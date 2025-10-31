@@ -5079,27 +5079,26 @@ setupRoutes(app);
 
     console.log('✅ Rotas V3.0 configuradas');
 
-    app.listen(PORT, '0.0.0.0', () => { // Escuta em 0.0.0.0 para compatibilidade com Render
+app.listen(PORT, '0.0.0.0', () => {
     logger.info('Server running on port ' + PORT);
-
     console.log(`Servidor rodando em http://0.0.0.0:${PORT}`);
     console.log(`Dashboard: http://0.0.0.0:${PORT}/api/system/status`);
     console.log(`LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:${PORT}`);
     console.log(`Health check: http://0.0.0.0:${PORT}/health`);
     console.log(`Chatbot disponível em: http://0.0.0.0:${PORT}/chatbot`);
     console.log(`Widget JS disponível em: http://0.0.0.0:${PORT}/public/widget.js`);
-    console.log(`Sistema de captura de leads PERSISTENTE ATIVADO`);
+    console.log('Sistema de captura de leads PERSISTENTE ATIVADO');
     console.log(`Painel de leads: http://0.0.0.0:${PORT}/admin/leads`);
-    console.log(`Extração de contatos: ATIVADA`);
-    console.log(`SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA`);
-    console.log(`Detecção de sarcasmo e ironia: IMPLEMENTADA`);
-    console.log(`Análise de múltiplas intenções: FUNCIONANDO`);
-    console.log(`Memória conversacional avançada: OPERACIONAL`);
-    console.log(`Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL`);
-    console.log(`Detecção de urgência: ATIVADA`);
-    console.log(`Sistema de agendamento: IMPLEMENTADO`);
-    console.log(`Botões fixos no topo: FUNCIONANDO`);
-    console.log(`Jornada do cliente: Análise inteligente ATIVADA`);
-    console.log(`Endpoint superinteligente: /api/process-chat-inteligente`);
-    console.log(`SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
+    console.log('Extração de contatos: ATIVADA');
+    console.log('SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA');
+    console.log('Detecção de sarcasmo e ironia: IMPLEMENTADA');
+    console.log('Análise de múltiplas intenções: FUNCIONANDO');
+    console.log('Memória conversacional avançada: OPERACIONAL');
+    console.log('Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL');
+    console.log('Detecção de urgência: ATIVADA');
+    console.log('Sistema de agendamento: IMPLEMENTADO');
+    console.log('Botões fixos no topo: FUNCIONANDO');
+    console.log('Jornada do cliente: Análise inteligente ATIVADA');
+    console.log('Endpoint superinteligente: /api/process-chat-inteligente');
+    console.log('SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!');
 });
