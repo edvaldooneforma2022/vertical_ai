@@ -81,7 +81,7 @@ class GmailIntegration {
                 return false;
             }
 
-            this.transporter = nodemailer.createTransporter({
+            this.transporter = nodemailer.createTransport({
                 service: service,
                 auth: {
                     user: user,

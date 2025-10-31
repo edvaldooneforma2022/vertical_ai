@@ -276,6 +276,12 @@ function getSQLiteTables() {
  */
 const DatabaseHelpers = {
     /**
+     * Executar uma query de escrita (INSERT, UPDATE, DELETE)
+     */
+    async run(query, params) {
+        return await db.query(query, params);
+    },
+    /**
      * Criar ou atualizar chatbot
      */
     async upsertChatbot(chatbotData) {
