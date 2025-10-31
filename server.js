@@ -77,6 +77,13 @@ try {
 
 const app = express();
 
+// Configuração de arquivos estáticos para o Render
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'pages')));
+app.use(express.static(path.join(__dirname, 'data')));
+app.use(express.static(path.join(__dirname, 'scripts')));
+app.use(express.static(path.join(__dirname, 'assets')));
+
 // Declarando conversationHistories no escopo global ou adequado
 const conversationHistories = new Map();
 
