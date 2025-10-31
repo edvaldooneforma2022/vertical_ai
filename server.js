@@ -4920,7 +4920,7 @@ setupRoutes(app);
     await initialize();
 
     // Iniciar servidor
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 3000; // Render usa a variável de ambiente PORT
 
     // ===== ROTAS DAS NOVAS INTEGRAÇÕES V3.0 =====
 
@@ -5079,7 +5079,7 @@ setupRoutes(app);
 
     console.log('✅ Rotas V3.0 configuradas');
 
-    app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', () => { // Escuta em 0.0.0.0 para compatibilidade com Render
     logger.info('Server running on port ' + PORT);
 
     console.log(`Servidor rodando em http://0.0.0.0:${PORT}`);
