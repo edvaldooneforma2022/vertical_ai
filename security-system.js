@@ -1,7 +1,4 @@
 // ===== SISTEMA DE SEGURANÇA AVANÇADO - LINKMÁGICO =====
-const path = require('path');
-const fs = require('fs');
-
 class SecuritySystem {
     constructor() {
         console.log("🛡️  SISTEMA DE SEGURANÇA AVANÇADO - Inicializando");
