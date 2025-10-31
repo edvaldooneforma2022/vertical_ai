@@ -1,6 +1,8 @@
 require("dotenv").config();
+
 // ===== SISTEMA DE SEGURANÇA AVANÇADO =====
 // TODOS ESTES ARQUIVOS JÁ EXISTEM - APENAS IMPORTE-OS!
+
 const {
     SecuritySystem,
     ThreatDetectionSystem, 
@@ -9,14 +11,19 @@ const {
     ApplicationFirewall,
     SecurityMonitor
 } = require('./security-system');
+
 const AuthSystem = require('./auth-system');           // ✅ JÁ EXISTE
 const authSystem = new AuthSystem();
+
 const CORSConfig = require('./cors-config');           // ✅ JÁ EXISTE  
 const corsConfig = new CORSConfig();
+
 const CSRFProtection = require('./csrf-protection');   // ✅ JÁ EXISTE
 const csrfSystem = new CSRFProtection();
+
 const CSPConfig = require('./csp-config');             // ✅ JÁ EXISTE
 const cspConfig = new CSPConfig();
+
 // Inicializar sistemas de segurança
 const securitySystem = new SecuritySystem();
 const threatDetection = new ThreatDetectionSystem();
@@ -24,6 +31,7 @@ const rateLimitSystem = new RateLimitSystem();
 const inputValidator = new InputValidationSystem();
 const firewall = new ApplicationFirewall();
 const securityMonitor = new SecurityMonitor();
+
 // ===== NOVOS MÓDULOS =====
 const { db, initializeDatabase, DatabaseHelpers, USE_POSTGRES } = require('./database');
 const { initializeCache, CacheManager, rateLimitMiddleware, isRedisConnected } = require('./cache');
@@ -34,6 +42,7 @@ const { llmOptimizer } = require('./llm-optimizer');
 const { knowledgeBaseManager } = require('./knowledge-base');
 const { setupRoutes } = require('./routes');
 const { initialize } = require('./init');
+
 console.log('✅ Módulos de melhorias carregados');
 // ===== NOVAS INTEGRAÇÕES V3.0 =====
 const { gmailManager } = require('./gmail-integration');
@@ -43,6 +52,7 @@ const { crmIntegrations } = require('./crm-integrations');
 const { whitelabelManager } = require('./whitelabel');
 const { structuredLeadsManager } = require('./structured-leads');
 console.log('✅ Módulos V3.0 carregados');
+
 const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
@@ -55,6 +65,7 @@ const fs = require("fs");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const session = require("express-session");
+
 // Optional dependencies with graceful fallback
 let puppeteer = null;
 try {
@@ -63,9 +74,12 @@ try {
 } catch (e) {
     console.log("⚠️ Puppeteer not installed - Using basic extraction only");
 }
+
 const app = express();
+
 // Declarando conversationHistories no escopo global ou adequado
 const conversationHistories = new Map();
+
 // ===== SISTEMA DE SUPERINTELIGÊNCIA CONVERSACIONAL AVANÇADA =====
 class SuperInteligenciaConversacional {
     constructor() {
@@ -87,6 +101,7 @@ class SuperInteligenciaConversacional {
             regionalismos: ["brasil"],
             velocidadeResposta: "natural"
         };
+
         // Dicionário de Emoções Complexas
         this.emocionesComplexas = {
             nostalgia: ['saudade', 'lembrança', 'antigamente', 'na época', 'quando era'],
@@ -95,6 +110,7 @@ class SuperInteligenciaConversacional {
             ansiedade: ['preocupado', 'nervoso', 'ansioso', 'apreensivo', 'medo'],
             euforia: ['incrível', 'maravilhoso', 'fantástico', 'perfeito', 'sensacional']
         };
+
         // Sistema de Sarcasmo e Ironia
         this.detectoresSarcasmo = {
             padroes: [
@@ -106,6 +122,7 @@ class SuperInteligenciaConversacional {
             ],
             contextoNegativo: ['problema', 'erro', 'falha', 'difícil', 'complicado']
         };
+
         // Memória de Preferências Conversacionais
         this.preferenciasConversacionais = {
             nivelDetalhe: new Map(), // 'superficial' | 'detalhado' | 'técnico'
@@ -114,6 +131,7 @@ class SuperInteligenciaConversacional {
             tempoResposta: new Map() // 'rapido' | 'reflexivo'
         };
     }
+
     // ===== DETECÇÃO AVANÇADA DE EMOÇÕES E INTENÇÕES =====
     analisarEstadoEmocional(mensagem, contexto = {}) {
         const mensagemLower = mensagem.toLowerCase();
@@ -122,8 +140,10 @@ class SuperInteligenciaConversacional {
         let intensidade = 1;
         let sarcasmoDetectado = false;
         let intencoesMultiplas = [];
+
         // Detecção de Sarcasmo e Ironia
         sarcasmoDetectado = this.detectarSarcasmo(mensagemLower, contexto);
+
         // Análise de Emoções Complexas
         for (const [emocao, termos] of Object.entries(this.emocionesComplexas)) {
             const matches = termos.filter(termo => mensagemLower.includes(termo));
@@ -136,11 +156,14 @@ class SuperInteligenciaConversacional {
                 intensidade = Math.max(intensidade, matches.length);
             }
         }
+
         // Detecção de Múltiplas Intenções
         intencoesMultiplas = this.detectarMultiplasIntencoes(mensagemLower);
+
         // Análise de Urgência e Prioridade
         const urgencia = this.analisarUrgencia(mensagemLower);
         const prioridade = this.analisarPrioridade(mensagemLower, contexto);
+
         return {
             emocaoPrimaria,
             emocaoSecundaria,
@@ -152,18 +175,22 @@ class SuperInteligenciaConversacional {
             contextoEmocional: this.analisarContextoEmocional(mensagemLower)
         };
     }
+
     detectarSarcasmo(mensagem, contexto) {
         // Verificação por padrões linguísticos de sarcasmo
         const padraoSarcasmo = this.detectoresSarcasmo.padroes.some(padrao => 
             padrao.test(mensagem)
         );
+
         // Verificação por incongruência contexto/sentimento
         const contextoNegativo = this.detectoresSarcasmo.contextoNegativo.some(termo => 
             mensagem.includes(termo)
         );
         const sentimentoPositivo = /maravilhoso|perfeito|excelente|ótimo/i.test(mensagem);
+
         return (padraoSarcasmo || (contextoNegativo && sentimentoPositivo));
     }
+
     detectarMultiplasIntencoes(mensagem) {
         const intencoes = [];
         
@@ -175,17 +202,21 @@ class SuperInteligenciaConversacional {
             relacionamento: ['obrigado', 'gostei', 'parabéns', 'reclamação'],
             urgente: ['urgente', 'agora', 'imediatamente', 'rápido']
         };
+
         for (const [intencao, termos] of Object.entries(mapeamentoIntencoes)) {
             if (termos.some(termo => mensagem.includes(termo))) {
                 intencoes.push(intencao);
             }
         }
+
         return intencoes;
     }
+
     analisarUrgencia(mensagem) {
         const termosUrgencia = ['urgente', 'agora', 'imediatamente', 'rápido', 'importante', 'prioridade'];
         return termosUrgencia.some(termo => mensagem.includes(termo)) ? 2 : 1;
     }
+
     analisarPrioridade(mensagem, contexto) {
         let prioridade = 1;
         
@@ -198,8 +229,10 @@ class SuperInteligenciaConversacional {
         if (mensagem.includes('problema') || mensagem.includes('erro')) {
             prioridade += 1;
         }
+
         return Math.min(3, prioridade);
     }
+
     analisarContextoEmocional(mensagem) {
         const contexto = {
             nivelFrustracao: this.contarTermos(mensagem, ['não consigo', 'difícil', 'complicado', 'chato']),
@@ -207,11 +240,14 @@ class SuperInteligenciaConversacional {
             nivelConfusao: this.contarTermos(mensagem, ['não entendi', 'como assim', 'explica', 'entender']),
             nivelUrgencia: this.contarTermos(mensagem, ['urgente', 'agora', 'rápido', 'importante'])
         };
+
         return contexto;
     }
+
     contarTermos(mensagem, termos) {
         return termos.filter(termo => mensagem.includes(termo)).length;
     }
+
     // ===== SISTEMA DE MEMÓRIA CONVERSACIONAL AVANÇADA =====
     atualizarMemoriaUsuario(userId, interacao) {
         if (!this.memoriaConversacional.has(userId)) {
@@ -225,6 +261,7 @@ class SuperInteligenciaConversacional {
                 referenciasCompartilhadas: []
             });
         }
+
         const memoria = this.memoriaConversacional.get(userId);
         
         // Atualizar histórico
@@ -234,15 +271,18 @@ class SuperInteligenciaConversacional {
             emocao: interacao.emocao,
             intencoes: interacao.intencoes
         });
+
         // Manter apenas últimas 50 interações
         if (memoria.historico.length > 50) {
             memoria.historico = memoria.historico.slice(-50);
         }
+
         // Atualizar preferências baseado no comportamento
         this.atualizarPreferenciasUsuario(memoria, interacao);
         
         memoria.ultimaInteracao = new Date();
     }
+
     atualizarPreferenciasUsuario(memoria, interacao) {
         // Detectar preferência por nível de detalhe
         if (interacao.mensagem.includes('mais detalhes') || interacao.mensagem.includes('explica melhor')) {
@@ -250,6 +290,7 @@ class SuperInteligenciaConversacional {
         } else if (interacao.mensagem.includes('resumido') || interacao.mensagem.includes('resumo')) {
             memoria.preferencias.nivelDetalhe = 'superficial';
         }
+
         // Detectar preferência por formalidade
         if (interacao.mensagem.includes('por favor') || interacao.mensagem.includes('você poderia')) {
             memoria.preferencias.formalidade = 'formal';
@@ -257,6 +298,7 @@ class SuperInteligenciaConversacional {
             memoria.preferencias.formalidade = 'informal';
         }
     }
+
     // ===== GERADOR DE RESPOSTAS SUPERINTELIGENTES =====
     gerarRespostaSuperInteligente(mensagemUsuario, estadoEmocional, memoriaUsuario, contextoPagina) {
         const timestamp = new Date();
@@ -285,8 +327,10 @@ class SuperInteligenciaConversacional {
             personalidade: personalidadeContextual.estilo,
             comprimento: respostaFinal.length
         });
+
         return respostaFinal;
     }
+
     analisarMensagemProfundamente(mensagem) {
         return {
             complexidade: this.calcularComplexidade(mensagem),
@@ -296,6 +340,7 @@ class SuperInteligenciaConversacional {
             referencias: this.extrairReferencias(mensagem)
         };
     }
+
     calcularComplexidade(mensagem) {
         const palavras = mensagem.split(' ').length;
         const frases = mensagem.split(/[.!?]+/).length - 1;
@@ -308,6 +353,7 @@ class SuperInteligenciaConversacional {
             score: Math.min(10, palavras * 0.5 + frases * 2)
         };
     }
+
     detectarAmbiguidade(mensagem) {
         const termosAmbiguos = ['isso', 'aquilo', 'aquele', 'desse jeito', 'assim'];
         const ambiguidades = termosAmbiguos.filter(termo => mensagem.includes(termo));
@@ -318,6 +364,7 @@ class SuperInteligenciaConversacional {
             nivel: ambiguidades.length
         };
     }
+
     analisarTom(mensagem) {
         const tom = {
             formal: this.contarTermos(mensagem, ['por favor', 'gostaria', 'poderia', 'agradeço']),
@@ -325,12 +372,14 @@ class SuperInteligenciaConversacional {
             tecnico: this.contarTermos(mensagem, ['funcionamento', 'especificação', 'técnico', 'detalhe']),
             emocional: this.contarTermos(mensagem, ['nervoso', 'feliz', 'preocupado', 'ansioso'])
         };
+
         const tomPredominante = Object.keys(tom).reduce((a, b) => tom[a] > tom[b] ? a : b);
         return {
             predominante: tomPredominante,
             scores: tom
         };
     }
+
     extrairEstruturas(mensagem) {
         return {
             perguntas: (mensagem.match(/\?/g) || []).length,
@@ -339,6 +388,7 @@ class SuperInteligenciaConversacional {
             maiusculas: (mensagem.match(/[A-ZÀ-Ú]{3,}/g) || []).length
         };
     }
+
     extrairReferencias(mensagem) {
         const referencias = {
             temporais: this.extrairReferenciasTemporais(mensagem),
@@ -348,6 +398,7 @@ class SuperInteligenciaConversacional {
         
         return referencias;
     }
+
     extrairReferenciasTemporais(mensagem) {
         const padroes = [
             /\b(hoje|amanhã|ontem)\b/gi,
@@ -357,6 +408,7 @@ class SuperInteligenciaConversacional {
         
         return padroes.flatMap(padrao => mensagem.match(padrao) || []);
     }
+
     extrairReferenciasEspaciais(mensagem) {
         const padroes = [
             /\b(aqui|ali|lá)\b/gi,
@@ -366,6 +418,7 @@ class SuperInteligenciaConversacional {
         
         return padroes.flatMap(padrao => mensagem.match(padrao) || []);
     }
+
     extrairReferenciasPessoais(mensagem) {
         const padroes = [
             /\b(eu|meu|minha)\b/gi,
@@ -375,10 +428,12 @@ class SuperInteligenciaConversacional {
         
         return padroes.flatMap(padrao => mensagem.match(padrao) || []);
     }
+
     construirPersonalidadeContextual(estadoEmocional, memoriaUsuario) {
         let estilo = 'equilibrado';
         let nivelEmpatia = this.configPersonalidade.nivelEmpatia;
         let usoHumor = this.configPersonalidade.usoHumor;
+
         // Adaptar baseado no estado emocional do usuário
         if (estadoEmocional.emocaoPrimaria === 'frustracao') {
             estilo = 'empatico';
@@ -393,6 +448,7 @@ class SuperInteligenciaConversacional {
             nivelEmpatia = 0.95;
             usoHumor = false;
         }
+
         // Considerar preferências do usuário
         if (memoriaUsuario && memoriaUsuario.preferencias) {
             if (memoriaUsuario.preferencias.formalidade === 'formal') {
@@ -401,6 +457,7 @@ class SuperInteligenciaConversacional {
                 estilo = 'informal';
             }
         }
+
         return {
             estilo,
             nivelEmpatia,
@@ -409,6 +466,7 @@ class SuperInteligenciaConversacional {
             registro: this.definirRegistro(estilo)
         };
     }
+
     definirRegistro(estilo) {
         const registros = {
             formal: {
@@ -436,8 +494,10 @@ class SuperInteligenciaConversacional {
                 verbos: ["pode", "gostaria", "quer"]
             }
         };
+
         return registros[estilo] || registros.equilibrado;
     }
+
     gerarRespostaBase(analiseProfunda, contextoPagina) {
         // Resposta base adaptada à complexidade da pergunta
         if (analiseProfunda.complexidade.score > 7) {
@@ -448,8 +508,10 @@ class SuperInteligenciaConversacional {
             return "Claro! Sobre isso...";
         }
     }
+
     aplicarCamadaEmpatica(resposta, estadoEmocional) {
         let prefixoEmpatico = "";
+
         if (estadoEmocional.emocaoPrimaria === 'frustracao') {
             prefixoEmpatico = "Entendo que isso pode ser frustrante. ";
         } else if (estadoEmocional.emocaoPrimaria === 'ansiedade') {
@@ -459,18 +521,23 @@ class SuperInteligenciaConversacional {
         } else if (estadoEmocional.sarcasmo) {
             prefixoEmpatico = "Percebi o tom da sua mensagem. ";
         }
+
         return prefixoEmpatico + resposta;
     }
+
     aplicarCamadaConversacional(resposta, analiseProfunda) {
         // Adicionar elementos conversacionais naturais
         if (analiseProfunda.complexidade.score > 5) {
             resposta = "Hmm, " + resposta.toLowerCase();
         }
+
         if (analiseProfunda.ambiguidade.possui) {
             resposta += " Se eu entendi corretamente...";
         }
+
         return resposta;
     }
+
     aplicarCamadaPersonalidade(resposta, personalidade) {
         // Adaptar resposta ao estilo da personalidade
         if (personalidade.estilo === 'informal') {
@@ -479,40 +546,51 @@ class SuperInteligenciaConversacional {
         } else if (personalidade.estilo === 'empatico') {
             resposta = resposta.replace(/\./g, ". Espero que isso ajude.");
         }
+
         return resposta;
     }
+
     aplicarCamadaMemoria(resposta, memoriaUsuario) {
         if (!memoriaUsuario || memoriaUsuario.historico.length < 2) {
             return resposta;
         }
+
         // Referenciar conversas anteriores se relevante
         const ultimaInteracao = memoriaUsuario.historico[memoriaUsuario.historico.length - 2];
         if (ultimaInteracao && this.saoTopicosRelacionados(ultimaInteracao.mensagem)) {
             resposta = `Continuando nosso papelo anterior, ${resposta.toLowerCase()}`;
         }
+
         return resposta;
     }
+
     saoTopicosRelacionados(mensagemAnterior) {
         const topicosComuns = ['preço', 'valor', 'funcionamento', 'como', 'quando'];
         return topicosComuns.some(topico => mensagemAnterior.includes(topico));
     }
+
     polirResposta(resposta, estadoEmocional, memoriaUsuario) {
         // Adicionar elementos de naturalidade
         if (estadoEmocional.intensidade > 1) {
             resposta = this.adicionarEnfase(resposta, estadoEmocional.intensidade);
         }
+
         // Adicionar elementos visuais contextuais
         resposta = this.adicionarElementosVisuais(resposta, estadoEmocional);
+
         // Garantir coerência com histórico
         resposta = this.ajustarCoerencia(resposta, memoriaUsuario);
+
         return resposta;
     }
+
     adicionarEnfase(resposta, intensidade) {
         const enfases = {
             1: ["", ""],
             2: ["**", "**"],
             3: ["**🎯 ", "**"]
         };
+
         const [prefixo, sufixo] = enfases[intensidade] || enfases[1];
         
         // Aplicar ênfase na primeira frase
@@ -521,8 +599,10 @@ class SuperInteligenciaConversacional {
             frases[0] = prefixo + frases[0] + sufixo;
             return frases.join('.');
         }
+
         return resposta;
     }
+
     adicionarElementosVisuais(resposta, estadoEmocional) {
         const elementos = {
             frustracao: "😔",
@@ -531,21 +611,27 @@ class SuperInteligenciaConversacional {
             nostalgia: "✨",
             neutro: "💭"
         };
+
         const elemento = elementos[estadoEmocional.emocaoPrimaria] || elementos.neutro;
         return elemento + " " + resposta;
     }
+
     ajustarCoerencia(resposta, memoriaUsuario) {
         if (!memoriaUsuario) return resposta;
+
         // Garantir que o estilo seja consistente com preferências
         if (memoriaUsuario.preferencias && memoriaUsuario.preferencias.formalidade === 'formal') {
             resposta = resposta.replace(/e aí/gi, "Olá")
                              .replace(/valeu/gi, "Agradeço");
         }
+
         return resposta;
     }
+
     // ===== SISTEMA DE APRENDIZADO CONTÍNUO =====
     aprenderDaInteracao(userId, mensagemUsuario, resposta, feedbackImplicito) {
         if (!this.memoriaConversacional.has(userId)) return;
+
         const memoria = this.memoriaConversacional.get(userId);
         
         // Analisar feedback implícito (engajamento, continuidade)
@@ -559,6 +645,7 @@ class SuperInteligenciaConversacional {
         // Aprender padrões de sucesso
         this.registrarPadraoSucesso(userId, mensagemUsuario, resposta, engajamento);
     }
+
     analisarEngajamento(mensagemUsuario, resposta) {
         const mensagemLower = mensagemUsuario.toLowerCase();
         
@@ -573,6 +660,7 @@ class SuperInteligenciaConversacional {
             alto: this.calcularNivelEngajamento(mensagemUsuario)
         };
     }
+
     calcularNivelEngajamento(mensagem) {
         let score = 0;
         score += (mensagem.split(' ').length > 5) ? 1 : 0;
@@ -580,6 +668,7 @@ class SuperInteligenciaConversacional {
         score += (mensagem.includes('obrigado') || mensagem.includes('valeu')) ? 0.5 : 0;
         return score;
     }
+
     registrarPadraoSucesso(userId, mensagemUsuario, resposta, engajamento) {
         // Registrar padrões que funcionam bem para este usuário
         if (engajamento.alto) {
@@ -589,18 +678,22 @@ class SuperInteligenciaConversacional {
                 timestamp: new Date(),
                 eficacia: engajamento.alto ? 'alta' : 'media'
             };
+
             if (!this.padroesSucesso.has(userId)) {
                 this.padroesSucesso.set(userId, []);
             }
+
             this.padroesSucesso.get(userId).push(padrao);
         }
     }
+
     classificarMensagem(mensagem) {
         if (mensagem.includes('?')) return 'pergunta';
         if (mensagem.includes('obrigado')) return 'agradecimento';
         if (mensagem.includes('problema')) return 'suporte';
         return 'declaracao';
     }
+
     classificarResposta(resposta) {
         if (resposta.includes('**')) return 'enfatica';
         if (resposta.length > 150) return 'detalhada';
@@ -608,9 +701,11 @@ class SuperInteligenciaConversacional {
         return 'padrao';
     }
 }
+
 // Inicializar SuperInteligência Global
 const superInteligenciaGlobal = new SuperInteligenciaConversacional();
 console.log("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Sistema Avançado Carregado");
+
 // ===== SISTEMA DE ARMAZENAMENTO DE LEADS PERSISTENTE =====
 function getTenantLeadsFilePath(apiKey) {
     const dataDir = path.join(__dirname, "data");
@@ -620,6 +715,7 @@ function getTenantLeadsFilePath(apiKey) {
     }
     return path.join(tenantDir, `leads-${apiKey}.json`);
 }
+
 class LeadCaptureSystem {
     constructor(apiKey) {
         this.apiKey = apiKey;
@@ -629,6 +725,7 @@ class LeadCaptureSystem {
         console.log(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
         console.log(`💾 Arquivo de leads: ${this.leadsFilePath}`);
     }
+
     ensureDataDirectory() {
         try {
             const dir = path.dirname(this.leadsFilePath);
@@ -643,6 +740,7 @@ class LeadCaptureSystem {
             console.log(`🔄 Usando fallback: ${this.leadsFilePath}`);
         }
     }
+
     loadLeads() {
         try {
             if (fs.existsSync(this.leadsFilePath)) {
@@ -657,6 +755,7 @@ class LeadCaptureSystem {
         console.log("📝 Inicializando novo arquivo de leads");
         return [];
     }
+
     saveLeads() {
         try {
             fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
@@ -667,6 +766,7 @@ class LeadCaptureSystem {
             return false;
         }
     }
+
     addLead(leadData) {
         const lead = {
             id: crypto.randomBytes(8).toString("hex"),
@@ -677,11 +777,13 @@ class LeadCaptureSystem {
             lastInteraction: new Date().toISOString(),
             status: "ativo"
         };
+
         this.leads.push(lead);
         this.saveLeads();
         console.log(`🎯 NOVO LEAD: ${lead.nome} (${lead.email})`);
         return lead;
     }
+
     updateLeadConversation(leadId, message, isUser = true) {
         const lead = this.leads.find(l => l.id === leadId);
         if (lead) {
@@ -697,6 +799,7 @@ class LeadCaptureSystem {
             this.saveLeads();
         }
     }
+
     // 🎯 NOVA FUNÇÃO: Limpar mensagem de caracteres especiais
     cleanMessage(message) {
         if (!message) return '';
@@ -707,6 +810,7 @@ class LeadCaptureSystem {
             .replace(/\s+/g, ' ') // Normaliza espaços
             .trim();
     }
+
     updateLeadJourneyStage(leadId, stage) {
         const lead = this.leads.find(l => l.id === leadId);
         if (lead && ["descoberta", "negociacao", "fidelizacao"].includes(stage)) {
@@ -714,24 +818,31 @@ class LeadCaptureSystem {
             this.saveLeads();
         }
     }
+
     getLeads() {
         return this.leads.sort((a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction));
     }
+
     getLeadById(leadId) {
         return this.leads.find(l => l.id === leadId);
     }
+
     findLeadByEmail(email) {
         return this.leads.find(l => l.email === email);
     }
 }
+
 // Funções para obter instâncias de sistema de leads e backup por tenant
 function getLeadSystem(apiKey) {
     return new LeadCaptureSystem(apiKey);
 }
+
 function getBackupSystem(leadSystem, apiKey) {
     return new LeadBackupSystem(leadSystem, apiKey);
 }
+
 // ===== SISTEMA DE BACKUP AUTOMÁTICO DE LEADS =====
+
 function getTenantBackupDirPath(apiKey) {
     const dataDir = path.join(__dirname, "data");
     const tenantDir = path.join(dataDir, "tenants");
@@ -750,6 +861,7 @@ function getTenantBackupDirPath(apiKey) {
     
     return backupDir;
 }
+
 class LeadBackupSystem {
     constructor(leadSystem, apiKey) {
         this.leadSystem = leadSystem;
@@ -767,6 +879,7 @@ class LeadBackupSystem {
         // Agendar backup diário
         this.scheduleAutomaticBackups();
     }
+
     ensureBackupDirectory() {
         try {
             if (!fs.existsSync(this.backupDir)) {
@@ -777,6 +890,7 @@ class LeadBackupSystem {
             console.error("❌ Erro ao criar diretório de backups:", error);
         }
     }
+
     createBackup(type = "manual") {
         try {
             const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -802,6 +916,7 @@ class LeadBackupSystem {
             return { success: false, error: error.message };
         }
     }
+
     cleanOldBackups() {
         try {
             const files = fs.readdirSync(this.backupDir)
@@ -825,6 +940,7 @@ class LeadBackupSystem {
             console.error("❌ Erro ao limpar backups antigos:", error);
         }
     }
+
     listBackups() {
         try {
             const files = fs.readdirSync(this.backupDir)
@@ -850,6 +966,7 @@ class LeadBackupSystem {
             return [];
         }
     }
+
     restoreBackup(filename) {
         try {
             const backupPath = path.join(this.backupDir, filename);
@@ -879,6 +996,7 @@ class LeadBackupSystem {
             return { success: false, error: error.message };
         }
     }
+
     scheduleAutomaticBackups() {
         setInterval(() => {
             console.log("⏰ Executando backup automático diário...");
@@ -887,6 +1005,7 @@ class LeadBackupSystem {
         
         console.log(`⏰ Backup automático agendado (a cada 24 horas)`);
     }
+
     setupShutdownHook() {
         const shutdown = () => {
             console.log("🛑 Servidor encerrando - Criando backup final...");
@@ -898,6 +1017,7 @@ class LeadBackupSystem {
         process.on("SIGINT", shutdown);
     }
 }
+
 // ===== SISTEMA DE ANÁLISE DE JORNADA DO CLIENTE =====
 class JourneyAnalyzer {
     constructor() {
@@ -919,6 +1039,7 @@ class JourneyAnalyzer {
                 'whatsapp', 'chamado', 'ticket', 'urgente', 'resolver'
             ]
         };
+
         this.synonyms = {
             empolgação: [
                 'excelente', 'fantástico', 'incrível', 'maravilhoso', 'impressionante',
@@ -927,6 +1048,7 @@ class JourneyAnalyzer {
             ]
         };
     }
+
     analyzeJourneyStage(message) {
         const messageLower = message.toLowerCase();
         let scores = {
@@ -934,6 +1056,7 @@ class JourneyAnalyzer {
             negociacao: 0,
             fidelizacao: 0
         };
+
         // Analisar palavras-chave
         for (const [stage, keywords] of Object.entries(this.stageKeywords)) {
             for (const keyword of keywords) {
@@ -942,20 +1065,25 @@ class JourneyAnalyzer {
                 }
             }
         }
+
         // Determinar estágio com maior pontuação
         const maxScore = Math.max(...Object.values(scores));
         if (maxScore === 0) return "descoberta";
+
         for (const [stage, score] of Object.entries(scores)) {
             if (score === maxScore) {
                 return stage;
             }
         }
+
         return "descoberta";
     }
+
     getRandomSynonym(category) {
         const synonyms = this.synonyms[category] || ['excelente'];
         return synonyms[Math.floor(Math.random() * synonyms.length)];
     }
+
     shouldMentionBonus(stage, message) {
         const messageLower = message.toLowerCase();
         
@@ -967,13 +1095,16 @@ class JourneyAnalyzer {
         return isAskingAboutBonus || stage === "negociacao";
     }
 }
+
 // Inicializar analisador de jornada
 const journeyAnalyzer = new JourneyAnalyzer();
+
 // ===== SISTEMA DE CAPTURA DE INTENÇÕES DO CLIENTE =====
 class SistemaCapturaInteligencias {
     constructor() {
         console.log("🎯 Sistema de Captura de Intenções Inicializado");
     }
+
     capturarInteligencias(mensagem) {
         const inteligencias = {
             contatoDireto: false,
@@ -983,7 +1114,9 @@ class SistemaCapturaInteligencias {
             experiencia: false,
             suporte: false
         };
+
         const mensagemLower = mensagem.toLowerCase();
+
         // Detectar solicitação de contato direto
         if (mensagemLower.includes('whatsapp') || 
             mensagemLower.includes('número') || 
@@ -996,6 +1129,7 @@ class SistemaCapturaInteligencias {
             mensagemLower.includes('chamar')) {
             inteligencias.contatoDireto = true;
         }
+
         // Detectar solicitação de link do site
         if (mensagemLower.includes('link') || 
             mensagemLower.includes('site') || 
@@ -1007,6 +1141,7 @@ class SistemaCapturaInteligencias {
             mensagemLower.includes('web')) {
             inteligencias.linkSite = true;
         }
+
         // Detectar perguntas sobre bônus
         if (mensagemLower.includes('bônus') || 
             mensagemLower.includes('bonus') ||
@@ -1026,6 +1161,7 @@ class SistemaCapturaInteligencias {
                 inteligencias.detalhesBonus = true;
             }
         }
+
         // Detectar perguntas sobre experiência
         if (mensagemLower.includes('experiência') || 
             mensagemLower.includes('experiencia') ||
@@ -1037,6 +1173,7 @@ class SistemaCapturaInteligencias {
             mensagemLower.includes('inicio')) {
             inteligencias.experiencia = true;
         }
+
         // Detectar solicitação de suporte
         if (mensagemLower.includes('suporte') || 
             mensagemLower.includes('atendimento') ||
@@ -1048,12 +1185,15 @@ class SistemaCapturaInteligencias {
             mensagemLower.includes('assistencia')) {
             inteligencias.suporte = true;
         }
+
         console.log(`🎯 Intenções detectadas:`, inteligencias);
         return inteligencias;
     }
+
     gerarRespostaContextual(inteligencias, contatos, journeyStage = "descoberta") {
         let resposta = '';
         const excitementWord = journeyAnalyzer.getRandomSynonym('empolgação');
+
         // 🎯 Resposta baseada nas intenções detectadas
         if (inteligencias.contatoDireto) {
             if (contatos.whatsapp && contatos.whatsapp.length > 0) {
@@ -1068,11 +1208,13 @@ class SistemaCapturaInteligencias {
                 resposta += `📞 **${excitementWord.toUpperCase()}!** Nosso telefone para contato: ${contatos.telefone.slice(0, 2).join(' ou ')}\n\n`;
             }
         }
+
         if (inteligencias.linkSite) {
             if (contatos.site && contatos.site.length > 0) {
                 resposta += `🌐 **Site oficial:** ${contatos.site[0]}\n\n`;
             }
         }
+
         if (inteligencias.detalhesBonus) {
             resposta += `🎁 **BÔNUS EXCLUSIVOS INCLUÍDOS:**\n\n`;
             resposta += `• 🚀 Automatização completa do atendimento\n`;
@@ -1085,12 +1227,14 @@ class SistemaCapturaInteligencias {
             resposta += `🎁 **SIM!** Temos bônus incríveis incluídos. `;
             resposta += `Gostaria que eu detalhe cada um dos bônus disponíveis?\n\n`;
         }
+
         if (inteligencias.experiencia) {
             resposta += `🌟 **PERFEITO PARA INICIANTES!**\n\n`;
             resposta += `Não é necessário nenhuma experiência prévia! `;
             resposta += `Nossa plataforma foi desenvolvida para ser intuitiva e fácil de usar, `;
             resposta += `com tutoriais passo a passo e suporte completo.\n\n`;
         }
+
         if (inteligencias.suporte) {
             resposta += `🛟 **SUPORTE ESPECIALIZADO**\n\n`;
             resposta += `Nossa equipe de suporte está pronta para ajudar você! `;
@@ -1105,6 +1249,7 @@ class SistemaCapturaInteligencias {
             
             resposta += `\n\nRespondemos rapidamente para resolver qualquer dúvida ou problema!\n\n`;
         }
+
         // Se nenhuma intenção específica foi detectada, usar resposta padrão baseada na jornada
         if (!resposta) {
             switch (journeyStage) {
@@ -1118,16 +1263,20 @@ class SistemaCapturaInteligencias {
                     resposta = "🎯 Obrigado pelo seu interesse! Como posso ajudar você hoje?";
             }
         }
+
         return resposta || "🎯 Obrigado pelo seu interesse! Como posso ajudar você hoje?";
     }
 }
+
 // Inicializar sistema de captura de intenções
 const sistemaInteligencias = new SistemaCapturaInteligencias();
+
 // ===== SISTEMA APRIMORADO DE EXTRAÇÃO DE CONTATOS =====
 class SistemaExtracaoContatosAprimorado {
     constructor() {
         console.log("📞 Sistema Aprimorado de Extração de Contatos Inicializado");
     }
+
     extrairContatosAprimorado($) {
         const contatos = {
             telefone: [],
@@ -1136,6 +1285,7 @@ class SistemaExtracaoContatosAprimorado {
             site: [],
             endereco: []
         };
+
         try {
             // Obter todo o texto da página
             const textoPagina = $('body').text();
@@ -1147,6 +1297,7 @@ class SistemaExtracaoContatosAprimorado {
                 /(\(\d{2}\)\s?\d{4,5}-\d{4})/g,
                 /(\d{2})\s?\d{4,5}-\d{4}/g
             ];
+
             // 🎯 DETECÇÃO INTELIGENTE DE WHATSAPP vs TELEFONE COMUM
             const whatsappKeywords = ['whatsapp', 'wa.me', 'wa.me', 'whats-app', 'whatsapp', 'zap', 'direct whatsapp'];
             
@@ -1163,9 +1314,11 @@ class SistemaExtracaoContatosAprimorado {
                                 Math.max(0, textoPagina.indexOf(match) - 50),
                                 Math.min(textoPagina.length, textoPagina.indexOf(match) + 50)
                             ).toLowerCase();
+
                             const isWhatsApp = whatsappKeywords.some(keyword => 
                                 contexto.includes(keyword)
                             );
+
                             const numeroFormatado = this.formatarNumeroBrasileiro(numeroLimpo);
                             
                             if (isWhatsApp) {
@@ -1183,6 +1336,7 @@ class SistemaExtracaoContatosAprimorado {
                     });
                 }
             });
+
             // 🎯 EXTRAÇÃO DE EMAILS DE MÚLTIPLAS FONTES
             const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
             const emails = textoPagina.match(emailRegex);
@@ -1190,6 +1344,7 @@ class SistemaExtracaoContatosAprimorado {
                 contatos.email = [...new Set(emails)]; // Remove duplicatas
                 console.log(`📧 Emails detectados: ${contatos.email.length}`);
             }
+
             // 🎯 EXTRAÇÃO DE SITES
             const siteRegex = /(https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
             const sites = textoPagina.match(siteRegex);
@@ -1197,6 +1352,7 @@ class SistemaExtracaoContatosAprimorado {
                 contatos.site = [...new Set(sites.slice(0, 3))]; // Limita a 3 sites únicos
                 console.log(`🌐 Sites detectados: ${contatos.site.length}`);
             }
+
             // 🎯 BUSCA EM ELEMENTOS ESPECÍFICOS PARA CONTATOS
             const seletoresContato = [
                 '[class*="contact"]',
@@ -1214,12 +1370,14 @@ class SistemaExtracaoContatosAprimorado {
                 '.telefone',
                 '.email'
             ];
+
             seletoresContato.forEach(seletor => {
                 $(seletor).each((i, elem) => {
                     const texto = $(elem).text();
                     this.processarTextoContato(texto, contatos);
                 });
             });
+
             // 🎯 BUSCA EM LINKS
             $('a[href]').each((i, elem) => {
                 const href = $(elem).attr('href') || '';
@@ -1255,19 +1413,24 @@ class SistemaExtracaoContatosAprimorado {
                     }
                 }
             });
+
             console.log(`📊 Resumo de contatos extraídos:`, {
                 telefones: contatos.telefone.length,
                 whatsapp: contatos.whatsapp.length,
                 emails: contatos.email.length,
                 sites: contatos.site.length
             });
+
         } catch (error) {
             console.error('❌ Erro na extração aprimorada de contatos:', error);
         }
+
         return contatos;
     }
+
     processarTextoContato(texto, contatos) {
         if (!texto) return;
+
         // Telefones
         const telefoneRegex = /(\+55\s?)?(\(?\d{2}\)?\s?)?\d{4,5}[-.\s]?\d{4}/g;
         const telefones = texto.match(telefoneRegex);
@@ -1286,6 +1449,7 @@ class SistemaExtracaoContatosAprimorado {
                 }
             });
         }
+
         // Emails
         const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
         const emails = texto.match(emailRegex);
@@ -1297,6 +1461,7 @@ class SistemaExtracaoContatosAprimorado {
             });
         }
     }
+
     formatarNumeroBrasileiro(numero) {
         // Remove tudo que não é dígito
         const apenasDigitos = numero.replace(/\D/g, '');
@@ -1323,8 +1488,10 @@ class SistemaExtracaoContatosAprimorado {
         return numero;
     }
 }
+
 // Inicializar sistema aprimorado de extração de contatos
 const sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
+
 // ===== SISTEMA DE SUPERINTELIGÊNCIA EMOCIONAL =====
 class SuperInteligenciaEmocional {
     constructor() {
@@ -1351,6 +1518,7 @@ class SuperInteligenciaEmocional {
                 'explicar', 'entender', 'compreender', 'não sei', 'não entendi'
             ]
         };
+
         // Personalidades adaptativas
         this.personalidades = {
             consultivo: {
@@ -1382,6 +1550,7 @@ class SuperInteligenciaEmocional {
                 despedida: "Você consegue! 💪"
             }
         };
+
         // Sistema de agendamento
         this.horariosDisponiveis = [
             "Segunda 09:00", "Segunda 14:00", "Segunda 16:00",
@@ -1391,23 +1560,28 @@ class SuperInteligenciaEmocional {
             "Sexta 10:30", "Sexta 14:00", "Sexta 16:00"
         ];
     }
+
     analisarEmocao(mensagem) {
         const mensagemLower = mensagem.toLowerCase();
         let emocao = "neutro";
         let intensidade = 1;
         let urgencia = false;
+
         // Análise de emoções positivas
         const positivas = this.emociones.positivas.filter(palavra => 
             mensagemLower.includes(palavra)
         ).length;
+
         // Análise de emoções negativas  
         const negativas = this.emociones.negativas.filter(palavra =>
             mensagemLower.includes(palavra)
         ).length;
+
         // Detecção de urgência
         urgencia = this.emociones.urgentes.some(palavra =>
             mensagemLower.includes(palavra)
         );
+
         // Determinar emoção predominante
         if (positivas > negativas && positivas > 0) {
             emocao = "positivo";
@@ -1416,15 +1590,20 @@ class SuperInteligenciaEmocional {
             emocao = "negativo"; 
             intensidade = Math.min(3, negativas);
         }
+
         // Ajustar intensidade baseado em urgência
         if (urgencia) {
             intensidade += 1;
         }
+
         console.log(`🎭 Análise Emocional: ${emocao} (intensidade: ${intensidade}) ${urgencia ? '🚨 URGENTE' : ''}`);
+
         return { emocao, intensidade, urgencia };
     }
+
     selecionarPersonalidade(emocao, intensidade, jornada) {
         let personalidade = "consultivo";
+
         if (emocao === "negativo" && intensidade >= 2) {
             personalidade = "empatico";
         } else if (jornada === "negociacao" && emocao === "positivo") {
@@ -1434,12 +1613,15 @@ class SuperInteligenciaEmocional {
         } else if (emocao === "positivo" && intensidade >= 2) {
             personalidade = "motivacional";
         }
+
         console.log(`🎨 Personalidade selecionada: ${personalidade}`);
         return this.personalidades[personalidade];
     }
+
     gerarRespostaEmpatica(mensagem, emocao, personalidade, contatos) {
         let respostaBase = "";
         const excitementWord = journeyAnalyzer.getRandomSynonym('empolgação');
+
         // Respostas baseadas na emoção detectada
         switch (emocao.emocao) {
             case "positivo":
@@ -1459,10 +1641,12 @@ class SuperInteligenciaEmocional {
             default:
                 respostaBase = `💭 **Ótima pergunta!** `;
         }
+
         // Adicionar urgencia se detectada
         if (emocao.urgencia) {
             respostaBase = `🚨 **Prioridade máxima!** ` + respostaBase;
         }
+
         // Adaptar tom baseado na personalidade
         switch (personalidade.tom) {
             case "acolhedor e compreensivo":
@@ -1477,8 +1661,10 @@ class SuperInteligenciaEmocional {
             default:
                 respostaBase += "Aqui estão as informações que você precisa: ";
         }
+
         return respostaBase;
     }
+
     // ===== SISTEMA DE AGENDAMENTO INTELIGENTE =====
     detectarAgendamento(mensagem) {
         const mensagemLower = mensagem.toLowerCase();
@@ -1487,15 +1673,19 @@ class SuperInteligenciaEmocional {
             'horário', 'horario', 'data', 'hora', 'telefone', 'call', 'vídeo',
             'video', 'encontro', 'conversar', 'falar', 'ligar', 'whatsapp'
         ];
+
         const isAgendamento = palavrasAgendamento.some(palavra => 
             mensagemLower.includes(palavra)
         );
+
         if (isAgendamento) {
             console.log("📅 Solicitação de agendamento detectada");
             return this.gerarOpcoesAgendamento();
         }
+
         return null;
     }
+
     gerarOpcoesAgendamento() {
         const horarios = this.horariosDisponiveis.slice(0, 3); // 3 primeiros horários
         let resposta = `**📅 AGENDAMENTO DISPONÍVEL**\n\n`;
@@ -1510,6 +1700,7 @@ class SuperInteligenciaEmocional {
         
         return resposta;
     }
+
     processarAgendamento(mensagem) {
         const mensagemLower = mensagem.toLowerCase();
         
@@ -1524,11 +1715,14 @@ class SuperInteligenciaEmocional {
                        `📞 **Contato direto:** Veja nossos canais acima! ⬆️`;
             }
         }
+
         return null;
     }
 }
+
 // Inicializar SuperInteligência
 const superInteligencia = new SuperInteligenciaEmocional();
+
 // ===== SISTEMA DE BOTÕES FIXOS NO TOPO =====
 function gerarBotoesFixos(contatos, robotName) {
     let botoesHTML = `
@@ -1549,6 +1743,7 @@ function gerarBotoesFixos(contatos, robotName) {
             📞 Fale com ${robotName}
         </div>
     `;
+
     // Botão de WhatsApp
     if (contatos.whatsapp && contatos.whatsapp.length > 0) {
         const whatsappNum = contatos.whatsapp[0].replace(/\D/g, '');
@@ -1570,6 +1765,7 @@ function gerarBotoesFixos(contatos, robotName) {
             <i class="fab fa-whatsapp"></i> WhatsApp
         </a>`;
     }
+
     // Botão de Telefone
     if (contatos.telefone && contatos.telefone.length > 0) {
         const telefoneNum = contatos.telefone[0].replace(/\D/g, '');
@@ -1591,6 +1787,7 @@ function gerarBotoesFixos(contatos, robotName) {
             <i class="fas fa-phone"></i> Ligar
         </a>`;
     }
+
     // Botão de Agendamento
     botoesHTML += `
     <button onclick="iniciarAgendamento()" style="
@@ -1610,6 +1807,7 @@ function gerarBotoesFixos(contatos, robotName) {
        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(139, 92, 246, 0.3)';">
         <i class="fas fa-calendar-check"></i> Agendar
     </button>`;
+
     // Botão de Site
     if (contatos.site && contatos.site.length > 0) {
         botoesHTML += `
@@ -1630,9 +1828,12 @@ function gerarBotoesFixos(contatos, robotName) {
             <i class="fas fa-globe"></i> Site
         </a>`;
     }
+
     botoesHTML += `</div>`;
+
     return botoesHTML;
 }
+
 // ===== Enhanced Logger =====
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || "info",
@@ -1650,6 +1851,7 @@ const logger = winston.createLogger({
         })
     ]
 });
+
 // ===== SISTEMA APRIMORADO DE DETECÇÃO DE BÔNUS =====
 class SistemaExtracaoApurado {
     constructor() {
@@ -1660,6 +1862,7 @@ class SistemaExtracaoApurado {
             'exclusivo', 'limitado', 'especial', 'oferta especial'
         ];
     }
+
     async extrairDadosCompletos(url) {
         try {
             console.log('🌐 [EXTRACAO APRIMORADA] Conectando à:', url);
@@ -1683,6 +1886,7 @@ class SistemaExtracaoApurado {
                 // 🎯 MELHORIA: Usar sistema aprimorado de extração de contatos
                 contatos: sistemaContatosAprimorado.extrairContatosAprimorado($)
             };
+
             console.log(`✅ [EXTRACAO] Concluída: ${dadosExtraidos.bonus.length} bônus encontrados`);
             return dadosExtraidos;
         } catch (error) {
@@ -1690,10 +1894,12 @@ class SistemaExtracaoApurado {
             return { erro: 'Falha na extração: ' + error.message };
         }
     }
+
     // 🎯 FUNÇÃO MANTIDA PARA COMPATIBILIDADE
     extrairContatos($) {
         return sistemaContatosAprimorado.extrairContatosAprimorado($);
     }
+
     extrairTextosRelevantes($) {
         const textos = [];
         const seletores = [
@@ -1706,14 +1912,17 @@ class SistemaExtracaoApurado {
             'section, .section, .container',
             'p, span, div'
         ].join(', ');
+
         $(seletores).each((i, elem) => {
             const texto = this.limparTexto($(elem).text());
             if (texto && texto.length > 5 && texto.length < 500) {
                 textos.push(texto);
             }
         });
+
         return [...new Set(textos)];
     }
+
     buscarInformacoesBonus($) {
         const bonusEncontrados = [];
         const elementosAlvo = [
@@ -1721,6 +1930,7 @@ class SistemaExtracaoApurado {
             '[class*="presente"]', '[class*="extra"]', '.offer, .oferta',
             '.special, .especial', '.bonus-item', '.bonus-section'
         ];
+
         elementosAlvo.forEach(seletor => {
             $(seletor).each((i, elem) => {
                 const texto = this.limparTexto($(elem).text());
@@ -1734,6 +1944,7 @@ class SistemaExtracaoApurado {
                 }
             });
         });
+
         // Busca geral como fallback
         $('body *').each((i, elem) => {
             const texto = this.limparTexto($(elem).text());
@@ -1749,13 +1960,16 @@ class SistemaExtracaoApurado {
                 }
             }
         });
+
         return bonusEncontrados;
     }
+
     contemTermoBonus(texto) {
         if (!texto) return false;
         const textoLower = texto.toLowerCase();
         return this.termosBonus.some(termo => textoLower.includes(termo));
     }
+
     obterContexto($, elemento) {
         const $elemento = $(elemento);
         const pai = $elemento.parent();
@@ -1765,12 +1979,14 @@ class SistemaExtracaoApurado {
             irmaos: pai.children().length
         };
     }
+
     extrairPrecos($) {
         const precos = [];
         const seletoresPreco = [
             '[class*="price"]', '[class*="preco"]', '[class*="valor"]',
             '.pricing, .cost, .money', '.currency'
         ];
+
         seletoresPreco.forEach(seletor => {
             $(seletor).each((i, elem) => {
                 const texto = this.limparTexto($(elem).text());
@@ -1779,14 +1995,17 @@ class SistemaExtracaoApurado {
                 }
             });
         });
+
         return precos;
     }
+
     extrairGarantia($) {
         const garantias = [];
         const seletoresGarantia = [
             '[class*="garantia"]', '[class*="guarantee"]', '[class*="warranty"]',
             '.safe, .security, .refund'
         ];
+
         seletoresGarantia.forEach(seletor => {
             $(seletor).each((i, elem) => {
                 const texto = this.limparTexto($(elem).text());
@@ -1795,14 +2014,17 @@ class SistemaExtracaoApurado {
                 }
             });
         });
+
         return garantias;
     }
+
     extrairSecoesEspeciais($) {
         const secoes = [];
         const secoesAlvo = [
             'section', 'div[class*="section"]', 'div[class*="container"]',
             '.offer-section', '.bonus-area', '.special-offer'
         ];
+
         secoesAlvo.forEach(seletor => {
             $(seletor).each((i, elem) => {
                 const $elem = $(elem);
@@ -1816,6 +2038,7 @@ class SistemaExtracaoApurado {
                     const ehRelevante = termosRelevantes.some(termo => 
                         texto.toLowerCase().includes(termo)
                     );
+
                     if (ehRelevante) {
                         secoes.push({
                             tipo: seletor,
@@ -1826,8 +2049,10 @@ class SistemaExtracaoApurado {
                 }
             });
         });
+
         return secoes;
     }
+
     extrairMetadados($) {
         return {
             ogTitle: this.limparTexto($('meta[property="og:title"]').attr('content')),
@@ -1836,6 +2061,7 @@ class SistemaExtracaoApurado {
             canonical: this.limparTexto($('link[rel="canonical"]').attr('href'))
         };
     }
+
     limparTexto(texto) {
         if (!texto) return '';
         return texto
@@ -1844,6 +2070,7 @@ class SistemaExtracaoApurado {
             .trim();
     }
 }
+
 class ValidacaoCruzada {
     constructor() {
         this.termosBonus = [
@@ -1851,6 +2078,7 @@ class ValidacaoCruzada {
             'incluído', 'incluido', 'adicional', 'oferta', 'promocional'
         ];
     }
+
     validarDadosCompletos(dadosExtraidos) {
         console.log('🔍 [VALIDAÇÃO] Iniciando validação cruzada...');
         
@@ -1860,27 +2088,34 @@ class ValidacaoCruzada {
             garantia: this.validarGarantia(dadosExtraidos),
             consistencia: this.validarConsistencia(dadosExtraidos)
         };
+
         const dadosValidados = this.aplicarCorrecoes(dadosExtraidos, validacoes);
         const pontuacaoConfianca = this.calcularPontuacaoConfianca(validacoes);
+
         console.log(`✅ [VALIDAÇÃO] Concluída: ${pontuacaoConfianca * 100}% de confiança`);
+
         return {
             dadosValidados,
             pontuacaoConfianca,
             problemasCriticos: this.identificarProblemasCriticos(validacoes)
         };
     }
+
     validarBonusCruzado(dados) {
         const fontes = {
             bonusDireto: dados.bonus || [],
             secoesEspeciais: this.buscarBonusEmSecoes(dados.secoesEspeciais || []),
             textosRelevantes: this.buscarBonusEmTextos(dados.textos || [])
         };
+
         const todosBonus = [
             ...fontes.bonusDireto,
             ...fontes.secoesEspeciais,
             ...fontes.textosRelevantes
         ];
+
         const bonusUnicos = this.removerDuplicatas(todosBonus);
+
         return {
             fontes,
             bonusUnificados: bonusUnicos,
@@ -1888,6 +2123,7 @@ class ValidacaoCruzada {
             confiabilidade: this.calcularConfiabilidadeBonus(fontes, bonusUnicos)
         };
     }
+
     buscarBonusEmSecoes(secoes) {
         const bonusEncontrados = [];
         
@@ -1896,6 +2132,7 @@ class ValidacaoCruzada {
             const termosEncontrados = this.termosBonus.filter(termo => 
                 texto.includes(termo)
             );
+
             if (termosEncontrados.length > 0) {
                 bonusEncontrados.push({
                     elemento: `secao_${secao.tipo}`,
@@ -1904,8 +2141,10 @@ class ValidacaoCruzada {
                 });
             }
         });
+
         return bonusEncontrados;
     }
+
     buscarBonusEmTextos(textos) {
         const bonusEncontrados = [];
         
@@ -1918,14 +2157,17 @@ class ValidacaoCruzada {
                 });
             }
         });
+
         return bonusEncontrados;
     }
+
     contemTermoBonus(texto) {
         if (!texto) return false;
         return this.termosBonus.some(termo => 
             texto.toLowerCase().includes(termo.toLowerCase())
         );
     }
+
     removerDuplicatas(bonusArray) {
         const seen = new Set();
         return bonusArray.filter(item => {
@@ -1937,6 +2179,7 @@ class ValidacaoCruzada {
             return true;
         });
     }
+
     validarPrecos(dados) {
         const precosEncontrados = [...(dados.preco || [])];
         return {
@@ -1944,6 +2187,7 @@ class ValidacaoCruzada {
             total: precosEncontrados.length
         };
     }
+
     validarGarantia(dados) {
         const garantias = [...(dados.garantia || [])];
         return {
@@ -1951,6 +2195,7 @@ class ValidacaoCruzada {
             total: garantias.length
         };
     }
+
     validarConsistencia(dados) {
         const inconsistencias = [];
         
@@ -1958,28 +2203,34 @@ class ValidacaoCruzada {
             (!dados.preco || dados.preco.length === 0)) {
             inconsistencias.push('Bônus encontrados mas preços não identificados');
         }
+
         return {
             consistente: inconsistencias.length === 0,
             inconsistencias,
             score: Math.max(0, 10 - inconsistencias.length) / 10
         };
     }
+
     calcularConfiabilidadeBonus(fontes, bonusUnicos) {
         const pesos = {
             bonusDireto: 1.0,
             secoesEspeciais: 0.8,
             textosRelevantes: 0.6
         };
+
         let score = 0;
         let totalPeso = 0;
+
         Object.keys(fontes).forEach(fonte => {
             if (fontes[fonte].length > 0) {
                 score += pesos[fonte] * fontes[fonte].length;
                 totalPeso += pesos[fonte];
             }
         });
+
         return totalPeso > 0 ? (score / totalPeso) / Math.max(1, bonusUnicos.length) : 0;
     }
+
     calcularPontuacaoConfianca(validacoes) {
         const pesos = {
             bonus: 0.4,
@@ -1987,13 +2238,16 @@ class ValidacaoCruzada {
             garantia: 0.2,
             consistencia: 0.2
         };
+
         let pontuacao = 0;
         pontuacao += validacoes.bonus.confiabilidade * pesos.bonus;
         pontuacao += (validacoes.preco.total > 0 ? 1 : 0.5) * pesos.preco;
         pontuacao += (validacoes.garantia.total > 0 ? 1 : 0.3) * pesos.garantia;
         pontuacao += validacoes.consistencia.score * pesos.consistencia;
+
         return Math.min(1, pontuacao);
     }
+
     identificarProblemasCriticos(validacoes) {
         const problemas = [];
         if (validacoes.bonus.totalEncontrado === 0) {
@@ -2007,6 +2261,7 @@ class ValidacaoCruzada {
         }
         return problemas;
     }
+
     aplicarCorrecoes(dados, validacoes) {
         const dadosCorrigidos = { ...dados };
         if (validacoes.bonus.bonusUnificados.length > 0) {
@@ -2015,12 +2270,16 @@ class ValidacaoCruzada {
         return dadosCorrigidos;
     }
 }
+
 // Instâncias globais dos sistemas
 const sistemaExtracao = new SistemaExtracaoApurado();
 const sistemaValidacao = new ValidacaoCruzada();
+
 // ===== FIM DO SISTEMA APRIMORADO =====
+
 // Trust proxy for accurate IP addresses
 app.set("trust proxy", true);
+
 // ===== Session Configuration =====
 let sessionConfig = {
     secret: process.env.SESSION_SECRET || "fallback-secret-change-in-production",
@@ -2032,6 +2291,7 @@ let sessionConfig = {
         httpOnly: true
     }
 };
+
 // Usa Redis se disponível, caso contrário mostra aviso
 if (process.env.REDIS_URL) {
     const RedisStore = require("connect-redis").default;
@@ -2052,19 +2312,25 @@ if (process.env.REDIS_URL) {
 } else {
     console.warn("⚠️  Redis não configurado - usando MemoryStore (não recomendado para produção)");
 }
+
 app.use(session(sessionConfig));
+
 // 🛡️ APLICAR CSRF PROTECTION GLOBALMENTE (NOVO MIDDLEWARE)
 app.use(csrfSystem.getMiddleware());
+
 // ===== Middleware =====
 app.use(helmet({
     contentSecurityPolicy: false, // 🛡️ DESABILITAR HELMET CSP PARA USAR NOSSO PRÓPRIO
     crossOriginEmbedderPolicy: false
 }));
+
 // ===== CONFIGURAÇÃO CORS SEGURA =====
 // Aplicar CORS seguro
 app.use(corsConfig.getMiddleware());
+
 // Logging de CORS
 app.use(corsConfig.corsLogger);
+
 // 🛡️ CONFIGURAÇÃO CSP - APLICAR BASEADO NO AMBIENTE
 if (process.env.NODE_ENV === 'production') {
     app.use(cspConfig.getMiddleware());
@@ -2073,6 +2339,7 @@ if (process.env.NODE_ENV === 'production') {
     app.use(cspConfig.getDevMiddleware());
     console.log('🔧 Modo desenvolvimento: CSP em report-only');
 }
+
 // 🛡️ HEADERS DE SEGURANÇA ADICIONAIS
 app.use((req, res, next) => {
     // Headers customizados de segurança
@@ -2084,10 +2351,13 @@ app.use((req, res, next) => {
     
     next();
 });
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(bodyParser.json({ limit: "10mb" }));
+
 app.use(morgan("combined"));
+
 // ===== API Key Validation Functions =====
 function loadApiKeys() {
     try {
@@ -2109,6 +2379,7 @@ function loadApiKeys() {
     }
     return {};
 }
+
 function validateApiKey(apiKey) {
     const apiKeys = loadApiKeys();
     const keyData = apiKeys[apiKey];
@@ -2126,14 +2397,18 @@ function validateApiKey(apiKey) {
     
     return { success: false };
 }
+
 // ===== API Key Middleware =====
 function requireApiKey(req, res, next) {
     logger.info(`[requireApiKey] Path: ${req.path}, Session Validated: ${!!(req.session && req.session.validatedApiKey)}`);
+
     // Permitir acesso a rotas públicas sem API Key
     if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot") {
         return next();
     }
+
     let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+
     if (apiKey) {
         const validation = validateApiKey(apiKey);
         if (validation.success) {
@@ -2143,24 +2418,30 @@ function requireApiKey(req, res, next) {
             return next();
         }
     }
+
     if (req.session && req.session.validatedApiKey) {
         req.cliente = req.session.clientData;
         return next();
     }
+
     // Se a API Key não for encontrada ou for inválida, e não houver sessão validada, redirecionar para a página inicial
     return res.redirect("/");
 }
+
 app.use(requireApiKey);
+
 // ===== MIDDLEWARE: Validação JWT para Widget =====
 function requireWidgetAuth(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
     if (!token) {
         return res.status(401).json({
             success: false,
             error: 'Token de acesso necessário'
         });
     }
+
     try {
         const decoded = authSystem.verifyWidgetToken(token);
         req.widgetClient = decoded;
@@ -2172,6 +2453,7 @@ function requireWidgetAuth(req, res, next) {
         });
     }
 }
+
 // ===== Static Files with API Key Protection =====
 app.get("/", (req, res) => {
     logger.info(`[GET /] Session Validated: ${!!(req.session && req.session.validatedApiKey)}`);
@@ -2180,6 +2462,7 @@ app.get("/", (req, res) => {
     }
     res.sendFile(path.join(__dirname, "public", "api_key_validation.html"));
 });
+
 app.post("/validate-api-key", (req, res) => {
     const { apiKey } = req.body;
     
@@ -2189,6 +2472,7 @@ app.post("/validate-api-key", (req, res) => {
             error: "API Key é obrigatória" 
         });
     }
+
     const validation = validateApiKey(apiKey);
     if (!validation.success) {
         return res.status(401).json({ 
@@ -2196,6 +2480,7 @@ app.post("/validate-api-key", (req, res) => {
             error: "API Key inválida" 
         });
     }
+
     req.session.validatedApiKey = apiKey;
     req.session.clientData = validation.client;
     req.cliente = validation.client; // Ensure req.cliente is set immediately after validation
@@ -2205,19 +2490,24 @@ app.post("/validate-api-key", (req, res) => {
         message: "API Key validada com sucesso" 
     });
 });
+
 // 🛡️ ENDPOINT PARA OBTER TOKEN CSRF (NOVA ROTA)
 app.get('/api/csrf-token', (req, res) => {
     csrfSystem.getCSRFToken(req, res);
 });
+
 app.get("/app", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index_app.html"));
 });
+
 app.get("/privacy.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "privacy.html"));
 });
+
 app.get("/excluir-dados", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "excluir-dados.html"));
 });
+
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", 
     csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
@@ -2232,6 +2522,7 @@ app.get("/admin/leads",
         total: leads.length
     });
 });
+
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     const lead = leadSystem.getLeadById(req.params.id);
@@ -2241,6 +2532,7 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
         res.status(404).json({ success: false, error: "Lead não encontrado" });
     }
 });
+
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", 
     csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
@@ -2251,6 +2543,7 @@ app.post("/admin/leads/backup/create",
     const result = backupSystem.createBackup("manual");
     res.json(result);
 });
+
 app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
@@ -2261,6 +2554,7 @@ app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
         total: backups.length
     });
 });
+
 app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
     const { filename } = req.body;
     
@@ -2275,6 +2569,7 @@ app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
     const result = backupSystem.restoreBackup(filename);
     res.json(result);
 });
+
 // ===== DOCUMENTAÇÃO DA API =====
 app.get("/api/docs", (req, res) => {
     const docs = {
@@ -2424,6 +2719,7 @@ app.get("/api/docs", (req, res) => {
     
     res.json(docs);
 });
+
 // ===== STATUS DO SISTEMA DE BACKUP =====
 app.get("/admin/backup/status", requireApiKey, (req, res) => {
     try {
@@ -2461,6 +2757,7 @@ app.get("/admin/backup/status", requireApiKey, (req, res) => {
         });
     }
 });
+
 // ===== TESTE DO SISTEMA DE BACKUP =====
 app.post("/admin/backup/test", requireApiKey, (req, res) => {
     try {
@@ -2494,6 +2791,7 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
         });
     }
 });
+
 // ROTA CHAT.HTML
 app.get("/chat.html", (req, res) => {
     const robotName = req.query.name || "Assistente IA";
@@ -2503,6 +2801,7 @@ app.get("/chat.html", (req, res) => {
     const chatbotHTML = generateChatbotHTML({ robotName, url, instructions });
     res.send(chatbotHTML);
 });
+
 // ROTA CHATBOT COMPLETA
 app.get("/chatbot", async (req, res) => {
     try {
@@ -2527,11 +2826,13 @@ app.get("/chatbot", async (req, res) => {
         res.status(500).send('Erro interno ao gerar chatbot');
     }
 });
+
 app.use("/public", express.static(path.join(__dirname, "public"), {
     maxAge: "1d",
     etag: true,
     lastModified: true
 }));
+
 // 🛡️ ENDPOINT PARA RELATAR VIOLAÇÕES CSP
 app.post('/api/security/csp-violation', 
     express.json({ type: 'application/csp-report' }),
@@ -2539,6 +2840,7 @@ app.post('/api/security/csp-violation',
         cspConfig.handleCSPViolation(req, res);
     }
 );
+
 // ===== ENDPOINT PARA VERIFICAR CONFIGURAÇÕES CORS =====
 if (process.env.NODE_ENV !== 'production') {
     app.get('/api/debug/cors-config', (req, res) => {
@@ -2550,11 +2852,13 @@ if (process.env.NODE_ENV !== 'production') {
         });
     });
 }
+
 app.use(express.static("public", {
     maxAge: "1d",
     etag: true,
     lastModified: true
 }));
+
 // ===== Analytics & Cache =====
 const analytics = {
     totalRequests: 0,
@@ -2568,22 +2872,28 @@ const analytics = {
     failedExtractions: 0,
     leadsCaptured: 0
 };
+
 app.use((req, res, next) => {
     const start = Date.now();
     analytics.totalRequests++;
+
     res.on("finish", () => {
         const responseTime = Date.now() - start;
         analytics.responseTimeHistory.push(responseTime);
         if (analytics.responseTimeHistory.length > 100) analytics.responseTimeHistory.shift();
         if (res.statusCode >= 400) analytics.errors++;
     });
+
     next();
 });
+
 const dataCache = new Map();
 const CACHE_TTL = 30 * 60 * 1000;
+
 function setCacheData(key, data) {
     dataCache.set(key, { data, timestamp: Date.now() });
 }
+
 function getCacheData(key) {
     const cached = dataCache.get(key);
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
@@ -2592,10 +2902,12 @@ function getCacheData(key) {
     dataCache.delete(key);
     return null;
 }
+
 // ===== Utility functions =====
 function normalizeText(text) {
     return (text || "").replace(/\s+/g, " ").trim();
 }
+
 function uniqueLines(text) {
     if (!text) return "";
     const seen = new Set();
@@ -2609,16 +2921,19 @@ function uniqueLines(text) {
         })
         .join("\n");
 }
+
 function clampSentences(text, maxSentences = 2) {
     if (!text) return "";
     const sentences = normalizeText(text).split(/(?<=[.!?])\s+/);
     return sentences.slice(0, maxSentences).join(" ");
 }
+
 function extractBonuses(text) {
     if (!text) return [];
     const bonusKeywords = /(bônus|bonus|brinde|extra|grátis|template|planilha|checklist|e-book|ebook)/gi;
     const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const bonuses = [];
+
     for (const line of lines) {
         if (bonusKeywords.test(line) && line.length > 10 && line.length < 200) {
             bonuses.push(line);
@@ -2627,13 +2942,16 @@ function extractBonuses(text) {
     }
     return Array.from(new Set(bonuses));
 }
+
 // ===== Content extraction =====
 function extractCleanTextFromHTML(html) {
     try {
         const $ = cheerio.load(html || "");
         $("script, style, noscript, iframe, nav, footer, aside").remove();
+
         const textBlocks = [];
         const selectors = ["h1", "h2", "h3", "p", "li", "span", "div"];
+
         for (const selector of selectors) {
             $(selector).each((i, element) => {
                 const text = normalizeText($(element).text() || "");
@@ -2642,11 +2960,13 @@ function extractCleanTextFromHTML(html) {
                 }
             });
         }
+
         const metaDesc = $("meta[name=\"description\"]").attr("content") ||
             $("meta[property=\"og:description\"]").attr("content") || "";
         if (metaDesc && metaDesc.trim().length > 20) {
             textBlocks.unshift(normalizeText(metaDesc.trim()));
         }
+
         const uniqueBlocks = [...new Set(textBlocks.map(b => b.trim()).filter(Boolean))];
         return uniqueBlocks.join("\n");
     } catch (error) {
@@ -2654,6 +2974,7 @@ function extractCleanTextFromHTML(html) {
         return "";
     }
 }
+
 // ===== Page extraction =====
 async function extractPageDataWithRetry(url, maxRetries = 3) {
     let lastError = null;
@@ -2718,10 +3039,12 @@ async function extractPageDataWithRetry(url, maxRetries = 3) {
         }
     };
 }
+
 async function extractPageData(url) {
     const startTime = Date.now();
     try {
         if (!url) throw new Error("URL is required");
+
         const cacheKey = url;
         const cached = getCacheData(cacheKey);
         if (cached) {
@@ -2730,6 +3053,7 @@ async function extractPageData(url) {
         }
         
         logger.info(`Starting extraction for: ${url}`);
+
         const extractedData = {
             title: "",
             description: "",
@@ -2753,6 +3077,7 @@ async function extractPageData(url) {
                 endereco: []
             }
         };
+
         let html = "";
         try {
             logger.info("Attempting Axios + Cheerio extraction...");
@@ -2774,10 +3099,12 @@ async function extractPageData(url) {
         } catch (axiosError) {
             logger.warn(`Axios extraction failed for ${url}: ${axiosError.message || axiosError}`);
         }
+
         if (html && html.length > 100) {
             try {
                 const $ = cheerio.load(html);
                 $("script, style, noscript, iframe").remove();
+
                 // Title
                 const titleSelectors = ["h1", "meta[property=\"og:title\"]", "meta[name=\"twitter:title\"]", "title"];
                 for (const selector of titleSelectors) {
@@ -2788,6 +3115,7 @@ async function extractPageData(url) {
                         break;
                     }
                 }
+
                 // Description
                 const descSelectors = ["meta[name=\"description\"]", "meta[property=\"og:description\"]", ".description", "article p", "main p"];
                 for (const selector of descSelectors) {
@@ -2798,14 +3126,19 @@ async function extractPageData(url) {
                         break;
                     }
                 }
+
                 extractedData.cleanText = extractCleanTextFromHTML(html);
+
                 const bodyText = $("body").text() || "";
                 const summaryText = bodyText.replace(/\s+/g, " ").trim();
                 const sentences = summaryText.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
                 extractedData.summary = sentences.slice(0, 3).join(". ").substring(0, 400) + (sentences.length > 3 ? "..." : "");
+
                 extractedData.bonuses_detected = extractBonuses(bodyText);
+
                 // 🎯 EXTRAIR CONTATOS
                 extractedData.contatos = sistemaContatosAprimorado.extrairContatosAprimorado($);
+
                 logger.info(`Cheerio extraction completed for ${url}`);
                 analytics.successfulExtractions++;
             } catch (cheerioError) {
@@ -2813,6 +3146,7 @@ async function extractPageData(url) {
                 analytics.failedExtractions++;
             }
         }
+
         // Puppeteer fallback
         const minAcceptableLength = 200;
         if ((!extractedData.cleanText || extractedData.cleanText.length < minAcceptableLength) && puppeteer) {
@@ -2833,11 +3167,13 @@ async function extractPageData(url) {
                     if (["stylesheet", "font", "image", "media"].includes(rt)) req.abort();
                     else req.continue();
                 });
+
                 try {
                     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 40000 });
                 } catch (gotoErr) {
                     logger.warn("Puppeteer goto failed:", gotoErr.message || gotoErr);
                 }
+
                 try {
                     await page.evaluate(async () => {
                         await new Promise((resolve) => {
@@ -2847,6 +3183,7 @@ async function extractPageData(url) {
                                 const scrollHeight = document.body.scrollHeight;
                                 window.scrollBy(0, distance);
                                 totalHeight += distance;
+
                                 if (totalHeight >= scrollHeight || totalHeight > 3000) {
                                     clearInterval(timer);
                                     resolve();
@@ -2857,6 +3194,7 @@ async function extractPageData(url) {
                 } catch (scrollErr) {
                     logger.warn("Puppeteer scroll failed:", scrollErr.message || scrollErr);
                 }
+
                 const content = await page.content();
                 const puppeteerData = await page.evaluate(() => {
                     const metaDescription = document.querySelector("meta[name=\"description\"]")?.content ||
@@ -2865,7 +3203,9 @@ async function extractPageData(url) {
                                   document.querySelector("h1")?.textContent || "";
                     return { metaDescription, title };
                 });
+
                 const finalText = extractCleanTextFromHTML(content);
+
                 if (finalText && finalText.length > extractedData.cleanText.length) {
                     extractedData.cleanText = finalText;
                     extractedData.method = "puppeteer";
@@ -2876,6 +3216,7 @@ async function extractPageData(url) {
                     extractedData.bonuses_detected = extractBonuses(finalText);
                     analytics.successfulExtractions++;
                 }
+
             } catch (puppeteerErr) {
                 logger.warn("Puppeteer extraction failed:", puppeteerErr.message || puppeteerErr);
                 analytics.failedExtractions++;
@@ -2883,6 +3224,7 @@ async function extractPageData(url) {
                 try { if (browser) await browser.close(); } catch (e) {}
             }
         }
+
         // Final processing
         try {
             if (extractedData.cleanText) extractedData.cleanText = uniqueLines(extractedData.cleanText);
@@ -2897,11 +3239,13 @@ async function extractPageData(url) {
         } catch (procErr) {
             logger.warn("Final processing failed:", procErr.message || procErr);
         }
+
         extractedData.extractionTime = Date.now() - startTime;
         
         setCacheData(cacheKey, extractedData);
         logger.info(`Extraction completed for ${url} in ${extractedData.extractionTime}ms using ${extractedData.method}`);
         return extractedData;
+
     } catch (error) {
         analytics.failedExtractions++;
         logger.error(`Page extraction failed for ${url}:`, error.message || error);
@@ -2930,17 +3274,21 @@ async function extractPageData(url) {
         };
     }
 }
+
 // ===== LLM Integration =====
 async function callGroq(messages, temperature = 0.4, maxTokens = 300) {
     if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY missing");
+
     const payload = {
         model: process.env.GROQ_MODEL || "llama-3.1-70b-versatile",
         messages,
         temperature,
         max_tokens: maxTokens
     };
+
     const url = process.env.GROQ_API_BASE || "https://api.groq.com/openai/v1/chat/completions";
     const headers = { "Authorization": `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" };
+
     try {
         const response = await axios.post(url, payload, { headers });
         return response.data.choices[0].message.content;
@@ -2949,16 +3297,20 @@ async function callGroq(messages, temperature = 0.4, maxTokens = 300) {
         throw new Error("Failed to get response from Groq API");
     }
 }
+
 async function callOpenRouter(messages, temperature = 0.4, maxTokens = 300) {
     if (!process.env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY missing");
+
     const payload = {
         model: process.env.OPENROUTER_MODEL || "mistralai/mistral-7b-instruct",
         messages,
         temperature,
         max_tokens: maxTokens
     };
+
     const url = process.env.OPENROUTER_API_BASE || "https://openrouter.ai/api/v1/chat/completions";
     const headers = { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" };
+
     try {
         const response = await axios.post(url, payload, { headers });
         return response.data.choices[0].message.content;
@@ -2967,16 +3319,20 @@ async function callOpenRouter(messages, temperature = 0.4, maxTokens = 300) {
         throw new Error("Failed to get response from OpenRouter API");
     }
 }
+
 async function callOpenAI(messages, temperature = 0.4, maxTokens = 300) {
     if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
+
     const payload = {
         model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
         messages,
         temperature,
         max_tokens: maxTokens
     };
+
     const url = process.env.OPENAI_API_BASE || "https://api.openai.com/v1/chat/completions";
     const headers = { "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" };
+
     try {
         const response = await axios.post(url, payload, { headers });
         return response.data.choices[0].message.content;
@@ -2985,13 +3341,16 @@ async function callOpenAI(messages, temperature = 0.4, maxTokens = 300) {
         throw new Error("Failed to get response from OpenAI API");
     }
 }
+
 // ===== AI Response Generation =====
 const NOT_FOUND_MSG = "Desculpe, não encontrei informações específicas sobre isso. Posso ajudar com outras dúvidas?";
+
 function shouldActivateSalesMode(instructions) {
     if (!instructions) return false;
     const salesKeywords = /(venda|vendas|compra|comprar|adquirir|produto|oferta|promoção|desconto)/i;
     return salesKeywords.test(instructions);
 }
+
 // ===== FUNÇÃO APRIMORADA DE RESPOSTA DA IA COM SUPERINTELIGÊNCIA =====
 async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null) {
     const startTime = Date.now();
@@ -2999,11 +3358,13 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         if (!userMessage || !String(userMessage).trim()) {
             return NOT_FOUND_MSG;
         }
+
         // 🎯 CORREÇÃO: Limpar mensagem de caracteres especiais
         const cleanUserMessage = String(userMessage).replace(/<s>\s*\[OUT\]/g, '').replace(/<[^>]*>/g, '').replace(/\[.*?\]/g, '').trim();
         if (!cleanUserMessage) {
             return "Desculpe, não entendi sua mensagem. Poderia reformular?";
         }
+
         // 🎯 SUPERINTELIGÊNCIA: Análise Avançada
         const userId = leadId || `user_${Date.now()}`;
         const estadoEmocional = superInteligenciaGlobal.analisarEstadoEmocional(cleanUserMessage);
@@ -3014,22 +3375,27 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             emocao: estadoEmocional.emocaoPrimaria,
             intencoes: estadoEmocional.intencoesMultiplas
         });
+
         // 🎯 OBTER MEMÓRIA DO USUÁRIO
         const memoriaUsuario = superInteligenciaGlobal.memoriaConversacional.get(userId);
+
         // 🎯 ANÁLISE DA JORNADA DO CLIENTE
         const journeyStage = journeyAnalyzer.analyzeJourneyStage(cleanUserMessage);
         const shouldMentionBonus = journeyAnalyzer.shouldMentionBonus(journeyStage, cleanUserMessage);
         const excitementWord = journeyAnalyzer.getRandomSynonym('empolgação');
+
         // Atualizar estágio do lead se existir
         if (leadId) {
             const leadSystem = getLeadSystem(process.env.API_KEYS_JSON ? JSON.parse(process.env.API_KEYS_JSON)[0] : "default");
             leadSystem.updateLeadJourneyStage(leadId, journeyStage);
         }
+
         // 🎯 DETECÇÃO APRIMORADA DE BÔNUS
         let bonusInfo = "";
         if (pageData && pageData.bonuses_detected && pageData.bonuses_detected.length > 0 && shouldMentionBonus) {
             bonusInfo = `BÔNUS DETECTADOS: ${pageData.bonuses_detected.join(', ')}. `;
         }
+
         // 🎯 INFORMAÇÕES DE CONTATO
         let contactInfo = "";
         if (pageData && pageData.contatos) {
@@ -3049,45 +3415,76 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 contactInfo += `Site: ${contatos.site[0]}. `;
             }
         }
+
         // 🎯 PROMPT SUPERINTELIGENTE
         const systemPrompt = `Você é um assistente de vendas SUPERINTELIGENTE com capacidades humanas avançadas.
+
 🧠 CAPACIDADES COGNITIVAS AVANÇADAS:
 - Detecção de sarcasmo, ironia e nuances emocionais
 - Compreensão de múltiplas intenções em uma única mensagem  
 - Memória conversacional de longo prazo
 - Adaptação de personalidade conforme contexto
 - Respostas empáticas e contextualizadas
+
 🎭 ESTADO EMOCIONAL DETECTADO: ${estadoEmocional.emocaoPrimaria.toUpperCase()} 
 ${estadoEmocional.emocaoSecundaria ? `+ ${estadoEmocional.emocaoSecundaria.toUpperCase()}` : ''}
 ${estadoEmocional.sarcasmo ? '🎭 SARCASMO DETECTADO' : ''}
 ${estadoEmocional.urgencia ? '🚨 URGÊNCIA IDENTIFICADA' : ''}
+
 🎯 JORNADA DO CLIENTE: ${journeyStage.toUpperCase()}
+
 DESCOBERTA: Cliente buscando informações básicas
+
 NEGOCIAÇÃO: Cliente interessado em preços e condições
+
 FIDELIZAÇÃO: Cliente com dúvidas sobre suporte e uso
+
 📊 CONTEXTO DA PÁGINA:
+
 Título: ${pageData.title || 'Não disponível'}
+
 Descrição: ${pageData.description || 'Não disponível'}
+
 ${bonusInfo}
+
 ${contactInfo}
+
 URL: ${pageData.url || 'Não disponível'}
+
 🧩 INTENÇÕES IDENTIFICADAS: ${estadoEmocional.intencoesMultiplas.join(', ') || 'Nenhuma específica'}
+
 🎨 DIRETRIZES DE RESPOSTA SUPERINTELIGENTE:
+
 Adapte sua personalidade ao estado emocional (${estadoEmocional.emocaoPrimaria})
+
 Responda às ${estadoEmocional.intencoesMultiplas.length} intenções detectadas
+
 Use linguagem natural com elementos conversacionais ("hmm", "veja bem", "então")
+
 Seja genuíno e humano - admita limitações quando necessário
+
 Mantenha coerência com histórico conversacional
+
 Use humor contextual quando apropriado (${estadoEmocional.sarcasmo ? 'especial cuidado com sarcasmo' : 'discreto'})
+
 ${estadoEmocional.urgencia ? 'PRIORIDADE MÁXIMA - resposta rápida e direta' : 'Ritmo natural de conversa'}
+
 Instruções personalizadas: ${instructions}
+
 🧠 RESPONDA em português como um humano superinteligente, mostrando:
+
 Empatia contextualizada
+
 Personalidade consistente
+
 Memória de interações
+
 Naturalidade conversacional
+
 Inteligência emocional
+
 NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
+
         const messages = [
             {
                 role: "system",
@@ -3096,8 +3493,10 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
             ...conversationHistory,
             { role: "user", content: cleanUserMessage }
         ];
+
         let response = "";
         let usedProvider = "none";
+
         // Try Groq first
         if (process.env.GROQ_API_KEY) {
             try {
@@ -3108,6 +3507,7 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
                 logger.warn(`Groq failed: ${groqError.message || groqError}`);
             }
         }
+
         // Try OpenRouter if Groq failed
         if (!response && process.env.OPENROUTER_API_KEY) {
             try {
@@ -3118,6 +3518,7 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
                 logger.warn(`OpenRouter failed: ${openrouterError.message || openrouterError}`);
             }
         }
+
         // Try OpenAI if others failed
         if (!response && process.env.OPENAI_API_KEY) {
             try {
@@ -3128,6 +3529,7 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
                 logger.warn(`OpenAI failed: ${openaiError.message || openaiError}`);
             }
         }
+
         // 🎯 SUPERINTELIGÊNCIA: Aplicar processamento avançado se resposta da IA disponível
         if (response && String(response).trim()) {
             const respostaSuperInteligente = superInteligenciaGlobal.gerarRespostaSuperInteligente(
@@ -3140,14 +3542,17 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
             // Combinar resposta da IA com superinteligência
             response = combinarRespostas(response, respostaSuperInteligente, estadoEmocional);
         }
+
         if (!response || !String(response).trim()) {
             response = generateLocalResponse(cleanUserMessage, pageData, instructions, journeyStage);
             usedProvider = "local";
         }
+
         // 🎯 APRENDIZADO CONTÍNUO
         superInteligenciaGlobal.aprenderDaInteracao(userId, cleanUserMessage, response, {
             engajamento: analisarEngajamento(cleanUserMessage, response)
         });
+
         // 🎯 CORREÇÃO FINAL: Limpar resposta de qualquer caractere especial
         const finalResponse = String(response).replace(/<s>\s*\[OUT\]/g, '').replace(/<[^>]*>/g, '').replace(/\[.*?\]/g, '').trim();
         const responseTime = Date.now() - startTime;
@@ -3161,11 +3566,13 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         
         logger.info(`AI response generated in ${responseTime}ms using ${usedProvider}`);
         return finalResponse;
+
     } catch (error) {
         logger.error("AI response generation failed:", error.message || error);
         return NOT_FOUND_MSG;
     }
 }
+
 // 🎯 NOVA FUNÇÃO: Combinar respostas da IA com superinteligência
 function combinarRespostas(respostaIA, respostaSuperInteligente, estadoEmocional) {
     // Se a resposta da IA já é boa, manter com melhorias da superinteligência
@@ -3179,12 +3586,15 @@ function combinarRespostas(respostaIA, respostaSuperInteligente, estadoEmocional
             return `😊 ${respostaIA}`;
         }
     }
+
     // Usar resposta superinteligente se a IA falhou
     return respostaSuperInteligente || respostaIA;
 }
+
 // 🎯 NOVA FUNÇÃO: Analisar engajamento para aprendizado
 function analisarEngajamento(mensagemUsuario, resposta) {
     const mensagemLower = mensagemUsuario.toLowerCase();
+
     return {
         continuouConversa: !mensagemLower.includes('tchau') && !mensagemLower.includes('obrigado'),
         fezPergunta: mensagemLower.includes('?') || 
@@ -3196,6 +3606,7 @@ function analisarEngajamento(mensagemUsuario, resposta) {
         nivel: calcularNivelEngajamento(mensagemUsuario)
     };
 }
+
 function calcularNivelEngajamento(mensagem) {
     let score = 0;
     score += (mensagem.split(' ').length > 5) ? 1 : 0;
@@ -3203,10 +3614,12 @@ function calcularNivelEngajamento(mensagem) {
     score += (mensagem.includes('obrigado') || mensagem.includes('valeu')) ? 0.5 : 0;
     return score;
 }
+
 function generateLocalResponse(userMessage, pageData = {}, instructions = "", journeyStage = "descoberta") {
     const question = (userMessage || "").toLowerCase();
     const salesMode = shouldActivateSalesMode(instructions);
     const excitementWord = journeyAnalyzer.getRandomSynonym('empolgação');
+
     // 🎯 RESPOSTA INTELIGENTE BASEADA NA JORNADA
     if (/bônus|bonus|brinde|presente|extra|grátis/.test(question)) {
         if (pageData.bonuses_detected && pageData.bonuses_detected.length > 0) {
@@ -3216,9 +3629,11 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
             return "🔍 Analisei a página cuidadosamente e não identifiquei bônus específicos no momento. Mas você ainda tem acesso a todos os benefícios do produto!";
         }
     }
+
     if (/preço|valor|quanto custa|investimento/.test(question)) {
         return "💰 Para informações detalhadas sobre preços e condições de pagamento, consulte diretamente a página do produto onde você encontrará todas as opções disponíveis.";
     }
+
     if (/contato|telefone|whatsapp|email|falar|ligar|ligação/.test(question)) {
         let contactResponse = "📞 **Opções de contato disponíveis:**\n\n";
         
@@ -3244,6 +3659,7 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
         contactResponse += "\nFique à vontade para entrar em contato por qualquer um desses canais!";
         return contactResponse;
     }
+
     if (/como funciona|funcionamento|o que é/.test(question)) {
         const summary = pageData.summary || pageData.description;
         if (summary) {
@@ -3251,22 +3667,27 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
             return `${shortSummary} Posso esclarecer mais algum aspecto específico para você?`;
         }
     }
+
     if (/suporte|atendimento|dúvida|problema|ajuda/.test(question)) {
         return "🛟 Para suporte técnico ou dúvidas específicas sobre o uso, recomendo entrar em contato diretamente com nossa equipe de atendimento que terá prazer em ajudar!";
     }
+
     if (pageData.summary) {
         const summary = clampSentences(pageData.summary, 2);
         return journeyStage === "negociacao" 
             ? `${summary} Gostaria de saber mais sobre valores e condições?` 
             : summary;
     }
+
     return NOT_FOUND_MSG;
 }
+
 // ===== API Routes =====
 app.get("/health", (req, res) => {
     const uptime = process.uptime();
     const avgResponseTime = analytics.responseTimeHistory.length > 0 ?
     Math.round(analytics.responseTimeHistory.reduce((a, b) => a + b, 0) / analytics.responseTimeHistory.length) : 0;
+
     res.json({
         status: "healthy",
         uptime: Math.floor(uptime),
@@ -3293,6 +3714,7 @@ app.get("/health", (req, res) => {
         }
     });
 });
+
 // ===== ENDPOINT: Captura de Lead =====
 // 🛡️ ATUALIZAR: Adicionar proteção CSRF  
 app.post("/api/capture-lead", 
@@ -3302,12 +3724,14 @@ app.post("/api/capture-lead",
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName } = req.body || {};
+
         if (!email) {
             return res.status(400).json({ 
                 success: false, 
                 error: "Email é obrigatório" 
             });
         }
+
         // Verificar se lead já existe
         const existingLead = leadSystem.findLeadByEmail(email);
         if (existingLead) {
@@ -3317,6 +3741,7 @@ app.post("/api/capture-lead",
                 message: "Lead atualizado com sucesso" 
             });
         }
+
         // Criar novo lead
         const newLead = leadSystem.addLead({
             nome: nome || "Não informado",
@@ -3325,14 +3750,17 @@ app.post("/api/capture-lead",
             url_origem: url_origem || "",
             robotName: robotName || "Assistente IA"
         });
+
         analytics.leadsCaptured++;
         
         console.log(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
+
         res.json({ 
             success: true, 
             lead: newLead,
             message: "Lead capturado com sucesso" 
         });
+
     } catch (error) {
         console.error("❌ Erro ao capturar lead:", error);
         res.status(500).json({ 
@@ -3341,10 +3769,12 @@ app.post("/api/capture-lead",
         });
     }
 });
+
 // ===== ENDPOINT: Obter Token JWT para Widget =====
 app.post('/api/auth/widget-token', async (req, res) => {
     try {
         const { apiKey, domain } = req.body;
+
         // Validações básicas
         if (!apiKey || !domain) {
             return res.status(400).json({
@@ -3352,6 +3782,7 @@ app.post('/api/auth/widget-token', async (req, res) => {
                 error: 'API Key e domínio são obrigatórios'
             });
         }
+
         // Validar API Key (usando sistema existente)
         const validation = validateApiKey(apiKey);
         if (!validation.success) {
@@ -3360,6 +3791,7 @@ app.post('/api/auth/widget-token', async (req, res) => {
                 error: 'API Key inválida'
             });
         }
+
         // Validar domínio (opcional - para segurança extra)
         const allowedDomains = [
             'localhost', 
@@ -3375,14 +3807,17 @@ app.post('/api/auth/widget-token', async (req, res) => {
                 error: 'Domínio não autorizado'
             });
         }
+
         // Gerar token JWT
         const token = authSystem.generateWidgetToken(apiKey, domain);
+
         res.json({
             success: true,
             token: token,
             expiresIn: '15 minutes',
             tokenType: 'Bearer'
         });
+
     } catch (error) {
         console.error('❌ Erro ao gerar token:', error);
         res.status(500).json({
@@ -3391,6 +3826,7 @@ app.post('/api/auth/widget-token', async (req, res) => {
         });
     }
 });
+
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 // 🛡️ ATUALIZAR: Adicionar proteção CSRF
 app.post("/api/chat-universal", 
@@ -3401,30 +3837,38 @@ app.post("/api/chat-universal",
     analytics.chatRequests++;
     try {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
+
         if (!message) {
             return res.status(400).json({ 
                 success: false, 
                 error: "Mensagem é obrigatória" 
             });
         }
+
         if (conversationId) {
             analytics.activeChats.add(conversationId);
             setTimeout(() => analytics.activeChats.delete(conversationId), 30 * 60 * 1000);
         }
+
         let processedPageData = pageData;
         if (!processedPageData && url) {
             processedPageData = await extractPageData(url);
         }
+
         // 🎯 ATUALIZAR CONVERSA DO LEAD SE EXISTIR
         if (leadId) {
             leadSystem.updateLeadConversation(leadId, message, true);
         }
+
         const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
+
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
         if (leadId) {
             leadSystem.updateLeadConversation(leadId, aiResponse, false);
         }
+
         let finalResponse = aiResponse;
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -3436,6 +3880,7 @@ app.post("/api/chat-universal",
                 method: processedPageData?.method || "none"
             }
         });
+
     } catch (error) {
         analytics.errors++;
         logger.error("Chat endpoint error:", error.message || error);
@@ -3446,6 +3891,7 @@ app.post("/api/chat-universal",
         });
     }
 });
+
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 // 🛡️ ATUALIZAR: Adicionar proteção CSRF
 app.post("/api/process-chat-inteligente", 
@@ -3456,25 +3902,30 @@ app.post("/api/process-chat-inteligente",
     analytics.chatRequests++;
     try {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
+
         if (!message) {
             return res.status(400).json({ 
                 success: false, 
                 error: "Mensagem é obrigatória" 
             });
         }
+
         console.log('🧠 [SUPER-INTELIGENCIA] Processando mensagem:', { 
             messageLength: message.length,
             url: url || 'none',
             leadId: leadId || 'none'
         });
+
         if (conversationId) {
             analytics.activeChats.add(conversationId);
             setTimeout(() => analytics.activeChats.delete(conversationId), 30 * 60 * 1000);
         }
+
         let processedPageData = pageData;
         if (!processedPageData && url) {
             processedPageData = await extractPageData(url);
         }
+
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);
         
@@ -3490,12 +3941,15 @@ app.post("/api/process-chat-inteligente",
             analiseEmocional.intensidade, 
             journeyStage
         );
+
         // 🎯 ATUALIZAR CONVERSA DO LEAD SE EXISTIR
         if (leadId) {
             leadSystem.updateLeadConversation(leadId, message, true);
             leadSystem.updateLeadJourneyStage(leadId, journeyStage);
         }
+
         let finalResponse = "";
+
         // 🎯 DETECTAR AGENDAMENTO
         const respostaAgendamento = superInteligencia.detectarAgendamento(message);
         if (respostaAgendamento) {
@@ -3543,10 +3997,12 @@ app.post("/api/process-chat-inteligente",
             
             console.log(`🤖 Resposta IA com melhorias emocionais`);
         }
+
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
         if (leadId) {
             leadSystem.updateLeadConversation(leadId, finalResponse, false);
         }
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -3563,6 +4019,7 @@ app.post("/api/process-chat-inteligente",
                 sistema: "super-inteligencia-v1"
             }
         });
+
     } catch (error) {
         analytics.errors++;
         logger.error("Super inteligencia endpoint error:", error.message || error);
@@ -3573,6 +4030,7 @@ app.post("/api/process-chat-inteligente",
         });
     }
 });
+
 // ===== ENDPOINT APRIMORADO DE EXTRAÇÃO =====
 app.post("/api/extract-enhanced", 
     csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
@@ -3580,6 +4038,7 @@ app.post("/api/extract-enhanced",
     analytics.extractRequests++;
     try {
         const { url } = req.body || {};
+
         console.log("📥 [EXTRACAO APRIMORADA] Recebendo requisição para:", url);
         
         if (!url) {
@@ -3588,6 +4047,7 @@ app.post("/api/extract-enhanced",
                 error: "URL é obrigatório" 
             });
         }
+
         try { 
             new URL(url); 
         } catch (urlErr) { 
@@ -3596,6 +4056,7 @@ app.post("/api/extract-enhanced",
                 error: "URL inválido" 
             }); 
         }
+
         const extractedData = await sistemaExtracao.extrairDadosCompletos(url);
         
         if (extractedData.erro) {
@@ -3604,6 +4065,7 @@ app.post("/api/extract-enhanced",
                 error: extractedData.erro 
             });
         }
+
         const validacao = sistemaValidacao.validarDadosCompletos(extractedData);
         
         console.log("✅ [EXTRACAO APRIMORADA] Concluída com sucesso");
@@ -3620,6 +4082,7 @@ app.post("/api/extract-enhanced",
                 totalBonus: validacao.dadosValidados.bonus.length
             }
         });
+
     } catch (error) {
         analytics.errors++;
         console.error("❌ Erro no endpoint /api/extract-enhanced:", error);
@@ -3631,6 +4094,7 @@ app.post("/api/extract-enhanced",
         });
     }
 });
+
 // /api/extract endpoint (ORIGINAL - mantido para compatibilidade)
 app.post("/api/extract",
     csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
@@ -3638,6 +4102,7 @@ app.post("/api/extract",
     analytics.extractRequests++;
     try {
         const { url, instructions, robotName } = req.body || {};
+
         console.log("📥 Recebendo requisição para extrair:", url);
         
         if (!url) {
@@ -3646,6 +4111,7 @@ app.post("/api/extract",
                 error: "URL é obrigatório" 
             });
         }
+
         try { 
             new URL(url); 
         } catch (urlErr) { 
@@ -3654,18 +4120,21 @@ app.post("/api/extract",
                 error: "URL inválido" 
             }); 
         }
+
         logger.info(`Starting extraction for URL: ${url}`);
         
         const extractedData = await extractPageData(url);
         
         if (instructions) extractedData.custom_instructions = instructions;
         if (robotName) extractedData.robot_name = robotName;
+
         console.log("✅ Extração concluída com sucesso");
         
         return res.json({ 
             success: true, 
             data: extractedData 
         });
+
     } catch (error) {
         analytics.errors++;
         console.error("❌ Erro no endpoint /api/extract:", error);
@@ -3678,11 +4147,13 @@ app.post("/api/extract",
         });
     }
 });
+
 // ===== FUNÇÃO: Geração Completa do HTML do Chatbot =====
 function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '') {
     const escapedPageData = JSON.stringify(pageData || {});
     const safeRobotName = String(robotName || 'Assistente IA').replace(/"/g, '&quot;');
     const safeInstructions = String(customInstructions || '').replace(/"/g, '&quot;');
+
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
         telefone: [],
@@ -3691,7 +4162,9 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         site: [pageData.url || ''],
         endereco: []
     };
+
     const botoesFixos = gerarBotoesFixos(contatos, safeRobotName);
+
     return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -3779,12 +4252,14 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         const startChatBtn = document.getElementById('startChat');
         let leadId = null;
         let agendamentoAtivo = false;
+
         // Função para iniciar agendamento
         function iniciarAgendamento() {
             const mensagem = "Gostaria de agendar uma reunião";
             messageInput.value = mensagem;
             sendMessage();
         }
+
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
             const name = document.getElementById('leadName').value.trim();
@@ -3820,6 +4295,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 alert('Erro ao processar. Tente novamente.');
             }
         });
+
         function addMessage(text, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = \`chat-message \${isUser ? 'user' : 'bot'}\`;
@@ -3827,6 +4303,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
+
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message) return;
@@ -3861,20 +4338,24 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 messageInput.focus();
             }
         }
+
         sendButton.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
+
         // Auto-focus no primeiro campo do formulário
         document.getElementById('leadName').focus();
     </script>
 </body>
 </html>`;
 }
+
 function generateChatbotHTML({ robotName, url, instructions }) {
     const escapedRobotName = String(robotName).replace(/"/g, "&quot;");
     const escapedUrl = String(url).replace(/"/g, "&quot;");
     const escapedInstructions = String(instructions).replace(/"/g, "&quot;");
+
     return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -3966,6 +4447,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         };
         let isTyping = false;
         let leadId = null;
+
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
             const name = document.getElementById('leadName').value.trim();
@@ -4000,6 +4482,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 alert('Erro ao processar. Tente novamente.');
             }
         });
+
         function addMessage(content, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'chat-message ' + (isUser ? 'user' : 'bot');
@@ -4007,15 +4490,18 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
+
         function showTyping() {
             isTyping = true;
             typingIndicator.style.display = 'flex';
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
+
         function hideTyping() {
             isTyping = false;
             typingIndicator.style.display = 'none';
         }
+
         async function sendMessage() {
             const message = chatInput.value.trim();
             if (!message || isTyping) return;
@@ -4051,6 +4537,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 chatInput.focus();
             }
         }
+
         sendButton.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -4058,12 +4545,14 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 sendMessage();
             }
         });
+
         // Auto-focus no primeiro campo do formulário
         document.getElementById('leadName').focus();
     </script>
 </body>
 </html>`;
 }
+
 // Widget JS v7.1 - Com Sistema de Autenticação JWT
 (function() {
     'use strict';
@@ -4155,16 +4644,20 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 }
             }
         },
+
         getApiKeyFromQuery: function(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
         },
+
         getStoredApiKey: function() {
             return localStorage.getItem("lm_api_key");
         },
+
         storeApiKey: function(apiKey) {
             localStorage.setItem("lm_api_key", apiKey);
         },
+
         init: function(userConfig) {
             this.config = Object.assign(this.config, userConfig || {});
             
@@ -4285,6 +4778,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             var messages = document.getElementById('lm-messages');
             var leadForm = document.getElementById('lm-lead-form');
             var leadSubmit = document.getElementById('lm-lead-submit');
+
             button.addEventListener('click', function() {
                 chat.style.display = chat.style.display === 'none' ? 'flex' : 'none';
                 if (this.config.captureLeads && !this.leadId) {
@@ -4293,10 +4787,13 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                     send.style.display = 'none';
                 }
             }.bind(this));
+
             close.addEventListener('click', function() {
                 chat.style.display = 'none';
             });
+
             leadSubmit.addEventListener('click', this.captureLead.bind(this));
+
             send.addEventListener('click', this.sendMessage.bind(this));
             input.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
@@ -4304,14 +4801,17 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 }
             }.bind(this));
         },
+
         captureLead: async function() {
             var name = document.getElementById('lm-lead-name').value.trim();
             var email = document.getElementById('lm-lead-email').value.trim();
             var phone = document.getElementById('lm-lead-phone').value.trim();
+
             if (!email) {
                 alert('Por favor, informe seu email');
                 return;
             }
+
             try {
                 // 🎯 ATUALIZADO: Usar requisição autenticada
                 const response = await this.auth.authenticatedRequest(
@@ -4327,7 +4827,9 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                         })
                     }
                 );
+
                 const data = await response.json();
+
                 if (data.success) {
                     this.leadId = data.lead.id;
                     this.storeLeadId(this.leadId);
@@ -4346,23 +4848,28 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 alert('Erro ao processar. Tente novamente.');
             }
         },
+
         getStoredLeadId: function() {
             return localStorage.getItem('lm_lead_id');
         },
+
         storeLeadId: function(leadId) {
             localStorage.setItem('lm_lead_id', leadId);
         },
+
         sendMessage: async function() {
             var input = document.getElementById('lm-input');
             var messages = document.getElementById('lm-messages');
             var message = input.value.trim();
             if (!message) return;
+
             var userMsg = document.createElement('div');
             userMsg.className = 'lm-msg lm-user';
             userMsg.textContent = message;
             messages.appendChild(userMsg);
             input.value = '';
             messages.scrollTop = messages.scrollHeight;
+
             try {
                 // 🎯 ATUALIZADO: Usar requisição autenticada
                 const response = await this.auth.authenticatedRequest(
@@ -4381,11 +4888,13 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 );
                 
                 const data = await response.json();
+
                 var botMsg = document.createElement('div');
                 botMsg.className = 'lm-msg lm-bot';
                 botMsg.textContent = data.response || 'Desculpe, ocorreu um erro.';
                 messages.appendChild(botMsg);
                 messages.scrollTop = messages.scrollHeight;
+
             } catch (error) {
                 console.error('Widget chat error:', error);
                 var errorMsg = document.createElement('div');
@@ -4396,19 +4905,25 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             }
         }
     };
+
     window.LinkMagicoWidget = LinkMagicoWidget;
     if (window.LinkMagicoWidgetConfig) {
         window.LinkMagicoWidget.init(window.LinkMagicoWidgetConfig);
     }
 })();`);
+
 // ===== CONFIGURAR NOVAS ROTAS =====
 setupRoutes(app);
+
 // ===== INICIALIZAR SISTEMAS =====
 (async () => {
     await initialize();
+
     // Iniciar servidor
     const PORT = process.env.PORT || 3000;
+
     // ===== ROTAS DAS NOVAS INTEGRAÇÕES V3.0 =====
+
     // Gmail Integration
     app.post('/api/gmail/send', async (req, res) => {
         try {
@@ -4420,10 +4935,12 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     app.get('/api/gmail/status', (req, res) => {
         const status = gmailManager.getStatus();
         res.json(status);
     });
+
     // WhatsApp Integration
     app.post('/api/whatsapp/send', async (req, res) => {
         try {
@@ -4435,10 +4952,12 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     app.get('/api/whatsapp/status', (req, res) => {
         const status = whatsappManager.getStatus();
         res.json(status);
     });
+
     // ChatGPT Integration
     app.post('/api/chatgpt/generate', async (req, res) => {
         try {
@@ -4450,14 +4969,17 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     app.get('/api/chatgpt/status', (req, res) => {
         const status = chatgptManager.getStatus();
         res.json(status);
     });
+
     app.get('/api/chatgpt/models', (req, res) => {
         const models = chatgptManager.getAvailableModels();
         res.json(models);
     });
+
     // Whitelabel System
     app.post('/api/whitelabel/:chatbotId', async (req, res) => {
         try {
@@ -4470,6 +4992,7 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     app.get('/api/whitelabel/:chatbotId', async (req, res) => {
         try {
             const { chatbotId } = req.params;
@@ -4480,11 +5003,13 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     // Structured Leads
     app.post('/api/leads/structured', async (req, res) => {
         try {
             const { chatbotId, leadData, metadata } = req.body;
             const lead = await structuredLeadsManager.saveLead(chatbotId, leadData, metadata);
+
             // Enviar notificações
             if (process.env.GMAIL_USER) {
                 await gmailManager.sendLeadNotification(lead);
@@ -4499,6 +5024,7 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     app.get('/api/leads/structured/:chatbotId', async (req, res) => {
         try {
             const { chatbotId } = req.params;
@@ -4510,6 +5036,7 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     app.get('/api/leads/export/:chatbotId', async (req, res) => {
         try {
             const { chatbotId } = req.params;
@@ -4522,6 +5049,7 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     app.get('/api/leads/stats/:chatbotId', async (req, res) => {
         try {
             const { chatbotId } = req.params;
@@ -4532,11 +5060,13 @@ setupRoutes(app);
             res.status(500).json({ success: false, error: error.message });
         }
     });
+
     // CRM Integrations (documentação)
     app.get('/api/crm/templates', (req, res) => {
         const templates = crmIntegrations.getAllTemplates();
         res.json({ success: true, templates });
     });
+
     app.get('/api/crm/templates/:crm', (req, res) => {
         const { crm } = req.params;
         const template = crmIntegrations.getTemplate(crm);
@@ -4546,27 +5076,30 @@ setupRoutes(app);
             res.status(404).json({ success: false, error: 'CRM não encontrado' });
         }
     });
+
     console.log('✅ Rotas V3.0 configuradas');
+
     app.listen(PORT, '0.0.0.0', () => {
     logger.info('Server running on port ' + PORT);
+
     console.log("Servidor rodando em http://0.0.0.0:" + PORT);
     console.log("Dashboard: http://0.0.0.0:" + PORT + "/api/system/status");
     console.log("LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:" + PORT);
     console.log("Health check: http://0.0.0.0:" + PORT + "/health");
     console.log("Chatbot disponível em: http://0.0.0.0:" + PORT + "/chatbot");
     console.log("Widget JS disponível em: http://0.0.0.0:" + PORT + "/public/widget.js");
-    console.log("Sistema de captura de leads PERSISTENTE ATIVADO");
+    console.log(`Sistema de captura de leads PERSISTENTE ATIVADO`);
     console.log("Painel de leads: http://0.0.0.0:" + PORT + "/admin/leads");
-    console.log("Extração de contatos: ATIVADA");
-    console.log("SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA");
-    console.log("Detecção de sarcasmo e ironia: IMPLEMENTADA");
-    console.log("Análise de múltiplas intenções: FUNCIONANDO");
-    console.log("Memória conversacional avançada: OPERACIONAL");
-    console.log("Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL");
-    console.log("Detecção de urgência: ATIVADA");
-    console.log("Sistema de agendamento: IMPLEMENTADO");
-    console.log("Botões fixos no topo: FUNCIONANDO");
-    console.log("Jornada do cliente: Análise inteligente ATIVADA");
+    console.log(`Extração de contatos: ATIVADA`);
+    console.log(`SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA`);
+    console.log(`Detecção de sarcasmo e ironia: IMPLEMENTADA`);
+    console.log(`Análise de múltiplas intenções: FUNCIONANDO`);
+    console.log(`Memória conversacional avançada: OPERACIONAL`);
+    console.log(`Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL`);
+    console.log(`Detecção de urgência: ATIVADA`);
+    console.log(`Sistema de agendamento: IMPLEMENTADO`);
+    console.log(`Botões fixos no topo: FUNCIONANDO`);
+    console.log(`Jornada do cliente: Análise inteligente ATIVADA`);
     console.log("Endpoint superinteligente: /api/process-chat-inteligente");
-    console.log("SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!");
+    console.log(`SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
 });
