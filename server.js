@@ -5088,10 +5088,11 @@ setupRoutes(app);
         }
     });
 
-    console.log('✅ Rotas V3.0 configuradas');
+ console.log('✅ Rotas V3.0 configuradas');
 
 app.listen(PORT, '0.0.0.0', () => {
     logger.info('Server running on port ' + PORT);
+
     console.log(`Servidor rodando em http://0.0.0.0:${PORT}`);
     console.log(`Dashboard: http://0.0.0.0:${PORT}/api/system/status`);
     console.log(`LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:${PORT}`);
