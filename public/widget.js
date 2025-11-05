@@ -1,3 +1,5 @@
+[file name]: widget.js
+[file content begin]
 // LinkMágico Commercial Widget v6.0
 // Enterprise-grade chatbot widget with security and analytics
 (function(window, document) {
@@ -34,7 +36,11 @@
             maxMessageLength: 500,
             rateLimitWindow: 60000, // 1 minute
             maxMessagesPerWindow: 10,
-            messageHistory: []
+            messageHistory: [],
+            // Novas propriedades de segurança JWT
+            token: null,
+            tokenExpiry: null,
+            isAuthenticated: false
         },
 
         // Default configuration
@@ -47,7 +53,7 @@
             robotName: 'Assistente IA',
             salesUrl: '',
             instructions: '',
-            apiBase: currentScript.src.split('/public/widget.js')[0],
+            apiBase: window.location.origin,
             showBadge: true,
             autoOpen: false,
             openDelay: 5000,
@@ -72,6 +78,13 @@
             retryAttempts: 3,
             timeout: 15000,
             
+            // Novas propriedades de segurança
+            apiKey: '', // Chave da API para autenticação
+            baseURL: 'https://linkmagico-comercial.onrender.com',
+            enableJWT: true, // Habilitar autenticação JWT
+            autoRefreshToken: true,
+            tokenRefreshMargin: 2 * 60 * 1000, // 2 minutos
+            
             // Callbacks
             onOpen: null,
             onClose: null,
@@ -81,7 +94,7 @@
         },
 
         // Initialize the widget
-        init: function(userConfig) {
+        init: async function(userConfig) {
             if (this.initialized) {
                 console.warn('LinkMagico Widget already initialized');
                 return;
@@ -91,9 +104,9 @@
                 // Merge configuration
                 this.config = this.mergeConfig(this.config, userConfig || {});
                 
-                // Validate domain (if configured on server)
-                if (!this.validateDomain()) {
-                    console.error('LinkMagico Widget: Domain not authorized');
+                // Validar domínio e obter token JWT
+                if (!await this.initializeSecurity()) {
+                    console.error('LinkMagico Widget: Security initialization failed');
                     return;
                 }
 
@@ -117,6 +130,110 @@
                 console.error('LinkMagico Widget initialization failed:', error);
                 this.handleError('initialization_failed', error.message);
             }
+        },
+
+        // Initialize security system
+        initializeSecurity: async function() {
+            try {
+                if (this.config.enableJWT && this.config.apiKey) {
+                    await this.obtainToken();
+                    this.security.isAuthenticated = true;
+                    console.log('✅ Widget seguro inicializado com token JWT');
+                } else {
+                    // Fallback para sistema antigo
+                    console.log('🔐 Usando sistema de autenticação legado');
+                    return this.validateDomain();
+                }
+                return true;
+            } catch (error) {
+                console.error('❌ Erro na inicialização de segurança:', error);
+                // Fallback para sistema legado
+                return this.validateDomain();
+            }
+        },
+
+        // Obtain JWT token
+        obtainToken: async function() {
+            try {
+                const response = await fetch(`${this.config.baseURL}/api/auth/widget-token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        apiKey: this.config.apiKey,
+                        domain: window.location.hostname
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Falha ao obter token');
+                }
+
+                this.security.token = data.token;
+                this.security.tokenExpiry = Date.now() + (15 * 60 * 1000); // 15 minutos
+
+                // Agendar renovação automática se configurado
+                if (this.config.autoRefreshToken) {
+                    this.scheduleTokenRefresh();
+                }
+
+                return data.token;
+
+            } catch (error) {
+                console.error('Erro ao obter token JWT:', error);
+                throw error;
+            }
+        },
+
+        // Schedule token refresh
+        scheduleTokenRefresh: function() {
+            const refreshTime = this.security.tokenExpiry - this.config.tokenRefreshMargin;
+            const timeUntilRefresh = refreshTime - Date.now();
+
+            if (timeUntilRefresh > 0) {
+                setTimeout(() => {
+                    this.obtainToken().catch(error => {
+                        console.error('Falha ao renovar token:', error);
+                        this.handleError('token_refresh_failed', error.message);
+                    });
+                }, timeUntilRefresh);
+            }
+        },
+
+        // Make secure request
+        makeSecureRequest: async function(endpoint, data) {
+            // Verificar se token está expirado
+            if (!this.security.token || Date.now() >= this.security.tokenExpiry) {
+                await this.obtainToken();
+            }
+
+            const response = await fetch(`${this.config.baseURL}${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.security.token}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.status === 401) {
+                // Token expirado, tentar renovar uma vez
+                await this.obtainToken();
+                return this.makeSecureRequest(endpoint, data);
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return response.json();
         },
 
         // Deep merge configuration objects
@@ -1148,7 +1265,8 @@
                 // Track message
                 this.trackEvent('message_sent', {
                     length: message.length,
-                    messageCount: this.messageCount
+                    messageCount: this.messageCount,
+                    secure: this.security.isAuthenticated
                 });
 
                 // Send to API with retries
@@ -1162,7 +1280,7 @@
             }
         },
 
-        // Enhanced API call with retry logic
+        // Enhanced API call with JWT security
         callAPI: function(message, retryCount) {
             var self = this;
             retryCount = retryCount || 0;
@@ -1175,6 +1293,80 @@
                 conversationId: this.conversationId
             };
 
+            // Usar sistema seguro se JWT estiver habilitado e autenticado
+            if (this.config.enableJWT && this.security.isAuthenticated) {
+                this.makeSecureRequest('/api/chat-universal', payload)
+                    .then(function(data) {
+                        self.handleAPIResponse(data, message);
+                    })
+                    .catch(function(error) {
+                        self.handleAPIError(error, message, retryCount);
+                    });
+            } else {
+                // Fallback para sistema antigo
+                this.makeLegacyAPIRequest(message, retryCount, payload);
+            }
+        },
+
+        // Handle API response
+        handleAPIResponse: function(data, message) {
+            this.hideTyping();
+            this.setInputState(true);
+
+            if (data.success && data.response) {
+                this.addMessage(data.response, false);
+                
+                // Handle bonuses if present
+                if (data.bonuses_detected && data.bonuses_detected.length > 0) {
+                    var bonusText = "🎁 Bônus inclusos: " + data.bonuses_detected.slice(0, 3).join(", ");
+                    setTimeout(() => {
+                        this.addMessage(bonusText, false);
+                    }, 500);
+                }
+
+                // Track successful response
+                this.trackEvent('message_received', {
+                    hasBonus: !!(data.bonuses_detected && data.bonuses_detected.length > 0),
+                    secure: this.security.isAuthenticated
+                });
+
+                // Callback
+                if (this.config.onMessage) {
+                    this.config.onMessage(message, data.response);
+                }
+            } else {
+                throw new Error(data.error || 'Invalid response format');
+            }
+        },
+
+        // Handle API errors
+        handleAPIError: function(error, message, retryCount) {
+            this.hideTyping();
+            this.setInputState(true);
+            
+            if (retryCount < this.config.retryAttempts) {
+                // Retry with exponential backoff
+                var delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+                setTimeout(() => {
+                    this.callAPI(message, retryCount + 1);
+                }, delay);
+                return;
+            }
+
+            this.handleError('api_failed', 'Erro de conexão: ' + error.message);
+
+            // Track error
+            this.trackEvent('message_error', {
+                error: error.message,
+                retryCount: retryCount,
+                secure: this.security.isAuthenticated
+            });
+        },
+
+        // Legacy API request (sistema antigo)
+        makeLegacyAPIRequest: function(message, retryCount, payload) {
+            var self = this;
+            
             var headers = {
                 'Content-Type': 'application/json',
                 'X-Widget-Token': this.token
@@ -1198,63 +1390,10 @@
                 return response.json();
             })
             .then(function(data) {
-                self.hideTyping();
-                self.setInputState(true);
-
-                if (data.success && data.response) {
-                    self.addMessage(data.response, false);
-                    
-                    // Handle bonuses if present
-                    if (data.bonuses_detected && data.bonuses_detected.length > 0) {
-                        var bonusText = "🎁 Bônus inclusos: " + data.bonuses_detected.slice(0, 3).join(", ");
-                        setTimeout(function() {
-                            self.addMessage(bonusText, false);
-                        }, 500);
-                    }
-
-                    // Track successful response
-                    self.trackEvent('message_received', {
-                        hasBonus: !!(data.bonuses_detected && data.bonuses_detected.length > 0)
-                    });
-
-                    // Callback
-                    if (self.config.onMessage) {
-                        self.config.onMessage(message, data.response);
-                    }
-                } else {
-                    throw new Error(data.error || 'Invalid response format');
-                }
+                self.handleAPIResponse(data, message);
             })
             .catch(function(error) {
-                clearTimeout(timeoutId);
-                self.hideTyping();
-                self.setInputState(true);
-                
-                // Handle different error types
-                if (error.name === 'AbortError') {
-                    self.handleError('request_timeout', 'Timeout - tente novamente');
-                } else if (error.message.includes('401')) {
-                    self.handleError('auth_failed', 'Token inválido');
-                } else if (error.message.includes('403')) {
-                    self.handleError('access_denied', 'Domínio não autorizado');
-                } else if (error.message.includes('429')) {
-                    self.handleError('rate_limit', 'Muitas mensagens - aguarde');
-                } else if (retryCount < self.config.retryAttempts) {
-                    // Retry with exponential backoff
-                    var delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-                    setTimeout(function() {
-                        self.callAPI(message, retryCount + 1);
-                    }, delay);
-                    return;
-                } else {
-                    self.handleError('api_failed', 'Erro de conexão');
-                }
-
-                // Track error
-                self.trackEvent('message_error', {
-                    error: error.message,
-                    retryCount: retryCount
-                });
+                self.handleAPIError(error, message, retryCount);
             });
         },
 
@@ -1552,6 +1691,25 @@
             }
         },
 
+        // Novo método para captura de lead
+        captureLead: async function(leadData) {
+            if (!this.security.isAuthenticated) {
+                console.error('Widget não autenticado para captura de lead');
+                this.handleError('lead_capture_failed', 'Widget não autenticado');
+                return;
+            }
+            
+            try {
+                const result = await this.makeSecureRequest('/api/capture-lead', leadData);
+                this.trackEvent('lead_captured', { email: leadData.email });
+                return result;
+            } catch (error) {
+                console.error('Erro ao capturar lead:', error);
+                this.handleError('lead_capture_failed', error.message);
+                throw error;
+            }
+        },
+
         updateConfig: function(newConfig) {
             this.config = this.mergeConfig(this.config, newConfig);
             
@@ -1569,7 +1727,13 @@
                 messageCount: this.messageCount,
                 conversationId: this.conversationId,
                 version: this.version,
-                uptime: Date.now() - this.startTime
+                uptime: Date.now() - this.startTime,
+                // Novas informações de segurança
+                security: {
+                    isAuthenticated: this.security.isAuthenticated,
+                    tokenExpiry: this.security.tokenExpiry,
+                    enableJWT: this.config.enableJWT
+                }
             };
         },
 
@@ -1594,6 +1758,9 @@
                 this.initialized = false;
                 this.isOpen = false;
                 this.messageCount = 0;
+                this.security.isAuthenticated = false;
+                this.security.token = null;
+                this.security.tokenExpiry = null;
 
                 this.dispatchEvent('widgetDestroyed');
 
@@ -1640,3 +1807,4 @@
     }
 
 })(window, document);
+[file content end]
