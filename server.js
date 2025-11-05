@@ -1,6 +1,8 @@
 require("dotenv").config();
 
 // ===== SISTEMA DE SEGURANÇA AVANÇADO =====
+// TODOS ESTES ARQUIVOS JÁ EXISTEM - APENAS IMPORTE-OS!
+
 const {
     SecuritySystem,
     ThreatDetectionSystem, 
@@ -9,6 +11,18 @@ const {
     ApplicationFirewall,
     SecurityMonitor
 } = require('./security-system');
+
+const AuthSystem = require('./auth-system');           // ✅ JÁ EXISTE
+const authSystem = new AuthSystem();
+
+const CORSConfig = require('./cors-config');           // ✅ JÁ EXISTE  
+const corsConfig = new CORSConfig();
+
+const CSRFProtection = require('./csrf-protection');   // ✅ JÁ EXISTE
+const csrfSystem = new CSRFProtection();
+
+const CSPConfig = require('./csp-config');             // ✅ JÁ EXISTE
+const cspConfig = new CSPConfig();
 
 // Inicializar sistemas de segurança
 const securitySystem = new SecuritySystem();
@@ -63,13 +77,20 @@ try {
 
 const app = express();
 
+// Configuração de arquivos estáticos para o Render
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'pages')));
+app.use(express.static(path.join(__dirname, 'data')));
+app.use(express.static(path.join(__dirname, 'scripts')));
+app.use(express.static(path.join(__dirname, 'assets')));
+
 // Declarando conversationHistories no escopo global ou adequado
 const conversationHistories = new Map();
 
 // ===== SISTEMA DE SUPERINTELIGÊNCIA CONVERSACIONAL AVANÇADA =====
 class SuperInteligenciaConversacional {
     constructor() {
-        console.log("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Inicializando Sistema Avançado");
+        console.log("SUPERINTELIGÊNCIA CONVERSACIONAL - Inicializando Sistema Avançado");
         
         // Sistema de Memória Conversacional Avançada
         this.memoriaConversacional = new Map();
@@ -2301,28 +2322,42 @@ if (process.env.REDIS_URL) {
 
 app.use(session(sessionConfig));
 
+// 🛡️ APLICAR CSRF PROTECTION GLOBALMENTE (NOVO MIDDLEWARE)
+app.use(csrfSystem.getMiddleware());
+
 // ===== Middleware =====
 app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://linkmagico-comercial.onrender.com"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "https://linkmagico-comercial.onrender.com"],
-            frameAncestors: ["*"], // Permite que o iframe seja incorporado em qualquer domínio
-        }
-    },
-    crossOriginEmbedderPolicy: false,
-    // frameguard: false (substituído por frameAncestors no CSP)
+    contentSecurityPolicy: false, // 🛡️ DESABILITAR HELMET CSP PARA USAR NOSSO PRÓPRIO
+    crossOriginEmbedderPolicy: false
 }));
 
-app.use(cors({
-    origin: "*",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"]
-}));
+// ===== CONFIGURAÇÃO CORS SEGURA =====
+// Aplicar CORS seguro
+app.use(corsConfig.getMiddleware());
+
+// Logging de CORS
+app.use(corsConfig.corsLogger);
+
+// 🛡️ CONFIGURAÇÃO CSP - APLICAR BASEADO NO AMBIENTE
+if (process.env.NODE_ENV === 'production') {
+    app.use(cspConfig.getMiddleware());
+    console.log('🔒 CSP aplicado em modo produção');
+} else {
+    app.use(cspConfig.getDevMiddleware());
+    console.log('🔧 Modo desenvolvimento: CSP em report-only');
+}
+
+// 🛡️ HEADERS DE SEGURANÇA ADICIONAIS
+app.use((req, res, next) => {
+    // Headers customizados de segurança
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    
+    next();
+});
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -2402,6 +2437,30 @@ function requireApiKey(req, res, next) {
 
 app.use(requireApiKey);
 
+// ===== MIDDLEWARE: Validação JWT para Widget =====
+function requireWidgetAuth(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            error: 'Token de acesso necessário'
+        });
+    }
+
+    try {
+        const decoded = authSystem.verifyWidgetToken(token);
+        req.widgetClient = decoded;
+        next();
+    } catch (error) {
+        return res.status(403).json({
+            success: false,
+            error: 'Token inválido ou expirado'
+        });
+    }
+}
+
 // ===== Static Files with API Key Protection =====
 app.get("/", (req, res) => {
     logger.info(`[GET /] Session Validated: ${!!(req.session && req.session.validatedApiKey)}`);
@@ -2439,16 +2498,13 @@ app.post("/validate-api-key", (req, res) => {
     });
 });
 
+// 🛡️ ENDPOINT PARA OBTER TOKEN CSRF (NOVA ROTA)
+app.get('/api/csrf-token', (req, res) => {
+    csrfSystem.getCSRFToken(req, res);
+});
+
 app.get("/app", (req, res) => {
-    const filePath = path.join(__dirname, "public", "index_app.html");
-    fs.readFile(filePath, 'utf8', (err, data) => {
-        if (err) {
-            return res.status(500).send('Erro ao carregar a página do aplicativo.');
-        }
-        const serverDomain = `${req.protocol}://${req.get('host')}`;
-        const result = data.replace(/{{server_domain}}/g, serverDomain);
-        res.send(result);
-    });
+    res.sendFile(path.join(__dirname, "public", "index_app.html"));
 });
 
 app.get("/privacy.html", (req, res) => {
@@ -2460,7 +2516,10 @@ app.get("/excluir-dados", (req, res) => {
 });
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
-app.get("/admin/leads", requireApiKey, (req, res) => {
+app.get("/admin/leads", 
+    csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
+    requireApiKey, 
+    (req, res) => {
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     const leads = leadSystem.getLeads();
     console.log(`📊 Retornando ${leads.length} leads para admin`);
@@ -2482,7 +2541,10 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 });
 
 // ===== ROTAS DE BACKUP DE LEADS =====
-app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
+app.post("/admin/leads/backup/create", 
+    csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
+    requireApiKey, 
+    (req, res) => {
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.createBackup("manual");
@@ -2777,6 +2839,26 @@ app.use("/public", express.static(path.join(__dirname, "public"), {
     etag: true,
     lastModified: true
 }));
+
+// 🛡️ ENDPOINT PARA RELATAR VIOLAÇÕES CSP
+app.post('/api/security/csp-violation', 
+    express.json({ type: 'application/csp-report' }),
+    (req, res) => {
+        cspConfig.handleCSPViolation(req, res);
+    }
+);
+
+// ===== ENDPOINT PARA VERIFICAR CONFIGURAÇÕES CORS =====
+if (process.env.NODE_ENV !== 'production') {
+    app.get('/api/debug/cors-config', (req, res) => {
+        res.json({
+            allowedOrigins: corsConfig.allowedOrigins,
+            currentOrigin: req.get('Origin'),
+            isAllowed: corsConfig.allowedOrigins.includes(req.get('Origin')),
+            environment: process.env.NODE_ENV || 'development'
+        });
+    });
+}
 
 app.use(express.static("public", {
     maxAge: "1d",
@@ -3641,7 +3723,11 @@ app.get("/health", (req, res) => {
 });
 
 // ===== ENDPOINT: Captura de Lead =====
-app.post("/api/capture-lead", requireApiKey, async (req, res) => {
+// 🛡️ ATUALIZAR: Adicionar proteção CSRF  
+app.post("/api/capture-lead", 
+    csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
+    requireApiKey, 
+    async (req, res) => {
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName } = req.body || {};
@@ -3691,8 +3777,69 @@ app.post("/api/capture-lead", requireApiKey, async (req, res) => {
     }
 });
 
+// ===== ENDPOINT: Obter Token JWT para Widget =====
+app.post('/api/auth/widget-token', async (req, res) => {
+    try {
+        const { apiKey, domain } = req.body;
+
+        // Validações básicas
+        if (!apiKey || !domain) {
+            return res.status(400).json({
+                success: false,
+                error: 'API Key e domínio são obrigatórios'
+            });
+        }
+
+        // Validar API Key (usando sistema existente)
+        const validation = validateApiKey(apiKey);
+        if (!validation.success) {
+            return res.status(401).json({
+                success: false,
+                error: 'API Key inválida'
+            });
+        }
+
+        // Validar domínio (opcional - para segurança extra)
+        const allowedDomains = [
+            'localhost', 
+            'seusite.com', 
+            'linkmagico-comercial.onrender.com',
+            'link-m-gico-v6-0-hmpl.onrender.com'
+        ];
+        const isValidDomain = allowedDomains.some(allowed => domain.includes(allowed));
+        
+        if (!isValidDomain) {
+            return res.status(403).json({
+                success: false,
+                error: 'Domínio não autorizado'
+            });
+        }
+
+        // Gerar token JWT
+        const token = authSystem.generateWidgetToken(apiKey, domain);
+
+        res.json({
+            success: true,
+            token: token,
+            expiresIn: '15 minutes',
+            tokenType: 'Bearer'
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao gerar token:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
-app.post("/api/chat-universal", requireApiKey, async (req, res) => {
+// 🛡️ ATUALIZAR: Adicionar proteção CSRF
+app.post("/api/chat-universal", 
+    csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
+    requireApiKey, 
+    async (req, res) => {
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     analytics.chatRequests++;
     try {
@@ -3753,7 +3900,11 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 });
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
-app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
+// 🛡️ ATUALIZAR: Adicionar proteção CSRF
+app.post("/api/process-chat-inteligente", 
+    csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
+    requireApiKey, 
+    async (req, res) => {
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     analytics.chatRequests++;
     try {
@@ -3888,7 +4039,9 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
 });
 
 // ===== ENDPOINT APRIMORADO DE EXTRAÇÃO =====
-app.post("/api/extract-enhanced", async (req, res) => {
+app.post("/api/extract-enhanced", 
+    csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
+    async (req, res) => {
     analytics.extractRequests++;
     try {
         const { url } = req.body || {};
@@ -3950,7 +4103,9 @@ app.post("/api/extract-enhanced", async (req, res) => {
 });
 
 // /api/extract endpoint (ORIGINAL - mantido para compatibilidade)
-app.post("/api/extract", async (req, res) => {
+app.post("/api/extract",
+    csrfSystem.verifyCSRF,  // NOVA PROTEÇÃO
+    async (req, res) => {
     analytics.extractRequests++;
     try {
         const { url, instructions, robotName } = req.body || {};
@@ -4405,10 +4560,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
 </html>`;
 }
 
-// Widget JS atualizado
-app.get("/public/widget.js", (req, res) => {
-    res.set("Content-Type", "application/javascript");
-    res.send(`// LinkMágico Widget v7.0 - Com Captura de Leads
+// Widget JS v7.1 - Com Sistema de Autenticação JWT
 (function() {
     'use strict';
     if (window.LinkMagicoWidget) return;
@@ -4421,9 +4573,85 @@ app.get("/public/widget.js", (req, res) => {
             salesUrl: '',
             instructions: '',
             apiBase: window.location.origin,
-            captureLeads: true
+            captureLeads: true,
+            apiKey: '', // Nova: API Key para autenticação
+            domain: ''  // Nova: Domínio atual
         },
         
+        // 🎯 NOVO: Sistema de Autenticação JWT
+        auth: {
+            token: null,
+            tokenExpiry: null,
+            
+            // Obter token JWT do servidor
+            getToken: async function() {
+                // Verificar se temos um token válido
+                if (this.token && this.tokenExpiry && Date.now() < this.tokenExpiry) {
+                    return this.token;
+                }
+                
+                try {
+                    const response = await fetch(this.config.apiBase + '/api/auth/widget-token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            apiKey: this.config.apiKey,
+                            domain: this.config.domain
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.token = data.token;
+                        // Definir expiração (15 minutos - 900 segundos)
+                        this.tokenExpiry = Date.now() + (14 * 60 * 1000); // 14 minutos para segurança
+                        return this.token;
+                    } else {
+                        console.error('Erro ao obter token:', data.error);
+                        throw new Error(data.error || 'Falha na autenticação');
+                    }
+                } catch (error) {
+                    console.error('Erro de autenticação:', error);
+                    throw error;
+                }
+            },
+            
+            // Fazer requisição autenticada
+            authenticatedRequest: async function(url, options = {}) {
+                try {
+                    const token = await this.getToken();
+                    
+                    const authOptions = {
+                        ...options,
+                        headers: {
+                            ...options.headers,
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json'
+                        }
+                    };
+                    
+                    const response = await fetch(url, authOptions);
+                    
+                    // Se token expirou, tentar renovar uma vez
+                    if (response.status === 403) {
+                        this.token = null; // Forçar renovação do token
+                        const newToken = await this.getToken();
+                        
+                        authOptions.headers['Authorization'] = 'Bearer ' + newToken;
+                        return await fetch(url, authOptions);
+                    }
+                    
+                    return response;
+                } catch (error) {
+                    console.error('Erro na requisição autenticada:', error);
+                    throw error;
+                }
+            }
+        },
+
         getApiKeyFromQuery: function(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
@@ -4439,6 +4667,22 @@ app.get("/public/widget.js", (req, res) => {
 
         init: function(userConfig) {
             this.config = Object.assign(this.config, userConfig || {});
+            
+            // 🎯 NOVO: Configurar domínio automaticamente
+            this.config.domain = window.location.hostname;
+            
+            // 🎯 NOVO: Tentar obter API Key de várias fontes
+            if (!this.config.apiKey) {
+                this.config.apiKey = this.getApiKeyFromQuery('apiKey') || 
+                                   this.getStoredApiKey() || 
+                                   this.getApiKeyFromQuery('lm_api_key');
+            }
+            
+            if (!this.config.apiKey) {
+                console.warn('⚠️ LinkMágico Widget: API Key não encontrada. Configure a apiKey no init() ou via parâmetro URL ?apiKey=SUA_CHAVE');
+                return;
+            }
+            
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', this.createWidget.bind(this));
             } else {
@@ -4455,6 +4699,38 @@ app.get("/public/widget.js", (req, res) => {
             this.bindEvents();
             
             this.leadId = this.getStoredLeadId();
+            
+            // 🎯 NOVO: Testar autenticação ao inicializar
+            this.testAuthentication();
+        },
+        
+        // 🎯 NOVA FUNÇÃO: Testar autenticação
+        testAuthentication: async function() {
+            try {
+                await this.auth.getToken();
+                console.log('✅ LinkMágico Widget: Autenticado com sucesso');
+            } catch (error) {
+                console.error('❌ LinkMágico Widget: Falha na autenticação', error);
+                // Opcional: Mostrar erro para o usuário
+                this.showAuthError();
+            }
+        },
+        
+        // 🎯 NOVA FUNÇÃO: Mostrar erro de autenticação
+        showAuthError: function() {
+            const widget = document.getElementById('linkmagico-widget');
+            if (widget) {
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#ef4444; color:white; padding:10px; border-radius:5px; z-index:1000000; font-size:12px; max-width:300px;';
+                errorDiv.innerHTML = '⚠️ Erro de autenticação. Verifique sua API Key.';
+                document.body.appendChild(errorDiv);
+                
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.parentNode.removeChild(errorDiv);
+                    }
+                }, 5000);
+            }
         },
         
         getHTML: function() {
@@ -4544,20 +4820,20 @@ app.get("/public/widget.js", (req, res) => {
             }
 
             try {
-                const response = await fetch(this.config.apiBase + '/api/capture-lead', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': this.config.apiKey
-                    },
-                    body: JSON.stringify({
-                        nome: name || 'Não informado',
-                        email: email,
-                        telefone: phone || 'Não informado',
-                        url_origem: window.location.href,
-                        robotName: this.config.robotName
-                    })
-                });
+                // 🎯 ATUALIZADO: Usar requisição autenticada
+                const response = await this.auth.authenticatedRequest(
+                    this.config.apiBase + '/api/capture-lead',
+                    {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            nome: name || 'Não informado',
+                            email: email,
+                            telefone: phone || 'Não informado',
+                            url_origem: window.location.href,
+                            robotName: this.config.robotName
+                        })
+                    }
+                );
 
                 const data = await response.json();
 
@@ -4602,21 +4878,22 @@ app.get("/public/widget.js", (req, res) => {
             messages.scrollTop = messages.scrollHeight;
 
             try {
-                const response = await fetch(this.config.apiBase + '/api/chat-universal', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': this.config.apiKey
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        url: this.config.salesUrl,
-                        instructions: this.config.instructions,
-                        robotName: this.config.robotName,
-                        conversationId: this.config.conversationId,
-                        leadId: this.leadId
-                    })
-                });
+                // 🎯 ATUALIZADO: Usar requisição autenticada
+                const response = await this.auth.authenticatedRequest(
+                    this.config.apiBase + '/api/chat-universal',
+                    {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            message: message,
+                            url: this.config.salesUrl,
+                            instructions: this.config.instructions,
+                            robotName: this.config.robotName,
+                            conversationId: this.config.conversationId,
+                            leadId: this.leadId
+                        })
+                    }
+                );
+                
                 const data = await response.json();
 
                 var botMsg = document.createElement('div');
@@ -4641,7 +4918,6 @@ app.get("/public/widget.js", (req, res) => {
         window.LinkMagicoWidget.init(window.LinkMagicoWidgetConfig);
     }
 })();`);
-});
 
 // ===== CONFIGURAR NOVAS ROTAS =====
 setupRoutes(app);
@@ -4651,7 +4927,7 @@ setupRoutes(app);
     await initialize();
 
     // Iniciar servidor
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 3000; // Render usa a variável de ambiente PORT
 
     // ===== ROTAS DAS NOVAS INTEGRAÇÕES V3.0 =====
 
@@ -4810,28 +5086,26 @@ setupRoutes(app);
 
     console.log('✅ Rotas V3.0 configuradas');
 
-    app.listen(PORT, '0.0.0.0', () => {
-        logger.info('Server running on port ' + PORT);
-
-        console.log(`🌐 Servidor rodando em http://0.0.0.0:${PORT}`);
-        console.log(`📊 Dashboard: http://0.0.0.0:${PORT}/api/system/status`);
-        console.log(`🚀 LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:${PORT}`);
-        console.log(`📊 Health check: http://0.0.0.0:${PORT}/health`);
-        console.log(`🤖 Chatbot disponível em: http://0.0.0.0:${PORT}/chatbot`);
-        console.log(`🔧 Widget JS disponível em: http://0.0.0.0:${PORT}/public/widget.js`);
-        console.log(`🎯 Sistema de captura de leads PERSISTENTE ATIVADO`);
-        console.log(`📈 Painel de leads: http://0.0.0.0:${PORT}/admin/leads`);
-        console.log(`📞 Extração de contatos: ATIVADA`);
-        console.log(`🧠 SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA`);
-        console.log(`🎭 Detecção de sarcasmo e ironia: IMPLEMENTADA`);
-        console.log(`🧩 Análise de múltiplas intenções: FUNCIONANDO`);
-        console.log(`💾 Memória conversacional avançada: OPERACIONAL`);
-        console.log(`🎨 Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL`);
-        console.log(`🚨 Detecção de urgência: ATIVADA`);
-        console.log(`📅 Sistema de agendamento: IMPLEMENTADO`);
-        console.log(`🎯 Botões fixos no topo: FUNCIONANDO`);
-        console.log(`👥 Jornada do cliente: Análise inteligente ATIVADA`);
-        console.log(`🧠 Endpoint superinteligente: /api/process-chat-inteligente`);
-        console.log(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
-    });
-})();
+app.listen(PORT, '0.0.0.0', () => {
+    logger.info('Server running on port ' + PORT);
+    console.log(`Servidor rodando em http://0.0.0.0:${PORT}`);
+    console.log(`Dashboard: http://0.0.0.0:${PORT}/api/system/status`);
+    console.log(`LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:${PORT}`);
+    console.log(`Health check: http://0.0.0.0:${PORT}/health`);
+    console.log(`Chatbot disponível em: http://0.0.0.0:${PORT}/chatbot`);
+    console.log(`Widget JS disponível em: http://0.0.0.0:${PORT}/public/widget.js`);
+    console.log('Sistema de captura de leads PERSISTENTE ATIVADO');
+    console.log(`Painel de leads: http://0.0.0.0:${PORT}/admin/leads`);
+    console.log('Extração de contatos: ATIVADA');
+    console.log('SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA');
+    console.log('Detecção de sarcasmo e ironia: IMPLEMENTADA');
+    console.log('Análise de múltiplas intenções: FUNCIONANDO');
+    console.log('Memória conversacional avançada: OPERACIONAL');
+    console.log('Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL');
+    console.log('Detecção de urgência: ATIVADA');
+    console.log('Sistema de agendamento: IMPLEMENTADO');
+    console.log('Botões fixos no topo: FUNCIONANDO');
+    console.log('Jornada do cliente: Análise inteligente ATIVADA');
+    console.log('Endpoint superinteligente: /api/process-chat-inteligente');
+    console.log('SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!');
+});

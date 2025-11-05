@@ -1,8 +1,3 @@
-// ===== IMPORTAÇÕES NECESSÁRIAS =====
-const path = require('path');
-const fs = require('fs');
-const { performance } = require('perf_hooks');
-
 // ===== SISTEMA DE SEGURANÇA AVANÇADO - LINKMÁGICO =====
 class SecuritySystem {
     constructor() {
@@ -18,12 +13,14 @@ class SecuritySystem {
         this.suspiciousActivities = new Map();
         this.loginAttempts = new Map();
         
+        this.setupSecurityHeaders();
         this.startMonitoring();
     }
 
-    // ===== MÉTODO PARA CONFIGURAR HELMET NO EXPRESS =====
-    setupSecurityHeaders(app) {
+    // ===== SISTEMA DE DETECÇÃO DE AMEAÇAS =====
+    setupSecurityHeaders() {
         const helmet = require('helmet');
+        const app = require('./server'); // Sua app Express
         
         app.use(helmet({
             contentSecurityPolicy: {
@@ -48,8 +45,6 @@ class SecuritySystem {
             crossOriginOpenerPolicy: { policy: "same-origin" },
             crossOriginResourcePolicy: { policy: "same-origin" }
         }));
-        
-        console.log("✅ Headers de segurança configurados com Helmet");
     }
 
     // ===== MIDDLEWARE DE SEGURANÇA GLOBAL =====
@@ -111,12 +106,6 @@ class SecuritySystem {
                (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
                '0.0.0.0';
     }
-
-    startMonitoring() {
-        // Inicializar monitoramento
-        this.securityMonitor = new SecurityMonitor();
-        console.log("✅ Sistema de monitoramento de segurança ativado");
-    }
 }
 
 // ===== SISTEMA DE DETECÇÃO DE AMEAÇAS =====
@@ -159,8 +148,8 @@ class ThreatDetectionSystem {
 
     isSuspiciousRequest(req) {
         const url = req.url.toLowerCase();
-        const body = JSON.stringify(req.body || {}).toLowerCase();
-        const headers = JSON.stringify(req.headers || {}).toLowerCase();
+        const body = JSON.stringify(req.body).toLowerCase();
+        const headers = JSON.stringify(req.headers).toLowerCase();
         const userAgent = req.get('User-Agent') || '';
 
         // Verificar padrões maliciosos na URL
@@ -562,15 +551,68 @@ class SecurityMonitor {
     }
 }
 
-// ===== EXPORTAÇÕES PARA USO EM OUTROS ARQUIVOS =====
-module.exports = {
-    SecuritySystem,
-    ThreatDetectionSystem,
-    RateLimitSystem,
-    InputValidationSystem,
-    ApplicationFirewall,
-    SecurityAuditLogger,
-    SecurityMonitor
-};
+// ===== INICIALIZAÇÃO DO SISTEMA DE SEGURANÇA =====
 
-console.log("🛡️  MÓDULO DE SEGURANÇA AVANÇADO CARREGADO COM SUCESSO!");
+// Adicionar no início do seu arquivo server.js, após os requires
+const securitySystem = new SecuritySystem();
+const threatDetection = new ThreatDetectionSystem();
+const rateLimitSystem = new RateLimitSystem();
+const inputValidator = new InputValidationSystem();
+const firewall = new ApplicationFirewall();
+const securityMonitor = new SecurityMonitor();
+
+// ===== MIDDLEWARE DE SEGURANÇA GLOBAL =====
+app.use(securitySystem.securityMiddleware());
+app.use(firewall.middleware());
+
+// ===== ROTAS PROTEGIDAS ADICIONAIS =====
+
+// Endpoint para status de segurança (apenas admin)
+app.get("/admin/security/status", requireApiKey, (req, res) => {
+    const status = {
+        blockedIPs: Array.from(securitySystem.blockedIPs),
+        activeThreats: Array.from(securitySystem.suspiciousActivities),
+        rateLimitStats: Object.fromEntries(rateLimitSystem.requests),
+        systemHealth: {
+            memory: process.memoryUsage(),
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString()
+        }
+    };
+    
+    res.json({ success: true, status });
+});
+
+// Endpoint para desbloquear IP (apenas admin)
+app.post("/admin/security/unblock-ip", requireApiKey, (req, res) => {
+    const { ip } = req.body;
+    
+    if (!ip) {
+        return res.status(400).json({ 
+            success: false, 
+            error: "IP é obrigatório" 
+        });
+    }
+
+    securitySystem.blockedIPs.delete(ip);
+    securitySystem.suspiciousActivities.delete(ip);
+    
+    res.json({ 
+        success: true, 
+        message: `IP ${ip} desbloqueado com sucesso` 
+    });
+});
+
+// ===== ATUALIZAÇÃO DOS ENDPOINTS EXISTENTES COM SEGURANÇA =====
+
+// Endpoint de chat com segurança reforçada
+app.post("/api/process-chat-inteligente", requireApiKey, securitySystem.securityMiddleware(), async (req, res) => {
+    // Sua implementação existente, agora com segurança adicional
+});
+
+// Endpoint de extração com segurança
+app.post("/api/extract-enhanced", securitySystem.securityMiddleware(), async (req, res) => {
+    // Sua implementação existente, agora com segurança adicional
+});
+
+console.log("🛡️  SISTEMA DE SEGURANÇA AVANÇADO IMPLANTADO COM SUCESSO!");
