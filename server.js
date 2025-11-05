@@ -2303,12 +2303,22 @@ app.use(session(sessionConfig));
 
 // ===== Middleware =====
 app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://linkmagico-comercial.onrender.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https://linkmagico-comercial.onrender.com"],
+            frameAncestors: ["*"], // Permite que o iframe seja incorporado em qualquer domínio
+        }
+    },
+    crossOriginEmbedderPolicy: false,
+    // frameguard: false (substituído por frameAncestors no CSP)
 }));
 
 app.use(cors({
-    origin: ["https://linkmagico-comercial.onrender.com", "https://link-m-gico-v6-0-hmpl.onrender.com", "http://localhost:3000", "http://localhost:8080"],
+    origin: "*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"]
