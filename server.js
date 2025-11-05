@@ -2440,7 +2440,15 @@ app.post("/validate-api-key", (req, res) => {
 });
 
 app.get("/app", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index_app.html"));
+    const filePath = path.join(__dirname, "public", "index_app.html");
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).send('Erro ao carregar a página do aplicativo.');
+        }
+        const serverDomain = `${req.protocol}://${req.get('host')}`;
+        const result = data.replace(/{{server_domain}}/g, serverDomain);
+        res.send(result);
+    });
 });
 
 app.get("/privacy.html", (req, res) => {
