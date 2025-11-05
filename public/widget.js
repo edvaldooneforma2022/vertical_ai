@@ -47,7 +47,7 @@
             robotName: 'Assistente IA',
             salesUrl: '',
             instructions: '',
-            apiBase: window.location.origin,
+            apiBase: currentScript.src.split('/public/widget.js')[0],
             showBadge: true,
             autoOpen: false,
             openDelay: 5000,
