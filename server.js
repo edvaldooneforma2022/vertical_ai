@@ -3624,9 +3624,18 @@ app.get("/health", (req, res) => {
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
-    const leadSystem = getLeadSystem(apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName, apiKey } = req.body || {};
+        
+        // Validar se apiKey foi fornecida
+        if (!apiKey) {
+            return res.status(401).json({ 
+                success: false, 
+                error: "API Key é obrigatória" 
+            });
+        }
+        
+        const leadSystem = getLeadSystem(apiKey);
 
         if (!email) {
             return res.status(400).json({ 
@@ -4074,6 +4083,10 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         </div>
     </div>
     <script>
+        // Extrair apiKey da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const apiKey = urlParams.get('apiKey');
+        
         const pageData = ${escapedPageData};
         const robotName = "${safeRobotName}";
         const customInstructions = "${safeInstructions}";
@@ -4112,7 +4125,8 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         email: email,
                         telefone: phone || 'Não informado',
                         url_origem: window.location.href,
-                        robotName: robotName
+                        robotName: robotName,
+                        apiKey: apiKey
                     })
                 });
                 const data = await response.json();
@@ -4266,6 +4280,10 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         </div>
     </div>
     <script>
+        // Extrair apiKey da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const apiKey = urlParams.get('apiKey');
+        
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
@@ -4300,7 +4318,8 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                         email: email,
                         telefone: phone || 'Não informado',
                         url_origem: window.location.href,
-                        robotName: config.robotName
+                        robotName: config.robotName,
+                        apiKey: apiKey
                     })
                 });
                 const data = await response.json();
