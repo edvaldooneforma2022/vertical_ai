@@ -3623,10 +3623,10 @@ app.get("/health", (req, res) => {
 });
 
 // ===== ENDPOINT: Captura de Lead =====
-app.post("/api/capture-lead", requireApiKey, async (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+app.post("/api/capture-lead", async (req, res) => {
+    const leadSystem = getLeadSystem(apiKey);
     try {
-        const { nome, email, telefone, url_origem, robotName } = req.body || {};
+        const { nome, email, telefone, url_origem, robotName, apiKey } = req.body || {};
 
         if (!email) {
             return res.status(400).json({ 
