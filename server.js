@@ -4249,7 +4249,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                     chatInputContainer.style.display = 'flex';
                     
                     // Enviar mensagem de confirmação no chat
-                    appendMessage('🤖', `✅ Agendamento para **${horario}** registrado com sucesso! Nossa equipe entrará em contato por e-mail para confirmar.`, 'bot');
+                    console.log('✅ Agendamento para ' + horario + ' registrado com sucesso! Notificação de agendamento enviada.');
 
                 } else {
                     alert(`❌ Erro ao agendar: ${result.error}`);
