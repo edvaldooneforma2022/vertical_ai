@@ -4252,11 +4252,11 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                     console.log('✅ Agendamento para ' + horario + ' registrado com sucesso! Notificação de agendamento enviada.');
 
                 } else {
-                    alert(`❌ Erro ao agendar: ${result.error}`);
+                    console.error(`❌ Erro ao agendar: ${result.error}`);
                 }
             } catch (error) {
                 console.error('Erro ao submeter agendamento:', error);
-                alert('❌ Erro de conexão ao tentar agendar. Tente novamente mais tarde.');
+                console.error('❌ Erro de conexão ao tentar agendar. Tente novamente mais tarde.');
             }
         });
 
