@@ -4241,7 +4241,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(`✅ Agendamento Confirmado! Nossa equipe entrará em contato para confirmar o horário de ${horario}.`);
+                    console.log(`✅ Agendamento Confirmado! Nossa equipe entrará em contato para confirmar o horário de ${horario}.`);
                     
                     // Voltar para a tela de chat
                     document.getElementById('agendamentoForm').style.display = 'none';
