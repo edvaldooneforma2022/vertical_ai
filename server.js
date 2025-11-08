@@ -816,6 +816,34 @@ class LeadCaptureSystem {
     findLeadByEmail(email) {
         return this.leads.find(l => l.email === email);
     }
+
+    addBooking(bookingData) {
+        const lead = this.findLeadByEmail(bookingData.email);
+        
+        if (!lead) {
+            console.error("❌ Erro ao adicionar agendamento: Lead não encontrado.");
+            return null;
+        }
+
+        // Adicionar o agendamento ao lead existente
+        if (!lead.bookings) {
+            lead.bookings = [];
+        }
+
+        const booking = {
+            id: crypto.randomBytes(8).toString("hex"),
+            timestamp: new Date().toISOString(),
+            ...bookingData,
+            status: "pendente"
+        };
+
+        lead.bookings.push(booking);
+        lead.journeyStage = "negociacao"; // Mudar o estágio da jornada
+        this.saveLeads();
+        
+        console.log(`📅 NOVO AGENDAMENTO: ${lead.nome} para ${booking.horario}`);
+        return booking;
+    }
 }
 
 // Funções para obter instâncias de sistema de leads e backup por tenant
@@ -1666,42 +1694,24 @@ class SuperInteligenciaEmocional {
 
         if (isAgendamento) {
             console.log("📅 Solicitação de agendamento detectada");
-            return this.gerarOpcoesAgendamento();
+            // Em vez de listar horários no chat, instruir o usuário a usar o botão "Agendar"
+            return `**📅 AGENDAMENTO DETECTADO**\n\n` +
+                   `Para agendar sua reunião, por favor, clique no botão **"Agendar"** no topo da tela. Você será direcionado para a seleção de horários.`;
         }
 
         return null;
     }
 
+    // Esta função não é mais usada, pois o agendamento é feito via formulário
     gerarOpcoesAgendamento() {
-        const horarios = this.horariosDisponiveis.slice(0, 3); // 3 primeiros horários
-        let resposta = `**📅 AGENDAMENTO DISPONÍVEL**\n\n`;
-        resposta += `Encontrei estes horários para nossa conversa:\n\n`;
-        
-        horarios.forEach((horario, index) => {
-            resposta += `${index + 1}. ${horario}\n`;
-        });
-        
-        resposta += `\n💬 **Qual horário prefere?**\n`;
-        resposta += `📞 Ou se preferir, posso passar nossos contatos diretos!`;
-        
-        return resposta;
+        return null;
     }
 
+    // O processamento de agendamento agora é feito via formulário e rota de API
+    // Este método é mantido apenas para compatibilidade ou para detectar confirmações
     processarAgendamento(mensagem) {
-        const mensagemLower = mensagem.toLowerCase();
-        
-        // Detectar seleção de horário
-        for (let i = 0; i < this.horariosDisponiveis.length; i++) {
-            if (mensagemLower.includes((i + 1).toString()) || 
-                mensagemLower.includes(this.horariosDisponiveis[i].toLowerCase())) {
-                
-                return `✅ **AGENDAMENTO CONFIRMADO!**\n\n` +
-                       `📅 **Horário:** ${this.horariosDisponiveis[i]}\n` +
-                       `🎯 **Próximo passo:** Nossa equipe entrará em contato para confirmar.\n` +
-                       `📞 **Contato direto:** Veja nossos canais acima! ⬆️`;
-            }
-        }
-
+        // Não é mais necessário processar a seleção de horário via chat, pois usamos o formulário.
+        // Mantemos a função para evitar erros, mas ela não terá mais a lógica de seleção.
         return null;
     }
 }
@@ -3622,6 +3632,65 @@ app.get("/health", (req, res) => {
     });
 });
 
+// ===== ENDPOINT: Agendamento de Reunião =====
+app.post("/api/schedule-booking", async (req, res) => {
+    try {
+        const { nome, email, horario, apiKey } = req.body || {};
+
+        // 1. Validação de Dados Essenciais
+        if (!apiKey) {
+            return res.status(401).json({ success: false, error: "API Key é obrigatória" });
+        }
+        if (!email || !horario) {
+            return res.status(400).json({ success: false, error: "Email e Horário são obrigatórios para agendamento" });
+        }
+
+        const leadSystem = getLeadSystem(apiKey);
+        let lead = leadSystem.findLeadByEmail(email);
+
+        // 2. Se o lead não existir, criar um lead básico
+        if (!lead) {
+            lead = leadSystem.addLead({
+                nome: nome || "Agendamento - Não Informado",
+                email: email,
+                telefone: req.body.telefone || "Não Informado",
+                url_origem: req.body.url_origem || "",
+                robotName: req.body.robotName || "Assistente IA",
+                journeyStage: "negociacao"
+            });
+        }
+
+        // 3. Adicionar o agendamento ao lead
+        const booking = leadSystem.addBooking({
+            nome: lead.nome,
+            email: lead.email,
+            horario: horario,
+            url_origem: req.body.url_origem || "",
+            robotName: req.body.robotName || "Assistente IA"
+        });
+
+        // 4. Notificação (Simulada)
+        console.log(`🔔 NOTIFICAÇÃO DE AGENDAMENTO - API Key: ${apiKey}`);
+        console.log(`   - Lead: ${lead.nome} (${lead.email})`);
+        console.log(`   - Horário Solicitado: ${horario}`);
+        console.log(`   - Status: Pendente de Confirmação`);
+        
+        // 5. Resposta de Sucesso
+        res.json({ 
+            success: true, 
+            booking: booking,
+            message: "Agendamento registrado com sucesso! Nossa equipe entrará em contato para confirmar." 
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao processar agendamento:", error);
+        res.status(500).json({ 
+            success: false, 
+            error: "Erro interno ao processar agendamento" 
+        });
+    }
+});
+
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
     try {
@@ -4071,6 +4140,15 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         <div class="chat-messages" id="chatMessages" style="display:none">
             <div class="chat-message bot">Olá! Sou ${safeRobotName}, estou aqui para tirar todas as suas dúvidas. Como posso ajudar você hoje?</div>
         </div>
+        <div id="agendamentoForm" class="lm-agendamento-form" style="display: none; flex-direction: column; padding: 20px; gap: 15px; background-color: #f9fafb; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h3 style="color: #1f2937; margin-top: 0;">📅 Agendar Reunião</h3>
+            <input type="text" id="agendamentoNome" placeholder="Seu Nome" class="lm-input" readonly style="background-color: #e5e7eb;">
+            <input type="email" id="agendamentoEmail" placeholder="Seu Email" class="lm-input" readonly style="background-color: #e5e7eb;">
+            <select id="agendamentoHorario" class="lm-input" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;"></select>
+            <button id="submitAgendamento" class="lm-button" style="background-color: #10b981; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Confirmar Agendamento</button>
+            <button id="cancelAgendamento" class="lm-button" style="background-color: #ef4444; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancelar</button>
+        </div>
+
         <div class="chat-input-container" id="chatInputContainer" style="display:none">
             <input type="text" class="chat-input" id="messageInput" placeholder="Digite sua mensagem..." autocomplete="off">
             <button class="send-button" id="sendButton"><i class="fas fa-paper-plane"></i></button>
@@ -4102,10 +4180,93 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 
         // Função para iniciar agendamento
         function iniciarAgendamento() {
-            const mensagem = "Gostaria de agendar uma reunião";
-            messageInput.value = mensagem;
-            sendMessage();
+            // Se o lead ainda não foi capturado, capturar primeiro
+            if (!leadId) {
+                alert('Por favor, preencha o formulário de leads primeiro para que possamos agendar.');
+                return;
+            }
+
+            // Ocultar o chat e mostrar o formulário de agendamento
+            chatMessages.style.display = 'none';
+            chatInputContainer.style.display = 'none';
+            document.getElementById('agendamentoForm').style.display = 'flex';
+            document.getElementById('agendamentoNome').value = document.getElementById('leadName').value.trim();
+            document.getElementById('agendamentoEmail').value = document.getElementById('leadEmail').value.trim();
+            
+            // Mostrar os horários disponíveis (simulação)
+            const horarios = [
+                "Segunda 09:00", "Terça 14:00", "Quarta 16:00",
+                "Quinta 10:00", "Sexta 15:00"
+            ];
+            const select = document.getElementById('agendamentoHorario');
+            select.innerHTML = '<option value="">Selecione um horário</option>';
+            horarios.forEach(h => {
+                const option = document.createElement('option');
+                option.value = h;
+                option.textContent = h;
+                select.appendChild(option);
+            });
         }
+
+        // Função para submeter o agendamento
+        document.getElementById('submitAgendamento').addEventListener('click', async function() {
+            const nome = document.getElementById('agendamentoNome').value.trim();
+            const email = document.getElementById('agendamentoEmail').value.trim();
+            const horario = document.getElementById('agendamentoHorario').value;
+            const apiKey = urlParams.get('apiKey');
+            const url_origem = urlParams.get('url');
+            const robotName = urlParams.get('robotName');
+
+            if (!horario) {
+                alert('Por favor, selecione um horário disponível.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/api/schedule-booking`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nome,
+                        email,
+                        horario,
+                        apiKey,
+                        url_origem,
+                        robotName
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`✅ Agendamento Confirmado! Nossa equipe entrará em contato para confirmar o horário de ${horario}.`);
+                    
+                    // Voltar para a tela de chat
+                    document.getElementById('agendamentoForm').style.display = 'none';
+                    chatMessages.style.display = 'flex';
+                    chatInputContainer.style.display = 'flex';
+                    
+                    // Enviar mensagem de confirmação no chat
+                    appendMessage('🤖', `✅ Agendamento para **${horario}** registrado com sucesso! Nossa equipe entrará em contato por e-mail para confirmar.`, 'bot');
+
+                } else {
+                    alert(`❌ Erro ao agendar: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Erro ao submeter agendamento:', error);
+                alert('❌ Erro de conexão ao tentar agendar. Tente novamente mais tarde.');
+            }
+        });
+
+        // Função para cancelar o agendamento
+        document.getElementById('cancelAgendamento').addEventListener('click', function() {
+            document.getElementById('agendamentoForm').style.display = 'none';
+            chatMessages.style.display = 'flex';
+            chatInputContainer.style.display = 'flex';
+            appendMessage('🤖', 'Agendamento cancelado. Se precisar de ajuda, é só perguntar!', 'bot');
+        });
 
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
@@ -4272,6 +4433,15 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             <span class="typing-dot"></span>
             <span>Digitando...</span>
         </div>
+        <div id="agendamentoForm" class="lm-agendamento-form" style="display: none; flex-direction: column; padding: 20px; gap: 15px; background-color: #f9fafb; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h3 style="color: #1f2937; margin-top: 0;">📅 Agendar Reunião</h3>
+            <input type="text" id="agendamentoNome" placeholder="Seu Nome" class="lm-input" readonly style="background-color: #e5e7eb;">
+            <input type="email" id="agendamentoEmail" placeholder="Seu Email" class="lm-input" readonly style="background-color: #e5e7eb;">
+            <select id="agendamentoHorario" class="lm-input" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;"></select>
+            <button id="submitAgendamento" class="lm-button" style="background-color: #10b981; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Confirmar Agendamento</button>
+            <button id="cancelAgendamento" class="lm-button" style="background-color: #ef4444; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancelar</button>
+        </div>
+
         <div class="chat-input-container" id="chatInputContainer" style="display:none">
             <input type="text" class="chat-input" id="chatInput" placeholder="Digite sua pergunta..." maxlength="500">
             <button class="send-button" id="sendButton">
