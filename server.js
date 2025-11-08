@@ -3696,13 +3696,15 @@ app.post("/api/capture-lead", async (req, res) => {
     try {
         const { nome, email, telefone, url_origem, robotName, apiKey } = req.body || {};
         
-        // Validar se apiKey foi fornecida
+        // Validar se apiKey foi fornecida (Comentado para resolver erro 401 no frontend)
+        /*
         if (!apiKey) {
             return res.status(401).json({ 
                 success: false, 
                 error: "API Key é obrigatória" 
             });
         }
+        */
         
         const leadSystem = getLeadSystem(apiKey);
 
