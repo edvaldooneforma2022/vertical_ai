@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Widget LinkMágico - Versão Inline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+        
+        .info-box h2 {
+            color: #3b82f6;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            color: #555;
+            line-height: 1.8;
+        }
+        
+        .config-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .config-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .config-box code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #d63384;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .success-box {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .success-box h3 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+        
+        .success-box p {
+            color: #155724;
+            line-height: 1.6;
+        }
+        
+        .test-steps {
+            background: #e7f3ff;
+            border: 2px solid #2196F3;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .test-steps h3 {
+            color: #0d47a1;
+            margin-bottom: 15px;
+        }
+        
+        .test-steps ol {
+            margin-left: 20px;
+            color: #0d47a1;
+            line-height: 2;
+        }
+        
+        .test-steps li {
+            margin-bottom: 8px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste do Widget LinkMágico</h1>
+        <p class="subtitle">Página de teste para validar o widget inline com API Key</p>
+        
+        <div class="info-box">
+            <h2>ℹ️ Sobre este Teste</h2>
+            <p>Esta página foi criada para testar o funcionamento do widget LinkMágico em sua versão inline com autenticação via API Key.</p>
+            <p><strong>Objetivo:</strong> Validar que o chatbot funciona corretamente em qualquer site externo.</p>
+        </div>
+        
+        <div class="config-box">
+            <h3>⚙️ Configuração Atual</h3>
+            <p><strong>Robot Name:</strong> <code>@convertaleads</code></p>
+            <p><strong>Sales URL:</strong> <code>https://www.arsenalsecretodosceos.com.br/ebook</code></p>
+            <p><strong>Instructions:</strong> <code>foco em vendas e conversão</code></p>
+            <p><strong>Primary Color:</strong> <code>#3b82f6</code></p>
+            <p><strong>API Key:</strong> <code>LMV7-NI12-9HIH-46S6</code> (teste)</p>
+        </div>
+        
+        <div class="success-box">
+            <h3>✅ Widget Carregado!</h3>
+            <p>Se você está vendo um balão flutuante azul no canto inferior direito desta página, o widget foi carregado com sucesso!</p>
+        </div>
+        
+        <div class="test-steps">
+            <h3>📋 Passos para Testar</h3>
+            <ol>
+                <li>Verifique se o balão flutuante aparece no canto inferior direito</li>
+                <li>Clique no balão para abrir a janela do chatbot</li>
+                <li>Verifique se a URL da janela contém o parâmetro <code>apiKey</code></li>
+                <li>Preencha o formulário de lead com seus dados de teste</li>
+                <li>Clique em "Iniciar Conversa"</li>
+                <li>Verifique se o lead foi capturado com sucesso</li>
+                <li>Teste enviar uma mensagem no chat</li>
+                <li>Verifique se o chatbot responde corretamente</li>
+            </ol>
+        </div>
+        
+        <div class="footer">
+            <p>LinkMágico © 2025 - Plataforma SaaS de Chatbot IA</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                <strong>Desenvolvido por:</strong> Equipe LinkMágico
+            </p>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- LinkMágico Chatbot Widget - Versão Inline FINAL -->
+    <!-- ============================================= -->
+    <script>
+    (function() {
+        'use strict';
+        
+        // ===== CONFIGURAÇÃO DO CLIENTE =====
+        const config = {
+            robotName: "@convertaleads",
+            salesUrl: "https://www.arsenalsecretodosceos.com.br/ebook",
+            instructions: "foco em vendas e conversão",
+            primaryColor: "#3b82f6",
+            apiKey: "LMV7-NI12-9HIH-46S6" // API Key de teste
+        };
+
+        // ===== CONFIGURAÇÃO DO SERVIDOR =====
+        const apiBase = "https://linkmagico-comercial.onrender.com";
+        
+        // ===== NÃO MODIFICAR ABAIXO DESTA LINHA =====
+        
+        // Verificar se apiKey foi configurada
+        if (!config.apiKey || config.apiKey === "SUA_API_KEY_AQUI") {
+            console.error("❌ LinkMágico Widget: API Key não configurada!");
+            return;
+        }
+        
+        // Criar balão flutuante
+        const bubble = document.createElement('div');
+        bubble.innerHTML = `
+            <style>
+                .linkmagico-chat-bubble {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    width: 60px;
+                    height: 60px;
+                    background: linear-gradient(135deg, ${config.primaryColor} 0%, #1e40af 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    z-index: 999999;
+                    transition: all 0.3s ease;
+                    animation: pulse 2s infinite;
+                }
+                .linkmagico-chat-bubble:hover {
+                    transform: scale(1.1);
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+                }
+                .linkmagico-chat-bubble svg {
+                    width: 30px;
+                    height: 30px;
+                    fill: white;
+                }
+                @keyframes pulse {
+                    0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+                    50% { box-shadow: 0 4px 20px rgba(59,130,246,0.4); }
+                }
+                @media (max-width: 768px) {
+                    .linkmagico-chat-bubble {
+                        bottom: 15px;
+                        right: 15px;
+                        width: 55px;
+                        height: 55px;
+                    }
+                }
+            </style>
+            <div class="linkmagico-chat-bubble" id="linkmagicoChatBubble">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                    <path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/>
+                </svg>
+            </div>
+        `;
+        
+        document.body.appendChild(bubble);
+        
+        // Abrir janela do chatbot ao clicar no balão
+        document.getElementById('linkmagicoChatBubble').addEventListener('click', function() {
+            // Construir URL com todos os parâmetros incluindo apiKey
+            const chatUrl = `${apiBase}/chatbot?` + 
+                `apiKey=${encodeURIComponent(config.apiKey)}&` +
+                `robotName=${encodeURIComponent(config.robotName)}&` +
+                `url=${encodeURIComponent(config.salesUrl)}&` +
+                `instructions=${encodeURIComponent(config.instructions)}&` +
+                `color=${encodeURIComponent(config.primaryColor)}`;
+            
+            console.log('🚀 Abrindo chatbot com URL:', chatUrl);
+            
+            // Abrir janela popup
+            const width = 450;
+            const height = 700;
+            const left = (window.screen.width - width) / 2;
+            const top = (window.screen.height - height) / 2;
+            
+            window.open(
+                chatUrl,
+                'LinkMagicoChatbot',
+                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+            );
+        });
+        
+        console.log('✅ LinkMágico Widget carregado com sucesso!');
+        console.log('📊 API Key:', config.apiKey);
+        console.log('🤖 Robot Name:', config.robotName);
+        
+    })();
+    </script>
+</body>
+</html>
