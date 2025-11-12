@@ -4223,7 +4223,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             }
 
             try {
-                const response = await fetch(`${apiBase}/api/schedule-booking`, {
+                const response = await fetch(apiBase + '/api/schedule-booking', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
