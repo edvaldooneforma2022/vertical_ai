@@ -29,7 +29,7 @@ const { knowledgeBaseManager } = require('./knowledge-base');
 const { setupRoutes } = require('./routes');
 const { initialize } = require('./init');
 
-console.error('✅ Módulos de melhorias carregados');
+console.log('✅ Módulos de melhorias carregados');
 // ===== NOVAS INTEGRAÇÕES V3.0 =====
 const { gmailManager } = require('./gmail-integration');
 const { whatsappManager } = require('./whatsapp-integration');
@@ -37,7 +37,7 @@ const { chatgptManager } = require('./chatgpt-integration');
 const { crmIntegrations } = require('./crm-integrations');
 const { whitelabelManager } = require('./whitelabel');
 const { structuredLeadsManager } = require('./structured-leads');
-console.error('✅ Módulos V3.0 carregados');
+console.log('✅ Módulos V3.0 carregados');
 
 const crypto = require("crypto");
 const express = require("express");
@@ -56,9 +56,9 @@ const session = require("express-session");
 let puppeteer = null;
 try {
     puppeteer = require("puppeteer");
-    console.error("✅ Puppeteer loaded - Dynamic rendering available");
+    console.log("✅ Puppeteer loaded - Dynamic rendering available");
 } catch (e) {
-    console.error("⚠️ Puppeteer not installed - Using basic extraction only");
+    console.log("⚠️ Puppeteer not installed - Using basic extraction only");
 }
 
 const app = express();
@@ -69,7 +69,7 @@ const conversationHistories = new Map();
 // ===== SISTEMA DE SUPERINTELIGÊNCIA CONVERSACIONAL AVANÇADA =====
 class SuperInteligenciaConversacional {
     constructor() {
-        console.error("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Inicializando Sistema Avançado");
+        console.log("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Inicializando Sistema Avançado");
         
         // Sistema de Memória Conversacional Avançada
         this.memoriaConversacional = new Map();
@@ -307,7 +307,7 @@ class SuperInteligenciaConversacional {
         // Finalização e polimento
         const respostaFinal = this.polirResposta(respostaBase, estadoEmocional, memoriaUsuario);
         
-        console.error('🧠 [SUPERINTELIGÊNCIA] Resposta gerada:', {
+        console.log('🧠 [SUPERINTELIGÊNCIA] Resposta gerada:', {
             emocao: estadoEmocional.emocaoPrimaria,
             intencoes: estadoEmocional.intencoesMultiplas,
             personalidade: personalidadeContextual.estilo,
@@ -690,7 +690,7 @@ class SuperInteligenciaConversacional {
 
 // Inicializar SuperInteligência Global
 const superInteligenciaGlobal = new SuperInteligenciaConversacional();
-console.error("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Sistema Avançado Carregado");
+console.log("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Sistema Avançado Carregado");
 
 // ===== SISTEMA DE ARMAZENAMENTO DE LEADS PERSISTENTE =====
 function getTenantLeadsFilePath(apiKey) {
@@ -708,8 +708,8 @@ class LeadCaptureSystem {
         this.leadsFilePath = getTenantLeadsFilePath(this.apiKey);
         this.ensureDataDirectory();
         this.leads = this.loadLeads();
-        console.error(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
-        console.error(`💾 Arquivo de leads: ${this.leadsFilePath}`);
+        console.log(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
+        console.log(`💾 Arquivo de leads: ${this.leadsFilePath}`);
     }
 
     ensureDataDirectory() {
@@ -717,13 +717,13 @@ class LeadCaptureSystem {
             const dir = path.dirname(this.leadsFilePath);
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
-                console.error(`📁 Diretório criado: ${dir}`);
+                console.log(`📁 Diretório criado: ${dir}`);
             }
         } catch (error) {
             console.error("❌ Erro ao criar diretório:", error);
             // Fallback para diretório atual se data/ não funcionar
             this.leadsFilePath = path.join(__dirname, "leads.json");
-            console.error(`🔄 Usando fallback: ${this.leadsFilePath}`);
+            console.log(`🔄 Usando fallback: ${this.leadsFilePath}`);
         }
     }
 
@@ -732,20 +732,20 @@ class LeadCaptureSystem {
             if (fs.existsSync(this.leadsFilePath)) {
                 const data = fs.readFileSync(this.leadsFilePath, "utf8");
                 const leads = JSON.parse(data);
-                console.error(`📥 Leads carregados: ${leads.length} registros`);
+                console.log(`📥 Leads carregados: ${leads.length} registros`);
                 return leads;
             }
         } catch (error) {
             console.error("❌ Erro ao carregar leads:", error);
         }
-        console.error("📝 Inicializando novo arquivo de leads");
+        console.log("📝 Inicializando novo arquivo de leads");
         return [];
     }
 
     saveLeads() {
         try {
             fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
-            console.error(`💾 Leads salvos: ${this.leads.length} registros`);
+            console.log(`💾 Leads salvos: ${this.leads.length} registros`);
             return true;
         } catch (error) {
             console.error("❌ Erro ao salvar leads:", error);
@@ -766,7 +766,7 @@ class LeadCaptureSystem {
 
         this.leads.push(lead);
         this.saveLeads();
-        console.error(`🎯 NOVO LEAD: ${lead.nome} (${lead.email})`);
+        console.log(`🎯 NOVO LEAD: ${lead.nome} (${lead.email})`);
         return lead;
     }
 
@@ -816,34 +816,6 @@ class LeadCaptureSystem {
     findLeadByEmail(email) {
         return this.leads.find(l => l.email === email);
     }
-
-    addBooking(bookingData) {
-        const lead = this.findLeadByEmail(bookingData.email);
-        
-        if (!lead) {
-            console.error("❌ Erro ao adicionar agendamento: Lead não encontrado.");
-            return null;
-        }
-
-        // Adicionar o agendamento ao lead existente
-        if (!lead.bookings) {
-            lead.bookings = [];
-        }
-
-        const booking = {
-            id: crypto.randomBytes(8).toString("hex"),
-            timestamp: new Date().toISOString(),
-            ...bookingData,
-            status: "pendente"
-        };
-
-        lead.bookings.push(booking);
-        lead.journeyStage = "negociacao"; // Mudar o estágio da jornada
-        this.saveLeads();
-        
-        console.error(`📅 NOVO AGENDAMENTO: ${lead.nome} para ${booking.horario}`);
-        return booking;
-    }
 }
 
 // Funções para obter instâncias de sistema de leads e backup por tenant
@@ -884,8 +856,8 @@ class LeadBackupSystem {
         this.ensureBackupDirectory();
         this.maxBackups = 7; // Manter últimos 7 dias
         this.backupInterval = 24 * 60 * 60 * 1000; // 24 horas
-        console.error(`🔐 Sistema de Backup Inicializado`);
-        console.error(`📁 Diretório de backups: ${this.backupDir}`);
+        console.log(`🔐 Sistema de Backup Inicializado`);
+        console.log(`📁 Diretório de backups: ${this.backupDir}`);
         
         // Fazer backup inicial
         this.createBackup("startup");
@@ -898,7 +870,7 @@ class LeadBackupSystem {
         try {
             if (!fs.existsSync(this.backupDir)) {
                 fs.mkdirSync(this.backupDir, { recursive: true });
-                console.error(`📁 Diretório de backups criado: ${this.backupDir}`);
+                console.log(`📁 Diretório de backups criado: ${this.backupDir}`);
             }
         } catch (error) {
             console.error("❌ Erro ao criar diretório de backups:", error);
@@ -919,7 +891,7 @@ class LeadBackupSystem {
             };
             
             fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
-            console.error(`✅ Backup criado: ${filename} (${this.leadSystem.leads.length} leads)`);
+            console.log(`✅ Backup criado: ${filename} (${this.leadSystem.leads.length} leads)`);
             
             // Limpar backups antigos
             this.cleanOldBackups();
@@ -947,7 +919,7 @@ class LeadBackupSystem {
                 const filesToDelete = files.slice(this.maxBackups);
                 filesToDelete.forEach(file => {
                     fs.unlinkSync(file.path);
-                    console.error(`🗑️ Backup antigo removido: ${file.name}`);
+                    console.log(`🗑️ Backup antigo removido: ${file.name}`);
                 });
             }
         } catch (error) {
@@ -998,7 +970,7 @@ class LeadBackupSystem {
             this.leadSystem.leads = backupData.leads;
             this.leadSystem.saveLeads();
             
-            console.error(`✅ Backup restaurado: ${filename} (${backupData.leadsCount} leads)`);
+            console.log(`✅ Backup restaurado: ${filename} (${backupData.leadsCount} leads)`);
             
             return { 
                 success: true, 
@@ -1013,16 +985,16 @@ class LeadBackupSystem {
 
     scheduleAutomaticBackups() {
         setInterval(() => {
-            console.error("⏰ Executando backup automático diário...");
+            console.log("⏰ Executando backup automático diário...");
             this.createBackup("daily");
         }, this.backupInterval);
         
-        console.error(`⏰ Backup automático agendado (a cada 24 horas)`);
+        console.log(`⏰ Backup automático agendado (a cada 24 horas)`);
     }
 
     setupShutdownHook() {
         const shutdown = () => {
-            console.error("🛑 Servidor encerrando - Criando backup final...");
+            console.log("🛑 Servidor encerrando - Criando backup final...");
             this.createBackup("shutdown");
             process.exit(0);
         };
@@ -1116,7 +1088,7 @@ const journeyAnalyzer = new JourneyAnalyzer();
 // ===== SISTEMA DE CAPTURA DE INTENÇÕES DO CLIENTE =====
 class SistemaCapturaInteligencias {
     constructor() {
-        console.error("🎯 Sistema de Captura de Intenções Inicializado");
+        console.log("🎯 Sistema de Captura de Intenções Inicializado");
     }
 
     capturarInteligencias(mensagem) {
@@ -1200,7 +1172,7 @@ class SistemaCapturaInteligencias {
             inteligencias.suporte = true;
         }
 
-        console.error(`🎯 Intenções detectadas:`, inteligencias);
+        console.log(`🎯 Intenções detectadas:`, inteligencias);
         return inteligencias;
     }
 
@@ -1288,7 +1260,7 @@ const sistemaInteligencias = new SistemaCapturaInteligencias();
 // ===== SISTEMA APRIMORADO DE EXTRAÇÃO DE CONTATOS =====
 class SistemaExtracaoContatosAprimorado {
     constructor() {
-        console.error("📞 Sistema Aprimorado de Extração de Contatos Inicializado");
+        console.log("📞 Sistema Aprimorado de Extração de Contatos Inicializado");
     }
 
     extrairContatosAprimorado($) {
@@ -1338,12 +1310,12 @@ class SistemaExtracaoContatosAprimorado {
                             if (isWhatsApp) {
                                 if (!contatos.whatsapp.includes(numeroFormatado)) {
                                     contatos.whatsapp.push(numeroFormatado);
-                                    console.error(`📞 WhatsApp detectado: ${numeroFormatado}`);
+                                    console.log(`📞 WhatsApp detectado: ${numeroFormatado}`);
                                 }
                             } else {
                                 if (!contatos.telefone.includes(numeroFormatado)) {
                                     contatos.telefone.push(numeroFormatado);
-                                    console.error(`📞 Telefone detectado: ${numeroFormatado}`);
+                                    console.log(`📞 Telefone detectado: ${numeroFormatado}`);
                                 }
                             }
                         }
@@ -1356,7 +1328,7 @@ class SistemaExtracaoContatosAprimorado {
             const emails = textoPagina.match(emailRegex);
             if (emails) {
                 contatos.email = [...new Set(emails)]; // Remove duplicatas
-                console.error(`📧 Emails detectados: ${contatos.email.length}`);
+                console.log(`📧 Emails detectados: ${contatos.email.length}`);
             }
 
             // 🎯 EXTRAÇÃO DE SITES
@@ -1364,7 +1336,7 @@ class SistemaExtracaoContatosAprimorado {
             const sites = textoPagina.match(siteRegex);
             if (sites) {
                 contatos.site = [...new Set(sites.slice(0, 3))]; // Limita a 3 sites únicos
-                console.error(`🌐 Sites detectados: ${contatos.site.length}`);
+                console.log(`🌐 Sites detectados: ${contatos.site.length}`);
             }
 
             // 🎯 BUSCA EM ELEMENTOS ESPECÍFICOS PARA CONTATOS
@@ -1428,7 +1400,7 @@ class SistemaExtracaoContatosAprimorado {
                 }
             });
 
-            console.error(`📊 Resumo de contatos extraídos:`, {
+            console.log(`📊 Resumo de contatos extraídos:`, {
                 telefones: contatos.telefone.length,
                 whatsapp: contatos.whatsapp.length,
                 emails: contatos.email.length,
@@ -1509,7 +1481,7 @@ const sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
 // ===== SISTEMA DE SUPERINTELIGÊNCIA EMOCIONAL =====
 class SuperInteligenciaEmocional {
     constructor() {
-        console.error("🧠 Sistema de SuperInteligência Emocional Inicializado");
+        console.log("🧠 Sistema de SuperInteligência Emocional Inicializado");
         
         // Mapeamento de emoções e sentimentos
         this.emociones = {
@@ -1610,7 +1582,7 @@ class SuperInteligenciaEmocional {
             intensidade += 1;
         }
 
-        console.error(`🎭 Análise Emocional: ${emocao} (intensidade: ${intensidade}) ${urgencia ? '🚨 URGENTE' : ''}`);
+        console.log(`🎭 Análise Emocional: ${emocao} (intensidade: ${intensidade}) ${urgencia ? '🚨 URGENTE' : ''}`);
 
         return { emocao, intensidade, urgencia };
     }
@@ -1628,7 +1600,7 @@ class SuperInteligenciaEmocional {
             personalidade = "motivacional";
         }
 
-        console.error(`🎨 Personalidade selecionada: ${personalidade}`);
+        console.log(`🎨 Personalidade selecionada: ${personalidade}`);
         return this.personalidades[personalidade];
     }
 
@@ -1693,25 +1665,43 @@ class SuperInteligenciaEmocional {
         );
 
         if (isAgendamento) {
-            console.error("📅 Solicitação de agendamento detectada");
-            // Em vez de listar horários no chat, instruir o usuário a usar o botão "Agendar"
-            return `**📅 AGENDAMENTO DETECTADO**\n\n` +
-                   `Para agendar sua reunião, por favor, clique no botão **"Agendar"** no topo da tela. Você será direcionado para a seleção de horários.`;
+            console.log("📅 Solicitação de agendamento detectada");
+            return this.gerarOpcoesAgendamento();
         }
 
         return null;
     }
 
-    // Esta função não é mais usada, pois o agendamento é feito via formulário
     gerarOpcoesAgendamento() {
-        return null;
+        const horarios = this.horariosDisponiveis.slice(0, 3); // 3 primeiros horários
+        let resposta = `**📅 AGENDAMENTO DISPONÍVEL**\n\n`;
+        resposta += `Encontrei estes horários para nossa conversa:\n\n`;
+        
+        horarios.forEach((horario, index) => {
+            resposta += `${index + 1}. ${horario}\n`;
+        });
+        
+        resposta += `\n💬 **Qual horário prefere?**\n`;
+        resposta += `📞 Ou se preferir, posso passar nossos contatos diretos!`;
+        
+        return resposta;
     }
 
-    // O processamento de agendamento agora é feito via formulário e rota de API
-    // Este método é mantido apenas para compatibilidade ou para detectar confirmações
     processarAgendamento(mensagem) {
-        // Não é mais necessário processar a seleção de horário via chat, pois usamos o formulário.
-        // Mantemos a função para evitar erros, mas ela não terá mais a lógica de seleção.
+        const mensagemLower = mensagem.toLowerCase();
+        
+        // Detectar seleção de horário
+        for (let i = 0; i < this.horariosDisponiveis.length; i++) {
+            if (mensagemLower.includes((i + 1).toString()) || 
+                mensagemLower.includes(this.horariosDisponiveis[i].toLowerCase())) {
+                
+                return `✅ **AGENDAMENTO CONFIRMADO!**\n\n` +
+                       `📅 **Horário:** ${this.horariosDisponiveis[i]}\n` +
+                       `🎯 **Próximo passo:** Nossa equipe entrará em contato para confirmar.\n` +
+                       `📞 **Contato direto:** Veja nossos canais acima! ⬆️`;
+            }
+        }
+
         return null;
     }
 }
@@ -1861,7 +1851,7 @@ class SistemaExtracaoApurado {
 
     async extrairDadosCompletos(url) {
         try {
-            console.error('🌐 [EXTRACAO APRIMORADA] Conectando à:', url);
+            console.log('🌐 [EXTRACAO APRIMORADA] Conectando à:', url);
             const { data } = await axios.get(url, {
                 timeout: 30000,
                 headers: {
@@ -1883,7 +1873,7 @@ class SistemaExtracaoApurado {
                 contatos: sistemaContatosAprimorado.extrairContatosAprimorado($)
             };
 
-            console.error(`✅ [EXTRACAO] Concluída: ${dadosExtraidos.bonus.length} bônus encontrados`);
+            console.log(`✅ [EXTRACAO] Concluída: ${dadosExtraidos.bonus.length} bônus encontrados`);
             return dadosExtraidos;
         } catch (error) {
             console.error('❌ [EXTRACAO] Erro:', error.message);
@@ -2076,7 +2066,7 @@ class ValidacaoCruzada {
     }
 
     validarDadosCompletos(dadosExtraidos) {
-        console.error('🔍 [VALIDAÇÃO] Iniciando validação cruzada...');
+        console.log('🔍 [VALIDAÇÃO] Iniciando validação cruzada...');
         
         const validacoes = {
             bonus: this.validarBonusCruzado(dadosExtraidos),
@@ -2088,7 +2078,7 @@ class ValidacaoCruzada {
         const dadosValidados = this.aplicarCorrecoes(dadosExtraidos, validacoes);
         const pontuacaoConfianca = this.calcularPontuacaoConfianca(validacoes);
 
-        console.error(`✅ [VALIDAÇÃO] Concluída: ${pontuacaoConfianca * 100}% de confiança`);
+        console.log(`✅ [VALIDAÇÃO] Concluída: ${pontuacaoConfianca * 100}% de confiança`);
 
         return {
             dadosValidados,
@@ -2304,7 +2294,7 @@ if (process.env.REDIS_URL) {
         prefix: "linkmagico:"
     });
     
-    console.error("✅ Redis configurado para sessões");
+    console.log("✅ Redis configurado para sessões");
 } else {
     console.warn("⚠️  Redis não configurado - usando MemoryStore (não recomendado para produção)");
 }
@@ -2455,7 +2445,7 @@ app.get("/excluir-dados", (req, res) => {
 app.get("/admin/leads", requireApiKey, (req, res) => {
     const leadSystem = getLeadSystem(req.cliente.apiKey);
     const leads = leadSystem.getLeads();
-    console.error(`📊 Retornando ${leads.length} leads para admin`);
+    console.log(`📊 Retornando ${leads.length} leads para admin`);
     res.json({
         success: true,
         leads: leads,
@@ -3474,12 +3464,12 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         const finalResponse = String(response).replace(/<s>\s*\[OUT\]/g, '').replace(/<[^>]*>/g, '').replace(/\[.*?\]/g, '').trim();
         const responseTime = Date.now() - startTime;
         
-        console.error(`🧠 [SUPERINTELIGÊNCIA] Resposta Gerada:`);
-        console.error(`   Emoção: ${estadoEmocional.emocaoPrimaria} | Intenções: ${estadoEmocional.intencoesMultiplas.length}`);
-        console.error(`   Jornada: ${journeyStage} | Sarcasmo: ${estadoEmocional.sarcasmo}`);
-        console.error(`   Usuário: "${cleanUserMessage.substring(0, 50)}..."`);
-        console.error(`   Resposta: "${finalResponse.substring(0, 50)}..."`);
-        console.error(`   Provedor: ${usedProvider}, Tempo: ${responseTime}ms`);
+        console.log(`🧠 [SUPERINTELIGÊNCIA] Resposta Gerada:`);
+        console.log(`   Emoção: ${estadoEmocional.emocaoPrimaria} | Intenções: ${estadoEmocional.intencoesMultiplas.length}`);
+        console.log(`   Jornada: ${journeyStage} | Sarcasmo: ${estadoEmocional.sarcasmo}`);
+        console.log(`   Usuário: "${cleanUserMessage.substring(0, 50)}..."`);
+        console.log(`   Resposta: "${finalResponse.substring(0, 50)}..."`);
+        console.log(`   Provedor: ${usedProvider}, Tempo: ${responseTime}ms`);
         
         logger.info(`AI response generated in ${responseTime}ms using ${usedProvider}`);
         return finalResponse;
@@ -3632,79 +3622,18 @@ app.get("/health", (req, res) => {
     });
 });
 
-// ===== ENDPOINT: Agendamento de Reunião =====
-app.post("/api/schedule-booking", async (req, res) => {
-    try {
-        const { nome, email, horario, apiKey } = req.body || {};
-
-        // 1. Validação de Dados Essenciais
-        if (!apiKey) {
-            return res.status(401).json({ success: false, error: "API Key é obrigatória" });
-        }
-        if (!email || !horario) {
-            return res.status(400).json({ success: false, error: "Email e Horário são obrigatórios para agendamento" });
-        }
-
-        const leadSystem = getLeadSystem(apiKey);
-        let lead = leadSystem.findLeadByEmail(email);
-
-        // 2. Se o lead não existir, criar um lead básico
-        if (!lead) {
-            lead = leadSystem.addLead({
-                nome: nome || "Agendamento - Não Informado",
-                email: email,
-                telefone: req.body.telefone || "Não Informado",
-                url_origem: req.body.url_origem || "",
-                robotName: req.body.robotName || "Assistente IA",
-                journeyStage: "negociacao"
-            });
-        }
-
-        // 3. Adicionar o agendamento ao lead
-        const booking = leadSystem.addBooking({
-            nome: lead.nome,
-            email: lead.email,
-            horario: horario,
-            url_origem: req.body.url_origem || "",
-            robotName: req.body.robotName || "Assistente IA"
-        });
-
-        // 4. Notificação (Simulada)
-        console.error(`🔔 NOTIFICAÇÃO DE AGENDAMENTO - API Key: ${apiKey}`);
-        console.error(`   - Lead: ${lead.nome} (${lead.email})`);
-        console.error(`   - Horário Solicitado: ${horario}`);
-        console.error(`   - Status: Pendente de Confirmação`);
-        
-        // 5. Resposta de Sucesso
-        res.json({ 
-            success: true, 
-            booking: booking,
-            message: "Agendamento registrado com sucesso! Nossa equipe entrará em contato para confirmar." 
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao processar agendamento:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: "Erro interno ao processar agendamento" 
-        });
-    }
-});
-
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
     try {
         const { nome, email, telefone, url_origem, robotName, apiKey } = req.body || {};
         
-        // Validar se apiKey foi fornecida (Comentado para resolver erro 401 no frontend)
-        /*
+        // Validar se apiKey foi fornecida
         if (!apiKey) {
             return res.status(401).json({ 
                 success: false, 
                 error: "API Key é obrigatória" 
             });
         }
-        */
         
         const leadSystem = getLeadSystem(apiKey);
 
@@ -3736,7 +3665,7 @@ app.post("/api/capture-lead", async (req, res) => {
 
         analytics.leadsCaptured++;
         
-        console.error(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
+        console.log(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
 
         res.json({ 
             success: true, 
@@ -3828,7 +3757,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             });
         }
 
-        console.error('🧠 [SUPER-INTELIGENCIA] Processando mensagem:', { 
+        console.log('🧠 [SUPER-INTELIGENCIA] Processando mensagem:', { 
             messageLength: message.length,
             url: url || 'none',
             leadId: leadId || 'none'
@@ -3872,12 +3801,12 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         const respostaAgendamento = superInteligencia.detectarAgendamento(message);
         if (respostaAgendamento) {
             finalResponse = respostaAgendamento;
-            console.error("📅 Resposta de agendamento gerada");
+            console.log("📅 Resposta de agendamento gerada");
         }
         // 🎯 PROCESSAR CONFIRMAÇÃO DE AGENDAMENTO
         else if (superInteligencia.processarAgendamento(message)) {
             finalResponse = superInteligencia.processarAgendamento(message);
-            console.error("✅ Confirmação de agendamento processada");
+            console.log("✅ Confirmação de agendamento processada");
         }
         // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES FORAM DETECTADAS
         else if (Object.values(inteligencias).some(val => val === true)) {
@@ -3899,7 +3828,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             );
             
             finalResponse = respostaEmpatica + respostaContextual;
-            console.error(`🎭 Resposta emocional inteligente gerada`);
+            console.log(`🎭 Resposta emocional inteligente gerada`);
         } else {
             // 🎯 USAR SISTEMA ORIGINAL COM MELHORIAS EMOCIONAIS
             const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
@@ -3913,7 +3842,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
                 finalResponse = respostaIA;
             }
             
-            console.error(`🤖 Resposta IA com melhorias emocionais`);
+            console.log(`🤖 Resposta IA com melhorias emocionais`);
         }
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
@@ -3955,7 +3884,7 @@ app.post("/api/extract-enhanced", async (req, res) => {
     try {
         const { url } = req.body || {};
 
-        console.error("📥 [EXTRACAO APRIMORADA] Recebendo requisição para:", url);
+        console.log("📥 [EXTRACAO APRIMORADA] Recebendo requisição para:", url);
         
         if (!url) {
             return res.status(400).json({ 
@@ -3984,10 +3913,10 @@ app.post("/api/extract-enhanced", async (req, res) => {
 
         const validacao = sistemaValidacao.validarDadosCompletos(extractedData);
         
-        console.error("✅ [EXTRACAO APRIMORADA] Concluída com sucesso");
-        console.error(`🎯 Bônus encontrados: ${validacao.dadosValidados.bonus.length}`);
-        console.error(`📞 Contatos encontrados: ${validacao.dadosValidados.contatos ? Object.keys(validacao.dadosValidados.contatos).length : 0}`);
-        console.error(`📊 Confiança: ${(validacao.pontuacaoConfianca * 100).toFixed(1)}%`);
+        console.log("✅ [EXTRACAO APRIMORADA] Concluída com sucesso");
+        console.log(`🎯 Bônus encontrados: ${validacao.dadosValidados.bonus.length}`);
+        console.log(`📞 Contatos encontrados: ${validacao.dadosValidados.contatos ? Object.keys(validacao.dadosValidados.contatos).length : 0}`);
+        console.log(`📊 Confiança: ${(validacao.pontuacaoConfianca * 100).toFixed(1)}%`);
         
         return res.json({ 
             success: true, 
@@ -4017,7 +3946,7 @@ app.post("/api/extract", async (req, res) => {
     try {
         const { url, instructions, robotName } = req.body || {};
 
-        console.error("📥 Recebendo requisição para extrair:", url);
+        console.log("📥 Recebendo requisição para extrair:", url);
         
         if (!url) {
             return res.status(400).json({ 
@@ -4042,7 +3971,7 @@ app.post("/api/extract", async (req, res) => {
         if (instructions) extractedData.custom_instructions = instructions;
         if (robotName) extractedData.robot_name = robotName;
 
-        console.error("✅ Extração concluída com sucesso");
+        console.log("✅ Extração concluída com sucesso");
         
         return res.json({ 
             success: true, 
@@ -4142,15 +4071,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         <div class="chat-messages" id="chatMessages" style="display:none">
             <div class="chat-message bot">Olá! Sou ${safeRobotName}, estou aqui para tirar todas as suas dúvidas. Como posso ajudar você hoje?</div>
         </div>
-        <div id="agendamentoForm" class="lm-agendamento-form" style="display: none; flex-direction: column; padding: 20px; gap: 15px; background-color: #f9fafb; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h3 style="color: #1f2937; margin-top: 0;">📅 Agendar Reunião</h3>
-            <input type="text" id="agendamentoNome" placeholder="Seu Nome" class="lm-input" readonly style="background-color: #e5e7eb;">
-            <input type="email" id="agendamentoEmail" placeholder="Seu Email" class="lm-input" readonly style="background-color: #e5e7eb;">
-            <select id="agendamentoHorario" class="lm-input" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;"></select>
-            <button id="submitAgendamento" class="lm-button" style="background-color: #10b981; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Confirmar Agendamento</button>
-            <button id="cancelAgendamento" class="lm-button" style="background-color: #ef4444; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancelar</button>
-        </div>
-
         <div class="chat-input-container" id="chatInputContainer" style="display:none">
             <input type="text" class="chat-input" id="messageInput" placeholder="Digite sua mensagem..." autocomplete="off">
             <button class="send-button" id="sendButton"><i class="fas fa-paper-plane"></i></button>
@@ -4165,7 +4085,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
     <script>
         // Extrair apiKey da URL
         const urlParams = new URLSearchParams(window.location.search);
-        const apiBase = window.location.origin; // Correção de escopo para a submissão do agendamento
         const apiKey = urlParams.get('apiKey');
         
         const pageData = ${escapedPageData};
@@ -4183,92 +4102,10 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 
         // Função para iniciar agendamento
         function iniciarAgendamento() {
-            // Se o lead ainda não foi capturado, capturar primeiro
-            if (!leadId) {
-                console.error('Por favor, preencha o formulário de leads primeiro para que possamos agendar.');
-                return;
-            }
-
-            // Ocultar o chat e mostrar o formulário de agendamento
-            chatMessages.style.display = 'none';
-            chatInputContainer.style.display = 'none';
-            document.getElementById('agendamentoForm').style.display = 'flex';
-            document.getElementById('agendamentoNome').value = document.getElementById('leadName').value.trim();
-            document.getElementById('agendamentoEmail').value = document.getElementById('leadEmail').value.trim();
-            
-            // Mostrar os horários disponíveis (simulação)
-            const horarios = [
-                "Segunda 09:00", "Terça 14:00", "Quarta 16:00",
-                "Quinta 10:00", "Sexta 15:00"
-            ];
-            const select = document.getElementById('agendamentoHorario');
-            select.innerHTML = '<option value="">Selecione um horário</option>';
-            horarios.forEach(h => {
-                const option = document.createElement('option');
-                option.value = h;
-                option.textContent = h;
-                select.appendChild(option);
-            });
+            const mensagem = "Gostaria de agendar uma reunião";
+            messageInput.value = mensagem;
+            sendMessage();
         }
-
-        // Função para submeter o agendamento
-        document.getElementById('submitAgendamento').addEventListener('click', async function() {
-            const nome = document.getElementById('agendamentoNome').value.trim();
-            const email = document.getElementById('agendamentoEmail').value.trim();
-            const horario = document.getElementById('agendamentoHorario').value;
-            const url_origem = urlParams.get('url');
-            const robotName = urlParams.get('robotName');
-
-            if (!horario) {
-                console.error('Por favor, selecione um horário disponível.');
-                return;
-            }
-
-            try {
-                const response = await fetch(apiBase + '/api/schedule-booking', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        nome,
-                        email,
-                        horario,
-                        apiKey,
-                        url_origem,
-                        robotName
-                    }),
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    console.error('✅ Agenda Confirmado! Nossa equipe entrará em contato para confirmar o horário de ' + horario + '.');
-                    
-                    // Voltar para a tela de chat
-                    document.getElementById('agendamentoForm').style.display = 'none';
-                    chatMessages.style.display = 'flex';
-                    chatInputContainer.style.display = 'flex';
-                    
-                    // Enviar mensagem de confirmação no chat
-                    console.log('Agendamento para ' + horario + ' registrado com sucesso! Notificação de agendamento enviada.');
-
-                } else {
-                    console.error('Erro ao agendar: ' + result.error);
-                }
-            } catch (error) {
-                console.error('Erro ao submeter agendamento:', error);
-                console.error('Erro de conexão ao tentar agendar. Tente novamente mais tarde.');
-            }
-        });
-
-        // Função para cancelar o agendamento
-        document.getElementById('cancelAgendamento').addEventListener('click', function() {
-            document.getElementById('agendamentoForm').style.display = 'none';
-            chatMessages.style.display = 'flex';
-            chatInputContainer.style.display = 'flex';
-            appendMessage('🤖', 'Agendamento cancelado. Se precisar de ajuda, é só perguntar!', 'bot');
-        });
 
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
@@ -4276,7 +4113,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             const email = document.getElementById('leadEmail').value.trim();
             const phone = document.getElementById('leadPhone').value.trim();
             if (!email) {
-                console.error('Por favor, informe seu email');
+                alert('Por favor, informe seu email');
                 return;
             }
             try {
@@ -4303,7 +4140,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 }
             } catch (error) {
                 console.error('Erro ao capturar lead:', error);
-                console.error('Erro ao processar. Tente novamente.');
+                alert('Erro ao processar. Tente novamente.');
             }
         });
 
@@ -4435,15 +4272,6 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             <span class="typing-dot"></span>
             <span>Digitando...</span>
         </div>
-        <div id="agendamentoForm" class="lm-agendamento-form" style="display: none; flex-direction: column; padding: 20px; gap: 15px; background-color: #f9fafb; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h3 style="color: #1f2937; margin-top: 0;">📅 Agendar Reunião</h3>
-            <input type="text" id="agendamentoNome" placeholder="Seu Nome" class="lm-input" readonly style="background-color: #e5e7eb;">
-            <input type="email" id="agendamentoEmail" placeholder="Seu Email" class="lm-input" readonly style="background-color: #e5e7eb;">
-            <select id="agendamentoHorario" class="lm-input" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;"></select>
-            <button id="submitAgendamento" class="lm-button" style="background-color: #10b981; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Confirmar Agendamento</button>
-            <button id="cancelAgendamento" class="lm-button" style="background-color: #ef4444; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancelar</button>
-        </div>
-
         <div class="chat-input-container" id="chatInputContainer" style="display:none">
             <input type="text" class="chat-input" id="chatInput" placeholder="Digite sua pergunta..." maxlength="500">
             <button class="send-button" id="sendButton">
@@ -4454,7 +4282,6 @@ function generateChatbotHTML({ robotName, url, instructions }) {
     <script>
         // Extrair apiKey da URL
         const urlParams = new URLSearchParams(window.location.search);
-        const apiBase = window.location.origin; // Correção de escopo para a submissão do agendamento
         const apiKey = urlParams.get('apiKey');
         
         const chatMessages = document.getElementById('chatMessages');
@@ -4479,7 +4306,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             const email = document.getElementById('leadEmail').value.trim();
             const phone = document.getElementById('leadPhone').value.trim();
             if (!email) {
-                console.error('Por favor, informe seu email');
+                alert('Por favor, informe seu email');
                 return;
             }
             try {
@@ -4505,7 +4332,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 }
             } catch (error) {
                 console.error('Erro ao capturar lead:', error);
-                console.error('Erro ao processar. Tente novamente.');
+                alert('Erro ao processar. Tente novamente.');
             }
         });
 
@@ -4750,30 +4577,30 @@ setupRoutes(app);
         }
     });
 
-    console.error('✅ Rotas V3.0 configuradas');
+    console.log('✅ Rotas V3.0 configuradas');
 
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 
-        console.error(`🌐 Servidor rodando em http://0.0.0.0:${PORT}`);
-        console.error(`📊 Dashboard: http://0.0.0.0:${PORT}/api/system/status`);
-        console.error(`🚀 LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:${PORT}`);
-        console.error(`📊 Health check: http://0.0.0.0:${PORT}/health`);
-        console.error(`🤖 Chatbot disponível em: http://0.0.0.0:${PORT}/chatbot`);
-        console.error(`🔧 Widget JS disponível em: http://0.0.0.0:${PORT}/public/widget.js`);
-        console.error(`🎯 Sistema de captura de leads PERSISTENTE ATIVADO`);
-        console.error(`📈 Painel de leads: http://0.0.0.0:${PORT}/admin/leads`);
-        console.error(`📞 Extração de contatos: ATIVADA`);
-        console.error(`🧠 SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA`);
-        console.error(`🎭 Detecção de sarcasmo e ironia: IMPLEMENTADA`);
-        console.error(`🧩 Análise de múltiplas intenções: FUNCIONANDO`);
-        console.error(`💾 Memória conversacional avançada: OPERACIONAL`);
-        console.error(`🎨 Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL`);
-        console.error(`🚨 Detecção de urgência: ATIVADA`);
-        console.error(`📅 Sistema de agendamento: IMPLEMENTADO`);
-        console.error(`🎯 Botões fixos no topo: FUNCIONANDO`);
-        console.error(`👥 Jornada do cliente: Análise inteligente ATIVADA`);
-        console.error(`🧠 Endpoint superinteligente: /api/process-chat-inteligente`);
-        console.error(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
+        console.log(`🌐 Servidor rodando em http://0.0.0.0:${PORT}`);
+        console.log(`📊 Dashboard: http://0.0.0.0:${PORT}/api/system/status`);
+        console.log(`🚀 LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:${PORT}`);
+        console.log(`📊 Health check: http://0.0.0.0:${PORT}/health`);
+        console.log(`🤖 Chatbot disponível em: http://0.0.0.0:${PORT}/chatbot`);
+        console.log(`🔧 Widget JS disponível em: http://0.0.0.0:${PORT}/public/widget.js`);
+        console.log(`🎯 Sistema de captura de leads PERSISTENTE ATIVADO`);
+        console.log(`📈 Painel de leads: http://0.0.0.0:${PORT}/admin/leads`);
+        console.log(`📞 Extração de contatos: ATIVADA`);
+        console.log(`🧠 SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA`);
+        console.log(`🎭 Detecção de sarcasmo e ironia: IMPLEMENTADA`);
+        console.log(`🧩 Análise de múltiplas intenções: FUNCIONANDO`);
+        console.log(`💾 Memória conversacional avançada: OPERACIONAL`);
+        console.log(`🎨 Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL`);
+        console.log(`🚨 Detecção de urgência: ATIVADA`);
+        console.log(`📅 Sistema de agendamento: IMPLEMENTADO`);
+        console.log(`🎯 Botões fixos no topo: FUNCIONANDO`);
+        console.log(`👥 Jornada do cliente: Análise inteligente ATIVADA`);
+        console.log(`🧠 Endpoint superinteligente: /api/process-chat-inteligente`);
+        console.log(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
     });
 })();

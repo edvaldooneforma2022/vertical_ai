@@ -1,7 +1,3 @@
-
-LinkMágico Chatbot Widget 
-
-
 <script>
 (function() {
     'use strict';
@@ -9,11 +5,11 @@ LinkMágico Chatbot Widget
     // ===== CONFIGURAÇÃO DO CLIENTE =====
     // O cliente deve configurar apenas estes campos:
     const config = {
-        robotName: "@convertaleads",              // Nome do robô/assistente
-        salesUrl: "https://www.arsenalsecretodosceos.com.br/ebook",  // URL do produto/página de vendas
-        instructions: "Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva com foco em vendas e conversões.", // Instruções personalizadas
+        robotName: "@Nutrição de Leads",              // Nome do robô/assistente
+        salesUrl: "https://www.arsenalsecretodosceos.com.br/q8qq0fj",  // URL do produto/página de vendas
+        instructions: "Foco em vendas e conversões.", // Instruções personalizadas
         primaryColor: "#3b82f6",                  // Cor primária do widget
-        apiKey: "LMV7-NI12-9HIH-46S6"                // ⚠️ CHAVE ÚNICA DE CADA CLIENTE (OBRIGATÓRIA )
+        apiKey: "LMV7-B3MS-JMRB-FRQZ"                // ⚠️ CHAVE ÚNICA DE CADA CLIENTE (OBRIGATÓRIA )
     };
 
     // ===== CONFIGURAÇÃO DO SERVIDOR =====
