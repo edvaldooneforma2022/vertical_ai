@@ -4216,7 +4216,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             const nome = document.getElementById('agendamentoNome').value.trim();
             const email = document.getElementById('agendamentoEmail').value.trim();
             const horario = document.getElementById('agendamentoHorario').value;
-            const apiKey = urlParams.get('apiKey');
             const url_origem = urlParams.get('url');
             const robotName = urlParams.get('robotName');
 
