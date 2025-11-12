@@ -1183,7 +1183,7 @@
             var controller = new AbortController();
             var timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
-            fetch(this.config.apiBase + '/api/chat-universal', {
+            fetch(this.config.apiBase + '/api/widget/chat', {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify(payload),
@@ -1494,7 +1494,7 @@
                     );
                 } else {
                     // Fallback for older browsers
-                    fetch(this.config.apiBase + '/api/chat-universal', {s', {
+                    fetch(this.config.apiBase + '/api/widget/analytics', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(eventData),

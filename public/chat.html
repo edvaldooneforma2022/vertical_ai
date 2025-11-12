@@ -761,7 +761,6 @@
     </div>
 
     <script>
-        const apiBase = window.location.origin;
         let pageData = null;
         let robotName = 'Assistente IA';
         let conversationId = 'chat_' + Date.now();
@@ -1039,7 +1038,7 @@
             showTyping();
             
             try {
-                const response = await fetch(`${apiBase}/api/chat-universal`, {
+                const response = await fetch('/api/chat-universal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
