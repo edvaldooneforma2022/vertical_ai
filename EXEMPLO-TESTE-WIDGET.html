@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Widget LinkMágico - Site do Cliente</title>
+    
+    <!-- Font Awesome (necessário para os ícones do widget) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+        
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .info-box h3 {
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .checklist {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .checklist h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .checklist ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .checklist li {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .checklist li:before {
+            content: "✓";
+            color: #10b981;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        
+        .success-box {
+            background: #d1fae5;
+            border: 2px solid #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .success-box h2 {
+            color: #065f46;
+            margin-bottom: 10px;
+        }
+        
+        .success-box p {
+            color: #047857;
+            font-size: 1.1em;
+        }
+        
+        .arrow {
+            font-size: 2em;
+            color: #3b82f6;
+            text-align: center;
+            margin: 20px 0;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        code {
+            background: #1e293b;
+            color: #10b981;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Teste do Widget LinkMágico</h1>
+        <p class="subtitle">Página de teste para validar a integração do chatbot</p>
+        
+        <div class="info-box">
+            <h3>📋 O que você deve ver:</h3>
+            <p>
+                Um <strong>balão flutuante azul</strong> deve aparecer no canto inferior direito da tela.
+                Ao clicar nele, uma janela de chat deve abrir com o assistente virtual.
+            </p>
+        </div>
+        
+        <div class="checklist">
+            <h3>✅ Checklist de Validação:</h3>
+            <ul>
+                <li>Balão flutuante aparece no canto inferior direito</li>
+                <li>Ao clicar, a janela do chat abre</li>
+                <li>Formulário de captura de lead é exibido (opcional)</li>
+                <li>É possível enviar mensagens</li>
+                <li>O bot responde às mensagens</li>
+                <li>Não há erros no console do navegador (F12)</li>
+            </ul>
+        </div>
+        
+        <div class="arrow">↓ Olhe para o canto inferior direito ↓</div>
+        
+        <div class="success-box">
+            <h2>✨ Widget Funcionando!</h2>
+            <p>Se você vê o balão flutuante, a correção foi aplicada com sucesso!</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>🔧 Para Desenvolvedores:</h3>
+            <p>
+                Abra o <strong>Console do Navegador</strong> (F12 → Console) para ver os logs de inicialização:
+            </p>
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li><code>LinkMagico Widget: Server domain detected as ...</code></li>
+                <li><code>LinkMagico Widget: Initializing with window.LinkMagicoWidgetConfig</code></li>
+                <li><code>LinkMagico Commercial Widget v6.0.0-commercial initialized</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ========================================
+         WIDGET LINKMAGICO - CÓDIGO DE INTEGRAÇÃO
+         ======================================== -->
+    
+    <!-- 
+        INSTRUÇÕES:
+        1. Substitua os valores abaixo com as configurações do seu chatbot
+        2. Certifique-se de que a URL do script aponta para o servidor LinkMágico correto
+        3. O domínio será detectado automaticamente pelo widget
+    -->
+    
+    <script>
+        // Configuração do Widget LinkMágico
+        window.LinkMagicoWidgetConfig = {
+            robotName: "Assistente de Vendas",
+            salesUrl: "https://exemplo.com/produto",
+            instructions: "Ajude os visitantes com dúvidas sobre produtos e vendas",
+            primaryColor: "#3b82f6"
+        };
+    </script>
+    
+    <!-- 
+        IMPORTANTE: Use a URL COMPLETA do servidor LinkMágico
+        Substitua "linkmagico-comercial.onrender.com" pelo seu domínio real
+    -->
+    <script src="https://linkmagico-comercial.onrender.com/public/widget.js"></script>
+    
+    <!-- ======================================== -->
+
+</body>
+</html>

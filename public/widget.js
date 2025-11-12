@@ -9,15 +9,30 @@
         return;
     }
 
-    // Security: Check for required token
+    // Auto-detect server domain from script source
     const scripts = document.querySelectorAll('script[src*="widget.js"]');
     const currentScript = scripts[scripts.length - 1];
-    const urlParams = new URLSearchParams(currentScript.src.split('?')[1] || '');
+    const scriptSrc = currentScript ? currentScript.src : '';
+    
+    // Extract server domain from script URL
+    let detectedServerDomain = '';
+    if (scriptSrc) {
+        try {
+            const scriptUrl = new URL(scriptSrc);
+            detectedServerDomain = scriptUrl.origin;
+            console.log('LinkMagico Widget: Server domain detected as', detectedServerDomain);
+        } catch (e) {
+            console.warn('LinkMagico Widget: Could not auto-detect server domain');
+        }
+    }
+    
+    // Optional token from URL parameters
+    const urlParams = new URLSearchParams(scriptSrc.split('?')[1] || '');
     const widgetToken = urlParams.get('token');
-
+    
+    // Token is optional - widget can work without it for basic functionality
     if (!widgetToken) {
-        console.error('LinkMagico Widget: Token required');
-        return;
+        console.log('LinkMagico Widget: No token provided, using configuration-based authentication');
     }
 
     var LinkMagicoWidget = {
@@ -47,7 +62,7 @@
             robotName: 'Assistente IA',
             salesUrl: '',
             instructions: '',
-            apiBase: window.location.origin,
+            apiBase: detectedServerDomain || window.location.origin,
             showBadge: true,
             autoOpen: false,
             openDelay: 5000,
@@ -1606,16 +1621,29 @@
     // Expose widget to global scope
     window.LinkMagicoWidget = LinkMagicoWidget;
 
-    // Auto-initialize if config is provided via data attributes
+    // Auto-initialize if config is provided
     document.addEventListener('DOMContentLoaded', function() {
+        // Priority 1: Check for window.LinkMagicoWidgetConfig (recommended method)
+        if (window.LinkMagicoWidgetConfig) {
+            try {
+                console.log('LinkMagico Widget: Initializing with window.LinkMagicoWidgetConfig');
+                LinkMagicoWidget.init(window.LinkMagicoWidgetConfig);
+                return;
+            } catch (error) {
+                console.error('Failed to auto-initialize LinkMagico Widget from window config:', error);
+            }
+        }
+        
+        // Priority 2: Check for data attributes
         var scripts = document.querySelectorAll('script[data-linkmagico-config]');
         if (scripts.length > 0) {
             try {
                 var configScript = scripts[0];
                 var config = JSON.parse(configScript.getAttribute('data-linkmagico-config'));
+                console.log('LinkMagico Widget: Initializing with data-linkmagico-config');
                 LinkMagicoWidget.init(config);
             } catch (error) {
-                console.error('Failed to auto-initialize LinkMagico Widget:', error);
+                console.error('Failed to auto-initialize LinkMagico Widget from data attribute:', error);
             }
         }
     });

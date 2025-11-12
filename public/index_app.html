@@ -1322,7 +1322,7 @@
         primaryColor: "#3b82f6"
     };
 &lt;/script&gt;
-&lt;script src="/public/widget.js"&gt;&lt;/script&gt;</code></pre>
+&lt;script src="https://SEU-SERVIDOR.onrender.com/public/widget.js"&gt;&lt;/script&gt;</code></pre>
                 </div>
             </div>
         </div>
@@ -1587,8 +1587,9 @@
                 });
                 chatbotFrame.src = `/chat.html?${chatbotParams.toString()}`;
 
-                // Atualiza o código do widget
-                widgetCodeDisplay.innerHTML = `&lt;!-- LinkMágico Chatbot Widget --&gt;\n&lt;script&gt;\n    window.LinkMagicoWidgetConfig = {\n        robotName: "${robotName}",\n        salesUrl: "${salesUrl}",\n        instructions: "${customInstructions}",\n        primaryColor: "#3b82f6"\n    };\n&lt;/script&gt;\n&lt;script src="/public/widget.js"&gt;&lt;/script&gt;`;
+                // Atualiza o código do widget com URL ABSOLUTA do servidor
+                const serverDomain = window.location.origin; // Ex: https://linkmagico-comercial.onrender.com
+                widgetCodeDisplay.innerHTML = `&lt;!-- LinkMágico Chatbot Widget --&gt;\n&lt;script&gt;\n    window.LinkMagicoWidgetConfig = {\n        robotName: "${robotName}",\n        salesUrl: "${salesUrl}",\n        instructions: "${customInstructions}",\n        primaryColor: "#3b82f6"\n    };\n&lt;/script&gt;\n&lt;script src="${serverDomain}/public/widget.js"&gt;&lt;/script&gt;`;
 
                 successAlert.style.display = 'block';
                 showToast('Chatbot ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
