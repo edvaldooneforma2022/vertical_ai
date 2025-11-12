@@ -3635,7 +3635,7 @@ app.get("/health", (req, res) => {
 // ===== ENDPOINT: Agendamento de Reunião =====
 app.post("/api/schedule-booking", async (req, res) => {
     try {
-        const { nome, email, horario, apiKey, telefone } = req.body || {};
+        const { nome, email, horario, apiKey } = req.body || {};
 
         // 1. Validação de Dados Essenciais
         if (!apiKey) {
@@ -4165,6 +4165,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
     <script>
         // Extrair apiKey da URL
         const urlParams = new URLSearchParams(window.location.search);
+        const apiBase = window.location.origin; // Correção de escopo para a submissão do agendamento
         const apiKey = urlParams.get('apiKey');
         
         const pageData = ${escapedPageData};
@@ -4215,7 +4216,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             const nome = document.getElementById('agendamentoNome').value.trim();
             const email = document.getElementById('agendamentoEmail').value.trim();
             const horario = document.getElementById('agendamentoHorario').value;
-            const apiKey = urlParams.get('apiKey');
             const url_origem = urlParams.get('url');
             const robotName = urlParams.get('robotName');
 
@@ -4225,7 +4225,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             }
 
             try {
-                const response = await fetch('/api/schedule-booking', {
+                const response = await fetch(apiBase + '/api/schedule-booking', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -4454,6 +4454,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
     <script>
         // Extrair apiKey da URL
         const urlParams = new URLSearchParams(window.location.search);
+        const apiBase = window.location.origin; // Correção de escopo para a submissão do agendamento
         const apiKey = urlParams.get('apiKey');
         
         const chatMessages = document.getElementById('chatMessages');
@@ -4776,28 +4777,3 @@ setupRoutes(app);
         console.error(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
     });
 })();
-
-// ===== ENDPOINT: Listar Leads e Agendamentos (Para Debug/Consulta) =====
-app.get("/api/leads", async (req, res) => {
-    try {
-        const apiKey = req.query.apiKey; // Pega a apiKey da query
-        if (!apiKey) {
-            return res.status(401).json({ success: false, error: "API Key é obrigatória" });
-        }
-
-        const leadSystem = getLeadSystem(apiKey);
-        
-        // Assumindo que leadSystem tem um método para retornar todos os leads
-        // O método mais provável é getAllLeads() ou similar
-        if (typeof leadSystem.getAllLeads === 'function') {
-            const allLeads = leadSystem.getAllLeads(); 
-            return res.json({ success: true, leads: allLeads });
-        } else {
-            return res.status(500).json({ success: false, error: "Função getAllLeads não encontrada no sistema de leads" });
-        }
-
-    } catch (error) {
-        console.error("Erro ao listar leads:", error);
-        return res.status(500).json({ success: false, error: "Erro interno do servidor" });
-    }
-});
