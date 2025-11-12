@@ -1680,7 +1680,7 @@ class SuperInteligenciaEmocional {
     }
 
     // ===== SISTEMA DE AGENDAMENTO INTELIGENTE =====
-    detectarAgendamento(mensagem) {
+    detectarAgendamento(mensagem, req) {
         const mensagemLower = mensagem.toLowerCase();
         const palavrasAgendamento = [
             'agendar', 'marcar', 'reunião', 'reuniao', 'encontro', 'consulta',
@@ -1695,7 +1695,75 @@ class SuperInteligenciaEmocional {
         if (isAgendamento) {
             console.error("📅 Solicitação de agendamento detectada");
             // Em vez de listar horários no chat, instruir o usuário a usar o botão "Agendar"
-            return `**📅 AGENDAMENTO DETECTADO**\n\n` +
+            const apiBase = req.protocol + '://' + req.get('host');
+        const apiKey = req.cliente.apiKey;
+        return `
+<div class="booking-form-container" data-api-base="${apiBase}" data-api-key="${apiKey}">
+    <h2 style="text-align: center; color: var(--primary-dark); margin-bottom: 20px;">Agendar Reunião</h2>
+    <p style="text-align: center; color: var(--gray-600); margin-bottom: 20px;">Preencha seus dados para agendar um horário com a nossa equipe.</p>
+    <div class="input-group">
+        <label for="nome">Nome</label>
+        <input type="text" id="nome" placeholder="Seu nome completo" value="${req.body.nome || ''}">
+    </div>
+    <div class="input-group">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" placeholder="Seu melhor e-mail" value="${req.body.email || ''}">
+    </div>
+    <div class="input-group">
+        <label for="horario">Horário Preferencial</label>
+        <select id="horario">
+            <option value="">Selecione um horário</option>
+            <option value="09:00">09:00 - 10:00</option>
+            <option value="10:00">10:00 - 11:00</option>
+            <option value="11:00">11:00 - 12:00</option>
+            <option value="14:00">14:00 - 15:00</option>
+            <option value="15:00">15:00 - 16:00</option>
+            <option value="16:00">16:00 - 17:00</option>
+        </select>
+    </div>
+    <button type="button" class="submit-btn" onclick="submeterAgendamento(this)">Confirmar Agendamento</button>
+    <button type="button" class="cancel-btn" onclick="cancelarAgendamento()">Cancelar</button>
+</div>
+<script>
+    async function submeterAgendamento(button) {
+        const formContainer = button.closest(".booking-form-container");
+        const apiBase = formContainer.dataset.apiBase;
+        const apiKey = formContainer.dataset.apiKey;
+        const nome = formContainer.querySelector("input[id='nome']").value;
+        const email = formContainer.querySelector("input[id='email']").value;
+        const horario = formContainer.querySelector("select[id='horario']").value;
+
+        if (!email || !horario) {
+            alert("Por favor, preencha seu e-mail e selecione um horário.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${apiBase}/api/schedule-booking`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nome, email, horario, apiKey })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert("Agendamento solicitado com sucesso! Em breve, nossa equipe entrará em contato para confirmar.");
+                formContainer.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--success);"><h2>Agendamento Recebido!</h2><p>Obrigado, ${nome}. Sua solicitação para ${horario} foi registrada.</p></div>`;
+            } else {
+                alert("Erro: " + result.error);
+            }
+        } catch (error) {
+            console.error("Erro ao submeter agendamento:", error);
+            alert("Erro de conexão ao tentar agendar. Tente novamente mais tarde.");
+        }
+    }
+    function cancelarAgendamento() {
+        // Lógica para fechar o formulário ou voltar ao chat
+        alert("Agendamento cancelado.");
+        // Exemplo: recarregar a página ou voltar ao estado inicial do chat
+        window.location.reload(); 
+    }
+</script>
+`
                    `Para agendar sua reunião, por favor, clique no botão **"Agendar"** no topo da tela. Você será direcionado para a seleção de horários.`;
         }
 
@@ -2453,7 +2521,7 @@ app.get("/excluir-dados", (req, res) => {
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
     const leads = leadSystem.getLeads();
     console.error(`📊 Retornando ${leads.length} leads para admin`);
     res.json({
@@ -2464,7 +2532,7 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
     const lead = leadSystem.getLeadById(req.params.id);
     if (lead) {
         res.json({ success: true, lead });
@@ -2475,14 +2543,14 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.createBackup("manual");
     res.json(result);
 });
 
 app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const backups = backupSystem.listBackups();
     res.json({
@@ -2501,7 +2569,7 @@ app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
             error: "Nome do arquivo de backup é obrigatório"
         });
     }
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.restoreBackup(filename);
     res.json(result);
@@ -2660,7 +2728,7 @@ app.get("/api/docs", (req, res) => {
 // ===== STATUS DO SISTEMA DE BACKUP =====
 app.get("/admin/backup/status", requireApiKey, (req, res) => {
     try {
-        const leadSystem = getLeadSystem(req.cliente.apiKey);
+        const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
         
         const backups = backupSystem.listBackups();
@@ -2698,7 +2766,7 @@ app.get("/admin/backup/status", requireApiKey, (req, res) => {
 // ===== TESTE DO SISTEMA DE BACKUP =====
 app.post("/admin/backup/test", requireApiKey, (req, res) => {
     try {
-        const leadSystem = getLeadSystem(req.cliente.apiKey);
+        const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
         
         // Criar backup de teste
@@ -2777,7 +2845,7 @@ app.use(express.static("public", {
 }));
 
 // ===== Analytics & Cache =====
-const analytics = {
+const analytics = analyticsManager; // Usar a instância do analyticsManager
     totalRequests: 0,
     chatRequests: 0,
     extractRequests: 0,
@@ -3645,7 +3713,7 @@ app.post("/api/schedule-booking", async (req, res) => {
             return res.status(400).json({ success: false, error: "Email e Horário são obrigatórios para agendamento" });
         }
 
-        const leadSystem = getLeadSystem(apiKey);
+        const leadSystem = structuredLeadsManager.getLeadSystem(apiKey);
         let lead = leadSystem.findLeadByEmail(email);
 
         // 2. Se o lead não existir, criar um lead básico
@@ -3706,7 +3774,7 @@ app.post("/api/capture-lead", async (req, res) => {
         }
         */
         
-        const leadSystem = getLeadSystem(apiKey);
+        const leadSystem = structuredLeadsManager.getLeadSystem(apiKey);
 
         if (!email) {
             return res.status(400).json({ 
@@ -3755,7 +3823,7 @@ app.post("/api/capture-lead", async (req, res) => {
 
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
     analytics.chatRequests++;
     try {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
@@ -3816,7 +3884,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const leadSystem = structuredLeadsManager.getLeadSystem(req.cliente.apiKey);
     analytics.chatRequests++;
     try {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
@@ -3869,7 +3937,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         let finalResponse = "";
 
         // 🎯 DETECTAR AGENDAMENTO
-        const respostaAgendamento = superInteligencia.detectarAgendamento(message);
+        const respostaAgendamento = superInteligencia.detectarAgendamento(message, req);
         if (respostaAgendamento) {
             finalResponse = respostaAgendamento;
             console.error("📅 Resposta de agendamento gerada");
