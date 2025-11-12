@@ -4165,6 +4165,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
     <script>
         // Extrair apiKey da URL
         const urlParams = new URLSearchParams(window.location.search);
+        const apiBase = window.location.origin; // Correção de escopo para a submissão do agendamento
         const apiKey = urlParams.get('apiKey');
         
         const pageData = ${escapedPageData};
@@ -4454,6 +4455,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
     <script>
         // Extrair apiKey da URL
         const urlParams = new URLSearchParams(window.location.search);
+        const apiBase = window.location.origin; // Correção de escopo para a submissão do agendamento
         const apiKey = urlParams.get('apiKey');
         
         const chatMessages = document.getElementById('chatMessages');
