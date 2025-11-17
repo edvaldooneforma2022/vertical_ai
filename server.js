@@ -4101,6 +4101,17 @@ app.post("/api/extract", async (req, res) => {
   try {
     // ===== USAR NOVA FUNÇÃO COM FIRECRAWL =====
     const data = await extractPageDataWithFirecrawl(url);
+
+    // CORREÇÃO: Verificar se a função retornou um objeto de falha (method: 'fallback')
+    // Se sim, retornar status 500 para o cliente, mesmo que a função não tenha lançado um erro.
+    if (data && data.method === 'fallback') {
+      logger.error('❌ Extração falhou completamente (Firecrawl + Fallback). Retornando 500.');
+      return res.status(500).json({ 
+        error: 'Erro ao extrair dados',
+        message: 'Extração falhou completamente (Firecrawl + Fallback).' 
+      });
+    }
+
     // Adicionar métricas para análise
     const metrics = {
       method: data.method,
