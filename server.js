@@ -3098,7 +3098,9 @@ async function extractPageDataWithFirecrawl(url) {
     extractedData.title = 'Extração Falhou';
     extractedData.method = 'fallback';
     extractedData.extractionTime = Date.now() - startTime;
-    return extractedData;
+    // Lançar o erro para que o middleware do Express o capture e retorne o status 500
+    // Isso garante que o cliente receba a resposta de erro, mesmo que o corpo seja um objeto de fallback.
+    throw error;
   }
 }
 
