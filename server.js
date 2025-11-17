@@ -2900,7 +2900,7 @@ async function extractPageDataWithRetry(url, maxRetries = 3) {
             const timeout = 30000 + (attempt - 1) * 15000;
             
             const result = await Promise.race([
-                extractPageData(url),
+                extractPageDataOriginal(url),
                 new Promise((_, reject) => 
                     setTimeout(() => reject(new Error(`Timeout após ${timeout/1000}s`)), timeout)
                 )
@@ -2983,7 +2983,9 @@ async function extractPageDataWithFirecrawl(url) {
     contatos: {
       site: [url],
       whatsapp: [],
-      email: []
+      email: [],
+      telefone: [],
+      endereco: []
     }
   };
 
@@ -3084,8 +3086,7 @@ async function extractPageDataWithFirecrawl(url) {
     // ===== ETAPA 4: FALLBACK - PUPPETEER (MANTER COMO ÚLTIMA OPÇÃO) =====
     logger.info('🔄 Usando Puppeteer como fallback...');
     
-    // Chamar função original de extração com Puppeteer
-    const puppeteerData = await extractPageDataOriginal(url);
+    // Chamar função original de extração com Puppeteer (agora com retry)\n    const puppeteerData = await extractPageDataWithRetry(url);
     return puppeteerData;
 
   } catch (error) {
@@ -4096,9 +4097,7 @@ app.post("/api/extract", async (req, res) => {
   }
   
   try {
-    // ===== USAR NOVA FUNÇÃO COM FIRECRAWL =====
-    const data = await extractPageDataWithFirecrawl(url);
-    
+    // ===== USAR NOVA FUNÇÃO COM FIRECRAWL =====\n    const data = await extractPageDataWithFirecrawl(url);    
     // Adicionar métricas para análise
     const metrics = {
       method: data.method,
