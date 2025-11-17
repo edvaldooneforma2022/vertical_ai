@@ -2745,7 +2745,7 @@ app.get("/chatbot", async (req, res) => {
         let pageData = {};
         if (url) {
             try {
-                pageData = await extractPageData(url);
+                pageData = await extractPageDataWithFirecrawl(url);
             } catch (extractError) {
                 console.warn('Failed to extract page data:', extractError.message || extractError);
             }
@@ -3086,18 +3086,18 @@ async function extractPageDataWithFirecrawl(url) {
     // ===== ETAPA 4: FALLBACK - PUPPETEER (MANTER COMO ÚLTIMA OPÇÃO) =====
     logger.info('🔄 Usando Puppeteer como fallback...');
     
-    // Chamar função original de extração com Puppeteer (agora com retry)\n    const puppeteerData = await extractPageDataOriginal(url);
+    // Chamar função original de extração com Puppeteer (agora com retry)
+    const puppeteerData = await extractPageDataOriginal(url);
     return puppeteerData;
 
   } catch (error) {
-    logger.error('❌ Erro geral na extração:', error);
+    logger.error('❌ Erro geral na extração:', error.message);
     
     // Retornar fallback de erro (manter lógica original)
     extractedData.cleanText = 'Não foi possível extrair o conteúdo automaticamente.';
     extractedData.title = 'Extração Falhou';
     extractedData.method = 'fallback';
     extractedData.extractionTime = Date.now() - startTime;
-    
     return extractedData;
   }
 }
@@ -4097,7 +4097,8 @@ app.post("/api/extract", async (req, res) => {
   }
   
   try {
-    // ===== USAR NOVA FUNÇÃO COM FIRECRAWL =====\n    const data = await extractPageDataWithFirecrawl(url);    
+    // ===== USAR NOVA FUNÇÃO COM FIRECRAWL =====
+    const data = await extractPageDataWithFirecrawl(url);
     // Adicionar métricas para análise
     const metrics = {
       method: data.method,
