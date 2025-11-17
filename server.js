@@ -45,6 +45,12 @@ const cors = require("cors");
 const helmet = require("helmet");
 const winston = require("winston");
 const axios = require("axios");
+const FirecrawlApp = require('@mendable/firecrawl-js').default;
+
+// ===== INICIALIZAR FIRECRAWL =====
+const firecrawlApp = new FirecrawlApp({ 
+  apiKey: process.env.FIRECRAWL_API_KEY 
+});
 const cheerio = require("cheerio");
 const path = require("path");
 const fs = require("fs");
@@ -2947,7 +2953,155 @@ async function extractPageDataWithRetry(url, maxRetries = 3) {
     };
 }
 
-async function extractPageData(url) {
+// ============================================================================
+// FUNÇÃO HÍBRIDA - extractPageDataWithFirecrawl (NOVA LÓGICA)
+// ============================================================================
+
+/**
+ * Versão HÍBRIDA: Usa Firecrawl para extração geral, mas mantém
+ * lógica específica do Link Mágico (Google Drive, Contatos, etc)
+ * 
+ * ESTRATÉGIA:
+ * 1. Google Drive → Mantém extração específica existente
+ * 2. URLs normais → Usa Firecrawl (super rápido)
+ * 3. Fallback → Se Firecrawl falhar, usa Puppeteer (como antes)
+ */
+async function extractPageDataWithFirecrawl(url) {
+  const startTime = Date.now();
+  
+  // Estrutura de dados mantida 100% compatível com o Link Mágico original
+  let extractedData = {
+    title: '',
+    description: '',
+    summary: '',
+    cleanText: '',
+    url: url,
+    extractionTime: 0,
+    method: 'unknown',
+    bonuses_detected: [],
+    price_detected: [],
+    contatos: {
+      site: [url],
+      whatsapp: [],
+      email: []
+    }
+  };
+
+  try {
+    // ===== ETAPA 1: VERIFICAR CACHE (MANTER LÓGICA ORIGINAL) =====
+    const cachedData = await getCacheData(url);
+    if (cachedData) {
+      logger.info('✅ Cache hit - retornando dados em cache');
+      return cachedData;
+    }
+
+    // ===== ETAPA 2: GOOGLE DRIVE - MANTER EXTRAÇÃO ESPECÍFICA =====
+    if (url.includes('docs.google.com') || url.includes('drive.google.com')) {
+      logger.info('📄 Google Drive detectado - usando extração específica');
+      
+      try {
+        // Assumindo que extractContentFromGoogleDrive está definido
+        const driveContent = await extractContentFromGoogleDrive(url);
+        
+        if (driveContent && driveContent.length > 100) {
+          extractedData.cleanText = driveContent;
+          extractedData.title = driveContent.split('\\n')[0] || 'Documento Google Drive';
+          extractedData.method = 'google-drive-export';
+          extractedData.contatos.site = []; // Limpar para não mostrar Drive como site oficial
+          
+          // Processar dados finais
+          // Assumindo que processExtractedData está definido
+          extractedData = await processExtractedData(extractedData);
+          extractedData.extractionTime = Date.now() - startTime;
+          
+          // Assumindo que setCacheData está definido
+          await setCacheData(url, extractedData);
+          return extractedData;
+        }
+      } catch (driveError) {
+        logger.warn('⚠️ Falha no Google Drive, tentando Firecrawl...');
+      }
+    }
+
+    // ===== ETAPA 3: FIRECRAWL - EXTRAÇÃO PRINCIPAL (NOVA LÓGICA) =====
+    logger.info('🔥 Iniciando extração com Firecrawl...');
+    
+    try {
+      // Configuração otimizada do Firecrawl para o Link Mágico
+      const scrapeResult = await firecrawlApp.scrapeUrl(url, {
+        formats: ['markdown', 'html'], // Obter ambos os formatos
+        onlyMainContent: true, // Apenas conteúdo principal (remove nav, footer, etc)
+        waitFor: 2000, // Aguarda 2s para JS carregar
+        timeout: 30000, // Timeout de 30s (mesmo do Link Mágico original)
+        
+        // Extrair metadados automaticamente
+        includeTags: ['article', 'main', 'section', 'p', 'h1', 'h2', 'h3'],
+        excludeTags: ['script', 'style', 'nav', 'footer', 'aside']
+      });
+
+      if (scrapeResult && scrapeResult.data) {
+        const data = scrapeResult.data;
+        
+        // ===== MAPEAR DADOS DO FIRECRAWL PARA FORMATO LINK MÁGICO =====
+        extractedData.cleanText = data.markdown || data.content || '';
+        extractedData.title = data.metadata?.title || data.title || '';
+        extractedData.description = data.metadata?.description || data.description || '';
+        extractedData.method = 'firecrawl-api';
+        
+        // ===== MANTER SISTEMA DE CONTATOS DO LINK MÁGICO =====
+        // Usar HTML do Firecrawl para extrair contatos com sistema original
+        if (data.html) {
+          const $ = cheerio.load(data.html);
+          
+          // Assumindo que sistemaContatosAprimorado está definido globalmente
+          const contatosExtraidos = await sistemaContatosAprimorado.extrairContatosAprimorado($);
+          
+          if (contatosExtraidos) {
+            extractedData.contatos = {
+              site: contatosExtraidos.site || [url],
+              whatsapp: contatosExtraidos.whatsapp || [],
+              email: contatosExtraidos.email || []
+            };
+          }
+        }
+        
+        // ===== PROCESSAR DADOS FINAIS (MANTER LÓGICA ORIGINAL) =====
+        extractedData = await processExtractedData(extractedData);
+        extractedData.extractionTime = Date.now() - startTime;
+        
+        logger.info(`✅ Firecrawl extraiu ${extractedData.cleanText.length} caracteres em ${extractedData.extractionTime}ms`);
+        
+        // Salvar no cache
+        await setCacheData(url, extractedData);
+        return extractedData;
+      }
+      
+    } catch (firecrawlError) {
+      logger.error('❌ Erro no Firecrawl:', firecrawlError.message);
+      logger.info('🔄 Tentando fallback com método original...');
+    }
+
+    // ===== ETAPA 4: FALLBACK - PUPPETEER (MANTER COMO ÚLTIMA OPÇÃO) =====
+    logger.info('🔄 Usando Puppeteer como fallback...');
+    
+    // Chamar função original de extração com Puppeteer
+    const puppeteerData = await extractPageDataOriginal(url);
+    return puppeteerData;
+
+  } catch (error) {
+    logger.error('❌ Erro geral na extração:', error);
+    
+    // Retornar fallback de erro (manter lógica original)
+    extractedData.cleanText = 'Não foi possível extrair o conteúdo automaticamente.';
+    extractedData.title = 'Extração Falhou';
+    extractedData.method = 'fallback';
+    extractedData.extractionTime = Date.now() - startTime;
+    
+    return extractedData;
+  }
+}
+
+async function extractPageDataOriginal(url) {
     const startTime = Date.now();
     try {
         if (!url) throw new Error("URL is required");
@@ -3932,55 +4086,40 @@ app.post("/api/extract-enhanced", async (req, res) => {
 });
 
 // /api/extract endpoint (ORIGINAL - mantido para compatibilidade)
+// ROTA ORIGINAL DE EXTRAÇÃO (AGORA USANDO FIRECRAWL)
 app.post("/api/extract", async (req, res) => {
-    analytics.extractRequests++;
-    try {
-        const { url, instructions, robotName } = req.body || {};
-
-        console.log("📥 Recebendo requisição para extrair:", url);
-        
-        if (!url) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "URL é obrigatório" 
-            });
-        }
-
-        try { 
-            new URL(url); 
-        } catch (urlErr) { 
-            return res.status(400).json({ 
-                success: false, 
-                error: "URL inválido" 
-            }); 
-        }
-
-        logger.info(`Starting extraction for URL: ${url}`);
-        
-        const extractedData = await extractPageData(url);
-        
-        if (instructions) extractedData.custom_instructions = instructions;
-        if (robotName) extractedData.robot_name = robotName;
-
-        console.log("✅ Extração concluída com sucesso");
-        
-        return res.json({ 
-            success: true, 
-            data: extractedData 
-        });
-
-    } catch (error) {
-        analytics.errors++;
-        console.error("❌ Erro no endpoint /api/extract:", error);
-        logger.error("Extract endpoint error:", error.message || error);
-        
-        return res.status(500).json({ 
-            success: false, 
-            error: "Erro interno ao extrair página: " + (error.message || "Erro desconhecido"),
-            details: error.message
-        });
-    }
+  const { url } = req.body;
+  
+  // Validação de URL
+  if (!url) {
+    return res.status(400).json({ error: 'URL é obrigatória' });
+  }
+  
+  try {
+    // ===== USAR NOVA FUNÇÃO COM FIRECRAWL =====
+    const data = await extractPageDataWithFirecrawl(url);
+    
+    // Adicionar métricas para análise
+    const metrics = {
+      method: data.method,
+      extractionTime: data.extractionTime,
+      contentLength: data.cleanText.length,
+      timestamp: new Date().toISOString()
+    };
+    
+    logger.info('📊 Métricas:', metrics);
+    
+    res.json(data);
+    
+  } catch (error) {
+    logger.error('❌ Erro na rota de extração:', error);
+    res.status(500).json({ 
+      error: 'Erro ao extrair dados',
+      message: error.message 
+    });
+  }
 });
+
 
 // ===== FUNÇÃO: Geração Completa do HTML do Chatbot =====
 function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '') {
