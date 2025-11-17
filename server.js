@@ -3086,7 +3086,7 @@ async function extractPageDataWithFirecrawl(url) {
     // ===== ETAPA 4: FALLBACK - PUPPETEER (MANTER COMO ÚLTIMA OPÇÃO) =====
     logger.info('🔄 Usando Puppeteer como fallback...');
     
-    // Chamar função original de extração com Puppeteer (agora com retry)\n    const puppeteerData = await extractPageDataWithRetry(url);
+    // Chamar função original de extração com Puppeteer (agora com retry)\n    const puppeteerData = await extractPageDataOriginal(url);
     return puppeteerData;
 
   } catch (error) {
