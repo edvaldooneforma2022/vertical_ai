@@ -78,8 +78,8 @@ async function firecrawlScrape(url, options = {}) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Firecrawl HTTP ${response.status}:`, errorText);
-      throw new Error(`Firecrawl API error: ${response.status}`);
+      console.error(`❌ Firecrawl HTTP ${response.status}:`, errorText); // ✅ CORRIGIDO
+      throw new Error(`Firecrawl API error: ${response.status}`); // ✅ CORRIGIDO
     }
 
     const result = await response.json();
