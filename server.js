@@ -2822,9 +2822,30 @@ app.get("/chatbot", async (req, res) => {
         let pageData = {};
         if (url) {
             try {
-                pageData = await extractPageDataWithFirecrawl(url);
+                // Usar a função com retry para maior robustez
+                pageData = await extractPageDataWithRetry(url);
             } catch (extractError) {
-                console.warn('Failed to extract page data:', extractError.message || extractError);
+                logger.error('❌ Erro CRÍTICO na extração de dados:', extractError.message || extractError);
+                // Em caso de erro crítico, retornar um objeto de fallback seguro
+                pageData = {
+                    title: "Chatbot Inteligente",
+                    description: "Assistente virtual pronto para ajudar",
+                    summary: "Erro ao extrair dados da página. Verifique se a URL está acessível.",
+                    cleanText: `Informações sobre: ${url}\n\nEste é um assistente virtual inteligente pronto para responder suas dúvidas.\n\nPor favor, faça sua pergunta e farei o melhor para ajudá-lo!`,
+                    url: url,
+                    extractionTime: 0,
+                    method: "fallback-error",
+                    error: extractError.message || "Erro desconhecido na extração",
+                    bonuses_detected: [],
+                    price_detected: [],
+                    contatos: {
+                        telefone: [],
+                        whatsapp: [],
+                        email: [],
+                        site: [url],
+                        endereco: []
+                    }
+                };
             }
         }
         
@@ -3193,7 +3214,7 @@ async function extractPageDataWithFirecrawl(url) {
   if (DISABLE_FIRECRAWL) {
     logger.info('⚠️ Firecrawl desativado por env (DISABLE_FIRECRAWL=true). Usando extrator antigo/fallback.');
     // chamar extractPageDataOriginal(url) direto
-    return extractPageDataOriginal(url);
+    return await extractPageDataOriginal(url);
   }
   // FIM DO PATCH 7
   
