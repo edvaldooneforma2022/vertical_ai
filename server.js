@@ -46,6 +46,7 @@ const helmet = require("helmet");
 const winston = require("winston");
 const axios = require("axios");
 const cheerio = require("cheerio");
+const FirecrawlApp = require('./firecrawl-replacement');
 const path = require("path");
 const fs = require("fs");
 const bodyParser = require("body-parser");
