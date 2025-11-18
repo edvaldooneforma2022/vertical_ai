@@ -1482,7 +1482,35 @@ class SistemaExtracaoContatosAprimorado {
 }
 
 // Inicializar sistema aprimorado de extração de contatos
-const sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
+// ===== INSERIR IMEDIATAMENTE APÓS A DECLARAÇÃO DA CLASSE SistemaExtracaoContatosAprimorado (Patch 1) =====
+/* Garantir instância única e reutilizável do sistema de extração de contatos */
+let sistemaContatosAprimorado;
+try {
+  // Se por alguma razão já existir, não re-instanciar
+  if (!global.__sistemaContatosAprimorado) {
+    global.__sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
+  }
+  sistemaContatosAprimorado = global.__sistemaContatosAprimorado;
+  console.log('✅ sistemaContatosAprimorado instanciado globalmente');
+} catch (err) {
+  console.error('❌ Falha ao instanciar sistemaContatosAprimorado:', err && err.message ? err.message : err);
+  // Criar fallback mínimo para evitar que chamadas quebrem o fluxo
+  sistemaContatosAprimorado = {
+    extrairContatosAprimorado: async ($) => {
+      try {
+        // tentativa simples: extrair emails e links básicos
+        const contatos = { telefone: [], whatsapp: [], email: [], site: [], endereco: [] };
+        const texto = ($ && $.text) ? $.text() : '';
+        const emailMatches = texto.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g) || [];
+        contatos.email = [...new Set(emailMatches)].slice(0,3);
+        return contatos;
+      } catch (e) {
+        return { telefone: [], whatsapp: [], email: [], site: [], endereco: [] };
+      }
+    }
+  };
+}
+// FIM DO PATCH 1
 
 // ===== SISTEMA DE SUPERINTELIGÊNCIA EMOCIONAL =====
 class SuperInteligenciaEmocional {
@@ -2889,6 +2917,100 @@ function extractCleanTextFromHTML(html) {
 }
 
 // ===== Page extraction =====
+
+// ===== INSERIR FUNÇÃO processExtractedData ABAIXO DAS UTILS (Patch 2) =====
+async function processExtractedData(extractedData = {}) {
+  try {
+    // Garantir estrutura mínima
+    extractedData = extractedData || {};
+    extractedData.cleanText = String(extractedData.cleanText || '').trim();
+    extractedData.title = extractedData.title || extractedData.metadata?.title || '';
+    extractedData.description = extractedData.description || extractedData.metadata?.description || '';
+
+    // Se não temos cleanText mas temos html, extrair
+    if ((!extractedData.cleanText || extractedData.cleanText.length < 20) && extractedData.html) {
+      try {
+        // Assumindo que extractCleanTextFromHTML está definido
+        extractedData.cleanText = extractCleanTextFromHTML(extractedData.html);
+      } catch (e) {
+        extractedData.cleanText = extractedData.cleanText || '';
+      }
+    }
+
+    // Se ainda vazio, tentar montar a partir de markdown/content
+    if (!extractedData.cleanText || extractedData.cleanText.length < 20) {
+      extractedData.cleanText = extractedData.markdown || extractedData.content || extractedData.cleanText || '';
+    }
+
+    // Garantir texto-base mínimo para evitar objetos vazios
+    if (!extractedData.cleanText || extractedData.cleanText.trim().length === 0) {
+      extractedData.cleanText = `Conteúdo não extraído automaticamente. URL: ${extractedData.url || ''}`;
+    }
+
+    // Detectar bônus de forma simples
+    try {
+      // Assumindo que extractBonuses está definido
+      extractedData.bonuses_detected = extractBonuses(extractedData.cleanText || '');
+    } catch (e) {
+      extractedData.bonuses_detected = [];
+    }
+
+    // Detectar price simples (fallback)
+    try {
+      const priceMatch = (extractedData.cleanText || '').match(/(?:R\$|BRL)\s?[\d\.,]+/g);
+      extractedData.price_detected = priceMatch ? Array.from(new Set(priceMatch)).slice(0,3) : [];
+    } catch (e) {
+      extractedData.price_detected = [];
+    }
+
+    // Extrair contatos via sistema (se houver html) de forma protegida
+    try {
+      if (extractedData.html && typeof sistemaContatosAprimorado?.extrairContatosAprimorado === 'function') {
+        // proteger chamadas externas com timeout e try/catch
+        const contatos = await Promise.race([
+          sistemaContatosAprimorado.extrairContatosAprimorado(require('cheerio').load(extractedData.html)),
+          new Promise(resolve => setTimeout(() => resolve(null), 7000)) // 7s timeout
+        ]);
+        if (contatos) {
+          extractedData.contatos = Object.assign({
+            telefone: [], whatsapp: [], email: [], site: [extractedData.url || ''], endereco: []
+          }, contatos);
+        }
+      } else {
+        // fallback: manter contatos já presentes ou minimal
+        extractedData.contatos = extractedData.contatos || { telefone: [], whatsapp: [], email: [], site: [extractedData.url || ''], endereco: [] };
+      }
+    } catch (e) {
+      console.warn('processExtractedData: erro ao extrair contatos:', e && e.message ? e.message : e);
+      extractedData.contatos = extractedData.contatos || { telefone: [], whatsapp: [], email: [], site: [extractedData.url || ''], endereco: [] };
+    }
+
+    // tempo de extração (se ainda não definido)
+    extractedData.extractionTime = typeof extractedData.extractionTime === 'number' ? extractedData.extractionTime : 0;
+
+    // método padrão
+    extractedData.method = extractedData.method || 'processed';
+
+    return extractedData;
+  } catch (error) {
+    console.error('❌ processExtractedData error:', error && error.message ? error.message : error);
+    // Garantir retorno robusto para evitar que callers quebrem
+    return {
+      title: extractedData.title || 'Conteúdo',
+      description: extractedData.description || '',
+      cleanText: extractedData.cleanText || `Conteúdo não extraído. URL: ${extractedData.url || ''}`,
+      url: extractedData.url || '',
+      extractionTime: extractedData.extractionTime || 0,
+      method: extractedData.method || 'processed-error',
+      bonuses_detected: extractedData.bonuses_detected || [],
+      price_detected: extractedData.price_detected || [],
+      contatos: extractedData.contatos || { telefone: [], whatsapp: [], email: [], site: [extractedData.url || ''], endereco: [] }
+    };
+  }
+}
+// FIM DO PATCH 2
+
+// ===== Page extraction =====
 async function extractPageDataWithRetry(url, maxRetries = 3) {
     let lastError = null;
     
@@ -2953,6 +3075,53 @@ async function extractPageDataWithRetry(url, maxRetries = 3) {
     };
 }
 
+// ===== INSERIR FUNÇÃO extractContentFromGoogleDrive (Patch 3) =====
+const qs = require('querystring');
+
+async function extractContentFromGoogleDrive(url) {
+  try {
+    if (!url) return '';
+    // tentar extrair fileId de urls comuns do Google Docs/Drive
+    const m1 = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+    const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+    const fileId = (m1 && m1[1]) || (m2 && m2[1]);
+
+    if (!fileId) {
+      // fallback: tentar buscar via axios direto na url (se público)
+      const resp = await axios.get(url, { timeout: 15000 });
+      const html = resp.data || '';
+      // extrair texto simples
+      // Assumindo que extractCleanTextFromHTML está definido
+      return extractCleanTextFromHTML(html) || '';
+    }
+
+    // Tentar export as plain text do Drive (público)
+    const exportUrl = `https://docs.google.com/document/d/${fileId}/export?format=txt`;
+    const r = await axios.get(exportUrl, {
+      headers: {
+        'User-Agent': 'LinkMagico-GoogleDrive-Extractor/1.0'
+      },
+      timeout: 15000,
+      validateStatus: s => s >= 200 && s < 400
+    });
+
+    const text = (r && r.data) ? String(r.data) : '';
+    if (text && text.length > 20) return text;
+
+    // último recurso: tentar export html
+    const exportHtmlUrl = `https://docs.google.com/document/d/${fileId}/export?format=html`;
+    const rh = await axios.get(exportHtmlUrl, { timeout: 15000, validateStatus: s => s >= 200 && s < 400 });
+    // Assumindo que extractCleanTextFromHTML está definido
+    if (rh && rh.data) return extractCleanTextFromHTML(rh.data);
+
+    return '';
+  } catch (err) {
+    console.warn('extractContentFromGoogleDrive fallback/erro:', err && err.message ? err.message : err);
+    return '';
+  }
+}
+// FIM DO PATCH 3
+
 // ============================================================================
 // FUNÇÃO HÍBRIDA - extractPageDataWithFirecrawl (NOVA LÓGICA)
 // ============================================================================
@@ -2968,6 +3137,16 @@ async function extractPageDataWithRetry(url, maxRetries = 3) {
  */
 async function extractPageDataWithFirecrawl(url) {
   const startTime = Date.now();
+
+  // Permitir forçar fallback sem Firecrawl via ENV (Patch 7)
+  const DISABLE_FIRECRAWL = process.env.DISABLE_FIRECRAWL === 'true';
+
+  if (DISABLE_FIRECRAWL) {
+    logger.info('⚠️ Firecrawl desativado por env (DISABLE_FIRECRAWL=true). Usando extrator antigo/fallback.');
+    // chamar extractPageDataOriginal(url) direto
+    return extractPageDataOriginal(url);
+  }
+  // FIM DO PATCH 7
   
   // Estrutura de dados mantida 100% compatível com o Link Mágico original
   let extractedData = {
@@ -3050,22 +3229,32 @@ async function extractPageDataWithFirecrawl(url) {
         extractedData.description = data.metadata?.description || data.description || '';
         extractedData.method = 'firecrawl-api';
         
-        // ===== MANTER SISTEMA DE CONTATOS DO LINK MÁGICO =====
+        // ===== MANTER SISTEMA DE CONTATOS DO LINK MÁGICO (Patch 5) =====
         // Usar HTML do Firecrawl para extrair contatos com sistema original
         if (data.html) {
-          const $ = cheerio.load(data.html);
-          
-          // Assumindo que sistemaContatosAprimorado está definido globalmente
-          const contatosExtraidos = await sistemaContatosAprimorado.extrairContatosAprimorado($);
-          
-          if (contatosExtraidos) {
-            extractedData.contatos = {
-              site: contatosExtraidos.site || [url],
-              whatsapp: contatosExtraidos.whatsapp || [],
-              email: contatosExtraidos.email || []
-            };
+          try {
+            const $ = cheerio.load(data.html || '');
+            let contatosExtraidos = null;
+            if (sistemaContatosAprimorado && typeof sistemaContatosAprimorado.extrairContatosAprimorado === 'function') {
+              contatosExtraidos = await Promise.race([
+                sistemaContatosAprimorado.extrairContatosAprimorado($),
+                new Promise(resolve => setTimeout(() => resolve(null), 7000)) // timeout 7s
+              ]);
+            }
+            if (contatosExtraidos) {
+              extractedData.contatos = {
+                site: contatosExtraidos.site || [url],
+                whatsapp: contatosExtraidos.whatsapp || [],
+                email: contatosExtraidos.email || []
+              };
+            } else {
+              logger.info('ℹ️ sistemaContatosAprimorado retornou vazio ou timeout; mantendo contatos padrão');
+            }
+          } catch (contErr) {
+            logger.warn('❌ Erro ao extrair contatos via sistemaContatosAprimorado:', contErr && contErr.message ? contErr.message : contErr);
           }
         }
+        // FIM DO PATCH 5
         
         // ===== PROCESSAR DADOS FINAIS (MANTER LÓGICA ORIGINAL) =====
         extractedData = await processExtractedData(extractedData);
@@ -3073,6 +3262,12 @@ async function extractPageDataWithFirecrawl(url) {
         
         logger.info(`✅ Firecrawl extraiu ${extractedData.cleanText.length} caracteres em ${extractedData.extractionTime}ms`);
         
+        // garantir texto mínimo (Patch 6)
+        if (!extractedData.cleanText || extractedData.cleanText.trim().length < 10) {
+          extractedData.cleanText = extractedData.cleanText || extractedData.markdown || extractedData.summary || `Conteúdo não extraído automaticamente. URL: ${url}`;
+        }
+        // FIM DO PATCH 6
+
         // Salvar no cache
         await setCacheData(url, extractedData);
         return extractedData;
@@ -4102,15 +4297,19 @@ app.post("/api/extract", async (req, res) => {
     // ===== USAR NOVA FUNÇÃO COM FIRECRAWL =====
     const data = await extractPageDataWithFirecrawl(url);
 
-    // CORREÇÃO: Verificar se a função retornou um objeto de falha (method: 'fallback')
-    // Se sim, retornar status 500 para o cliente, mesmo que a função não tenha lançado um erro.
+    // CORREÇÃO: Se fizemos fallback, não retornar 500 automaticamente. (Patch 4)
     if (data && data.method === 'fallback') {
-      logger.error('❌ Extração falhou completamente (Firecrawl + Fallback). Retornando 500.');
-      return res.status(500).json({ 
-        error: 'Erro ao extrair dados',
-        message: 'Extração falhou completamente (Firecrawl + Fallback).' 
-      });
+      logger.warn('⚠️ Extração retornou fallback - retornando dados minimais (não 500). URL: ' + (url || ''));
+      // garantir fields mínimos
+      data = data || {};
+      data.cleanText = data.cleanText && data.cleanText.length ? data.cleanText : (`Conteúdo não extraído automaticamente. URL: ${url}`);
+      data.contatos = data.contatos || { telefone: [], whatsapp: [], email: [], site: [url], endereco: [] };
+      // incrementar métrica de falha mas retornar OK para o front
+      analytics.failedExtractions = (analytics.failedExtractions || 0) + 1;
+      // retornar 200 com o objeto de fallback
+      return res.json(data);
     }
+    // FIM DO PATCH 4
 
     // Adicionar métricas para análise
     const metrics = {
