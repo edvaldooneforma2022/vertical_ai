@@ -1491,7 +1491,7 @@ try {
     global.__sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
   }
   sistemaContatosAprimorado = global.__sistemaContatosAprimorado;
-  console.log('✅ sistemaContatosAprimorado instanciado globalmente');
+  console.log('sistemaContatosAprimorado instanciado globalmente');
 } catch (err) {
   console.error('❌ Falha ao instanciar sistemaContatosAprimorado:', err && err.message ? err.message : err);
   // Criar fallback mínimo para evitar que chamadas quebrem o fluxo
