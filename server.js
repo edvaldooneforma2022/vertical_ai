@@ -3352,8 +3352,7 @@ async function extractPageDataWithFirecrawl(url) {
     logger.info('🔄 Usando Puppeteer como fallback...');
     
     // Chamar função original de extração com Puppeteer (agora com retry)
-    const puppeteerData = await extractPageDataOriginal(url);
-    return puppeteerData;
+    return await extractPageDataOriginal(url);
 
   } catch (error) {
     logger.error('❌ Erro geral na extração:', error.message);
