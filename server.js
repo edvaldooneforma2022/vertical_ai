@@ -45,12 +45,61 @@ const cors = require("cors");
 const helmet = require("helmet");
 const winston = require("winston");
 const axios = require("axios");
-const FirecrawlApp = require('@mendable/firecrawl-js').default;
+const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 
-// ===== INICIALIZAR FIRECRAWL =====
-const firecrawlApp = new FirecrawlApp({ 
-  apiKey: process.env.FIRECRAWL_API_KEY 
-});
+/**
+ * Função para fazer scraping com Firecrawl usando fetch direto
+ * @param {string} url - URL para fazer scraping
+ * @param {object} options - Opções de scraping
+ * @returns {Promise<object>} - Resultado do scraping
+ */
+async function firecrawlScrape(url, options = {}) {
+  try {
+    if (!FIRECRAWL_API_KEY) {
+      throw new Error('FIRECRAWL_API_KEY não configurada');
+    }
+
+    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        url: url,
+        formats: options.formats || ['markdown', 'html'],
+        onlyMainContent: options.onlyMainContent !== false,
+        waitFor: options.waitFor || 2000,
+        timeout: options.timeout || 30000,
+        includeTags: options.includeTags || ['article', 'main', 'section', 'p', 'h1', 'h2', 'h3'],
+        excludeTags: options.excludeTags || ['script', 'style', 'nav', 'footer', 'aside']
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Firecrawl HTTP ${response.status}:`, errorText);
+      throw new Error(`Firecrawl API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ Firecrawl: Scraping concluído com sucesso');
+    return result;
+
+  } catch (error) {
+    console.error('❌ Erro no Firecrawl:', error.message);
+    throw error;
+  }
+}
+
+// Objeto compatível com a API original (para não quebrar código existente)
+const firecrawlApp = {
+  scrapeUrl: async (url, options) => {
+    return await firecrawlScrape(url, options);
+  }
+};
+
+console.log('🔥 Firecrawl configurado via fetch direto (sem SDK)');
 const cheerio = require("cheerio");
 const path = require("path");
 const fs = require("fs");
