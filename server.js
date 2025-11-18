@@ -45,61 +45,6 @@ const cors = require("cors");
 const helmet = require("helmet");
 const winston = require("winston");
 const axios = require("axios");
-const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
-
-/**
- * Função para fazer scraping com Firecrawl usando fetch direto
- * @param {string} url - URL para fazer scraping
- * @param {object} options - Opções de scraping
- * @returns {Promise<object>} - Resultado do scraping
- */
-async function firecrawlScrape(url, options = {}) {
-  try {
-    if (!FIRECRAWL_API_KEY) {
-      throw new Error('FIRECRAWL_API_KEY não configurada');
-    }
-
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        url: url,
-        formats: options.formats || ['markdown', 'html'],
-        onlyMainContent: options.onlyMainContent !== false,
-        waitFor: options.waitFor || 2000,
-        timeout: options.timeout || 30000,
-        includeTags: options.includeTags || ['article', 'main', 'section', 'p', 'h1', 'h2', 'h3'],
-        excludeTags: options.excludeTags || ['script', 'style', 'nav', 'footer', 'aside']
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Firecrawl HTTP ${response.status}:`, errorText); // ✅ CORRIGIDO
-      throw new Error(`Firecrawl API error: ${response.status}`); // ✅ CORRIGIDO
-    }
-
-    const result = await response.json();
-    console.log('✅ Firecrawl: Scraping concluído com sucesso');
-    return result;
-
-  } catch (error) {
-    console.error('❌ Erro no Firecrawl:', error.message);
-    throw error;
-  }
-}
-
-// Objeto compatível com a API original (para não quebrar código existente)
-const firecrawlApp = {
-  scrapeUrl: async (url, options) => {
-    return await firecrawlScrape(url, options);
-  }
-};
-
-console.log('🔥 Firecrawl configurado via fetch direto (sem SDK)');
 const cheerio = require("cheerio");
 const path = require("path");
 const fs = require("fs");
@@ -1531,35 +1476,7 @@ class SistemaExtracaoContatosAprimorado {
 }
 
 // Inicializar sistema aprimorado de extração de contatos
-// ===== INSERIR IMEDIATAMENTE APÓS A DECLARAÇÃO DA CLASSE SistemaExtracaoContatosAprimorado (Patch 1) =====
-/* Garantir instância única e reutilizável do sistema de extração de contatos */
-let sistemaContatosAprimorado;
-try {
-  // Se por alguma razão já existir, não re-instanciar
-  if (!global.__sistemaContatosAprimorado) {
-    global.__sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
-  }
-  sistemaContatosAprimorado = global.__sistemaContatosAprimorado;
-  console.log('sistemaContatosAprimorado instanciado globalmente');
-} catch (err) {
-  console.error('❌ Falha ao instanciar sistemaContatosAprimorado:', err && err.message ? err.message : err);
-  // Criar fallback mínimo para evitar que chamadas quebrem o fluxo
-  sistemaContatosAprimorado = {
-    extrairContatosAprimorado: async ($) => {
-      try {
-        // tentativa simples: extrair emails e links básicos
-        const contatos = { telefone: [], whatsapp: [], email: [], site: [], endereco: [] };
-        const texto = ($ && $.text) ? $.text() : '';
-        const emailMatches = texto.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g) || [];
-        contatos.email = [...new Set(emailMatches)].slice(0,3);
-        return contatos;
-      } catch (e) {
-        return { telefone: [], whatsapp: [], email: [], site: [], endereco: [] };
-      }
-    }
-  };
-}
-// FIM DO PATCH 1
+const sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
 
 // ===== SISTEMA DE SUPERINTELIGÊNCIA EMOCIONAL =====
 class SuperInteligenciaEmocional {
@@ -2822,30 +2739,9 @@ app.get("/chatbot", async (req, res) => {
         let pageData = {};
         if (url) {
             try {
-                // Usar a função com retry para maior robustez
-                pageData = await extractPageDataWithRetry(url);
+                pageData = await extractPageData(url);
             } catch (extractError) {
-                logger.error('❌ Erro CRÍTICO na extração de dados:', extractError.message || extractError);
-                // Em caso de erro crítico, retornar um objeto de fallback seguro
-                pageData = {
-                    title: "Chatbot Inteligente",
-                    description: "Assistente virtual pronto para ajudar",
-                    summary: "Erro ao extrair dados da página. Verifique se a URL está acessível.",
-                    cleanText: `Informações sobre: ${url}\n\nEste é um assistente virtual inteligente pronto para responder suas dúvidas.\n\nPor favor, faça sua pergunta e farei o melhor para ajudá-lo!`,
-                    url: url,
-                    extractionTime: 0,
-                    method: "fallback-error",
-                    error: extractError.message || "Erro desconhecido na extração",
-                    bonuses_detected: [],
-                    price_detected: [],
-                    contatos: {
-                        telefone: [],
-                        whatsapp: [],
-                        email: [],
-                        site: [url],
-                        endereco: []
-                    }
-                };
+                console.warn('Failed to extract page data:', extractError.message || extractError);
             }
         }
         
@@ -2987,100 +2883,6 @@ function extractCleanTextFromHTML(html) {
 }
 
 // ===== Page extraction =====
-
-// ===== INSERIR FUNÇÃO processExtractedData ABAIXO DAS UTILS (Patch 2) =====
-async function processExtractedData(extractedData = {}) {
-  try {
-    // Garantir estrutura mínima
-    extractedData = extractedData || {};
-    extractedData.cleanText = String(extractedData.cleanText || '').trim();
-    extractedData.title = extractedData.title || extractedData.metadata?.title || '';
-    extractedData.description = extractedData.description || extractedData.metadata?.description || '';
-
-    // Se não temos cleanText mas temos html, extrair
-    if ((!extractedData.cleanText || extractedData.cleanText.length < 20) && extractedData.html) {
-      try {
-        // Assumindo que extractCleanTextFromHTML está definido
-        extractedData.cleanText = extractCleanTextFromHTML(extractedData.html);
-      } catch (e) {
-        extractedData.cleanText = extractedData.cleanText || '';
-      }
-    }
-
-    // Se ainda vazio, tentar montar a partir de markdown/content
-    if (!extractedData.cleanText || extractedData.cleanText.length < 20) {
-      extractedData.cleanText = extractedData.markdown || extractedData.content || extractedData.cleanText || '';
-    }
-
-    // Garantir texto-base mínimo para evitar objetos vazios
-    if (!extractedData.cleanText || extractedData.cleanText.trim().length === 0) {
-      extractedData.cleanText = `Conteúdo não extraído automaticamente. URL: ${extractedData.url || ''}`;
-    }
-
-    // Detectar bônus de forma simples
-    try {
-      // Assumindo que extractBonuses está definido
-      extractedData.bonuses_detected = extractBonuses(extractedData.cleanText || '');
-    } catch (e) {
-      extractedData.bonuses_detected = [];
-    }
-
-    // Detectar price simples (fallback)
-    try {
-      const priceMatch = (extractedData.cleanText || '').match(/(?:R\$|BRL)\s?[\d\.,]+/g);
-      extractedData.price_detected = priceMatch ? Array.from(new Set(priceMatch)).slice(0,3) : [];
-    } catch (e) {
-      extractedData.price_detected = [];
-    }
-
-    // Extrair contatos via sistema (se houver html) de forma protegida
-    try {
-      if (extractedData.html && typeof sistemaContatosAprimorado?.extrairContatosAprimorado === 'function') {
-        // proteger chamadas externas com timeout e try/catch
-        const contatos = await Promise.race([
-          sistemaContatosAprimorado.extrairContatosAprimorado(require('cheerio').load(extractedData.html)),
-          new Promise(resolve => setTimeout(() => resolve(null), 7000)) // 7s timeout
-        ]);
-        if (contatos) {
-          extractedData.contatos = Object.assign({
-            telefone: [], whatsapp: [], email: [], site: [extractedData.url || ''], endereco: []
-          }, contatos);
-        }
-      } else {
-        // fallback: manter contatos já presentes ou minimal
-        extractedData.contatos = extractedData.contatos || { telefone: [], whatsapp: [], email: [], site: [extractedData.url || ''], endereco: [] };
-      }
-    } catch (e) {
-      console.warn('processExtractedData: erro ao extrair contatos:', e && e.message ? e.message : e);
-      extractedData.contatos = extractedData.contatos || { telefone: [], whatsapp: [], email: [], site: [extractedData.url || ''], endereco: [] };
-    }
-
-    // tempo de extração (se ainda não definido)
-    extractedData.extractionTime = typeof extractedData.extractionTime === 'number' ? extractedData.extractionTime : 0;
-
-    // método padrão
-    extractedData.method = extractedData.method || 'processed';
-
-    return extractedData;
-  } catch (error) {
-    console.error('❌ processExtractedData error:', error && error.message ? error.message : error);
-    // Garantir retorno robusto para evitar que callers quebrem
-    return {
-      title: extractedData.title || 'Conteúdo',
-      description: extractedData.description || '',
-      cleanText: extractedData.cleanText || `Conteúdo não extraído. URL: ${extractedData.url || ''}`,
-      url: extractedData.url || '',
-      extractionTime: extractedData.extractionTime || 0,
-      method: extractedData.method || 'processed-error',
-      bonuses_detected: extractedData.bonuses_detected || [],
-      price_detected: extractedData.price_detected || [],
-      contatos: extractedData.contatos || { telefone: [], whatsapp: [], email: [], site: [extractedData.url || ''], endereco: [] }
-    };
-  }
-}
-// FIM DO PATCH 2
-
-// ===== Page extraction =====
 async function extractPageDataWithRetry(url, maxRetries = 3) {
     let lastError = null;
     
@@ -3092,7 +2894,7 @@ async function extractPageDataWithRetry(url, maxRetries = 3) {
             const timeout = 30000 + (attempt - 1) * 15000;
             
             const result = await Promise.race([
-                extractPageDataOriginal(url),
+                extractPageData(url),
                 new Promise((_, reject) => 
                     setTimeout(() => reject(new Error(`Timeout após ${timeout/1000}s`)), timeout)
                 )
@@ -3145,230 +2947,7 @@ async function extractPageDataWithRetry(url, maxRetries = 3) {
     };
 }
 
-// ===== INSERIR FUNÇÃO extractContentFromGoogleDrive (Patch 3) =====
-const qs = require('querystring');
-
-async function extractContentFromGoogleDrive(url) {
-  try {
-    if (!url) return '';
-    // tentar extrair fileId de urls comuns do Google Docs/Drive
-    const m1 = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
-    const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
-    const fileId = (m1 && m1[1]) || (m2 && m2[1]);
-
-    if (!fileId) {
-      // fallback: tentar buscar via axios direto na url (se público)
-      const resp = await axios.get(url, { timeout: 15000 });
-      const html = resp.data || '';
-      // extrair texto simples
-      // Assumindo que extractCleanTextFromHTML está definido
-      return extractCleanTextFromHTML(html) || '';
-    }
-
-    // Tentar export as plain text do Drive (público)
-    const exportUrl = `https://docs.google.com/document/d/${fileId}/export?format=txt`;
-    const r = await axios.get(exportUrl, {
-      headers: {
-        'User-Agent': 'LinkMagico-GoogleDrive-Extractor/1.0'
-      },
-      timeout: 15000,
-      validateStatus: s => s >= 200 && s < 400
-    });
-
-    const text = (r && r.data) ? String(r.data) : '';
-    if (text && text.length > 20) return text;
-
-    // último recurso: tentar export html
-    const exportHtmlUrl = `https://docs.google.com/document/d/${fileId}/export?format=html`;
-    const rh = await axios.get(exportHtmlUrl, { timeout: 15000, validateStatus: s => s >= 200 && s < 400 });
-    // Assumindo que extractCleanTextFromHTML está definido
-    if (rh && rh.data) return extractCleanTextFromHTML(rh.data);
-
-    return '';
-  } catch (err) {
-    console.warn('extractContentFromGoogleDrive fallback/erro:', err && err.message ? err.message : err);
-    return '';
-  }
-}
-// FIM DO PATCH 3
-
-// ============================================================================
-// FUNÇÃO HÍBRIDA - extractPageDataWithFirecrawl (NOVA LÓGICA)
-// ============================================================================
-
-/**
- * Versão HÍBRIDA: Usa Firecrawl para extração geral, mas mantém
- * lógica específica do Link Mágico (Google Drive, Contatos, etc)
- * 
- * ESTRATÉGIA:
- * 1. Google Drive → Mantém extração específica existente
- * 2. URLs normais → Usa Firecrawl (super rápido)
- * 3. Fallback → Se Firecrawl falhar, usa Puppeteer (como antes)
- */
-async function extractPageDataWithFirecrawl(url) {
-  const startTime = Date.now();
-
-  // Permitir forçar fallback sem Firecrawl via ENV (Patch 7)
-  const DISABLE_FIRECRAWL = process.env.DISABLE_FIRECRAWL === 'true';
-
-  if (DISABLE_FIRECRAWL) {
-    logger.info('⚠️ Firecrawl desativado por env (DISABLE_FIRECRAWL=true). Usando extrator antigo/fallback.');
-    // chamar extractPageDataOriginal(url) direto
-    return await extractPageDataOriginal(url);
-  }
-  // FIM DO PATCH 7
-  
-  // Estrutura de dados mantida 100% compatível com o Link Mágico original
-  let extractedData = {
-    title: '',
-    description: '',
-    summary: '',
-    cleanText: '',
-    url: url,
-    extractionTime: 0,
-    method: 'unknown',
-    bonuses_detected: [],
-    price_detected: [],
-    contatos: {
-      site: [url],
-      whatsapp: [],
-      email: [],
-      telefone: [],
-      endereco: []
-    }
-  };
-
-  try {
-    // ===== ETAPA 1: VERIFICAR CACHE (MANTER LÓGICA ORIGINAL) =====
-    const cachedData = await getCacheData(url);
-    if (cachedData) {
-      logger.info('✅ Cache hit - retornando dados em cache');
-      return cachedData;
-    }
-
-    // ===== ETAPA 2: GOOGLE DRIVE - MANTER EXTRAÇÃO ESPECÍFICA =====
-    if (url.includes('docs.google.com') || url.includes('drive.google.com')) {
-      logger.info('📄 Google Drive detectado - usando extração específica');
-      
-      try {
-        // Assumindo que extractContentFromGoogleDrive está definido
-        const driveContent = await extractContentFromGoogleDrive(url);
-        
-        if (driveContent && driveContent.length > 100) {
-          extractedData.cleanText = driveContent;
-          extractedData.title = driveContent.split('\\n')[0] || 'Documento Google Drive';
-          extractedData.method = 'google-drive-export';
-          extractedData.contatos.site = []; // Limpar para não mostrar Drive como site oficial
-          
-          // Processar dados finais
-          // Assumindo que processExtractedData está definido
-          extractedData = await processExtractedData(extractedData);
-          extractedData.extractionTime = Date.now() - startTime;
-          
-          // Assumindo que setCacheData está definido
-          await setCacheData(url, extractedData);
-          return extractedData;
-        }
-      } catch (driveError) {
-        logger.warn('⚠️ Falha no Google Drive, tentando Firecrawl...');
-      }
-    }
-
-    // ===== ETAPA 3: FIRECRAWL - EXTRAÇÃO PRINCIPAL (NOVA LÓGICA) =====
-    logger.info('🔥 Iniciando extração com Firecrawl...');
-    
-    try {
-      // Configuração otimizada do Firecrawl para o Link Mágico
-      const scrapeResult = await firecrawlApp.scrapeUrl(url, {
-        formats: ['markdown', 'html'], // Obter ambos os formatos
-        onlyMainContent: true, // Apenas conteúdo principal (remove nav, footer, etc)
-        waitFor: 2000, // Aguarda 2s para JS carregar
-        timeout: 30000, // Timeout de 30s (mesmo do Link Mágico original)
-        
-        // Extrair metadados automaticamente
-        includeTags: ['article', 'main', 'section', 'p', 'h1', 'h2', 'h3'],
-        excludeTags: ['script', 'style', 'nav', 'footer', 'aside']
-      });
-
-      if (scrapeResult && scrapeResult.data) {
-        const data = scrapeResult.data;
-        
-        // ===== MAPEAR DADOS DO FIRECRAWL PARA FORMATO LINK MÁGICO =====
-        extractedData.cleanText = data.markdown || data.content || '';
-        extractedData.title = data.metadata?.title || data.title || '';
-        extractedData.description = data.metadata?.description || data.description || '';
-        extractedData.method = 'firecrawl-api';
-        
-        // ===== MANTER SISTEMA DE CONTATOS DO LINK MÁGICO (Patch 5) =====
-        // Usar HTML do Firecrawl para extrair contatos com sistema original
-        if (data.html) {
-          try {
-            const $ = cheerio.load(data.html || '');
-            let contatosExtraidos = null;
-            if (sistemaContatosAprimorado && typeof sistemaContatosAprimorado.extrairContatosAprimorado === 'function') {
-              contatosExtraidos = await Promise.race([
-                sistemaContatosAprimorado.extrairContatosAprimorado($),
-                new Promise(resolve => setTimeout(() => resolve(null), 7000)) // timeout 7s
-              ]);
-            }
-            if (contatosExtraidos) {
-              extractedData.contatos = {
-                site: contatosExtraidos.site || [url],
-                whatsapp: contatosExtraidos.whatsapp || [],
-                email: contatosExtraidos.email || []
-              };
-            } else {
-              logger.info('ℹ️ sistemaContatosAprimorado retornou vazio ou timeout; mantendo contatos padrão');
-            }
-          } catch (contErr) {
-            logger.warn('❌ Erro ao extrair contatos via sistemaContatosAprimorado:', contErr && contErr.message ? contErr.message : contErr);
-          }
-        }
-        // FIM DO PATCH 5
-        
-        // ===== PROCESSAR DADOS FINAIS (MANTER LÓGICA ORIGINAL) =====
-        extractedData = await processExtractedData(extractedData);
-        extractedData.extractionTime = Date.now() - startTime;
-        
-        logger.info(`✅ Firecrawl extraiu ${extractedData.cleanText.length} caracteres em ${extractedData.extractionTime}ms`);
-        
-        // garantir texto mínimo (Patch 6)
-        if (!extractedData.cleanText || extractedData.cleanText.trim().length < 10) {
-          extractedData.cleanText = extractedData.cleanText || extractedData.markdown || extractedData.summary || `Conteúdo não extraído automaticamente. URL: ${url}`;
-        }
-        // FIM DO PATCH 6
-
-        // Salvar no cache
-        await setCacheData(url, extractedData);
-        return extractedData;
-      }
-      
-    } catch (firecrawlError) {
-      logger.error('❌ Erro no Firecrawl:', firecrawlError.message);
-      logger.info('🔄 Tentando fallback com método original...');
-    }
-
-    // ===== ETAPA 4: FALLBACK - PUPPETEER (MANTER COMO ÚLTIMA OPÇÃO) =====
-    logger.info('🔄 Usando Puppeteer como fallback...');
-    
-    // Chamar função original de extração com Puppeteer (agora com retry)
-    return await extractPageDataOriginal(url);
-
-  } catch (error) {
-    logger.error('❌ Erro geral na extração:', error.message);
-    
-    // Retornar fallback de erro (manter lógica original)
-    extractedData.cleanText = 'Não foi possível extrair o conteúdo automaticamente.';
-    extractedData.title = 'Extração Falhou';
-    extractedData.method = 'fallback';
-    extractedData.extractionTime = Date.now() - startTime;
-    // Em caso de erro geral, retornar o objeto de fallback.
-    // O middleware de erro do Express deve ser configurado para tratar erros assíncronos.
-    return extractedData;
-  }
-}
-
-async function extractPageDataOriginal(url) {
+async function extractPageData(url) {
     const startTime = Date.now();
     try {
         if (!url) throw new Error("URL is required");
@@ -4353,54 +3932,55 @@ app.post("/api/extract-enhanced", async (req, res) => {
 });
 
 // /api/extract endpoint (ORIGINAL - mantido para compatibilidade)
-// ROTA ORIGINAL DE EXTRAÇÃO (AGORA USANDO FIRECRAWL)
 app.post("/api/extract", async (req, res) => {
-  const { url } = req.body;
-  
-  // Validação de URL
-  if (!url) {
-    return res.status(400).json({ error: 'URL é obrigatória' });
-  }
-  
-  try {
-    // ===== USAR NOVA FUNÇÃO COM FIRECRAWL =====
-    const data = await extractPageDataWithFirecrawl(url);
+    analytics.extractRequests++;
+    try {
+        const { url, instructions, robotName } = req.body || {};
 
-    // CORREÇÃO: Se fizemos fallback, não retornar 500 automaticamente. (Patch 4)
-    if (data && data.method === 'fallback') {
-      logger.warn('⚠️ Extração retornou fallback - retornando dados minimais (não 500). URL: ' + (url || ''));
-      // garantir fields mínimos
-      data = data || {};
-      data.cleanText = data.cleanText && data.cleanText.length ? data.cleanText : (`Conteúdo não extraído automaticamente. URL: ${url}`);
-      data.contatos = data.contatos || { telefone: [], whatsapp: [], email: [], site: [url], endereco: [] };
-      // incrementar métrica de falha mas retornar OK para o front
-      analytics.failedExtractions = (analytics.failedExtractions || 0) + 1;
-      // retornar 200 com o objeto de fallback
-      return res.json(data);
+        console.log("📥 Recebendo requisição para extrair:", url);
+        
+        if (!url) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "URL é obrigatório" 
+            });
+        }
+
+        try { 
+            new URL(url); 
+        } catch (urlErr) { 
+            return res.status(400).json({ 
+                success: false, 
+                error: "URL inválido" 
+            }); 
+        }
+
+        logger.info(`Starting extraction for URL: ${url}`);
+        
+        const extractedData = await extractPageData(url);
+        
+        if (instructions) extractedData.custom_instructions = instructions;
+        if (robotName) extractedData.robot_name = robotName;
+
+        console.log("✅ Extração concluída com sucesso");
+        
+        return res.json({ 
+            success: true, 
+            data: extractedData 
+        });
+
+    } catch (error) {
+        analytics.errors++;
+        console.error("❌ Erro no endpoint /api/extract:", error);
+        logger.error("Extract endpoint error:", error.message || error);
+        
+        return res.status(500).json({ 
+            success: false, 
+            error: "Erro interno ao extrair página: " + (error.message || "Erro desconhecido"),
+            details: error.message
+        });
     }
-    // FIM DO PATCH 4
-
-    // Adicionar métricas para análise
-    const metrics = {
-      method: data.method,
-      extractionTime: data.extractionTime,
-      contentLength: data.cleanText.length,
-      timestamp: new Date().toISOString()
-    };
-    
-    logger.info('📊 Métricas:', metrics);
-    
-    res.json(data);
-    
-  } catch (error) {
-    logger.error('❌ Erro na rota de extração:', error);
-    res.status(500).json({ 
-      error: 'Erro ao extrair dados',
-      message: error.message 
-    });
-  }
 });
-
 
 // ===== FUNÇÃO: Geração Completa do HTML do Chatbot =====
 function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '') {
