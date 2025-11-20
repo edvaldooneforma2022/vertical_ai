@@ -1,228 +1,263 @@
-# ✨ Link_Mágico — Plataforma de IA Conversacional Inteligente  
-**Versão:** 7.0  
-**Status:** Ativa e em Produção  
-**Tecnologias:** Node.js · Express · PostgreSQL/JSON · OpenAI · Redis Cache · Playwright Stealth · Crawler Inteligente
+📘 README.md – Link Mágico (Versão 7.x+)
+Plataforma de Inteligência Artificial Conversacional, Automação Comercial e Extração Dinâmica de Dados
+
+<!-- ========================================================= -->
+<!-- ====================== BANNER ============================ -->
+<!-- ========================================================= -->
+
+<p align="center">
+  <img src="https://svg-banners.vercel.app/api?type=glitch&text1=LINK%20MÁGICO&width=900&height=260" />
+</p>
+
+<br>
+
+<!-- ========================================================= -->
+<!-- ====================== BADGE PACK ======================== -->
+<!-- ========================================================= -->
+
+<p align="center">
+
+  <!-- Linguagens -->
+  <img src="https://img.shields.io/badge/Node.js-18.x-339933?logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" />
+
+  <!-- Infra -->
+  <img src="https://img.shields.io/badge/Redis-Cache%20Layer-D92B21?logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/Crawl4AI-Web%20Scraping-blueviolet" />
+  <img src="https://img.shields.io/badge/Playwright-Dynamic%20Scraping-45ba4b?logo=microsoft-edge&logoColor=white" />
+
+  <!-- IA -->
+  <img src="https://img.shields.io/badge/OpenAI-LLM%20Engine-412991?logo=openai&logoColor=white" />
+  <img src="https://img.shields.io/badge/Groq-Ultra%20Speed%20LLM-ff4a4a?logo=groq&logoColor=white" />
+  <img src="https://img.shields.io/badge/OpenRouter-AI%20Gateway-ffc700" />
+
+  <!-- Deploy -->
+  <img src="https://img.shields.io/badge/Render-Cloud%20Deploy-46E3B7?logo=render&logoColor=white" />
+
+  <!-- Qualidade -->
+  <img src="https://img.shields.io/badge/Tests-Automated%20Testing-0A7" />
+  <img src="https://img.shields.io/badge/Security-WAF%20Enabled-critical" />
+  <img src="https://img.shields.io/badge/License-MIT-blue" />
+
+</p>
+
+<br>
+
+<!-- ========================================================= -->
+<!-- ========== BADGES PERSONALIZADOS EXCLUSIVOS ============= -->
+<!-- ========================================================= -->
+
+<p align="center">
+
+  <img src="https://img.shields.io/badge/Crawl%20AI-Powered-purple?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Dynamic%20Scraping-Enabled-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/LLM%20Optimization-85%25%20Semantic%20Cache-blue?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Multi--LLM-Fallback%20Engine-orange?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Virtual%20Browser-Playwright%20Engine-0d6efd?style=for-the-badge" />
+
+</p>
 
 ---
 
-## 📌 Sobre o Link Mágico
-O **Link Mágico** é uma plataforma SaaS de **IA Conversacional Personalizada**, projetada para atender empresas, empreendedores, criadores de conteúdo e profissionais que desejam oferecer:
-
-- Atendimento automático 24h  
-- Geração de leads qualificados  
-- Agendamento inteligente  
-- Funis de vendas personalizados  
-- Extração automática de informações (Crawler IA)  
-- Integração com WhatsApp, E-mail e Marketing  
-
-Tudo isso através de um **chat flutuante**, fácil de instalar, auto configurável e totalmente inteligente.
+# ✨ Link Mágico — Plataforma SaaS de IA Conversacional Avançada  
+**Versão:** 7.x  
+**Status:** Estável • Produção • Multi-Tenant  
+**Tecnologias Core:** Node.js • Python • Redis • Crawl4AI • Playwright • OpenAI • Groq • OpenRouter
 
 ---
 
-## 🎯 Objetivo da Plataforma
-Criar uma experiência de atendimento **personalizada**, com IA capaz de:
+## 💠 Tecnologias Utilizadas (com Ícones SVG)
 
-- Entender emoções  
-- Adaptar personalidade  
-- Seguir jornadas conversacionais  
-- Agendar reuniões automaticamente  
-- Registrar leads em CRM interno  
-- Executar ações reais (API Actions)  
-- Avaliar risco, intenção, urgência e nível do usuário  
-
----
-
-## 🚀 Principais Recursos
-
-### 🧠 Inteligência Conversacional Evoluída
-- Raciocínio avançado  
-- Emoções contextuais  
-- Memória de longo prazo  
-- Perfil comportamental do usuário  
-- Linguagem natural em formato humano real  
-
-### 🤖 Motor de IA Multi-Camadas
-- Mecanismo primário conversacional  
-- Mecanismo secundário de contextualização  
-- Mecanismo de interpretação semântica  
-- Cálculo de intenção, urgência e risco  
-- Controle de tom, humor e jornada  
+<p align="center">
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linux/linux-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/openai/openai-vertical.svg" />
+</p>
 
 ---
 
-## 📅 Agendamento Inteligente V7
-A plataforma agora conta com um **sistema real de agendamentos**, gratuito e integrado:
+## 📌 Visão Geral
 
-- Cadastro de horários disponíveis  
-- Registro de reuniões  
-- Responses automáticas da IA  
-- Consulta rápida de slots livres  
-- Criação automática de reuniões durante o chat  
-- Compatível com multi-tenant  
+O **Link Mágico** é uma plataforma SaaS completa de **IA Conversacional**, construída sob uma arquitetura híbrida (Node + Python) capaz de:
 
-*(Versão inicial — microserviço separado ou acoplado ao backend principal.)*
+- Realizar atendimento automatizado 24h
+- Entender contexto, emoções e intenção do usuário
+- Extrair informações da web usando navegador virtual (Crawl4AI)
+- Executar scraping dinâmico com JavaScript renderizado
+- Otimizar custos de LLM com cache inteligente baseado em NLP
+- Realizar agendamentos reais (Scheduler integrado)
+- Gerar leads e organizar dados em um CRM interno
+- Integrar WhatsApp, Gmail, APIs externas e automações profundas
 
----
+A plataforma se destaca por unir:
 
-## 🕸 Crawler / Extração Inteligente (IA)
-O Link Mágico possui um sistema de EXTRAÇÃO AUTOMÁTICA que utiliza:
-
-- Axios (requisições rápidas)
-- Cheerio (scraping estruturado)
-- Playwright Stealth (para páginas complexas)
-- Fallback automático
-- Sanitização de dados
-- Parsing semântico
-- Geração de insights automáticos
-
-Ideal para:
-
-- captar dados de sites  
-- localizar preços  
-- extrair descrições  
-- coletar informações públicas  
+✔ Inteligência Artificial real  
+✔ Automação conversacional  
+✔ Extração dinâmica de sites  
+✔ Multi-LLM com fallback inteligente  
+✔ Sistema híbrido de cache  
+✔ Arquitetura assíncrona para alta performance  
+✔ Segurança corporativa integrada  
+✔ Multi-tenant completo  
 
 ---
 
-## ⚙️ Arquitetura Interna
-O backend contém:
+# 🎯 Objetivos do Link Mágico
 
-- **Servidor Express modular**  
-- **Sistema de Segurança Interno (WAF, Threat IA, RateLimit)**  
-- **Gerenciamento de Tenants**  
-- **Cache Redis com fallback JSON**  
-- **Database inteligente (Postgres ou JSON dinâmico)**  
-- **Módulo de Backup automático**  
-- **CRM interno integrado**  
-- **Widget externo com injeção inteligente**  
+- **Transformar qualquer site** em um ambiente de atendimento inteligente.  
+- **Reduzir custos de LLM** com NLP + cache semântico (85%).  
+- **Extrair dados de qualquer URL** com navegador virtual.  
+- **Criar automações reais** via API Actions.  
+- **Organizar leads automaticamente** no CRM interno.  
+- **Oferecer whitelabel** para empreendedores/agências.  
 
 ---
 
-## 🔗 Integrações Disponíveis
+# 🚀 Funcionalidades Principais
 
-### 📞 WhatsApp (API externa)
-Envio e recepção de mensagens automáticas.
+## 🧠 Inteligência Conversacional
+- Personalidade adaptativa  
+- Análise emocional  
+- Memória contextual  
+- Jornada conversacional inteligente  
 
-### 📧 Gmail API
-Leitura e envio de e-mails.
+## 🤖 Motor de IA Multi-Camadas
+- Groq → ultra-rápido  
+- OpenAI → alta precisão  
+- OpenRouter → fallback + economia  
+- Otimizador semântico baseado em NLP  
 
-### 🤖 OpenAI (Modelos suportados)
-- GPT-4  
-- GPT-4.1  
-- GPT-4o  
-- GPT-o-mini  
-- O1 / O1-Mini  
-- Funções / Actions  
+## 🌐 Scraping Dinâmico + Crawl4AI
+- Navegador headless (Playwright)  
+- Execução de JavaScript real  
+- Rolagem automática  
+- Extração orientada por IA  
+- Firecrawl Replacement nativo  
 
-### 🌐 API HTTP + Webhooks
-- Rotas públicas  
-- Rotas autenticadas  
-- Rotas admin  
-- Rotas de backup  
-- Rotas de agendamento  
+## 🧩 Multi-Tenant Completo
+- Isolamento total de dados  
+- Tokens dedicados por tenant  
+- Whitelabel automático  
+
+## 🔐 Segurança (WAF Inteligente)
+- Rate-limit via Redis  
+- Análise de comportamento  
+- Sanitização profunda  
+- Logs e auditoria  
+
+## ⚡ Cache Híbrido Inteligente
+- Redis (cache de extração)  
+- Cache semântico (perguntas similares 85%)  
+- Redução de custos LLM em até **80%**  
 
 ---
 
-## 🧩 Widget.js (Instalação Simples)
-O widget de chat pode ser instalado com:
+# 📅 Sistema de Agendamento Inteligente (Scheduler v1.0)
 
-```html
-<script src="https://SEU_DOMINIO/widget.js"></script>
-
-Inclui:
-
-Botão flutuante inteligente
-
-Adaptativo ao dispositivo
-
-IA embarcada
-
-Carregamento rápido
-
-Sistema de fallback
-
-📁 Estrutura do Projeto
-/root
- ├── server.js               # Backend principal
- ├── public/                 # Arquivos estáticos
- ├── widget/                 # Widget.js externo
- ├── ai/                     # Módulo de IA principal
- ├── scheduler/              # Microserviço de Agendamento
- ├── database/               # Arquivos de data
- ├── backups/                # Backups automáticos
- └── README.md               # Este arquivo
-
-⚡ Deploy
-
-Pode ser hospedado em:
-
-Render (free)
-
-Railway (free)
-
-Fly.io
-
-GitHub Codespaces
-
-Servidores básicos Node.js
-
-Comando padrão:
-
-npm install
-npm run start
-
-🔐 Segurança
-
-O Link Mágico inclui:
-
-Firewall interno (ApplicationFirewall)
-
-Limitação de requisições
-
-Anti-bot
-
-Anti-spam
-
-Verificação de autenticidade
-
-Controle de tenants
-
-Sanitização de entrada
-
-Backup automático de leads
-
-📦 Sistema de Agendamento (v1.0)
-
-Endpoints principais:
+Rotas:
 
 POST /api/schedule/create
-GET  /api/schedule/slots
-GET  /api/schedule/list
+GET /api/schedule/slots
+GET /api/schedule/list
 
 
-Integração rápida com IA e frontend.
+---
 
-🛠 Desenvolvimento
+# 🧩 Arquitetura Técnica
 
-Clone o repositório:
 
+/root
+├── server.js
+├── ai/
+├── crawl4ai-adapter.js
+├── firecrawl-replacement.js
+├── llm-optimizer.js
+├── cache.js
+├── database/
+├── scheduler/
+├── public/
+├── widget.js
+├── backups/
+└── README.md
+
+
+---
+
+# 🧠 Fluxo de Operação da IA
+
+1. Usuário envia mensagem  
+2. Sistema checa cache semântico (>85%)  
+3. Se cache HIT → responde em milissegundos  
+4. Se não:
+   - Seleciona melhor modelo LLM  
+   - Analisa intenção/humor  
+   - Faz scraping se necessário  
+   - Gera resposta personalizada  
+5. Salva no cache  
+6. Classifica lead  
+7. Registra no CRM  
+
+---
+
+# 🔗 Integrações Disponíveis
+
+| Integração | Tipo | Detalhes |
+|-----------|------|----------|
+| WhatsApp | Mensagens | Automação e atendimento |
+| Gmail | E-mail | Envio/recepção |
+| Groq | IA | Modelos rápidos |
+| OpenAI | IA | Modelos avançados |
+| OpenRouter | IA | Roteamento otimizado |
+| Crawl4AI | Dados | Scraping dinâmico |
+| Scheduler | Reuniões | API completa |
+| Widget.js | Frontend | Chat para qualquer site |
+
+---
+
+# ⚙️ Instalação e Deploy
+
+### Local
+```bash
 git clone https://github.com/SEU_USUARIO/vertical_ai.git
 cd vertical_ai
 npm install
 npm start
 
+Variáveis de ambiente
+
+PORT=10000
+REDIS_URL=redis://...
+OPENAI_API_KEY=...
+GROQ_API_KEY=...
+OPENROUTER_API_KEY=...
+
+🔐 Segurança e Compliance
+
+WAF próprio
+
+Rate-limit
+
+Anti-bots
+
+Sanitização
+
+LGPD-ready
+
 🤝 Contribuição
 
-Contribuições são bem-vindas!
+git checkout -b feature/minha-feature
 
-Faça um fork → crie uma branch → envie seu Pull Request.
 
 📄 Licença
 
-Este projeto é distribuído sob licença MIT.
-Uso comercial permitido.
+Licença MIT — uso comercial permitido.
 
-👨‍💻 Criado por
+👨‍💻 Autor
 
-Edvaldo — Link Mágico
-Uma plataforma de IA feita para transformar negócios.
+Edvaldo L. S. — Criador do Link Mágico
+IA projetada para transformar a forma como negócios atendem seus clientes.
+
