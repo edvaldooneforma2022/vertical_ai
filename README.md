@@ -128,3 +128,101 @@ O widget de chat pode ser instalado com:
 
 ```html
 <script src="https://SEU_DOMINIO/widget.js"></script>
+
+Inclui:
+
+Botão flutuante inteligente
+
+Adaptativo ao dispositivo
+
+IA embarcada
+
+Carregamento rápido
+
+Sistema de fallback
+
+📁 Estrutura do Projeto
+/root
+ ├── server.js               # Backend principal
+ ├── public/                 # Arquivos estáticos
+ ├── widget/                 # Widget.js externo
+ ├── ai/                     # Módulo de IA principal
+ ├── scheduler/              # Microserviço de Agendamento
+ ├── database/               # Arquivos de data
+ ├── backups/                # Backups automáticos
+ └── README.md               # Este arquivo
+
+⚡ Deploy
+
+Pode ser hospedado em:
+
+Render (free)
+
+Railway (free)
+
+Fly.io
+
+GitHub Codespaces
+
+Servidores básicos Node.js
+
+Comando padrão:
+
+npm install
+npm run start
+
+🔐 Segurança
+
+O Link Mágico inclui:
+
+Firewall interno (ApplicationFirewall)
+
+Limitação de requisições
+
+Anti-bot
+
+Anti-spam
+
+Verificação de autenticidade
+
+Controle de tenants
+
+Sanitização de entrada
+
+Backup automático de leads
+
+📦 Sistema de Agendamento (v1.0)
+
+Endpoints principais:
+
+POST /api/schedule/create
+GET  /api/schedule/slots
+GET  /api/schedule/list
+
+
+Integração rápida com IA e frontend.
+
+🛠 Desenvolvimento
+
+Clone o repositório:
+
+git clone https://github.com/SEU_USUARIO/vertical_ai.git
+cd vertical_ai
+npm install
+npm start
+
+🤝 Contribuição
+
+Contribuições são bem-vindas!
+
+Faça um fork → crie uma branch → envie seu Pull Request.
+
+📄 Licença
+
+Este projeto é distribuído sob licença MIT.
+Uso comercial permitido.
+
+👨‍💻 Criado por
+
+Edvaldo — Link Mágico
+Uma plataforma de IA feita para transformar negócios.
