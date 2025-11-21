@@ -64,41 +64,6 @@ try {
 
 const app = express();
 
-
-/* === Scheduler Integration (assistant) === */
-(async function(){
-  try {
-    const REDIS_URL = process.env.REDIS_URL || process.env.REDIS || null;
-    // initialize redis if available in scheduler module
-    try {
-      const dbModule = require('./scheduler/scheduler-db');
-      if (REDIS_URL && dbModule && typeof dbModule.initRedis === 'function') {
-        await dbModule.initRedis(REDIS_URL).catch(()=>{});
-      }
-    } catch(e){
-      console.error('Scheduler DB init error', e);
-    }
-    try {
-      let schedulerRouter;
-      if (typeof require !== 'undefined') {
-        schedulerRouter = require('./scheduler/scheduler-routes');
-      } else {
-        schedulerRouter = (await import('./scheduler/scheduler-routes.js')).default;
-      }
-      // mount under /api/schedule but keep compatibility: existing API prefix not required
-      app.use('/api/schedule', schedulerRouter);
-      console.log('Scheduler mounted at /api/schedule');
-    } catch (e) {
-      console.error('Scheduler mount failed', e);
-    }
-  } catch(e) {
-    console.error('Scheduler bootstrap error', e);
-  }
-})();
-
-
-
-
 // Declarando conversationHistories no escopo global ou adequado
 const conversationHistories = new Map();
 
@@ -3858,38 +3823,18 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             console.log(`🎭 Resposta emocional inteligente gerada`);
         } else {
             // 🎯 USAR SISTEMA ORIGINAL COM MELHORIAS EMOCIONAIS
-            const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
+            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
             
             // Aplicar melhorias emocionais na resposta
             if (analiseEmocional.emocao === "negativo" && analiseEmocional.intensidade >= 2) {
-                finalResponse = `🤗 **Entendo que isso é importante para você.** ` + aiResponse.text;
+                finalResponse = `🤗 **Entendo que isso é importante para você.** ` + respostaIA;
             } else if (analiseEmocional.urgencia) {
-                finalResponse = `🚨 **Priorizando sua solicitação!** ` + aiResponse.text;
+                finalResponse = `🚨 **Priorizando sua solicitação!** ` + respostaIA;
             } else {
-                finalResponse = aiResponse.text;
+                finalResponse = respostaIA;
             }
             
             console.log(`🤖 Resposta IA com melhorias emocionais`);
-
-            // 🎯 PROCESSAMENTO DE TOOL CALLING (AGENDAMENTO)
-            if (aiResponse.tool_calls) {
-                const toolCall = aiResponse.tool_calls[0];
-                if (toolCall.function.name === "schedule_meeting") {
-                    const args = JSON.parse(toolCall.function.arguments);
-                    
-                    // Retornar a chamada da ferramenta para o frontend processar o agendamento
-                    return res.json({
-                        success: true,
-                        response: finalResponse,
-                        conversation_id: conversationId,
-                        lead_id: leadId,
-                        scheduling: {
-                            action: "schedule_meeting",
-                            args: args
-                        }
-                    });
-                }
-            }
         }
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
