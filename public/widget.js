@@ -1184,10 +1184,10 @@
 
             var payload = {
                 message: message,
-                robotName: this.config.robotName,
+                page_url: window.location.href, // Adicionado page_url
                 instructions: this.config.instructions,
-                salesUrl: this.config.salesUrl,
-                conversationId: this.conversationId
+                conversation_id: this.conversationId,
+                lead_id: this.conversationId
             };
 
             var headers = {
@@ -1198,7 +1198,7 @@
             var controller = new AbortController();
             var timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
-            fetch(this.config.apiBase + '/api/widget/chat', {
+            fetch(this.config.apiBase + '/api/chat-universal', { // Alterado para /api/chat-universal
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify(payload),
@@ -1216,10 +1216,23 @@
                 self.hideTyping();
                 self.setInputState(true);
 
-                if (data.success && data.response) {
+                if (data.response) {
                     self.addMessage(data.response, false);
                     
-                    // Handle bonuses if present
+                    // Processamento de Tool Calling para Agendamento
+                    if (data.scheduling && data.scheduling.action === 'schedule_meeting') {
+                        var args = data.scheduling.args || {};
+                        // Se a IA retornar apenas a intenção de agendar, mostramos o calendário
+                        if (!args.date && !args.time && !args.user_info) {
+                            self.showSchedulingCalendar(); // Mostrar calendário genérico
+                        } else if (args.date && !args.time && !args.user_info) {
+                            self.fetchSchedulingAvailability(args.date); // Buscar disponibilidade para a data
+                        } else if (args.date && args.time && args.user_info) {
+                            self.bookSchedulingAppointment(args.date, args.time, args.user_info); // Agendar diretamente
+                        }
+                    }
+
+                    // Handle bonuses if present (mantido, mas ajustado para o novo formato de resposta)
                     if (data.bonuses_detected && data.bonuses_detected.length > 0) {
                         var bonusText = "🎁 Bônus inclusos: " + data.bonuses_detected.slice(0, 3).join(", ");
                         setTimeout(function() {
@@ -1229,6 +1242,7 @@
 
                     // Track successful response
                     self.trackEvent('message_received', {
+                        hasScheduling: !!(data.scheduling),
                         hasBonus: !!(data.bonuses_detected && data.bonuses_detected.length > 0)
                     });
 
@@ -1586,6 +1600,118 @@
                 version: this.version,
                 uptime: Date.now() - this.startTime
             };
+        },
+
+        // Funcoes de Agendamento
+        fetchSchedulingAvailability: function(date) {
+            var self = this;
+            var tenant = this.config.tenantId || 'default';
+            
+            fetch(this.config.apiBase + '/api/schedule/availability?tenant=' + tenant + '&date=' + date, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.slots && data.slots.length > 0) {
+                    self.showSchedulingCalendar(data.slots, date);
+                } else {
+                    self.addMessage('Desculpe, nao ha horarios disponiveis para ' + date + '.', false);
+                }
+            })
+            .catch(function(error) {
+                console.error('Erro ao buscar disponibilidade:', error);
+                self.addMessage('Erro ao buscar horarios disponiveis. Tente novamente.', false);
+            });
+        },
+
+        bookSchedulingAppointment: function(date, time, userInfo) {
+            var self = this;
+            var tenant = this.config.tenantId || 'default';
+            
+            var payload = {
+                tenant: tenant,
+                date: date,
+                time: time,
+                user_name: userInfo.name,
+                user_email: userInfo.email
+            };
+            
+            fetch(this.config.apiBase + '/api/schedule/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    self.addMessage('Agendamento confirmado para ' + date + ' as ' + time + '! Voce recebera um email de confirmacao em ' + userInfo.email, false);
+                    self.hideSchedulingCalendar();
+                } else {
+                    self.addMessage('Erro ao agendar: ' + (data.message || 'Tente novamente.'), false);
+                }
+            })
+            .catch(function(error) {
+                console.error('Erro ao agendar:', error);
+                self.addMessage('Erro ao processar agendamento. Tente novamente.', false);
+            });
+        },
+
+        showSchedulingCalendar: function(slots, date) {
+            var self = this;
+            var messagesDiv = document.getElementById('lm-chat-messages');
+            
+            var calendarHTML = '<div class="lm-scheduling-calendar" style="margin: 12px 0; padding: 12px; background: #f3f4f6; border-radius: 12px; font-size: 13px;">';
+            calendarHTML += '<div style="font-weight: 600; margin-bottom: 10px; color: #1f2937;">Horarios disponiveis para ' + date + ':</div>';
+            calendarHTML += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">';
+            
+            slots.forEach(function(slot) {
+                calendarHTML += '<button class="lm-time-slot" data-time="' + slot + '" style="padding: 10px; background: white; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 500;">' + slot + '</button>';
+            });
+            
+            calendarHTML += '</div></div>';
+            
+            var calendarDiv = document.createElement('div');
+            calendarDiv.className = 'lm-message lm-bot-message';
+            calendarDiv.innerHTML = '<div class="lm-message-avatar"><i class="fas fa-robot"></i></div><div class="lm-message-content">' + calendarHTML + '</div>';
+            messagesDiv.appendChild(calendarDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Adicionar listeners aos botoes de horario
+            var timeSlots = calendarDiv.querySelectorAll('.lm-time-slot');
+            timeSlots.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var selectedTime = this.getAttribute('data-time');
+                    self.selectSchedulingTime(date, selectedTime);
+                });
+                btn.addEventListener('mouseover', function() {
+                    this.style.borderColor = self.config.primaryColor;
+                    this.style.backgroundColor = self.config.primaryColor + '10';
+                });
+                btn.addEventListener('mouseout', function() {
+                    this.style.borderColor = '#e5e7eb';
+                    this.style.backgroundColor = 'white';
+                });
+            });
+        },
+
+        selectSchedulingTime: function(date, time) {
+            var self = this;
+            // Pedir informacoes do usuario
+            var userInfo = prompt('Por favor, digite seu nome completo:');
+            if (!userInfo) return;
+            
+            var userEmail = prompt('Por favor, digite seu email:');
+            if (!userEmail) return;
+            
+            this.bookSchedulingAppointment(date, time, { name: userInfo, email: userEmail });
+        },
+
+        hideSchedulingCalendar: function() {
+            var calendar = document.querySelector('.lm-scheduling-calendar');
+            if (calendar) {
+                calendar.parentElement.parentElement.remove();
+            }
         },
 
         destroy: function() {
