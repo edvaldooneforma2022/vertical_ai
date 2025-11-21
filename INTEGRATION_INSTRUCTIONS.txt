@@ -1,0 +1,26 @@
+INTEGRATION SUMMARY
+
+Files added in scheduler/ (folder):
+- scheduler-db.js
+- scheduler-service.js
+- scheduler-controller.js
+- scheduler-routes.js
+- README.md
+
+Backup of original server:
+- server.js.backup_assistant
+
+How integration was performed:
+- The assistant inserted a small bootstrap snippet into server.js after the line defining the Express app (const app = ...).
+- The snippet attempts to initialize Redis (if REDIS_URL provided), falls back gracefully to JSON, and mounts routes at "/api/schedule".
+- If you prefer manual integration, remove the inserted block and follow these steps:
+  1) require or import the scheduler router: const schedulerRouter = require('./scheduler/scheduler-routes');
+  2) mount: app.use('/api/schedule', schedulerRouter);
+
+Environment variables:
+- REDIS_URL (optional) e.g. redis://default:pass@host:6379
+- SCHEDULER_BACKUP_JSON=true (optional) - if set, JSON persistence is always updated as well
+
+Notes:
+- A backup of original server.js created at server.js.backup_assistant
+- Test endpoints after deploy: GET /api/schedule/health
