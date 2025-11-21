@@ -3858,18 +3858,38 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             console.log(`🎭 Resposta emocional inteligente gerada`);
         } else {
             // 🎯 USAR SISTEMA ORIGINAL COM MELHORIAS EMOCIONAIS
-            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
+            const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
             
             // Aplicar melhorias emocionais na resposta
             if (analiseEmocional.emocao === "negativo" && analiseEmocional.intensidade >= 2) {
-                finalResponse = `🤗 **Entendo que isso é importante para você.** ` + respostaIA;
+                finalResponse = `🤗 **Entendo que isso é importante para você.** ` + aiResponse.text;
             } else if (analiseEmocional.urgencia) {
-                finalResponse = `🚨 **Priorizando sua solicitação!** ` + respostaIA;
+                finalResponse = `🚨 **Priorizando sua solicitação!** ` + aiResponse.text;
             } else {
-                finalResponse = respostaIA;
+                finalResponse = aiResponse.text;
             }
             
             console.log(`🤖 Resposta IA com melhorias emocionais`);
+
+            // 🎯 PROCESSAMENTO DE TOOL CALLING (AGENDAMENTO)
+            if (aiResponse.tool_calls) {
+                const toolCall = aiResponse.tool_calls[0];
+                if (toolCall.function.name === "schedule_meeting") {
+                    const args = JSON.parse(toolCall.function.arguments);
+                    
+                    // Retornar a chamada da ferramenta para o frontend processar o agendamento
+                    return res.json({
+                        success: true,
+                        response: finalResponse,
+                        conversation_id: conversationId,
+                        lead_id: leadId,
+                        scheduling: {
+                            action: "schedule_meeting",
+                            args: args
+                        }
+                    });
+                }
+            }
         }
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
