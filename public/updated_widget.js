@@ -1,4 +1,3 @@
-
 /*
   Enhanced widget.js for Link Mágico
   - Intercepts "Agendar" actions
@@ -77,17 +76,94 @@
           days.push(d);
         }
         // For each day, generate time slots based on availability rules (same logic as server)
-        function generateSlotsForDay(availability, date){
+      function generateSlotsForDay(availability, date){
           const weekday = date.getDay() === 0 ? 7 : date.getDay(); // 1-7
           const dateStr = date.toISOString().slice(0,10);
           const result = [];
           for (const slot of availability.filter(s=>s.weekday===weekday)){
-            const [sh,sm] = slot.start.split(':').map(Number);
+            let [sh,sm] = slot.start.split(':').map(Number);
+            const [eh,em] = slot.end.split(':').map(Number);
+            const dur = Number(slot.durationMinutes)||30;
+            let t = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), sh, sm));
+            const end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), eh, em));
+            const now = new Date();
+            const isToday = date.getUTCFullYear() === now.getUTCFullYear() && date.getUTCMonth() === now.getUTCMonth() && date.getUTCDate() === now.getUTCDate();
+
+            if (isToday) {
+              const currentUTCHour = now.getUTCHours();
+              const currentUTCMinute = now.getUTCMinutes();
+              
+              while (t < end) {
+                const slotUTCHour = t.getUTCHours();
+                const slotUTCMinute = t.getUTCMinutes();
+
+                if (slotUTCHour > currentUTCHour || (slotUTCHour === currentUTCHour && slotUTCMinute >= currentUTCMinute)) {
+                  const hh = String(slotUTCHour).padStart(2,'0');
+                  const mm = String(slotUTCMinute).padStart(2,'0');
+                  result.push({ date: dateStr, time:`${hh}:${mm}`, durationMinutes: dur });
+                }
+                t = new Date(t.getTime() + dur*60000);
+              }
+            } else {
+              while (t < end) {
+                const hh = String(t.getUTCHours()).padStart(2,'0');
+                const mm = String(t.getUTCMinutes()).padStart(2,'0');
+                result.push({ date: dateStr, time:`${hh}:${mm}`, durationMinutes: dur });
+                t = new Date(t.getTime() + dur*60000);
+              }
+            }
+          }
+          return result;
+        }st slotStartMinutes = sh * 60 + sm;
+              
+              if (slotStartMinutes < currentMinutes) {
+                // Se o slot de início já passou, ajusta para o próximo slot
+                let nextSlotMinutes = slotStartMinutes;
+                while (nextSlotMinutes < currentMinutes) {
+                  nextSlotMinutes += dur;
+                }
+                sh = Math.floor(nextSlotMinutes / 60);
+                sm = nextSlotMinutes % 60;
+                t = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), sh, sm));
+                
+                // Se o ajuste ultrapassar o horário final do slot, pular para o próximo slot de disponibilidade
+                if (t >= end) continue;
+              }
+            }
+            
+            while (t < end) {Date();
+            const isToday = date.toDateString() === now.toDateString();
+            
+            // Ajuste para slots de hoje: ignorar horários passados
+            if (isToday) {
+              const [nh, nm] = [now.getHours(), now.getMinutes()];
+              const currentMinutes = nh * 60 + nm;
+              const slotStartMinutes = sh * 60 + sm;
+              
+              if (slotStartMinutes < currentMinutes) {
+                // Se o slot de início já passou, ajusta para o próximo slot
+                let nextSlotMinutes = slotStartMinutes;
+                while (nextSlotMinutes < currentMinutes) {
+                  nextSlotMinutes += dur;
+                }
+                sh = Math.floor(nextSlotMinutes / 60);
+                sm = nextSlotMinutes % 60;
+                t = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), sh, sm));
+                
+                // Se o ajuste ultrapassar o horário final do slot, pular para o próximo slot de disponibilidade
+                if (t >= end) continue;
+              }
+            }
             const [eh,em] = slot.end.split(':').map(Number);
             const dur = Number(slot.durationMinutes)||30;
             let t = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), sh, sm));
             const end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), eh, em));
             while (t < end) {
+              // Ajuste para garantir que o slot não comece no passado se for hoje
+              if (isToday && t < now) {
+                t = new Date(t.getTime() + dur*60000);
+                continue;
+              }
               const hh = String(t.getUTCHours()).padStart(2,'0');
               const mm = String(t.getUTCMinutes()).padStart(2,'0');
               result.push({ date: dateStr, time:`${hh}:${mm}`, durationMinutes: dur });
