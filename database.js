@@ -276,6 +276,39 @@ function getSQLiteTables() {
  */
 const DatabaseHelpers = {
     /**
+     * Funções de baixo nível para compatibilidade com better-sqlite3 e pg
+     */
+    async run(query, params) {
+        if (USE_POSTGRES) {
+            return db.query(query, params);
+        } else {
+            // Para SQLite, run é usado para INSERT, UPDATE, DELETE
+            const info = db.sqlite.prepare(query).run(params || []);
+            return { rows: [{ id: info.lastInsertRowid }] };
+        }
+    },
+
+    async get(query, params) {
+        if (USE_POSTGRES) {
+            const result = await db.query(query, params);
+            return result.rows[0];
+        } else {
+            // Para SQLite, get é usado para SELECT de uma única linha
+            return db.sqlite.prepare(query).get(params || []);
+        }
+    },
+
+    async all(query, params) {
+        if (USE_POSTGRES) {
+            const result = await db.query(query, params);
+            return result.rows;
+        } else {
+            // Para SQLite, all é usado para SELECT de múltiplas linhas
+            return db.sqlite.prepare(query).all(params || []);
+        }
+    },
+
+    /**
      * Criar ou atualizar chatbot
      */
     async upsertChatbot(chatbotData) {
@@ -482,3 +515,4 @@ module.exports = {
     DatabaseHelpers,
     USE_POSTGRES
 };
+        
