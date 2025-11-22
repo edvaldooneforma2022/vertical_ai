@@ -1,23 +1,16 @@
+const { DatabaseHelpers } = require('./database');
+const { getChatbotByApiKey } = DatabaseHelpers;
+
+// O sistema de agendamento original usava arquivos JSON/Redis para persistência.
+// O novo sistema usará o banco de dados centralizado (PostgreSQL/SQLite)
+// com isolamento de tenant via chatbot_id (obtido da API Key).
+
+// Funções de disponibilidade (ainda usam o sistema de arquivos/Redis temporariamente)
+// O ideal seria migrar a disponibilidade para o banco de dados também, mas
+// o foco é o agendamento (bookings).
+
 const fs = require('fs');
 const path = require('path');
-let RedisClient = null;
-let redisAvailable = false;
-
-async function initRedis(redisUrl) {
-  try {
-    const { createClient } = require('redis');
-    const client = createClient({ url: redisUrl });
-    client.on('error', (e) => console.error('Redis error', e));
-    await client.connect();
-    RedisClient = client;
-    redisAvailable = true;
-    return client;
-  } catch (e) {
-    console.warn('Redis init failed, falling back to JSON files:', e.message);
-    redisAvailable = false;
-    return null;
-  }
-}
 
 function tenantKey(apiKey) {
   return apiKey.replace(/[^a-zA-Z0-9_-]/g, '_') || 'public';
@@ -44,53 +37,16 @@ async function jsonFileForTenant(apiKey) {
   return fn;
 }
 
-// API: getData, setData, addBooking, listBookings, cancelBooking, setAvailability, getAvailability
 async function getData(apiKey) {
-  if (redisAvailable && RedisClient) {
-    const key = `scheduler:data:${tenantKey(apiKey)}`;
-    const raw = await RedisClient.get(key);
-    if (raw) return JSON.parse(raw);
-    // fallback to file
-  }
   const fn = await jsonFileForTenant(apiKey);
   const txt = await fs.promises.readFile(fn, 'utf8');
   return JSON.parse(txt || '{}');
 }
 
 async function setData(apiKey, obj) {
-  if (redisAvailable && RedisClient) {
-    const key = `scheduler:data:${tenantKey(apiKey)}`;
-    await RedisClient.set(key, JSON.stringify(obj));
-  }
   const fn = await jsonFileForTenant(apiKey);
   await fs.promises.writeFile(fn, JSON.stringify(obj, null, 2));
   return true;
-}
-
-async function addBooking(apiKey, booking) {
-  const data = await getData(apiKey);
-  data.bookings = data.bookings || [];
-  data.bookings.push(booking);
-  await setData(apiKey, data);
-  return booking;
-}
-
-async function listBookings(apiKey, status) {
-  const data = await getData(apiKey);
-  let arr = data.bookings || [];
-  if (status) arr = arr.filter(b => b.status === status);
-  return arr;
-}
-
-async function cancelBooking(apiKey, bookingId, reason) {
-  const data = await getData(apiKey);
-  const idx = (data.bookings || []).findIndex(b => b.id === bookingId);
-  if (idx === -1) return null;
-  data.bookings[idx].status = 'cancelled';
-  data.bookings[idx].cancelledAt = new Date().toISOString();
-  if (reason) data.bookings[idx].cancelReason = reason;
-  await setData(apiKey, data);
-  return data.bookings[idx];
 }
 
 async function setAvailability(apiKey, availability) {
@@ -105,8 +61,65 @@ async function getAvailability(apiKey) {
   return data.availability || [];
 }
 
+// =================================================================
+// FUNÇÕES DE AGENDAMENTO (BOOKINGS) - MIGRANDO PARA O BANCO DE DADOS
+// =================================================================
+
+async function getChatbotId(apiKey) {
+    const chatbot = await getChatbotByApiKey(apiKey);
+    if (!chatbot) {
+        throw new Error('Chatbot not found for API Key');
+    }
+    return chatbot.id;
+}
+
+async function addBooking(apiKey, booking) {
+    const chatbot_id = await getChatbotId(apiKey);
+    const appointmentData = {
+        chatbot_id,
+        name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        date: booking.date,
+        time: booking.time,
+        duration_minutes: booking.durationMinutes,
+        timezone: booking.timezone,
+        metadata: booking.metadata,
+        status: booking.status
+    };
+    // Persistir no banco de dados principal
+    const newBooking = await DatabaseHelpers.addAppointment(appointmentData);
+    return newBooking;
+}
+
+async function listBookings(apiKey, status) {
+    const chatbot_id = await getChatbotId(apiKey);
+    // Recuperar do banco de dados principal
+    const bookings = await DatabaseHelpers.listAppointments(chatbot_id, status);
+    return bookings.map(b => ({
+        id: b.id,
+        name: b.name,
+        email: b.email,
+        phone: b.phone,
+        date: b.date,
+        time: b.time,
+        durationMinutes: b.duration_minutes,
+        timezone: b.timezone,
+        metadata: b.metadata,
+        createdAt: b.created_at,
+        status: b.status
+    }));
+}
+
+async function cancelBooking(apiKey, bookingId, reason) {
+    const chatbot_id = await getChatbotId(apiKey);
+    // Cancelar no banco de dados principal
+    const cancelledBooking = await DatabaseHelpers.cancelAppointment(chatbot_id, bookingId, reason);
+    return cancelledBooking;
+}
+
 module.exports = {
-  initRedis,
+  // initRedis, // Não é mais necessário
   addBooking,
   listBookings,
   cancelBooking,
