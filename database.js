@@ -106,6 +106,22 @@ async function initializeDatabase() {
  */
 function getPostgresTables() {
     return [
+        // Tabela de Agendamentos
+        `CREATE TABLE IF NOT EXISTS appointments (
+            id SERIAL PRIMARY KEY,
+            chatbot_id VARCHAR(255) REFERENCES chatbots(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            phone VARCHAR(50),
+            date DATE NOT NULL,
+            time TIME NOT NULL,
+            duration_minutes INTEGER NOT NULL,
+            timezone VARCHAR(100) DEFAULT 'UTC',
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(50) DEFAULT 'confirmed'
+        )`,
+
         // Tabela de Chatbots
         `CREATE TABLE IF NOT EXISTS chatbots (
             id VARCHAR(255) PRIMARY KEY,
@@ -171,6 +187,39 @@ function getPostgresTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 
+        // Tabela de Agendamentos
+        `CREATE TABLE IF NOT EXISTS appointments (
+            id SERIAL PRIMARY KEY,
+            chatbot_id VARCHAR(255) REFERENCES chatbots(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            phone VARCHAR(50),
+            date DATE NOT NULL,
+            time TIME NOT NULL,
+            duration_minutes INTEGER NOT NULL,
+            timezone VARCHAR(100) DEFAULT 'UTC',
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(50) DEFAULT 'confirmed'
+        )`,
+
+        // Tabela de Agendamentos
+        `CREATE TABLE IF NOT EXISTS appointments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chatbot_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL,
+            duration_minutes INTEGER NOT NULL,
+            timezone TEXT DEFAULT 'UTC',
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'confirmed',
+            FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
+        )`,
+
         // Tabela de Conhecimento Adicional
         `CREATE TABLE IF NOT EXISTS knowledge_base (
             id SERIAL PRIMARY KEY,
@@ -186,7 +235,9 @@ function getPostgresTables() {
         `CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp)`,
         `CREATE INDEX IF NOT EXISTS idx_analytics_chatbot_date ON analytics(chatbot_id, date)`,
         `CREATE INDEX IF NOT EXISTS idx_extraction_cache_hash ON extraction_cache(url_hash)`,
-        `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`
+        `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_appointments_chatbot ON appointments(chatbot_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_appointments_chatbot ON appointments(chatbot_id)`
     ];
 }
 
@@ -195,6 +246,23 @@ function getPostgresTables() {
  */
 function getSQLiteTables() {
     return [
+        // Tabela de Agendamentos
+        `CREATE TABLE IF NOT EXISTS appointments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chatbot_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL,
+            duration_minutes INTEGER NOT NULL,
+            timezone TEXT DEFAULT 'UTC',
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'confirmed',
+            FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
+        )`,
+
         // Tabela de Chatbots
         `CREATE TABLE IF NOT EXISTS chatbots (
             id TEXT PRIMARY KEY,
@@ -260,6 +328,39 @@ function getSQLiteTables() {
             url TEXT NOT NULL,
             active INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
+        )`,
+
+        // Tabela de Agendamentos
+        `CREATE TABLE IF NOT EXISTS appointments (
+            id SERIAL PRIMARY KEY,
+            chatbot_id VARCHAR(255) REFERENCES chatbots(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            phone VARCHAR(50),
+            date DATE NOT NULL,
+            time TIME NOT NULL,
+            duration_minutes INTEGER NOT NULL,
+            timezone VARCHAR(100) DEFAULT 'UTC',
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(50) DEFAULT 'confirmed'
+        )`,
+
+        // Tabela de Agendamentos
+        `CREATE TABLE IF NOT EXISTS appointments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chatbot_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL,
+            duration_minutes INTEGER NOT NULL,
+            timezone TEXT DEFAULT 'UTC',
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'confirmed',
             FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
         )`,
 
@@ -511,6 +612,68 @@ const DatabaseHelpers = {
         }
         const result = await db.query(query, USE_POSTGRES ? [chatbot_id, parsedDays] : [chatbot_id, parsedDays]);
         return result.rows;
+    },
+
+    /**
+     * Adicionar um novo agendamento
+     */
+    async addAppointment(appointmentData) {
+        const { chatbot_id, name, email, phone, date, time, duration_minutes, timezone, metadata, status } = appointmentData;
+
+        const query = USE_POSTGRES
+            ? `INSERT INTO appointments (chatbot_id, name, email, phone, date, time, duration_minutes, timezone, metadata, status)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`
+            : `INSERT INTO appointments (chatbot_id, name, email, phone, date, time, duration_minutes, timezone, metadata, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+        const params = [
+            chatbot_id,
+            name,
+            email,
+            phone,
+            date,
+            time,
+            duration_minutes,
+            timezone,
+            JSON.stringify(metadata || {}),
+            status || 'confirmed'
+        ];
+
+        const result = await db.query(query, params);
+        return result.rows[0];
+    },
+
+    /**
+     * Listar agendamentos de um chatbot
+     */
+    async listAppointments(chatbot_id, status) {
+        let query = USE_POSTGRES
+            ? `SELECT * FROM appointments WHERE chatbot_id = $1`
+            : `SELECT * FROM appointments WHERE chatbot_id = ?`;
+
+        const params = [chatbot_id];
+
+        if (status) {
+            query += USE_POSTGRES ? ` AND status = $2` : ` AND status = ?`;
+            params.push(status);
+        }
+
+        const result = await db.query(query, params);
+        return result.rows;
+    },
+
+    /**
+     * Cancelar um agendamento
+     */
+    async cancelAppointment(chatbot_id, appointmentId, reason) {
+        const query = USE_POSTGRES
+            ? `UPDATE appointments SET status = 'cancelled' WHERE chatbot_id = $1 AND id = $2 RETURNING *`
+            : `UPDATE appointments SET status = 'cancelled' WHERE chatbot_id = ? AND id = ?`;
+
+        const params = [chatbot_id, appointmentId];
+
+        const result = await db.query(query, params);
+        return result.rows[0];
     }
 };
 
