@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Detectar ambiente e escolher banco apropriado
-const USE_POSTGRES = process.env.DATABASE_URL || process.env.USE_POSTGRES === 'true';
+const USE_POSTGRES = process.env.DATABASE_URL && process.env.DATABASE_URL.length > 0;
 
 let db;
 
