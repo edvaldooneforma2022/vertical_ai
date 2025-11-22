@@ -24,7 +24,7 @@ function tenantKey(apiKey) {
 }
 
 function dataDir() {
-  return path.join(process.cwd(), 'scheduler_data');
+  return path.join(__dirname, 'scheduler_data');
 }
 
 async function ensureDir(p) {
@@ -113,3 +113,4 @@ module.exports = {
   setAvailability,
   getAvailability,
 };
+
