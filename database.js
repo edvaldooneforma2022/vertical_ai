@@ -515,4 +515,3 @@ module.exports = {
     DatabaseHelpers,
     USE_POSTGRES
 };
-        
