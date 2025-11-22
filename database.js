@@ -89,7 +89,12 @@ async function initializeDatabase() {
             await db.query(table);
             console.log('✅ Tabela criada/verificada');
         } catch (error) {
-            console.error('❌ Erro ao criar tabela:', error.message);
+            // Se for um erro de conexão (PostgreSQL), o servidor não deve travar
+            if (error.message && error.message.includes('Connection terminated')) {
+                console.error('❌ Erro de conexão ao criar tabela (ignorado para evitar crash):', error.message);
+            } else {
+                console.error('❌ Erro ao criar tabela:', error.message);
+            }
         }
     }
 
