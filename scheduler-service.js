@@ -15,14 +15,7 @@ function generateSlotsForDate(availability, dateStr) {
     const duration = Number(slot.durationMinutes) || 30;
     let t = new Date(Date.UTC(y, m-1, d, sh, sm));
     const end = new Date(Date.UTC(y, m-1, d, eh, em));
-        const now = new Date();
-    const isToday = dt.getUTCFullYear() === now.getUTCFullYear() && dt.getUTCMonth() === now.getUTCMonth() && dt.getUTCDate() === now.getUTCDate();
-
     while (t < end) {
-      if (isToday && t < now) {
-        t = new Date(t.getTime() + duration*60000);
-        continue;
-      }
       const hh = String(t.getUTCHours()).padStart(2,'0');
       const mm = String(t.getUTCMinutes()).padStart(2,'0');
       slots.push({ date: dateStr, time: `${hh}:${mm}`, durationMinutes: duration });
