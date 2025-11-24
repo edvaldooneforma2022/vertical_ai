@@ -64,8 +64,136 @@ try {
 
 const app = express();
 
+// ===== SISTEMA DE AUTENTICAÇÃO E MULTITENANCY (Simulação) =====
+// Simulação de um banco de dados de clientes/chatbots
+const clientes = new Map();
+clientes.set('LMV7-2U3H-C1O9-43LN', {
+    id: 'cliente-francisco',
+    apiKey: 'LMV7-2U3H-C1O9-43LN',
+    nome: 'Francisco - Vertical AI',
+    leads: new Map(), // Simulação de um sistema de leads por cliente
+    config: {
+        robotName: 'Vertical AI - Teste Francisco',
+        customInstructions: 'Seja prestativo e focado em agendamento.',
+        url: 'https://arsenalsecretodosceos.com.br',
+        pageData: {
+            summary: 'O Arsenal Secreto dos CEOs é um treinamento focado em estratégias de negócios e liderança.',
+            contatos: {
+                whatsapp: ['+55 11 99999-9999'],
+                email: ['suporte@verticalai.com.br']
+            }
+        }
+    }
+});
+
+// Middleware para autenticação via API Key
+async function requireApiKey(req, res, next) {
+    // A API Key pode vir no header (para chamadas de API) ou no corpo (para chamadas do widget)
+    const apiKey = req.headers["x-api-key"] || req.body.apiKey || req.query.apiKey;
+
+    if (!apiKey) {
+        return res.status(401).json({ 
+            success: false, 
+            error: "Acesso negado. API Key não fornecida." 
+        });
+    }
+
+    const cliente = clientes.get(apiKey);
+
+    if (!cliente) {
+        return res.status(403).json({ 
+            success: false, 
+            error: "Acesso negado. API Key inválida." 
+        });
+    }
+
+    // Anexar dados do cliente à requisição
+    req.cliente = cliente;
+    next();
+}
+
+// Função para obter o sistema de leads do cliente
+function getLeadSystem(apiKey) {
+    const cliente = clientes.get(apiKey);
+    if (!cliente) {
+        // Em um sistema real, isso lançaria um erro ou retornaria um sistema de leads padrão/nulo
+        return {
+            findLeadByEmail: () => null,
+            addLead: (lead) => ({ id: Date.now(), ...lead }),
+            updateLeadConversation: () => {},
+            updateLeadJourneyStage: () => {}
+        };
+    }
+
+    // Simulação de um sistema de leads com persistência simples em Map
+    return {
+        findLeadByEmail: (email) => {
+            for (const lead of cliente.leads.values()) {
+                if (lead.email === email) return lead;
+            }
+            return null;
+        },
+        addLead: (lead) => {
+            const newLead = { id: `lead-${Date.now()}`, ...lead, conversation: [] };
+            cliente.leads.set(newLead.id, newLead);
+            return newLead;
+        },
+        updateLeadConversation: (leadId, message, isUser) => {
+            const lead = cliente.leads.get(leadId);
+            if (lead) {
+                lead.conversation.push({ timestamp: new Date(), message, isUser });
+            }
+        },
+        updateLeadJourneyStage: (leadId, stage) => {
+            const lead = cliente.leads.get(leadId);
+            if (lead) {
+                lead.journeyStage = stage;
+            }
+        }
+    };
+}
+
+// Simulação da função de autenticação para a rota /chatbot
+async function authenticateAndGetChatbotData(apiKey) {
+    const cliente = clientes.get(apiKey);
+    if (cliente) {
+        return cliente.config;
+    }
+    return null;
+}
+
 // Declarando conversationHistories no escopo global ou adequado
 const conversationHistories = new Map();
+
+// Simulação de dependências necessárias para as novas rotas
+// Em um sistema real, estas seriam importadas ou instanciadas corretamente.
+const logger = console; // Usar console como logger de fallback
+const journeyAnalyzer = {
+    analyzeJourneyStage: (message) => {
+        if (message.toLowerCase().includes('preço') || message.toLowerCase().includes('valor')) return 'preco';
+        if (message.toLowerCase().includes('agendar') || message.toLowerCase().includes('reuniao')) return 'agendamento';
+        return 'descoberta';
+    }
+};
+const sistemaCapturaInteligencias = {
+    capturarInteligencias: (message) => ({
+        // Simulação de inteligências capturadas
+        intencao: message.toLowerCase().includes('preço') ? 'preco' : 'geral',
+        contato: message.toLowerCase().includes('whatsapp') ? 'whatsapp' : null
+    }),
+    gerarRespostaContextual: (inteligencias, contatos, journeyStage) => {
+        if (inteligencias.intencao === 'preco') {
+            return "Interessado em conhecer nossos valores? Posso te enviar um resumo por email ou WhatsApp.";
+        }
+        if (journeyStage === 'agendamento') {
+            return "Ótimo! Para agendar, por favor, confirme seu melhor horário e telefone.";
+        }
+        if (contatos.whatsapp.length > 0) {
+            return `Obrigado pelo seu interesse! Como posso ajudar você hoje? Se preferir, pode nos chamar no WhatsApp: ${contatos.whatsapp[0]}`;
+        }
+        return "Obrigado pelo seu interesse! Como posso ajudar você hoje?";
+    }
+};
 
 // ===== SISTEMA DE SUPERINTELIGÊNCIA CONVERSACIONAL AVANÇADA =====
 class SuperInteligenciaConversacional {
@@ -4186,7 +4314,337 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 </html>`;
 }
 
-function generateChatbotHTML({ robotName, url, instructions }) {
+// ===== FUNÇÃO: Geração Completa do HTML do Chatbot (Versão Atualizada) =====
+function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '') {
+    const escapedPageData = JSON.stringify(pageData || {});
+    const safeRobotName = String(robotName || 'Assistente IA').replace(/"/g, '&quot;');
+    const safeInstructions = String(customInstructions || '').replace(/"/g, '&quot;');
+
+    // Gerar botões fixos com contatos
+    const contatos = pageData.contatos || {
+        telefone: [],
+        whatsapp: [], 
+        email: [],
+        site: [pageData.url || ''],
+        endereco: []
+    };
+
+    let fixedButtonsHTML = '';
+    if (contatos.whatsapp.length > 0) {
+        fixedButtonsHTML += `<a href="https://wa.me/${contatos.whatsapp[0].replace(/\D/g, '')}" target="_blank" class="fixed-button whatsapp-button">WhatsApp</a>`;
+    }
+    if (contatos.telefone.length > 0) {
+        fixedButtonsHTML += `<a href="tel:${contatos.telefone[0].replace(/\D/g, '')}" class="fixed-button phone-button">Ligar</a>`;
+    }
+    if (contatos.email.length > 0) {
+        fixedButtonsHTML += `<a href="mailto:${contatos.email[0]}" class="fixed-button email-button">Email</a>`;
+    }
+    if (contatos.site.length > 0) {
+        fixedButtonsHTML += `<a href="${contatos.site[0]}" target="_blank" class="fixed-button site-button">Site</a>`;
+    }
+
+    // HTML do Chatbot
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot ${safeRobotName}</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-header {
+            background-color: #007bff;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-message {
+            max-width: 80%;
+            padding: 8px 12px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        .bot {
+            background-color: #e2e2e2;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+        .user {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+        .chat-input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            background-color: #fff;
+        }
+        .chat-input-container input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 1em;
+        }
+        .chat-input-container button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .chat-input-container button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .typing-indicator {
+            padding: 10px;
+            color: #666;
+            font-style: italic;
+            display: none;
+        }
+        .lead-form {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-grow: 1;
+            justify-content: center;
+            align-items: center;
+        }
+        .lead-form input {
+            width: 90%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        .lead-form button {
+            width: 90%;
+            background-color: #ffc107;
+            color: #333;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .fixed-buttons-container {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            gap: 5px;
+            border-top: 1px solid #ddd;
+        }
+        .fixed-button {
+            display: block;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+        }
+        .whatsapp-button { background-color: #25d366; }
+        .phone-button { background-color: #007bff; }
+        .email-button { background-color: #dc3545; }
+        .site-button { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">${safeRobotName}</div>
+        
+        <div class="lead-form" id="leadForm">
+            <h2>Antes de começar...</h2>
+            <p>Para um atendimento personalizado, por favor, preencha seus dados:</p>
+            <input type="text" id="leadName" placeholder="Seu Nome (Opcional)">
+            <input type="email" id="leadEmail" placeholder="Seu Melhor Email (Obrigatório)">
+            <input type="tel" id="leadPhone" placeholder="Seu Telefone (Opcional)">
+            <button id="startChatButton">Começar o Chat</button>
+        </div>
+
+        <div class="chat-messages" id="chatMessages" style="display: none;">
+            <div class="typing-indicator" id="typingIndicator">Digitando...</div>
+        </div>
+
+        <div class="fixed-buttons-container" id="fixedButtonsContainer">
+            ${fixedButtonsHTML}
+        </div>
+
+        <div class="chat-input-container" id="chatInputContainer" style="display: none;">
+            <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
+            <button id="sendButton">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        const config = {
+            url: "${pageData.url || ''}",
+            instructions: "${safeInstructions}",
+            robotName: "${safeRobotName}",
+            conversationId: "chat-${Date.now()}-${Math.random().toString(36).substring(2, 9)}",
+            apiKey: new URLSearchParams(window.location.search).get('apiKey') || ''
+        };
+
+        const leadForm = document.getElementById('leadForm');
+        const startChatButton = document.getElementById('startChatButton');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInputContainer = document.getElementById('chatInputContainer');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+        let leadId = null;
+        let isTyping = false;
+
+        startChatButton.addEventListener('click', async () => {
+            const name = document.getElementById('leadName').value.trim();
+            const email = document.getElementById('leadEmail').value.trim();
+            const phone = document.getElementById('leadPhone').value.trim();
+
+            if (!email) {
+                alert('O email é obrigatório para começar o chat.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/capture-lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        apiKey: config.apiKey, // Enviar apiKey no corpo para autenticação
+                        nome: name,
+                        email: email,
+                        telefone: phone || 'Não informado',
+                        url_origem: window.location.href,
+                        robotName: config.robotName
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    leadId = data.lead.id;
+                    leadForm.style.display = 'none';
+                    chatMessages.style.display = 'flex';
+                    chatInputContainer.style.display = 'flex';
+                    addMessage(\`Olá \${name || 'amigo'}! É um prazer ter você aqui. Como posso ajudar você hoje?\`, false);
+                } else {
+                    alert(\`Erro ao capturar lead: \${data.error || 'Erro desconhecido'}\`);
+                }
+            } catch (error) {
+                console.error('Erro ao capturar lead:', error);
+                alert('Erro ao processar. Tente novamente.');
+            }
+        });
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message ' + (isUser ? 'user' : 'bot');
+            messageDiv.textContent = content;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTyping() {
+            isTyping = true;
+            typingIndicator.style.display = 'flex';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTyping() {
+            isTyping = false;
+            typingIndicator.style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message || isTyping) return;
+            addMessage(message, true);
+            chatInput.value = '';
+            sendButton.disabled = true;
+            showTyping();
+            try {
+                const response = await fetch('/api/chat-universal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        apiKey: config.apiKey, // Enviar apiKey no corpo para autenticação
+                        message: message,
+                        url: config.url,
+                        instructions: config.instructions,
+                        robotName: config.robotName,
+                        conversationId: config.conversationId,
+                        leadId: leadId
+                    })
+                });
+                const data = await response.json();
+                hideTyping();
+                if (data.success) {
+                    addMessage(data.response);
+                } else {
+                    addMessage('Desculpe, ocorreu um erro. Tente novamente em alguns minutos.');
+                }
+            } catch (error) {
+                hideTyping();
+                addMessage('Erro de conexão. Verifique sua internet e tente novamente.');
+            } finally {
+                sendButton.disabled = false;
+                chatInput.focus();
+            }
+        }
+
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        sendButton.addEventListener('click', sendMessage);
+
+        // Auto-focus no primeiro campo do formulário
+        document.getElementById('leadName').focus();
+    </script>
+</body>
+</html>`;
+}
+
+// Rota para o widget de chat (versão antiga)
+// app.get('/public/chat-widget.html', (req, res) => {
+//     const { robotName, url, instructions } = req.query;
+//     res.send(generateChatbotHTML({ robotName, url, instructions }));
+// });
     const escapedRobotName = String(robotName).replace(/"/g, "&quot;");
     const escapedUrl = String(url).replace(/"/g, "&quot;");
     const escapedInstructions = String(instructions).replace(/"/g, "&quot;");
@@ -4486,9 +4944,139 @@ setupRoutes(app);
         }
     });
 
-    // Structured Leads
-    app.post('/api/leads/structured', async (req, res) => {
-        try {
+ // ===== ROTAS DO CHATBOT (NOVAS) =====
+
+// Rota para servir a interface completa do chatbot
+app.get("/chatbot", async (req, res) => {
+    const apiKey = req.query.apiKey;
+    if (!apiKey) {
+        return res.status(400).send("API Key não fornecida. Use /chatbot?apiKey=SUA_CHAVE");
+    }
+
+    const chatbotData = await authenticateAndGetChatbotData(apiKey);
+
+    if (!chatbotData) {
+        return res.status(403).send("API Key inválida ou chatbot não encontrado.");
+    }
+
+    const html = generateFullChatbotHTML(
+        chatbotData.pageData, 
+        chatbotData.robotName, 
+        chatbotData.customInstructions
+    );
+
+    res.send(html);
+});
+
+// Rota para capturar o lead inicial
+app.post("/api/capture-lead", requireApiKey, async (req, res) => {
+    const { nome, email, telefone, url_origem, robotName } = req.body;
+    const cliente = req.cliente;
+    const leadSystem = getLeadSystem(cliente.apiKey);
+
+    if (!email) {
+        return res.status(400).json({
+            success: false,
+            error: "O email é obrigatório para a captura do lead."
+        });
+    }
+
+    try {
+        let lead = leadSystem.findLeadByEmail(email);
+
+        if (!lead) {
+            // Novo lead
+            lead = leadSystem.addLead({
+                nome,
+                email,
+                telefone,
+                url_origem,
+                robotName,
+                journeyStage: "descoberta"
+            });
+            logger.info(`✅ Novo Lead Capturado: ${email}`);
+        } else {
+            logger.info(`⚠️ Lead Existente Encontrado: ${email}`);
+        }
+
+        return res.json({
+            success: true,
+            lead: {
+                id: lead.id,
+                email: lead.email,
+                nome: lead.nome
+            }
+        });
+
+    } catch (error) {
+        logger.error("Erro no endpoint /api/capture-lead:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Erro interno ao capturar o lead."
+        });
+    }
+});
+
+// Rota para processar as mensagens do Chatbot
+app.post("/api/chat-universal", requireApiKey, async (req, res) => {
+    const { message, conversationId, leadId } = req.body;
+    const cliente = req.cliente;
+    const leadSystem = getLeadSystem(cliente.apiKey);
+
+    if (!message || !conversationId || !leadId) {
+        return res.status(400).json({
+            success: false,
+            error: "Dados incompletos: message, conversationId e leadId são obrigatórios."
+        });
+    }
+
+    try {
+        // 1. Atualizar histórico de conversação do lead
+        leadSystem.updateLeadConversation(leadId, message, true); // Mensagem do usuário
+
+        // 2. Análise de Jornada e Intenções
+        // Assumindo que journeyAnalyzer e sistemaCapturaInteligencias estão definidos no escopo global
+        const journeyStage = journeyAnalyzer.analyzeJourneyStage(message);
+        const inteligencias = sistemaCapturaInteligencias.capturarInteligencias(message);
+        
+        // 3. Gerar Resposta
+        const respostaContextual = sistemaCapturaInteligencias.gerarRespostaContextual(
+            inteligencias, 
+            cliente.config.pageData.contatos, 
+            journeyStage
+        );
+
+        let finalResponse = respostaContextual;
+
+        // Se a resposta contextual for a padrão, usar a SuperInteligencia
+        if (respostaContextual.includes("Obrigado pelo seu interesse! Como posso ajudar você hoje?") || respostaContextual.includes("Interessado em conhecer nossos valores")) {
+            // Simulação de resposta da SuperInteligenciaConversacional
+            // Em um sistema real, aqui seria a chamada para o LLM
+            finalResponse = `[Simulação IA] ${message}. ${cliente.config.pageData.summary}. ${cliente.config.customInstructions}. ${respostaContextual}`;
+        }
+
+        // 4. Atualizar histórico de conversação com a resposta do bot
+        leadSystem.updateLeadConversation(leadId, finalResponse, false); // Mensagem do bot
+        leadSystem.updateLeadJourneyStage(leadId, journeyStage);
+
+        return res.json({
+            success: true,
+            response: finalResponse,
+            journeyStage: journeyStage,
+            inteligencias: inteligencias
+        });
+
+    } catch (error) {
+        logger.error("Erro no endpoint /api/chat-universal:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Erro interno ao processar a mensagem."
+        });
+    }
+});
+
+// Rotas V3.0 (Structured Leads)
+app.post('/api/leads/structured', async (req, res) => {   try {
             const { chatbotId, leadData, metadata } = req.body;
             const lead = await structuredLeadsManager.saveLead(chatbotId, leadData, metadata);
 
