@@ -3684,7 +3684,8 @@ app.post("/api/capture-lead", async (req, res) => {
             email,
             telefone: telefone || "Não informado",
             url_origem: url_origem || "",
-            robotName: robotName || "Assistente IA"
+            robotName: robotName,
+                        apiKey: new URLSearchParams(window.location.search).get('apiKey') || "Assistente IA"
         });
 
         analytics.leadsCaptured++;
@@ -4153,7 +4154,8 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         email: email,
                         telefone: phone || 'Não informado',
                         url_origem: window.location.href,
-                        robotName: robotName
+                        robotName: robotName,
+                        apiKey: new URLSearchParams(window.location.search).get('apiKey')
                     })
                 });
                 const data = await response.json();
@@ -4194,6 +4196,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         message: message,
                         pageData: pageData,
                         robotName: robotName,
+                        apiKey: new URLSearchParams(window.location.search).get('apiKey'),
                         instructions: customInstructions,
                         conversationId: 'chatbot_' + Date.now(),
                         leadId: leadId
