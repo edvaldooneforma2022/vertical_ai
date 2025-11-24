@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Serviço Crawl4AI (Recomendado para Produção)
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    container_name: crawl4ai-service
+    ports:
+      - "11235:11235"
+    environment:
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Seu app Node.js
+  nodejs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vertical-ai-app
+    depends_on:
+      - crawl4ai
+    environment:
+      # Configuração para o adaptador crawl4ai-adapter.js
+      - CRAWL4AI_MODE=docker
+      # O nome do serviço 'crawl4ai' é usado como hostname dentro da rede Docker Compose
+      - CRAWL4AI_DOCKER_URL=http://crawl4ai:11235
+      - PORT=3000 # Porta que o Node.js app irá expor
+    ports:
+      - "3000:3000"
+    # Adicione aqui o restart policy se necessário, ex: restart: unless-stopped

@@ -1,0 +1,39 @@
+# ==========================================
+# LINKMAGICO V7.0 - Python Requirements
+# Crawl4AI Dependencies
+# ==========================================
+
+# Core Crawl4AI
+crawl4ai>=0.7.6
+
+# Browser automation (instalado automaticamente pelo crawl4ai-setup)
+playwright>=1.40.0
+
+# ==========================================
+# OPTIONAL: Advanced Features
+# ==========================================
+
+# Uncomment se precisar de features avançadas:
+
+# Para extração com LLM (OpenAI, Anthropic)
+# openai>=1.0.0
+# anthropic>=0.8.0
+
+# Para processamento de documentos
+# beautifulsoup4>=4.12.0
+# lxml>=4.9.0
+
+# Para análise de conteúdo
+# numpy>=1.24.0
+# pandas>=2.0.0
+
+# ==========================================
+# NOTES
+# ==========================================
+
+# 1. Install: pip install -r requirements.txt
+# 2. Setup: crawl4ai-setup (instala browsers)
+# 3. Verify: crawl4ai-doctor
+
+# No Render, usar Build Command:
+# pip install -r requirements.txt && crawl4ai-setup && npm install
