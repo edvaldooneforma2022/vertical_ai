@@ -1,61 +1,29 @@
-// LinkMágico Commercial Widget v7.0 - Multi-Tenant Universal
-// Este script é a versão universal para ser distribuída aos clientes.
-// Ele carrega o widget.js do servidor LinkMágico com a API Key do cliente.
-(function(window, document) {
+<script>
+(function() {
     'use strict';
-
-    // Previne inicializações múltiplas
-    if (window.LinkMagicoWidgetLoaded) {
-        console.warn('LinkMagico Widget Universal já carregado.');
-        return;
-    }
-    window.LinkMagicoWidgetLoaded = true;
-
-    // 1. Obter a configuração do cliente a partir do script tag
-    // O cliente deve usar um script tag como este:
-    // <script id="linkmagico-config" data-api-key="LMV7-GTN1-14EQ-AOEX" data-robot-name="@teste" data-sales-url="https://vendas.com" data-instructions="Instruções personalizadas" data-primary-color="#FFD700" src="https://SEU_DOMINIO/public/widget.js"></script>
     
-    const currentScript = document.getElementById('linkmagico-config');
-    if (!currentScript) {
-        console.error('❌ LinkMágico Widget: Script tag com id="linkmagico-config" não encontrado. O widget não será carregado.');
-        return;
-    }
+    // ===== CONFIGURAÇÃO DO CLIENTE =====
+    // O cliente deve configurar apenas estes campos:
+    const config = {
+        robotName: "@teste",              // Nome do robô/assistente
+        salesUrl: "https://www.arsenalsecretodosceos.com.br/r3bu6mj",  // URL do produto/página de vendas
+        instructions: "Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva.", // Instruções personalizadas
+        primaryColor: "#FFD700",                  // Cor primária do widget
+        apiKey: "LMV7-GTN1-14EQ-AOEX"                // ⚠️ CHAVE ÚNICA DE CADA CLIENTE (OBRIGATÓRIA )
+    };
 
-    const apiKey = currentScript.getAttribute('data-api-key');
-    const robotName = currentScript.getAttribute('data-robot-name') || 'Assistente IA';
-    const salesUrl = currentScript.getAttribute('data-sales-url') || window.location.href;
-    const instructions = currentScript.getAttribute('data-instructions') || '';
-    const primaryColor = currentScript.getAttribute('data-primary-color') || '#3b82f6';
+    // ===== CONFIGURAÇÃO DO SERVIDOR =====
+    const apiBase = "https://vertical-ai-dktu.onrender.com"; // Domínio do seu servidor
     
-    // 2. Validar a API Key
-    if (!apiKey || apiKey.length < 10) {
-        console.error('❌ LinkMágico Widget: API Key inválida ou não fornecida no atributo data-api-key.');
-        return;
-    }
-
-    // 3. Determinar o domínio do servidor LinkMágico
-    // O domínio é extraído do atributo 'src' do script tag.
-    let apiBase = '';
-    try {
-        const scriptUrl = new URL(currentScript.src);
-        apiBase = scriptUrl.origin;
-    } catch (e) {
-        console.error('❌ LinkMágico Widget: Não foi possível determinar o domínio do servidor a partir do atributo src do script tag.', e);
-        return;
-    }
-
-    // 4. Injetar o script do widget real (chat.html)
-    // Este é o script que o cliente deve usar para carregar o balão flutuante.
-    // Ele aponta para o servidor LinkMágico, passando todos os parâmetros.
+    // ===== NÃO MODIFICAR ABAIXO DESTA LINHA =====
     
-    const chatUrl = `${apiBase}/chatbot?` + 
-        `apiKey=${encodeURIComponent(apiKey)}&` +
-        `robotName=${encodeURIComponent(robotName)}&` +
-        `url=${encodeURIComponent(salesUrl)}&` +
-        `instructions=${encodeURIComponent(instructions)}&` +
-        `color=${encodeURIComponent(primaryColor)}`;
-
-    // Cria o balão flutuante
+    // Verificar se apiKey foi configurada
+    if (!config.apiKey || config.apiKey === "SUA_API_KEY_AQUI" ) {
+        console.error("❌ LinkMágico Widget: API Key não configurada! Configure a propriedade 'apiKey' no objeto config.");
+        return;
+    }
+    
+    // Criar balão flutuante
     const bubble = document.createElement('div');
     bubble.innerHTML = `
         <style>
@@ -65,7 +33,7 @@
                 right: 20px;
                 width: 60px;
                 height: 60px;
-                background: linear-gradient(135deg, ${primaryColor} 0%, #1e40af 100%);
+                background: linear-gradient(135deg, ${config.primaryColor} 0%, #1e40af 100%);
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
@@ -106,10 +74,18 @@
         </div>
     `;
     
-    document.body.appendChild(bubble);
+    document.body.appendChild(bubble );
     
     // Abrir janela do chatbot ao clicar no balão
     document.getElementById('linkmagicoChatBubble').addEventListener('click', function() {
+        // Construir URL com todos os parâmetros incluindo apiKey
+        const chatUrl = `${apiBase}/chatbot?` + 
+            `apiKey=${encodeURIComponent(config.apiKey)}&` +
+            `robotName=${encodeURIComponent(config.robotName)}&` +
+            `url=${encodeURIComponent(config.salesUrl)}&` +
+            `instructions=${encodeURIComponent(config.instructions)}&` +
+            `color=${encodeURIComponent(config.primaryColor)}`;
+        
         // Abrir janela popup
         const width = 450;
         const height = 700;
@@ -123,8 +99,9 @@
         );
     });
     
-    console.log('✅ LinkMágico Widget Universal carregado com sucesso!');
-    console.log('📊 API Key:', apiKey);
-    console.log('🤖 Robot Name:', robotName);
-
-})(window, document);
+    console.log('✅ LinkMágico Widget carregado com sucesso!');
+    console.log('📊 API Key:', config.apiKey);
+    console.log('🤖 Robot Name:', config.robotName);
+    
+})();
+</script>
