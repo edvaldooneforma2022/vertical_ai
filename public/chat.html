@@ -1114,3 +1114,43 @@
 </body>
 </html>
         
+<script>
+        function handleLeadFormSubmit(event) {
+            event.preventDefault();
+
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const telefone = document.getElementById('telefone').value;
+            const url_origem = window.location.href;
+            const robotName = new URLSearchParams(window.location.search).get('robotName') || 'Assistente IA';
+            const apiKey = new URLSearchParams(window.location.search).get('apiKey');
+
+            const leadData = {
+                nome,
+                email,
+                telefone,
+                url_origem,
+                robotName,
+                apiKey
+            };
+
+            fetch('/api/capture-lead', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(leadData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Ocultar formulário e mostrar chat
+                } else {
+                    // Mostrar erro
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao capturar lead:', error);
+            });
+        }
+    </script>
