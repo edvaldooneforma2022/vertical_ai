@@ -4123,7 +4123,8 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         email: email,
                         telefone: phone || 'Não informado',
                         url_origem: window.location.href,
-                        robotName: robotName
+                        robotName: robotName,
+                        apiKey: new URLSearchParams(window.location.search).get('apiKey') // Adicionando a apiKey aqui
                     })
                 });
                 const data = await response.json();
@@ -4310,8 +4311,9 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                         nome: name || 'Não informado',
                         email: email,
                         telefone: phone || 'Não informado',
-                        url_origem: window.location.href,
-                        robotName: config.robotName
+url_origem: window.location.href,
+                        robotName: robotName,
+                        apiKey: new URLSearchParams(window.location.search).get('apiKey') // Adicionando a apiKey aqui
                     })
                 });
                 const data = await response.json();
