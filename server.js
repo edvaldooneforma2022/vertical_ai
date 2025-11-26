@@ -3632,8 +3632,9 @@ app.get("/health", (req, res) => {
     });
 });
 
-// ===== ENDPOINT: Captura de Lead ===app.post("/api/capture-lead", async (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);piKey || (req.session.user ? req.session.user.apiKey : null);
+// ===== ENDPOINT: Captura de Lead =====
+app.post("/api/capture-lead", async (req, res) => {
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName } = req.body || {};
