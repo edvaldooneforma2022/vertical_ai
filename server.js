@@ -2728,14 +2728,28 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
 });
 
 // ROTA CHAT.HTML
-app.get("/chat.html", (req, res) => {
-    const robotName = req.query.name || "Assistente IA";
-    const url = req.query.url || "";
+app.get("/chat.html", async (req, res) => {
+    try {
+        const robotName = req.query.name || "Assistente IA";
+        const url = req.query.url || "";
         const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : '');
-    const instructions = req.query.instructions || "";
-    
-    const chatbotHTML = generateChatbotHTML({ robotName, url, instructions });
-    res.send(chatbotHTML);
+        const instructions = req.query.instructions || "";
+        
+        let pageData = {};
+        if (url) {
+            try {
+                pageData = await extractPageData(url);
+            } catch (extractError) {
+                console.warn('Failed to extract page data in chat.html:', extractError.message || extractError);
+            }
+        }
+
+        const chatbotHTML = generateFullChatbotHTML(pageData, robotName, instructions, apiKey);
+        res.send(chatbotHTML);
+    } catch (error) {
+        logger.error('Chat.html route error:', error.message || error);
+        res.status(500).send('Erro interno ao gerar chat.html');
+    }
 });
 
 // ROTA CHATBOT COMPLETA
@@ -3601,6 +3615,44 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
 }
 
 // ===== API Routes =====
+app.get("/health", (req, res) => {
+    // Implementação da rota /health...
+});
+
+// Rota de status para o dashboard (alias para /health)
+app.get("/api/system/status", (req, res) => {
+    // Reutiliza a lógica de /health
+    const uptime = process.uptime();
+    const avgResponseTime = analytics.responseTimeHistory.length > 0 ?
+    Math.round(analytics.responseTimeHistory.reduce((a, b) => a + b, 0) / analytics.responseTimeHistory.length) : 0;
+
+    res.json({
+        status: "healthy",
+        uptime: Math.floor(uptime),
+        timestamp: new Date().toISOString(),
+        version: "7.0.0",
+        analytics: {
+            totalRequests: analytics.totalRequests,
+            chatRequests: analytics.chatRequests,
+            extractRequests: analytics.extractRequests,
+            errors: analytics.errors,
+            activeChats: analytics.activeChats.size,
+            avgResponseTime,
+            successfulExtractions: analytics.successfulExtractions,
+            failedExtractions: analytics.failedExtractions,
+            cacheSize: dataCache.size,
+            leadsCaptured: analytics.leadsCaptured
+        },
+        services: {
+            groq: !!process.env.GROQ_API_KEY,
+            openai: !!process.env.OPENAI_API_KEY,
+            openrouter: !!process.env.OPENROUTER_API_KEY,
+            puppeteer: !!puppeteer,
+            superinteligencia: true
+        }
+    });
+});
+
 app.get("/health", (req, res) => {
     const uptime = process.uptime();
     const avgResponseTime = analytics.responseTimeHistory.length > 0 ?
