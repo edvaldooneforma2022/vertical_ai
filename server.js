@@ -2403,7 +2403,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/validate-api-key", (req, res) => {
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     
     if (!apiKey) {
         return res.status(400).json({ 
@@ -2444,7 +2444,7 @@ app.get("/excluir-dados", (req, res) => {
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const leads = leadSystem.getLeads();
     console.log(`📊 Retornando ${leads.length} leads para admin`);
@@ -2456,7 +2456,7 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const lead = leadSystem.getLeadById(req.params.id);
     if (lead) {
@@ -2468,7 +2468,7 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.createBackup("manual");
@@ -2476,7 +2476,7 @@ app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const backups = backupSystem.listBackups();
@@ -2496,7 +2496,7 @@ app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
             error: "Nome do arquivo de backup é obrigatório"
         });
     }
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.restoreBackup(filename);
@@ -2656,7 +2656,7 @@ app.get("/api/docs", (req, res) => {
 // ===== STATUS DO SISTEMA DE BACKUP =====
 app.get("/admin/backup/status", requireApiKey, (req, res) => {
     try {
-        const { apiKey } = req.body;
+        const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
         
@@ -2695,7 +2695,7 @@ app.get("/admin/backup/status", requireApiKey, (req, res) => {
 // ===== TESTE DO SISTEMA DE BACKUP =====
 app.post("/admin/backup/test", requireApiKey, (req, res) => {
     try {
-        const { apiKey } = req.body;
+        const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
         
@@ -2731,6 +2731,7 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
 app.get("/chat.html", (req, res) => {
     const robotName = req.query.name || "Assistente IA";
     const url = req.query.url || "";
+        const apiKey = (req.session.user ? req.session.user.apiKey : null) || req.query.apiKey;
     const instructions = req.query.instructions || "";
     
     const chatbotHTML = generateChatbotHTML({ robotName, url, instructions });
@@ -2742,6 +2743,7 @@ app.get("/chatbot", async (req, res) => {
     try {
         const robotName = req.query.name || "Assistente IA";
         const url = req.query.url || "";
+        const apiKey = (req.session.user ? req.session.user.apiKey : null) || req.query.apiKey;
         const instructions = req.query.instructions || "";
         
         let pageData = {};
@@ -2753,7 +2755,7 @@ app.get("/chatbot", async (req, res) => {
             }
         }
         
-        const html = generateFullChatbotHTML(pageData, robotName, instructions);
+        const html = generateFullChatbotHTML(pageData, robotName, instructions, apiKey);
         res.set('Content-Type', 'text/html');
         res.send(html);
     } catch (error) {
@@ -3630,9 +3632,8 @@ app.get("/health", (req, res) => {
     });
 });
 
-// ===== ENDPOINT: Captura de Lead =====
-app.post("/api/capture-lead", async (req, res) => {
-    const { apiKey } = req.body;
+// ===== ENDPOINT: Captura de Lead ===app.post("/api/capture-lead", async (req, res) => {
+    const apiKey = (req.session.user ? req.session.user.apiKey : null) || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName } = req.body || {};
@@ -3684,7 +3685,7 @@ app.post("/api/capture-lead", async (req, res) => {
 
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -3746,7 +3747,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -3994,7 +3995,7 @@ app.post("/api/extract", async (req, res) => {
 });
 
 // ===== FUNÇÃO: Geração Completa do HTML do Chatbot =====
-function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '') {
+function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '', apiKey = '') {
     const escapedPageData = JSON.stringify(pageData || {});
     const safeRobotName = String(robotName || 'Assistente IA').replace(/"/g, '&quot;');
     const safeInstructions = String(customInstructions || '').replace(/"/g, '&quot;');
@@ -4096,6 +4097,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         const chatInputContainer = document.getElementById('chatInputContainer');
         const startChatBtn = document.getElementById('startChat');
         let leadId = null;
+        const currentApiKey = "${apiKey}";
         let agendamentoAtivo = false;
 
         // Função para iniciar agendamento
@@ -4124,7 +4126,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         telefone: phone || 'Não informado',
                         url_origem: window.location.href,
                         robotName: robotName,
-                        apiKey: new URLSearchParams(window.location.search).get('apiKey') // Adicionando a apiKey aqui
+                        apiKey: currentApiKey || new URLSearchParams(window.location.search).get('apiKey')
                     })
                 });
                 const data = await response.json();
@@ -4293,6 +4295,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         };
         let isTyping = false;
         let leadId = null;
+        const currentApiKey = "${apiKey}";
 
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
@@ -4313,7 +4316,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                         telefone: phone || 'Não informado',
 url_origem: window.location.href,
                         robotName: robotName,
-                        apiKey: new URLSearchParams(window.location.search).get('apiKey') // Adicionando a apiKey aqui
+                        apiKey: currentApiKey || new URLSearchParams(window.location.search).get('apiKey')
                     })
                 });
                 const data = await response.json();
