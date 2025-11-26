@@ -2731,7 +2731,7 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
 app.get("/chat.html", (req, res) => {
     const robotName = req.query.name || "Assistente IA";
     const url = req.query.url || "";
-        const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : null);
+        const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : '');
     const instructions = req.query.instructions || "";
     
     const chatbotHTML = generateChatbotHTML({ robotName, url, instructions });
@@ -2743,7 +2743,7 @@ app.get("/chatbot", async (req, res) => {
     try {
         const robotName = req.query.name || "Assistente IA";
         const url = req.query.url || "";
-        const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : null);
+        const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : '');
         const instructions = req.query.instructions || "";
         
         let pageData = {};
@@ -2760,7 +2760,8 @@ app.get("/chatbot", async (req, res) => {
         res.send(html);
     } catch (error) {
         logger.error('Chatbot route error:', error.message || error);
-        res.status(500).send('Erro interno ao gerar chatbot');
+        // Retorna uma mensagem de erro mais amigável para o Preview
+        res.status(500).send('<h1>Internal Server Error</h1><p>Erro ao gerar chatbot. Verifique os logs do servidor.</p>');
     }
 });
 
@@ -4127,7 +4128,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         telefone: phone || 'Não informado',
                         url_origem: window.location.href,
                         robotName: robotName,
-                        apiKey: currentApiKey || new URLSearchParams(window.location.search).get('apiKey')
+                        apiKey: currentApiKey || new URLSearchParams(window.location.search).get('apiKey') || ''
                     })
                 });
                 const data = await response.json();
@@ -4317,7 +4318,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                         telefone: phone || 'Não informado',
 url_origem: window.location.href,
                         robotName: robotName,
-                        apiKey: currentApiKey || new URLSearchParams(window.location.search).get('apiKey')
+                        apiKey: currentApiKey || new URLSearchParams(window.location.search).get('apiKey') || ''
                     })
                 });
                 const data = await response.json();
