@@ -769,6 +769,7 @@
 
         // URL Parameters
         const urlParams = new URLSearchParams(window.location.search);
+        const apiKey = urlParams.get('apiKey');
         const pageUrl = urlParams.get('url');
         const robotNameParam = urlParams.get('name');
 
@@ -1046,7 +1047,8 @@
                         pageData: pageData,
                         robotName: robotName,
                         conversationId: conversationId,
-                        instructions: customInstructions
+                        instructions: customInstructions,
+                        apiKey: apiKey
                     })
                 });
                 
