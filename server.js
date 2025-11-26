@@ -2731,7 +2731,7 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
 app.get("/chat.html", (req, res) => {
     const robotName = req.query.name || "Assistente IA";
     const url = req.query.url || "";
-        const apiKey = (req.session.user ? req.session.user.apiKey : null) || req.query.apiKey;
+        const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const instructions = req.query.instructions || "";
     
     const chatbotHTML = generateChatbotHTML({ robotName, url, instructions });
@@ -2743,7 +2743,7 @@ app.get("/chatbot", async (req, res) => {
     try {
         const robotName = req.query.name || "Assistente IA";
         const url = req.query.url || "";
-        const apiKey = (req.session.user ? req.session.user.apiKey : null) || req.query.apiKey;
+        const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
         
         let pageData = {};
@@ -3633,7 +3633,7 @@ app.get("/health", (req, res) => {
 });
 
 // ===== ENDPOINT: Captura de Lead ===app.post("/api/capture-lead", async (req, res) => {
-    const apiKey = (req.session.user ? req.session.user.apiKey : null) || req.body.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);piKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName } = req.body || {};
@@ -4097,7 +4097,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         const chatInputContainer = document.getElementById('chatInputContainer');
         const startChatBtn = document.getElementById('startChat');
         let leadId = null;
-        const currentApiKey = "${apiKey}";
+        const currentApiKey = "${apiKey || ''}";
         let agendamentoAtivo = false;
 
         // Função para iniciar agendamento
@@ -4295,7 +4295,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         };
         let isTyping = false;
         let leadId = null;
-        const currentApiKey = "${apiKey}";
+        const currentApiKey = "${apiKey || ''}";
 
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
