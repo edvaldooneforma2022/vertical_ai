@@ -843,7 +843,7 @@
             if (!pageUrl) return;
 
             try {
-                const response = await fetch('/api/extract', {
+                const response = await fetch('/extract', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -1115,4 +1115,3 @@
     </script>
 </body>
 </html>
-        
