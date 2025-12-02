@@ -2403,7 +2403,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/validate-api-key", (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     
     if (!apiKey) {
         return res.status(400).json({ 
@@ -2444,7 +2444,7 @@ app.get("/excluir-dados", (req, res) => {
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const leads = leadSystem.getLeads();
     console.log(`📊 Retornando ${leads.length} leads para admin`);
@@ -2456,7 +2456,7 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const lead = leadSystem.getLeadById(req.params.id);
     if (lead) {
@@ -2468,7 +2468,7 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.createBackup("manual");
@@ -2476,7 +2476,7 @@ app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const backups = backupSystem.listBackups();
@@ -2496,7 +2496,7 @@ app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
             error: "Nome do arquivo de backup é obrigatório"
         });
     }
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.restoreBackup(filename);
@@ -2656,7 +2656,7 @@ app.get("/api/docs", (req, res) => {
 // ===== STATUS DO SISTEMA DE BACKUP =====
 app.get("/admin/backup/status", requireApiKey, (req, res) => {
     try {
-        const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+        const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
         
@@ -2695,7 +2695,7 @@ app.get("/admin/backup/status", requireApiKey, (req, res) => {
 // ===== TESTE DO SISTEMA DE BACKUP =====
 app.post("/admin/backup/test", requireApiKey, (req, res) => {
     try {
-        const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+        const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
         
@@ -2732,7 +2732,7 @@ app.get("/chat.html", async (req, res) => {
     try {
         const robotName = req.query.name || "Assistente IA";
         const url = req.query.url || "";
-        const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : '');
+        const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
         
         let pageData = {};
@@ -2757,7 +2757,7 @@ app.get("/chatbot", async (req, res) => {
     try {
         const robotName = req.query.name || "Assistente IA";
         const url = req.query.url || "";
-        const apiKey = req.query.apiKey || (req.session.user ? req.session.user.apiKey : '');
+        const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
         
         let pageData = {};
@@ -3284,7 +3284,7 @@ function shouldActivateSalesMode(instructions) {
 }
 
 // ===== FUNÇÃO APRIMORADA DE RESPOSTA DA IA COM SUPERINTELIGÊNCIA =====
-async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null) {
+async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null, apiKey = null) {
     const startTime = Date.now();
     try {
         if (!userMessage || !String(userMessage).trim()) {
@@ -3318,7 +3318,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
 
         // Atualizar estágio do lead se existir
         if (leadId) {
-            const leadSystem = getLeadSystem(process.env.API_KEYS_JSON ? JSON.parse(process.env.API_KEYS_JSON)[0] : "default");
+            const leadSystem = getLeadSystem(apiKey);
             leadSystem.updateLeadJourneyStage(leadId, journeyStage);
         }
 
@@ -3687,7 +3687,7 @@ app.get("/health", (req, res) => {
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName } = req.body || {};
@@ -3739,7 +3739,7 @@ app.post("/api/capture-lead", async (req, res) => {
 
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -3767,7 +3767,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
             leadSystem.updateLeadConversation(leadId, message, true);
         }
 
-        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
+        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey);
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
         if (leadId) {
@@ -3801,7 +3801,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -3888,7 +3888,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             console.log(`🎭 Resposta emocional inteligente gerada`);
         } else {
             // 🎯 USAR SISTEMA ORIGINAL COM MELHORIAS EMOCIONAIS
-            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
+            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey);
             
             // Aplicar melhorias emocionais na resposta
             if (analiseEmocional.emocao === "negativo" && analiseEmocional.intensidade >= 2) {
