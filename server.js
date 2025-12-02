@@ -236,7 +236,7 @@ class SuperInteligenciaConversacional {
     }
 
     // ===== SISTEMA DE MEMÓRIA CONVERSACIONAL AVANÇADA =====
-    atualizarMemoriaUsuario(userId, interacao) {
+    atualizarMemoriaUsuario(resolvedUserId, interacao) {
         if (!this.memoriaConversacional.has(userId)) {
             this.memoriaConversacional.set(userId, {
                 historico: [],
@@ -2820,6 +2820,23 @@ app.use((req, res, next) => {
 });
 
 const dataCache = new Map();
+
+// ===== TENANCY HELPER =====
+function getRequestUserId(req) {
+    // attempt several common locations for identifying the tenant/user
+    try {
+        if (req.session && req.session.user && (req.session.user.id || req.session.user._id)) {
+            return String(req.session.user.id || req.session.user._id);
+        }
+        if (req.session && req.session.user && req.session.user.apiKey) {
+            return String(req.session.user.apiKey);
+        }
+        if (req.query && req.query.userId) return String(req.query.userId);
+        if (req.query && req.query.apiKey) return String(req.query.apiKey);
+        if (req.body && req.body.apiKey) return String(req.body.apiKey);
+    } catch (e) {}
+    return null;
+}
 const CACHE_TTL = 30 * 60 * 1000;
 
 function setCacheData(key, data) {
