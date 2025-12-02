@@ -2370,7 +2370,9 @@ function requireApiKey(req, res, next) {
         return next();
     }
 
-    lconst apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]); // Manter a lógica de extração para o middleware requireApiKey   if (apiKey) {
+    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+
+    if (apiKey) {
         const validation = validateApiKey(apiKey);
         if (validation.success) {
             req.session.validatedApiKey = apiKey;
