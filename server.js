@@ -2402,8 +2402,8 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "api_key_validation.html"));
 });
 
-app.post("/validate-api-key", (req, res) => {
-    const apiKey = req.cliente.apiKey;
+app.get("/validate-api-key", (req, res) => {
+    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
     
     if (!apiKey) {
         return res.status(400).json({ 
