@@ -2402,8 +2402,8 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "api_key_validation.html"));
 });
 
-app.get("/validate-api-key", (req, res) => {
-    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+app.post("/validate-api-key", (req, res) => {
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     
     if (!apiKey) {
         return res.status(400).json({ 
@@ -2444,7 +2444,7 @@ app.get("/excluir-dados", (req, res) => {
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
-    const apiKey = req.cliente.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const leads = leadSystem.getLeads();
     console.log(`📊 Retornando ${leads.length} leads para admin`);
@@ -2456,7 +2456,7 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
-    const apiKey = req.cliente.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const lead = leadSystem.getLeadById(req.params.id);
     if (lead) {
@@ -2468,7 +2468,7 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
-    const apiKey = req.cliente.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.createBackup("manual");
@@ -2476,7 +2476,7 @@ app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
-    const apiKey = req.cliente.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const backups = backupSystem.listBackups();
@@ -2496,7 +2496,7 @@ app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
             error: "Nome do arquivo de backup é obrigatório"
         });
     }
-    const apiKey = req.cliente.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.restoreBackup(filename);
@@ -2656,7 +2656,7 @@ app.get("/api/docs", (req, res) => {
 // ===== STATUS DO SISTEMA DE BACKUP =====
 app.get("/admin/backup/status", requireApiKey, (req, res) => {
     try {
-        const apiKey = req.cliente.apiKey;
+        const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
         
@@ -2695,7 +2695,7 @@ app.get("/admin/backup/status", requireApiKey, (req, res) => {
 // ===== TESTE DO SISTEMA DE BACKUP =====
 app.post("/admin/backup/test", requireApiKey, (req, res) => {
     try {
-        const apiKey = req.cliente.apiKey;
+        const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
         
@@ -3687,7 +3687,7 @@ app.get("/health", (req, res) => {
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
-    const apiKey = req.cliente.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName } = req.body || {};
@@ -3739,7 +3739,7 @@ app.post("/api/capture-lead", async (req, res) => {
 
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
-    const apiKey = req.cliente.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -3801,7 +3801,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const apiKey = req.cliente.apiKey;
+    const apiKey = req.body.apiKey || (req.session.user ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
