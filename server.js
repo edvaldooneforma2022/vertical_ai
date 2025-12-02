@@ -2444,7 +2444,12 @@ app.get("/excluir-dados", (req, res) => {
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+    
     const leadSystem = getLeadSystem(apiKey);
     const leads = leadSystem.getLeads();
     console.log(`📊 Retornando ${leads.length} leads para admin`);
@@ -2456,7 +2461,12 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+    
     const leadSystem = getLeadSystem(apiKey);
     const lead = leadSystem.getLeadById(req.params.id);
     if (lead) {
@@ -2468,7 +2478,12 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+    
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.createBackup("manual");
@@ -2476,7 +2491,12 @@ app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+    
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const backups = backupSystem.listBackups();
@@ -2496,7 +2516,13 @@ app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
             error: "Nome do arquivo de backup é obrigatório"
         });
     }
-    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+    
     const leadSystem = getLeadSystem(apiKey);
     const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
     const result = backupSystem.restoreBackup(filename);
@@ -3687,7 +3713,12 @@ app.get("/health", (req, res) => {
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+    
     const leadSystem = getLeadSystem(apiKey);
     try {
         const { nome, email, telefone, url_origem, robotName } = req.body || {};
@@ -4464,6 +4495,60 @@ url_origem: window.location.href,
 // funcione corretamente em sites externos dos clientes
 
 // ===== CONFIGURAR NOVAS ROTAS =====
+
+// ===== MIDDLEWARE DE AUTENTICAÇÃO PARA ROTAS V3.0 =====
+function requireApiKeyV3(req, res, next) {
+    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+    
+    if (apiKey) {
+        const validation = validateApiKey(apiKey);
+        if (validation.success) {
+            req.session.validatedApiKey = apiKey;
+            req.session.clientData = validation.client;
+            req.cliente = validation.client;
+            return next();
+        }
+    }
+    
+    if (req.session && req.session.validatedApiKey) {
+        req.cliente = req.session.clientData;
+        return next();
+    }
+    
+    return res.status(401).json({ 
+        success: false, 
+        error: "API Key não fornecida ou inválida. Autenticação necessária." 
+    });
+}
+
+// ===== MIDDLEWARE DE VALIDAÇÃO DE PROPRIEDADE DO CHATBOT =====
+function validateChatbotOwnership(req, res, next) {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey;
+    const chatbotId = req.params.chatbotId || req.body.chatbotId;
+    
+    if (!apiKey) {
+        return res.status(401).json({ 
+            success: false, 
+            error: "API Key não fornecida" 
+        });
+    }
+    
+    if (!chatbotId) {
+        return res.status(400).json({ 
+            success: false, 
+            error: "ChatbotId não fornecido" 
+        });
+    }
+    
+    // Verificar se o chatbotId pertence ao tenant
+    // Por segurança, o chatbotId deve começar com a apiKey ou ter um mapeamento
+    // Por enquanto, apenas garantir que apiKey existe
+    req.validatedChatbotId = chatbotId;
+    req.validatedApiKey = apiKey;
+    
+    next();
+}
+
 setupRoutes(app);
 
 // ===== INICIALIZAR SISTEMAS =====
@@ -4476,7 +4561,7 @@ setupRoutes(app);
     // ===== ROTAS DAS NOVAS INTEGRAÇÕES V3.0 =====
 
     // Gmail Integration
-    app.post('/api/gmail/send', async (req, res) => {
+    app.post('/api/gmail/send', requireApiKeyV3, async (req, res) => {
         try {
             const { to, subject, html, text } = req.body;
             const result = await gmailManager.sendEmail({ to, subject, html, text });
@@ -4487,13 +4572,13 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/gmail/status', (req, res) => {
+    app.get('/api/gmail/status', requireApiKeyV3, (req, res) => {
         const status = gmailManager.getStatus();
         res.json(status);
     });
 
     // WhatsApp Integration
-    app.post('/api/whatsapp/send', async (req, res) => {
+    app.post('/api/whatsapp/send', requireApiKeyV3, async (req, res) => {
         try {
             const { to, message } = req.body;
             const result = await whatsappManager.sendMessage(to, message);
@@ -4504,13 +4589,13 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/whatsapp/status', (req, res) => {
+    app.get('/api/whatsapp/status', requireApiKeyV3, (req, res) => {
         const status = whatsappManager.getStatus();
         res.json(status);
     });
 
     // ChatGPT Integration
-    app.post('/api/chatgpt/generate', async (req, res) => {
+    app.post('/api/chatgpt/generate', requireApiKeyV3, async (req, res) => {
         try {
             const { prompt, model, pageContent } = req.body;
             const result = await chatgptManager.generateResponse(prompt, pageContent, model);
@@ -4521,18 +4606,18 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/chatgpt/status', (req, res) => {
+    app.get('/api/chatgpt/status', requireApiKeyV3, (req, res) => {
         const status = chatgptManager.getStatus();
         res.json(status);
     });
 
-    app.get('/api/chatgpt/models', (req, res) => {
+    app.get('/api/chatgpt/models', requireApiKeyV3, (req, res) => {
         const models = chatgptManager.getAvailableModels();
         res.json(models);
     });
 
     // Whitelabel System
-    app.post('/api/whitelabel/:chatbotId', async (req, res) => {
+    app.post('/api/whitelabel/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const config = req.body;
@@ -4544,7 +4629,7 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/whitelabel/:chatbotId', async (req, res) => {
+    app.get('/api/whitelabel/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const config = await whitelabelManager.getConfig(chatbotId);
@@ -4556,7 +4641,7 @@ setupRoutes(app);
     });
 
     // Structured Leads
-    app.post('/api/leads/structured', async (req, res) => {
+    app.post('/api/leads/structured', requireApiKeyV3, async (req, res) => {
         try {
             const { chatbotId, leadData, metadata } = req.body;
             const lead = await structuredLeadsManager.saveLead(chatbotId, leadData, metadata);
@@ -4576,7 +4661,7 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/leads/structured/:chatbotId', async (req, res) => {
+    app.get('/api/leads/structured/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const { status, limit, offset } = req.query;
@@ -4588,7 +4673,7 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/leads/export/:chatbotId', async (req, res) => {
+    app.get('/api/leads/export/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const csv = await structuredLeadsManager.exportToCSV(chatbotId);
@@ -4601,7 +4686,7 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/leads/stats/:chatbotId', async (req, res) => {
+    app.get('/api/leads/stats/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const stats = await structuredLeadsManager.getStats(chatbotId);
@@ -4613,12 +4698,12 @@ setupRoutes(app);
     });
 
     // CRM Integrations (documentação)
-    app.get('/api/crm/templates', (req, res) => {
+    app.get('/api/crm/templates', requireApiKeyV3, (req, res) => {
         const templates = crmIntegrations.getAllTemplates();
         res.json({ success: true, templates });
     });
 
-    app.get('/api/crm/templates/:crm', (req, res) => {
+    app.get('/api/crm/templates/:crm', requireApiKeyV3, (req, res) => {
         const { crm } = req.params;
         const template = crmIntegrations.getTemplate(crm);
         if (template) {
