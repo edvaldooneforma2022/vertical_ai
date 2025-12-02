@@ -236,7 +236,7 @@ class SuperInteligenciaConversacional {
     }
 
     // ===== SISTEMA DE MEMÓRIA CONVERSACIONAL AVANÇADA =====
-    atualizarMemoriaUsuario(userId, interacao) {
+    atualizarMemoriaUsuario(resolvedUserId, interacao) {
         if (!this.memoriaConversacional.has(userId)) {
             this.memoriaConversacional.set(userId, {
                 historico: [],
@@ -1708,7 +1708,7 @@ class SuperInteligenciaEmocional {
 }
 
 // Inicializar SuperInteligência
-
+const superInteligencia = new SuperInteligenciaEmocional();
 
 // ===== SISTEMA DE BOTÕES FIXOS NO TOPO =====
 function gerarBotoesFixos(contatos, robotName) {
@@ -3848,7 +3848,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         }
 
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
-        const analiseEmocional = superInteligenciaGlobal.analisarEmocao(message);
+        const analiseEmocional = superInteligencia.analisarEmocao(message);
         
         // 🎯 CAPTURA DE INTENÇÕES DO CLIENTE
         const inteligencias = sistemaInteligencias.capturarInteligencias(message);
@@ -3857,7 +3857,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         const journeyStage = journeyAnalyzer.analyzeJourneyStage(message);
         
         // 🎯 SELEÇÃO DE PERSONALIDADE ADAPTATIVA
-        const personalidade = superInteligenciaGlobal.selecionarPersonalidade(
+        const personalidade = superInteligencia.selecionarPersonalidade(
             analiseEmocional.emocao, 
             analiseEmocional.intensidade, 
             journeyStage
@@ -3872,14 +3872,14 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         let finalResponse = "";
 
         // 🎯 DETECTAR AGENDAMENTO
-        const respostaAgendamento = superInteligenciaGlobal.detectarAgendamento(message);
+        const respostaAgendamento = superInteligencia.detectarAgendamento(message);
         if (respostaAgendamento) {
             finalResponse = respostaAgendamento;
             console.log("📅 Resposta de agendamento gerada");
         }
         // 🎯 PROCESSAR CONFIRMAÇÃO DE AGENDAMENTO
-        else if (superInteligenciaGlobal.processarAgendamento(message)) {
-            finalResponse = superInteligenciaGlobal.processarAgendamento(message);
+        else if (superInteligencia.processarAgendamento(message)) {
+            finalResponse = superInteligencia.processarAgendamento(message);
             console.log("✅ Confirmação de agendamento processada");
         }
         // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES FORAM DETECTADAS
@@ -3887,7 +3887,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             const contatos = processedPageData?.contatos || {};
             
             // Gerar resposta base com empatia
-            const respostaEmpatica = superInteligenciaGlobal.gerarRespostaEmpatica(
+            const respostaEmpatica = superInteligencia.gerarRespostaEmpatica(
                 message, 
                 analiseEmocional, 
                 personalidade, 
