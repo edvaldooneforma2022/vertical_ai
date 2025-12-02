@@ -1708,7 +1708,7 @@ class SuperInteligenciaEmocional {
 }
 
 // Inicializar SuperInteligência
-// const superInteligencia = new SuperInteligenciaConversacional(); // Removido para evitar conflito de instâncias
+
 
 // ===== SISTEMA DE BOTÕES FIXOS NO TOPO =====
 function gerarBotoesFixos(contatos, robotName) {
