@@ -2697,41 +2697,30 @@
                         return leadDate === today;
                     }).length;
 
-                    // Calcular conversas e mensagens
-                    let totalConversations = 0;
-                    let totalMessages = 0;
+                    // Calcular conversas (leads com mensagens hoje) e mensagens de hoje
+                    // NOTA: lead.conversations contém mensagens diretas, não conversas com sub-arrays
                     let conversationsToday = 0;
                     let messagesToday = 0;
 
                     leads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
-                            lead.conversations.forEach(conv => {
-                                totalConversations++;
-
-                                // Verificar se a conversa é de hoje
-                                if (conv.timestamp) {
-                                    const convDate = new Date(conv.timestamp).toDateString();
-                                    if (convDate === today) {
-                                        conversationsToday++;
+                            // Verificar se o lead teve alguma mensagem hoje
+                            let leadHasMessageToday = false;
+                            
+                            lead.conversations.forEach(msg => {
+                                if (msg.timestamp) {
+                                    const msgDate = new Date(msg.timestamp).toDateString();
+                                    if (msgDate === today) {
+                                        messagesToday++;
+                                        leadHasMessageToday = true;
                                     }
                                 }
-
-                                // Contar mensagens
-                                if (conv.messages && Array.isArray(conv.messages)) {
-                                    const msgCount = conv.messages.length;
-                                    totalMessages += msgCount;
-
-                                    // Contar mensagens de hoje
-                                    conv.messages.forEach(msg => {
-                                        if (msg.timestamp) {
-                                            const msgDate = new Date(msg.timestamp).toDateString();
-                                            if (msgDate === today) {
-                                                messagesToday++;
-                                            }
-                                        }
-                                    });
-                                }
                             });
+                            
+                            // Contar como conversa se o lead teve pelo menos uma mensagem hoje
+                            if (leadHasMessageToday) {
+                                conversationsToday++;
+                            }
                         }
                     });
 
