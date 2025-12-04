@@ -2805,11 +2805,47 @@
                                         <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🔗 URL de Origem</div>
                                         <div style="color:#60a5fa; word-break:break-all;">${url}</div>
                                     </div>
+                                    
+                                    <div id="lead-appointments-${lead.id}" style="background:#334155; padding:1.5rem; border-radius:12px; margin-top:1rem;">
+                                        <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📅 Agendamentos</div>
+                                        <div style="color:#64748b;">Carregando...</div>
+                                    </div>
                                 </div>
                             </div>
                         `;
 
                             document.body.insertAdjacentHTML('beforeend', modalContent);
+                            
+                            // 📅 Carregar agendamentos do lead
+                            fetch('/api/appointments/' + lead.id)
+                                .then(r => r.json())
+                                .then(data => {
+                                    const container = document.getElementById('lead-appointments-' + lead.id);
+                                    if (container) {
+                                        if (data.success && data.appointments && data.appointments.length > 0) {
+                                            container.innerHTML = '<div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📅 Agendamentos</div>' +
+                                                data.appointments.map(a => `
+                                                    <div style="background:#1e293b; padding:0.75rem; border-radius:8px; margin-top:0.5rem; border-left:3px solid #10b981;">
+                                                        <div style="color:#10b981; font-weight:600;">📅 ${a.datetime}</div>
+                                                        <div style="color:#94a3b8; font-size:0.85rem; margin-top:0.25rem;">Status: <span style="color:#60a5fa;">${a.status || 'pendente'}</span></div>
+                                                        <div style="color:#64748b; font-size:0.75rem; margin-top:0.25rem;">${new Date(a.createdAt).toLocaleString('pt-BR')}</div>
+                                                    </div>
+                                                `).join('');
+                                        } else {
+                                            container.innerHTML = '<div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📅 Agendamentos</div>' +
+                                                '<div style="color:#64748b;">Nenhum agendamento registrado</div>';
+                                        }
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('Erro ao carregar agendamentos:', err);
+                                    const container = document.getElementById('lead-appointments-' + lead.id);
+                                    if (container) {
+                                        container.innerHTML = '<div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📅 Agendamentos</div>' +
+                                            '<div style="color:#ef4444;">Erro ao carregar</div>';
+                                    }
+                                });
+
                         }
                     }
                 })

@@ -703,6 +703,15 @@ function getTenantLeadsFilePath(apiKey) {
     return path.join(tenantDir, `leads-${apiKey}.json`);
 }
 
+// 📅 Função para obter caminho do arquivo de agendamentos por tenant
+function getTenantAppointmentsFilePath(apiKey) {
+    const tenantDir = path.join(__dirname, 'data', 'tenants');
+    if (!fs.existsSync(tenantDir)) {
+        fs.mkdirSync(tenantDir, { recursive: true });
+    }
+    return path.join(tenantDir, `appointments-${apiKey}.json`);
+}
+
 class LeadCaptureSystem {
     constructor(apiKey) {
         this.apiKey = apiKey;
@@ -821,6 +830,104 @@ class LeadCaptureSystem {
     // 🎯 Encontrar lead por conversationId para rastrear mensagens
     findLeadByConversationId(conversationId) {
         return this.leads.find(l => l.conversationId === conversationId);
+    }
+
+    // ===== 📅 SISTEMA DE AGENDAMENTOS =====
+
+    initializeAppointments() {
+        this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+        this.appointments = this.loadAppointments();
+        console.log(`📅 Sistema de Agendamentos: ${this.appointments.length} agendamentos carregados`);
+    }
+
+    loadAppointments() {
+        try {
+            if (!this.appointmentsFilePath) {
+                this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+            }
+            if (fs.existsSync(this.appointmentsFilePath)) {
+                const data = fs.readFileSync(this.appointmentsFilePath, "utf8");
+                return JSON.parse(data);
+            }
+        } catch (error) {
+            console.error("❌ Erro ao carregar agendamentos:", error);
+        }
+        return [];
+    }
+
+    saveAppointments() {
+        try {
+            if (!this.appointmentsFilePath) {
+                this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+            }
+            fs.writeFileSync(this.appointmentsFilePath, JSON.stringify(this.appointments || [], null, 2));
+            console.log(`💾 Agendamentos salvos: ${(this.appointments || []).length} registros`);
+            return true;
+        } catch (error) {
+            console.error("❌ Erro ao salvar agendamentos:", error);
+            return false;
+        }
+    }
+
+    addAppointment(appointmentData) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+
+        const appointment = {
+            id: crypto.randomBytes(8).toString("hex"),
+            createdAt: new Date().toISOString(),
+            leadId: appointmentData.leadId || null,
+            leadName: appointmentData.leadName || 'Não informado',
+            leadEmail: appointmentData.leadEmail || 'Não informado',
+            leadPhone: appointmentData.leadPhone || '',
+            datetime: appointmentData.datetime,
+            status: 'pendente', // pendente, confirmado, cancelado, realizado
+            notes: appointmentData.notes || '',
+            robotName: appointmentData.robotName || 'Assistente IA',
+            urlOrigem: appointmentData.urlOrigem || ''
+        };
+
+        this.appointments.push(appointment);
+        this.saveAppointments();
+        console.log(`📅 NOVO AGENDAMENTO: ${appointment.leadName} - ${appointment.datetime}`);
+        return appointment;
+    }
+
+    getAppointments() {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+        return (this.appointments || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    getAppointmentById(appointmentId) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+        return this.appointments.find(a => a.id === appointmentId);
+    }
+
+    updateAppointmentStatus(appointmentId, status) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+        const appointment = this.appointments.find(a => a.id === appointmentId);
+        if (appointment && ['pendente', 'confirmado', 'cancelado', 'realizado'].includes(status)) {
+            appointment.status = status;
+            appointment.updatedAt = new Date().toISOString();
+            this.saveAppointments();
+            console.log(`📅 Agendamento ${appointmentId} atualizado para: ${status}`);
+            return appointment;
+        }
+        return null;
+    }
+
+    getAppointmentsByLeadId(leadId) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+        return this.appointments.filter(a => a.leadId === leadId);
     }
 }
 
@@ -1701,10 +1808,18 @@ class SuperInteligenciaEmocional {
             if (mensagemLower.includes((i + 1).toString()) ||
                 mensagemLower.includes(this.horariosDisponiveis[i].toLowerCase())) {
 
-                return `✅ **AGENDAMENTO CONFIRMADO!**\n\n` +
-                    `📅 **Horário:** ${this.horariosDisponiveis[i]}\n` +
+                const horarioSelecionado = this.horariosDisponiveis[i];
+                const mensagemConfirmacao = `✅ **AGENDAMENTO CONFIRMADO!**\n\n` +
+                    `📅 **Horário:** ${horarioSelecionado}\n` +
                     `🎯 **Próximo passo:** Nossa equipe entrará em contato para confirmar.\n` +
                     `📞 **Contato direto:** Veja nossos canais acima! ⬆️`;
+
+                // Retornar objeto estruturado para persistência
+                return {
+                    confirmed: true,
+                    datetime: horarioSelecionado,
+                    message: mensagemConfirmacao
+                };
             }
         }
 
@@ -2532,6 +2647,127 @@ app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
     const backupSystem = getBackupSystem(leadSystem, apiKey);
     const result = backupSystem.restoreBackup(filename);
     res.json(result);
+});
+
+// ===== 📅 ENDPOINTS DE AGENDAMENTOS =====
+
+// Listar todos os agendamentos
+app.get("/admin/appointments", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointments = leadSystem.getAppointments();
+
+    console.log(`📅 Retornando ${appointments.length} agendamentos para admin`);
+    res.json({
+        success: true,
+        appointments,
+        total: appointments.length
+    });
+});
+
+// Obter agendamento específico
+app.get("/admin/appointments/:id", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointment = leadSystem.getAppointmentById(req.params.id);
+
+    if (!appointment) {
+        return res.status(404).json({ success: false, error: "Agendamento não encontrado" });
+    }
+
+    res.json({ success: true, appointment });
+});
+
+// Criar novo agendamento
+app.post("/api/appointments", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const { leadId, leadName, leadEmail, leadPhone, datetime, notes, robotName, urlOrigem } = req.body;
+
+    if (!datetime) {
+        return res.status(400).json({ success: false, error: "Data/hora é obrigatória" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointment = leadSystem.addAppointment({
+        leadId,
+        leadName,
+        leadEmail,
+        leadPhone,
+        datetime,
+        notes,
+        robotName,
+        urlOrigem
+    });
+
+    res.json({
+        success: true,
+        appointment,
+        message: "Agendamento criado com sucesso"
+    });
+});
+
+// Atualizar status do agendamento
+app.put("/admin/appointments/:id/status", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const { status } = req.body;
+
+    if (!status || !['pendente', 'confirmado', 'cancelado', 'realizado'].includes(status)) {
+        return res.status(400).json({
+            success: false,
+            error: "Status inválido. Use: pendente, confirmado, cancelado ou realizado"
+        });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointment = leadSystem.updateAppointmentStatus(req.params.id, status);
+
+    if (!appointment) {
+        return res.status(404).json({ success: false, error: "Agendamento não encontrado" });
+    }
+
+    res.json({
+        success: true,
+        appointment,
+        message: `Status atualizado para: ${status}`
+    });
+});
+
+// Obter agendamentos de um lead específico
+app.get("/admin/leads/:leadId/appointments", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointments = leadSystem.getAppointmentsByLeadId(req.params.leadId);
+
+    res.json({
+        success: true,
+        appointments,
+        total: appointments.length
+    });
 });
 
 // ===== DOCUMENTAÇÃO DA API =====
@@ -3774,7 +4010,29 @@ app.post("/api/capture-lead", async (req, res) => {
     }
 });
 
+// ===== 📅 ENDPOINT: Buscar agendamentos de um lead =====
+app.get("/api/appointments/:leadId", async (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.query.apiKey ||
+        (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const { leadId } = req.params;
+
+    try {
+        const appointments = leadSystem.getAppointmentsByLeadId(leadId);
+        res.json({ success: true, appointments: appointments || [] });
+    } catch (error) {
+        console.error("❌ Erro ao buscar agendamentos:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
+
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
     const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
@@ -3914,10 +4172,28 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             console.log("📅 Resposta de agendamento gerada");
         }
         // 🎯 PROCESSAR CONFIRMAÇÃO DE AGENDAMENTO
-        else if (superInteligencia.processarAgendamento(message)) {
-            finalResponse = superInteligencia.processarAgendamento(message);
+        else if (superInteligencia.processarAgendamento(message)?.confirmed) {
+            const agendamentoData = superInteligencia.processarAgendamento(message);
+            finalResponse = agendamentoData.message;
+
+            // 🎯 PERSISTIR AGENDAMENTO NO SISTEMA
+            if (effectiveLeadId) {
+                const lead = leadSystem.getLeadById(effectiveLeadId);
+                leadSystem.addAppointment({
+                    leadId: effectiveLeadId,
+                    leadName: lead?.nome || 'Não informado',
+                    leadEmail: lead?.email || 'Não informado',
+                    leadPhone: lead?.telefone || '',
+                    datetime: agendamentoData.datetime,
+                    robotName: robotName || 'Assistente IA',
+                    urlOrigem: url || '',
+                    notes: `Agendado via chat`
+                });
+                console.log(`📅 AGENDAMENTO SALVO para lead ${effectiveLeadId}`);
+            }
             console.log("✅ Confirmação de agendamento processada");
         }
+
         // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES FORAM DETECTADAS
         else if (Object.values(inteligencias).some(val => val === true)) {
             const contatos = processedPageData?.contatos || {};
