@@ -817,6 +817,11 @@ class LeadCaptureSystem {
     findLeadByEmail(email) {
         return this.leads.find(l => l.email === email);
     }
+
+    // 🎯 Encontrar lead por conversationId para rastrear mensagens
+    findLeadByConversationId(conversationId) {
+        return this.leads.find(l => l.conversationId === conversationId);
+    }
 }
 
 // Funções para obter instâncias de sistema de leads e backup por tenant
@@ -3721,7 +3726,7 @@ app.post("/api/capture-lead", async (req, res) => {
 
     const leadSystem = getLeadSystem(apiKey);
     try {
-        const { nome, email, telefone, url_origem, robotName } = req.body || {};
+        const { nome, email, telefone, url_origem, robotName, conversationId } = req.body || {};
 
         if (!email) {
             return res.status(400).json({
@@ -3740,13 +3745,14 @@ app.post("/api/capture-lead", async (req, res) => {
             });
         }
 
-        // Criar novo lead
+        // Criar novo lead com conversationId para rastrear mensagens
         const newLead = leadSystem.addLead({
             nome: nome || "Não informado",
             email,
             telefone: telefone || "Não informado",
             url_origem: url_origem || "",
-            robotName: robotName || "Assistente IA"
+            robotName: robotName || "Assistente IA",
+            conversationId: conversationId || null
         });
 
         analytics.leadsCaptured++;
@@ -3794,15 +3800,23 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
         }
 
         // 🎯 ATUALIZAR CONVERSA DO LEAD SE EXISTIR
-        if (leadId) {
-            leadSystem.updateLeadConversation(leadId, message, true);
+        // Buscar lead por leadId ou conversationId
+        let effectiveLeadId = leadId;
+        if (!effectiveLeadId && conversationId) {
+            const leadByConversation = leadSystem.findLeadByConversationId(conversationId);
+            if (leadByConversation) {
+                effectiveLeadId = leadByConversation.id;
+            }
+        }
+        if (effectiveLeadId) {
+            leadSystem.updateLeadConversation(effectiveLeadId, message, true);
         }
 
         const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey);
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
-        if (leadId) {
-            leadSystem.updateLeadConversation(leadId, aiResponse, false);
+        if (effectiveLeadId) {
+            leadSystem.updateLeadConversation(effectiveLeadId, aiResponse, false);
         }
 
         let finalResponse = aiResponse;
@@ -3878,9 +3892,17 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         );
 
         // 🎯 ATUALIZAR CONVERSA DO LEAD SE EXISTIR
-        if (leadId) {
-            leadSystem.updateLeadConversation(leadId, message, true);
-            leadSystem.updateLeadJourneyStage(leadId, journeyStage);
+        // Buscar lead por leadId ou conversationId
+        let effectiveLeadId = leadId;
+        if (!effectiveLeadId && conversationId) {
+            const leadByConversation = leadSystem.findLeadByConversationId(conversationId);
+            if (leadByConversation) {
+                effectiveLeadId = leadByConversation.id;
+            }
+        }
+        if (effectiveLeadId) {
+            leadSystem.updateLeadConversation(effectiveLeadId, message, true);
+            leadSystem.updateLeadJourneyStage(effectiveLeadId, journeyStage);
         }
 
         let finalResponse = "";
@@ -3934,8 +3956,8 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         }
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
-        if (leadId) {
-            leadSystem.updateLeadConversation(leadId, finalResponse, false);
+        if (effectiveLeadId) {
+            leadSystem.updateLeadConversation(effectiveLeadId, finalResponse, false);
         }
 
         return res.json({
