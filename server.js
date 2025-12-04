@@ -3776,7 +3776,7 @@ app.post("/api/capture-lead", async (req, res) => {
 
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -3846,7 +3846,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
