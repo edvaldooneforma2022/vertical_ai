@@ -5,6 +5,7 @@ const { db, DatabaseHelpers } = require('./database');
 
 class WhitelabelManager {
     constructor() {
+        this._initialized = false;
         this.defaultBranding = {
             companyName: 'Link Mágico',
             logo: null,
@@ -16,6 +17,15 @@ class WhitelabelManager {
             favicon: null
         };
     }
+
+    // Garantir que a tabela foi inicializada (lazy initialization)
+    async ensureInitialized() {
+        if (!this._initialized) {
+            await this.initialize();
+            this._initialized = true;
+        }
+    }
+
 
     // Inicializar tabela de whitelabel
     async initialize() {
@@ -63,9 +73,13 @@ class WhitelabelManager {
             };
         }
 
+        // Garantir que a tabela existe
+        await this.ensureInitialized();
+
         try {
             const id = `wl_${chatbotId}_${Date.now()}`;
-            
+
+
             const query = `
                 INSERT OR REPLACE INTO whitelabel_settings (
                     id, chatbot_id, plan_type, company_name, logo_url,
@@ -91,7 +105,7 @@ class WhitelabelManager {
             ]);
 
             console.log(`✅ Whitelabel configurado para chatbot ${chatbotId}`);
-            
+
             return {
                 success: true,
                 id: id,
@@ -108,8 +122,12 @@ class WhitelabelManager {
 
     // Obter configurações de whitelabel
     async getSettings(chatbotId) {
+        // Garantir que a tabela existe
+        await this.ensureInitialized();
+
         try {
             const query = `
+
                 SELECT * FROM whitelabel_settings 
                 WHERE chatbot_id = ? 
                 ORDER BY created_at DESC 
@@ -273,10 +291,10 @@ class WhitelabelManager {
     // Validar URL de logo
     isValidLogoUrl(url) {
         if (!url) return false;
-        
+
         const validExtensions = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
         const lowerUrl = url.toLowerCase();
-        
+
         return validExtensions.some(ext => lowerUrl.includes(ext));
     }
 
@@ -346,10 +364,8 @@ class WhitelabelManager {
 // Singleton instance
 const whitelabelManager = new WhitelabelManager();
 
-// Inicializar automaticamente
-(async () => {
-    await whitelabelManager.initialize();
-})();
+// NOTA: Inicialização lazy - será chamada automaticamente na primeira operação
+// Isso evita timeout de conexão durante o startup do servidor
 
 module.exports = {
     whitelabelManager,
