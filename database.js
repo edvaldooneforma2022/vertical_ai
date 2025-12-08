@@ -20,7 +20,7 @@ let db;
 if (USE_POSTGRES) {
     // PostgreSQL para produção
     const { Pool } = require('pg');
-    
+
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.NODE_ENV === 'production' ? {
@@ -41,7 +41,7 @@ if (USE_POSTGRES) {
     // SQLite para desenvolvimento
     const Database = require('better-sqlite3');
     const dbPath = path.join(__dirname, 'data', 'linkmagico.db');
-    
+
     // Garantir que o diretório existe
     const dataDir = path.dirname(dbPath);
     if (!fs.existsSync(dataDir)) {
@@ -176,12 +176,52 @@ function getPostgresTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 
+        // Tabela de Leads por Tenant (V3.1 - PostgreSQL)
+        `CREATE TABLE IF NOT EXISTS tenant_leads (
+            id VARCHAR(255) PRIMARY KEY,
+            api_key VARCHAR(255) NOT NULL,
+            nome VARCHAR(255),
+            email VARCHAR(255),
+            telefone VARCHAR(100),
+            empresa VARCHAR(255),
+            cargo VARCHAR(255),
+            origem VARCHAR(255),
+            journey_stage VARCHAR(50) DEFAULT 'descoberta',
+            status VARCHAR(50) DEFAULT 'ativo',
+            conversations JSONB DEFAULT '[]',
+            bookings JSONB DEFAULT '[]',
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_interaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Agendamentos por Tenant (V3.1 - PostgreSQL)
+        `CREATE TABLE IF NOT EXISTS tenant_appointments (
+            id VARCHAR(255) PRIMARY KEY,
+            api_key VARCHAR(255) NOT NULL,
+            lead_id VARCHAR(255),
+            nome VARCHAR(255),
+            email VARCHAR(255),
+            telefone VARCHAR(100),
+            data VARCHAR(50),
+            horario VARCHAR(50),
+            servico VARCHAR(255),
+            observacoes TEXT,
+            status VARCHAR(50) DEFAULT 'pendente',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_lead FOREIGN KEY (lead_id) REFERENCES tenant_leads(id) ON DELETE SET NULL
+        )`,
+
         // Índices para performance
         `CREATE INDEX IF NOT EXISTS idx_conversations_chatbot ON conversations(chatbot_id)`,
         `CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp)`,
         `CREATE INDEX IF NOT EXISTS idx_analytics_chatbot_date ON analytics(chatbot_id, date)`,
         `CREATE INDEX IF NOT EXISTS idx_extraction_cache_hash ON extraction_cache(url_hash)`,
-        `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`
+        `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_leads_api_key ON tenant_leads(api_key)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_leads_email ON tenant_leads(email)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_api_key ON tenant_appointments(api_key)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`
     ];
 }
 
@@ -267,6 +307,42 @@ function getSQLiteTables() {
             metadata TEXT DEFAULT '{}',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
+        )`,
+
+        // Tabela de Leads por Tenant (V3.1 - SQLite)
+        `CREATE TABLE IF NOT EXISTS tenant_leads (
+            id TEXT PRIMARY KEY,
+            api_key TEXT NOT NULL,
+            nome TEXT,
+            email TEXT,
+            telefone TEXT,
+            empresa TEXT,
+            cargo TEXT,
+            origem TEXT,
+            journey_stage TEXT DEFAULT 'descoberta',
+            status TEXT DEFAULT 'ativo',
+            conversations TEXT DEFAULT '[]',
+            bookings TEXT DEFAULT '[]',
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_interaction DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Agendamentos por Tenant (V3.1 - SQLite)
+        `CREATE TABLE IF NOT EXISTS tenant_appointments (
+            id TEXT PRIMARY KEY,
+            api_key TEXT NOT NULL,
+            lead_id TEXT,
+            nome TEXT,
+            email TEXT,
+            telefone TEXT,
+            data TEXT,
+            horario TEXT,
+            servico TEXT,
+            observacoes TEXT,
+            status TEXT DEFAULT 'pendente',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (lead_id) REFERENCES tenant_leads(id) ON DELETE SET NULL
         )`
     ];
 }
@@ -280,8 +356,8 @@ const DatabaseHelpers = {
      */
     async upsertChatbot(chatbotData) {
         const { id, api_key, name, url, extracted_data, config, user_email, plan } = chatbotData;
-        
-        const query = USE_POSTGRES 
+
+        const query = USE_POSTGRES
             ? `INSERT INTO chatbots (id, api_key, name, url, extracted_data, config, user_email, plan, last_active)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
                ON CONFLICT (id) DO UPDATE SET
@@ -292,11 +368,11 @@ const DatabaseHelpers = {
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
 
         const params = [
-            id, 
-            api_key, 
-            name, 
-            url, 
-            JSON.stringify(extracted_data), 
+            id,
+            api_key,
+            name,
+            url,
+            JSON.stringify(extracted_data),
             JSON.stringify(config),
             user_email,
             plan || 'free'
@@ -314,11 +390,11 @@ const DatabaseHelpers = {
             ? `SELECT * FROM chatbots WHERE api_key = $1`
             : `SELECT * FROM chatbots WHERE api_key = ?`;
 
-               const parsedDays = parseInt(days, 10);
+        const parsedDays = parseInt(days, 10);
         if (isNaN(parsedDays) || parsedDays <= 0) {
             throw new Error('Invalid days parameter');
         }
-        const result = await db.query(query, [chatbot_id, parsedDays]);      const chatbot = result.rows[0];
+        const result = await db.query(query, [chatbot_id, parsedDays]); const chatbot = result.rows[0];
 
         if (chatbot && !USE_POSTGRES) {
             chatbot.extracted_data = JSON.parse(chatbot.extracted_data || '{}');
@@ -473,6 +549,261 @@ const DatabaseHelpers = {
         }
         const result = await db.query(query, USE_POSTGRES ? [chatbot_id, parsedDays] : [chatbot_id, parsedDays]);
         return result.rows;
+    },
+
+    // =====================================================
+    // 📋 MÉTODOS CRUD PARA LEADS (V3.1)
+    // =====================================================
+
+    /**
+     * Salvar ou atualizar lead
+     */
+    async saveLead(apiKey, leadData) {
+        const { id, nome, email, telefone, empresa, cargo, origem, journey_stage, status, conversations, bookings, metadata } = leadData;
+
+        const query = USE_POSTGRES
+            ? `INSERT INTO tenant_leads (id, api_key, nome, email, telefone, empresa, cargo, origem, journey_stage, status, conversations, bookings, metadata, last_interaction)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP)
+               ON CONFLICT (id) DO UPDATE SET
+                   nome = $3, email = $4, telefone = $5, empresa = $6, cargo = $7, origem = $8,
+                   journey_stage = $9, status = $10, conversations = $11, bookings = $12, 
+                   metadata = $13, last_interaction = CURRENT_TIMESTAMP
+               RETURNING *`
+            : `INSERT OR REPLACE INTO tenant_leads (id, api_key, nome, email, telefone, empresa, cargo, origem, journey_stage, status, conversations, bookings, metadata, last_interaction)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
+
+        const params = [
+            id,
+            apiKey,
+            nome || null,
+            email || null,
+            telefone || null,
+            empresa || null,
+            cargo || null,
+            origem || null,
+            journey_stage || 'descoberta',
+            status || 'ativo',
+            JSON.stringify(conversations || []),
+            JSON.stringify(bookings || []),
+            JSON.stringify(metadata || {})
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`✅ Lead salvo no banco: ${id}`);
+            return result.rows[0] || { id };
+        } catch (error) {
+            console.error('❌ Erro ao salvar lead no banco:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar todos os leads por API key
+     */
+    async getLeadsByApiKey(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_leads WHERE api_key = $1 ORDER BY last_interaction DESC`
+            : `SELECT * FROM tenant_leads WHERE api_key = ? ORDER BY last_interaction DESC`;
+
+        try {
+            const result = await db.query(query, [apiKey]);
+            return result.rows.map(lead => {
+                if (!USE_POSTGRES) {
+                    lead.conversations = JSON.parse(lead.conversations || '[]');
+                    lead.bookings = JSON.parse(lead.bookings || '[]');
+                    lead.metadata = JSON.parse(lead.metadata || '{}');
+                }
+                return lead;
+            });
+        } catch (error) {
+            console.error('❌ Erro ao buscar leads:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Buscar lead por ID
+     */
+    async getLeadById(apiKey, leadId) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_leads WHERE api_key = $1 AND id = $2`
+            : `SELECT * FROM tenant_leads WHERE api_key = ? AND id = ?`;
+
+        try {
+            const result = await db.query(query, [apiKey, leadId]);
+            if (result.rows.length === 0) return null;
+
+            const lead = result.rows[0];
+            if (!USE_POSTGRES) {
+                lead.conversations = JSON.parse(lead.conversations || '[]');
+                lead.bookings = JSON.parse(lead.bookings || '[]');
+                lead.metadata = JSON.parse(lead.metadata || '{}');
+            }
+            return lead;
+        } catch (error) {
+            console.error('❌ Erro ao buscar lead por ID:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Buscar lead por email
+     */
+    async getLeadByEmail(apiKey, email) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_leads WHERE api_key = $1 AND email = $2`
+            : `SELECT * FROM tenant_leads WHERE api_key = ? AND email = ?`;
+
+        try {
+            const result = await db.query(query, [apiKey, email]);
+            if (result.rows.length === 0) return null;
+
+            const lead = result.rows[0];
+            if (!USE_POSTGRES) {
+                lead.conversations = JSON.parse(lead.conversations || '[]');
+                lead.bookings = JSON.parse(lead.bookings || '[]');
+                lead.metadata = JSON.parse(lead.metadata || '{}');
+            }
+            return lead;
+        } catch (error) {
+            console.error('❌ Erro ao buscar lead por email:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Atualizar lead
+     */
+    async updateLead(apiKey, leadId, updates) {
+        // Primeiro buscar o lead existente
+        const existingLead = await this.getLeadById(apiKey, leadId);
+        if (!existingLead) {
+            console.error('❌ Lead não encontrado para atualização:', leadId);
+            return null;
+        }
+
+        // Mesclar atualizações
+        const updatedLead = { ...existingLead, ...updates, id: leadId };
+        return await this.saveLead(apiKey, updatedLead);
+    },
+
+    /**
+     * Deletar lead
+     */
+    async deleteLead(apiKey, leadId) {
+        const query = USE_POSTGRES
+            ? `DELETE FROM tenant_leads WHERE api_key = $1 AND id = $2`
+            : `DELETE FROM tenant_leads WHERE api_key = ? AND id = ?`;
+
+        try {
+            await db.query(query, [apiKey, leadId]);
+            console.log(`🗑️ Lead deletado: ${leadId}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Erro ao deletar lead:', error);
+            return false;
+        }
+    },
+
+    // =====================================================
+    // 📅 MÉTODOS CRUD PARA AGENDAMENTOS (V3.1)
+    // =====================================================
+
+    /**
+     * Salvar agendamento
+     */
+    async saveAppointment(apiKey, appointmentData) {
+        const { id, lead_id, nome, email, telefone, data, horario, servico, observacoes, status } = appointmentData;
+
+        const query = USE_POSTGRES
+            ? `INSERT INTO tenant_appointments (id, api_key, lead_id, nome, email, telefone, data, horario, servico, observacoes, status)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+               ON CONFLICT (id) DO UPDATE SET
+                   lead_id = $3, nome = $4, email = $5, telefone = $6, data = $7, 
+                   horario = $8, servico = $9, observacoes = $10, status = $11
+               RETURNING *`
+            : `INSERT OR REPLACE INTO tenant_appointments (id, api_key, lead_id, nome, email, telefone, data, horario, servico, observacoes, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+        const params = [
+            id,
+            apiKey,
+            lead_id || null,
+            nome || null,
+            email || null,
+            telefone || null,
+            data || null,
+            horario || null,
+            servico || null,
+            observacoes || null,
+            status || 'pendente'
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`✅ Agendamento salvo no banco: ${id}`);
+            return result.rows[0] || { id };
+        } catch (error) {
+            console.error('❌ Erro ao salvar agendamento:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar agendamentos por API key
+     */
+    async getAppointmentsByApiKey(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_appointments WHERE api_key = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_appointments WHERE api_key = ? ORDER BY created_at DESC`;
+
+        try {
+            const result = await db.query(query, [apiKey]);
+            return result.rows;
+        } catch (error) {
+            console.error('❌ Erro ao buscar agendamentos:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Buscar agendamentos por lead
+     */
+    async getAppointmentsByLeadId(apiKey, leadId) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_appointments WHERE api_key = $1 AND lead_id = $2 ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_appointments WHERE api_key = ? AND lead_id = ? ORDER BY created_at DESC`;
+
+        try {
+            const result = await db.query(query, [apiKey, leadId]);
+            return result.rows;
+        } catch (error) {
+            console.error('❌ Erro ao buscar agendamentos por lead:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Atualizar status do agendamento
+     */
+    async updateAppointmentStatus(apiKey, appointmentId, newStatus) {
+        const query = USE_POSTGRES
+            ? `UPDATE tenant_appointments SET status = $3 WHERE api_key = $1 AND id = $2`
+            : `UPDATE tenant_appointments SET status = ? WHERE api_key = ? AND id = ?`;
+
+        const params = USE_POSTGRES
+            ? [apiKey, appointmentId, newStatus]
+            : [newStatus, apiKey, appointmentId];
+
+        try {
+            await db.query(query, params);
+            console.log(`✅ Status do agendamento atualizado: ${appointmentId} -> ${newStatus}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Erro ao atualizar status do agendamento:', error);
+            return false;
+        }
     }
 };
 

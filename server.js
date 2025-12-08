@@ -3,7 +3,7 @@ require("dotenv").config();
 // ===== SISTEMA DE SEGURANÇA AVANÇADO =====
 const {
     SecuritySystem,
-    ThreatDetectionSystem, 
+    ThreatDetectionSystem,
     RateLimitSystem,
     InputValidationSystem,
     ApplicationFirewall,
@@ -70,14 +70,14 @@ const conversationHistories = new Map();
 class SuperInteligenciaConversacional {
     constructor() {
         console.error("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Inicializando Sistema Avançado");
-        
+
         // Sistema de Memória Conversacional Avançada
         this.memoriaConversacional = new Map();
         this.personalidades = new Map();
         this.historicoEmocional = new Map();
         this.preferenciasUsuarios = new Map();
         this.padroesSucesso = new Map();
-        
+
         // Configurações da Personalidade
         this.configPersonalidade = {
             nome: "Assistente IA",
@@ -164,12 +164,12 @@ class SuperInteligenciaConversacional {
 
     detectarSarcasmo(mensagem, contexto) {
         // Verificação por padrões linguísticos de sarcasmo
-        const padraoSarcasmo = this.detectoresSarcasmo.padroes.some(padrao => 
+        const padraoSarcasmo = this.detectoresSarcasmo.padroes.some(padrao =>
             padrao.test(mensagem)
         );
 
         // Verificação por incongruência contexto/sentimento
-        const contextoNegativo = this.detectoresSarcasmo.contextoNegativo.some(termo => 
+        const contextoNegativo = this.detectoresSarcasmo.contextoNegativo.some(termo =>
             mensagem.includes(termo)
         );
         const sentimentoPositivo = /maravilhoso|perfeito|excelente|ótimo/i.test(mensagem);
@@ -179,7 +179,7 @@ class SuperInteligenciaConversacional {
 
     detectarMultiplasIntencoes(mensagem) {
         const intencoes = [];
-        
+
         // Mapeamento de intenções complexas
         const mapeamentoIntencoes = {
             informacao: ['o que é', 'como funciona', 'explica', 'entender'],
@@ -205,12 +205,12 @@ class SuperInteligenciaConversacional {
 
     analisarPrioridade(mensagem, contexto) {
         let prioridade = 1;
-        
+
         // Aumenta prioridade baseado em contexto emocional
         if (contexto.emocional === 'frustracao' || contexto.emocional === 'ansiedade') {
             prioridade += 1;
         }
-        
+
         // Aumenta prioridade para intenções de suporte
         if (mensagem.includes('problema') || mensagem.includes('erro')) {
             prioridade += 1;
@@ -249,7 +249,7 @@ class SuperInteligenciaConversacional {
         }
 
         const memoria = this.memoriaConversacional.get(userId);
-        
+
         // Atualizar histórico
         memoria.historico.push({
             timestamp: new Date(),
@@ -265,7 +265,7 @@ class SuperInteligenciaConversacional {
 
         // Atualizar preferências baseado no comportamento
         this.atualizarPreferenciasUsuario(memoria, interacao);
-        
+
         memoria.ultimaInteracao = new Date();
     }
 
@@ -288,25 +288,25 @@ class SuperInteligenciaConversacional {
     // ===== GERADOR DE RESPOSTAS SUPERINTELIGENTES =====
     gerarRespostaSuperInteligente(mensagemUsuario, estadoEmocional, memoriaUsuario, contextoPagina) {
         const timestamp = new Date();
-        
+
         // Análise profunda da mensagem
         const analiseProfunda = this.analisarMensagemProfundamente(mensagemUsuario);
-        
+
         // Construção da personalidade contextual
         const personalidadeContextual = this.construirPersonalidadeContextual(estadoEmocional, memoriaUsuario);
-        
+
         // Geração da resposta base
         let respostaBase = this.gerarRespostaBase(analiseProfunda, contextoPagina);
-        
+
         // Aplicação de camadas de inteligência emocional
         respostaBase = this.aplicarCamadaEmpatica(respostaBase, estadoEmocional);
         respostaBase = this.aplicarCamadaConversacional(respostaBase, analiseProfunda);
         respostaBase = this.aplicarCamadaPersonalidade(respostaBase, personalidadeContextual);
         respostaBase = this.aplicarCamadaMemoria(respostaBase, memoriaUsuario);
-        
+
         // Finalização e polimento
         const respostaFinal = this.polirResposta(respostaBase, estadoEmocional, memoriaUsuario);
-        
+
         console.error('🧠 [SUPERINTELIGÊNCIA] Resposta gerada:', {
             emocao: estadoEmocional.emocaoPrimaria,
             intencoes: estadoEmocional.intencoesMultiplas,
@@ -331,7 +331,7 @@ class SuperInteligenciaConversacional {
         const palavras = mensagem.split(' ').length;
         const frases = mensagem.split(/[.!?]+/).length - 1;
         const complexidadeEstrutural = palavras > 20 ? 'alta' : palavras > 10 ? 'media' : 'baixa';
-        
+
         return {
             estrutural: complexidadeEstrutural,
             palavras: palavras,
@@ -343,7 +343,7 @@ class SuperInteligenciaConversacional {
     detectarAmbiguidade(mensagem) {
         const termosAmbiguos = ['isso', 'aquilo', 'aquele', 'desse jeito', 'assim'];
         const ambiguidades = termosAmbiguos.filter(termo => mensagem.includes(termo));
-        
+
         return {
             possui: ambiguidades.length > 0,
             termos: ambiguidades,
@@ -381,7 +381,7 @@ class SuperInteligenciaConversacional {
             espaciais: this.extrairReferenciasEspaciais(mensagem),
             pessoais: this.extrairReferenciasPessoais(mensagem)
         };
-        
+
         return referencias;
     }
 
@@ -391,7 +391,7 @@ class SuperInteligenciaConversacional {
             /\b(agora|já|depois)\b/gi,
             /\b(semana|mês|ano)\b/gi
         ];
-        
+
         return padroes.flatMap(padrao => mensagem.match(padrao) || []);
     }
 
@@ -401,7 +401,7 @@ class SuperInteligenciaConversacional {
             /\b(nesse|naquele)\b/gi,
             /\b(perto|longe)\b/gi
         ];
-        
+
         return padroes.flatMap(padrao => mensagem.match(padrao) || []);
     }
 
@@ -411,7 +411,7 @@ class SuperInteligenciaConversacional {
             /\b(você|teu|sua)\b/gi,
             /\b(nós|nosso)\b/gi
         ];
-        
+
         return padroes.flatMap(padrao => mensagem.match(padrao) || []);
     }
 
@@ -578,7 +578,7 @@ class SuperInteligenciaConversacional {
         };
 
         const [prefixo, sufixo] = enfases[intensidade] || enfases[1];
-        
+
         // Aplicar ênfase na primeira frase
         const frases = resposta.split('.');
         if (frases.length > 0) {
@@ -608,7 +608,7 @@ class SuperInteligenciaConversacional {
         // Garantir que o estilo seja consistente com preferências
         if (memoriaUsuario.preferencias && memoriaUsuario.preferencias.formalidade === 'formal') {
             resposta = resposta.replace(/e aí/gi, "Olá")
-                             .replace(/valeu/gi, "Agradeço");
+                .replace(/valeu/gi, "Agradeço");
         }
 
         return resposta;
@@ -619,30 +619,30 @@ class SuperInteligenciaConversacional {
         if (!this.memoriaConversacional.has(userId)) return;
 
         const memoria = this.memoriaConversacional.get(userId);
-        
+
         // Analisar feedback implícito (engajamento, continuidade)
         const engajamento = this.analisarEngajamento(mensagemUsuario, resposta);
-        
+
         // Atualizar preferências baseado no engajamento
         if (engajamento.alto) {
             memoria.preferencias.estiloAtual = 'efetivo';
         }
-        
+
         // Aprender padrões de sucesso
         this.registrarPadraoSucesso(userId, mensagemUsuario, resposta, engajamento);
     }
 
     analisarEngajamento(mensagemUsuario, resposta) {
         const mensagemLower = mensagemUsuario.toLowerCase();
-        
+
         return {
             continuouConversa: !mensagemLower.includes('tchau') && !mensagemLower.includes('obrigado'),
-            fezPergunta: mensagemLower.includes('?') || 
-                         mensagemLower.includes('como') || 
-                         mensagemLower.includes('quando'),
-            mostrouSatisfacao: mensagemLower.includes('obrigado') || 
-                              mensagemLower.includes('perfeito') ||
-                              mensagemLower.includes('ajudou'),
+            fezPergunta: mensagemLower.includes('?') ||
+                mensagemLower.includes('como') ||
+                mensagemLower.includes('quando'),
+            mostrouSatisfacao: mensagemLower.includes('obrigado') ||
+                mensagemLower.includes('perfeito') ||
+                mensagemLower.includes('ajudou'),
             alto: this.calcularNivelEngajamento(mensagemUsuario)
         };
     }
@@ -706,10 +706,30 @@ class LeadCaptureSystem {
     constructor(apiKey) {
         this.apiKey = apiKey;
         this.leadsFilePath = getTenantLeadsFilePath(this.apiKey);
+        this.useDatabase = USE_POSTGRES; // Usar PostgreSQL se disponível
         this.ensureDataDirectory();
-        this.leads = this.loadLeads();
-        console.error(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
-        console.error(`💾 Arquivo de leads: ${this.leadsFilePath}`);
+        this.leads = [];
+        this.isInitialized = false;
+
+        // Inicialização assíncrona
+        this.initializeAsync();
+    }
+
+    async initializeAsync() {
+        try {
+            this.leads = await this.loadLeads();
+            this.isInitialized = true;
+            console.error(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
+            console.error(`💾 Modo: ${this.useDatabase ? 'PostgreSQL' : 'JSON Fallback'}`);
+
+            // Migrar dados JSON para PostgreSQL se necessário
+            if (this.useDatabase) {
+                await this.migrateFromJSON();
+            }
+        } catch (error) {
+            console.error('❌ Erro na inicialização do sistema de leads:', error);
+            this.leads = [];
+        }
     }
 
     ensureDataDirectory() {
@@ -727,28 +747,155 @@ class LeadCaptureSystem {
         }
     }
 
-    loadLeads() {
+    async loadLeads() {
+        // Tentar carregar do PostgreSQL primeiro
+        if (this.useDatabase) {
+            try {
+                const dbLeads = await DatabaseHelpers.getLeadsByApiKey(this.apiKey);
+                if (dbLeads && dbLeads.length > 0) {
+                    console.error(`📥 Leads carregados do PostgreSQL: ${dbLeads.length} registros`);
+                    // Converter formato do banco para formato interno
+                    return dbLeads.map(lead => ({
+                        id: lead.id,
+                        nome: lead.nome,
+                        email: lead.email,
+                        telefone: lead.telefone,
+                        empresa: lead.empresa,
+                        cargo: lead.cargo,
+                        origem: lead.origem,
+                        journeyStage: lead.journey_stage || 'descoberta',
+                        status: lead.status || 'ativo',
+                        conversations: lead.conversations || [],
+                        bookings: lead.bookings || [],
+                        metadata: lead.metadata || {},
+                        timestamp: lead.created_at,
+                        lastInteraction: lead.last_interaction
+                    }));
+                }
+            } catch (error) {
+                console.error('⚠️ Erro ao carregar do PostgreSQL, usando fallback JSON:', error.message);
+                this.useDatabase = false;
+            }
+        }
+
+        // Fallback: Carregar do arquivo JSON
+        return this.loadLeadsFromJSON();
+    }
+
+    loadLeadsFromJSON() {
         try {
             if (fs.existsSync(this.leadsFilePath)) {
                 const data = fs.readFileSync(this.leadsFilePath, "utf8");
                 const leads = JSON.parse(data);
-                console.error(`📥 Leads carregados: ${leads.length} registros`);
+                console.error(`📥 Leads carregados do JSON: ${leads.length} registros`);
                 return leads;
             }
         } catch (error) {
-            console.error("❌ Erro ao carregar leads:", error);
+            console.error("❌ Erro ao carregar leads do JSON:", error);
         }
         console.error("📝 Inicializando novo arquivo de leads");
         return [];
     }
 
-    saveLeads() {
+    async migrateFromJSON() {
         try {
-            fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
-            console.error(`💾 Leads salvos: ${this.leads.length} registros`);
+            // Verificar se há dados JSON para migrar
+            if (!fs.existsSync(this.leadsFilePath)) {
+                return; // Nenhum arquivo JSON para migrar
+            }
+
+            const jsonData = fs.readFileSync(this.leadsFilePath, "utf8");
+            const jsonLeads = JSON.parse(jsonData);
+
+            if (!jsonLeads || jsonLeads.length === 0) {
+                return; // Nenhum lead para migrar
+            }
+
+            // Verificar se já há leads no PostgreSQL
+            const dbLeads = await DatabaseHelpers.getLeadsByApiKey(this.apiKey);
+            if (dbLeads && dbLeads.length > 0) {
+                console.error(`ℹ️ PostgreSQL já tem ${dbLeads.length} leads, pulando migração`);
+                return;
+            }
+
+            console.error(`🔄 Migrando ${jsonLeads.length} leads do JSON para PostgreSQL...`);
+
+            for (const lead of jsonLeads) {
+                try {
+                    await DatabaseHelpers.saveLead(this.apiKey, {
+                        id: lead.id,
+                        nome: lead.nome,
+                        email: lead.email,
+                        telefone: lead.telefone,
+                        empresa: lead.empresa,
+                        cargo: lead.cargo,
+                        origem: lead.origem,
+                        journey_stage: lead.journeyStage || 'descoberta',
+                        status: lead.status || 'ativo',
+                        conversations: lead.conversations || [],
+                        bookings: lead.bookings || [],
+                        metadata: lead.metadata || {}
+                    });
+                } catch (err) {
+                    console.error(`⚠️ Erro ao migrar lead ${lead.id}:`, err.message);
+                }
+            }
+
+            console.error(`✅ Migração concluída: ${jsonLeads.length} leads migrados para PostgreSQL`);
+
+            // Renomear arquivo JSON como backup
+            const backupPath = this.leadsFilePath.replace('.json', '.json.migrated');
+            fs.renameSync(this.leadsFilePath, backupPath);
+            console.error(`📁 Arquivo JSON renomeado para: ${backupPath}`);
+
+        } catch (error) {
+            console.error('❌ Erro na migração de dados:', error);
+        }
+    }
+
+    saveLeads() {
+        // Salvar no PostgreSQL se disponível
+        if (this.useDatabase) {
+            this.saveLeadsToDatabase();
+        }
+
+        // Sempre manter backup em JSON (para redundância)
+        return this.saveLeadsToJSON();
+    }
+
+    async saveLeadsToDatabase() {
+        try {
+            for (const lead of this.leads) {
+                await DatabaseHelpers.saveLead(this.apiKey, {
+                    id: lead.id,
+                    nome: lead.nome,
+                    email: lead.email,
+                    telefone: lead.telefone,
+                    empresa: lead.empresa,
+                    cargo: lead.cargo,
+                    origem: lead.origem,
+                    journey_stage: lead.journeyStage || 'descoberta',
+                    status: lead.status || 'ativo',
+                    conversations: lead.conversations || [],
+                    bookings: lead.bookings || [],
+                    metadata: lead.metadata || {}
+                });
+            }
+            console.error(`💾 Leads salvos no PostgreSQL: ${this.leads.length} registros`);
             return true;
         } catch (error) {
-            console.error("❌ Erro ao salvar leads:", error);
+            console.error('❌ Erro ao salvar leads no PostgreSQL:', error);
+            return false;
+        }
+    }
+
+    saveLeadsToJSON() {
+        try {
+            fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
+            console.error(`💾 Leads salvos em JSON: ${this.leads.length} registros`);
+            return true;
+        } catch (error) {
+            console.error("❌ Erro ao salvar leads em JSON:", error);
             return false;
         }
     }
@@ -775,7 +922,7 @@ class LeadCaptureSystem {
         if (lead) {
             // 🎯 CORREÇÃO: Remover caracteres especiais como <s> [OUT]
             const cleanMessage = this.cleanMessage(message);
-            
+
             lead.conversations.push({
                 timestamp: new Date().toISOString(),
                 message: cleanMessage,
@@ -819,7 +966,7 @@ class LeadCaptureSystem {
 
     addBooking(bookingData) {
         const lead = this.findLeadByEmail(bookingData.email);
-        
+
         if (!lead) {
             console.error("❌ Erro ao adicionar agendamento: Lead não encontrado.");
             return null;
@@ -840,7 +987,7 @@ class LeadCaptureSystem {
         lead.bookings.push(booking);
         lead.journeyStage = "negociacao"; // Mudar o estágio da jornada
         this.saveLeads();
-        
+
         console.error(`📅 NOVO AGENDAMENTO: ${lead.nome} para ${booking.horario}`);
         return booking;
     }
@@ -860,19 +1007,19 @@ function getBackupSystem(leadSystem, apiKey) {
 function getTenantBackupDirPath(apiKey) {
     const dataDir = path.join(__dirname, "data");
     const tenantDir = path.join(dataDir, "tenants");
-    
+
     // Garantir que o diretório existe
     if (!fs.existsSync(tenantDir)) {
         fs.mkdirSync(tenantDir, { recursive: true });
     }
-    
+
     const backupDir = path.join(tenantDir, apiKey, "backups");
-    
+
     // Garantir que o diretório de backup existe
     if (!fs.existsSync(backupDir)) {
         fs.mkdirSync(backupDir, { recursive: true });
     }
-    
+
     return backupDir;
 }
 
@@ -886,10 +1033,10 @@ class LeadBackupSystem {
         this.backupInterval = 24 * 60 * 60 * 1000; // 24 horas
         console.error(`🔐 Sistema de Backup Inicializado`);
         console.error(`📁 Diretório de backups: ${this.backupDir}`);
-        
+
         // Fazer backup inicial
         this.createBackup("startup");
-        
+
         // Agendar backup diário
         this.scheduleAutomaticBackups();
     }
@@ -910,20 +1057,20 @@ class LeadBackupSystem {
             const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
             const filename = `leads-backup-${type}-${timestamp}.json`;
             const backupPath = path.join(this.backupDir, filename);
-            
+
             const backupData = {
                 timestamp: new Date().toISOString(),
                 type: type,
                 leadsCount: this.leadSystem.leads.length,
                 leads: this.leadSystem.leads
             };
-            
+
             fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
             console.error(`✅ Backup criado: ${filename} (${this.leadSystem.leads.length} leads)`);
-            
+
             // Limpar backups antigos
             this.cleanOldBackups();
-            
+
             return { success: true, filename, path: backupPath };
         } catch (error) {
             console.error("❌ Erro ao criar backup:", error);
@@ -941,7 +1088,7 @@ class LeadBackupSystem {
                     time: fs.statSync(path.join(this.backupDir, f)).mtime.getTime()
                 }))
                 .sort((a, b) => b.time - a.time);
-            
+
             // Manter apenas os últimos maxBackups
             if (files.length > this.maxBackups) {
                 const filesToDelete = files.slice(this.maxBackups);
@@ -973,7 +1120,7 @@ class LeadBackupSystem {
                     };
                 })
                 .sort((a, b) => new Date(b.created) - new Date(a.created));
-            
+
             return files;
         } catch (error) {
             console.error("❌ Erro ao listar backups:", error);
@@ -984,24 +1131,24 @@ class LeadBackupSystem {
     restoreBackup(filename) {
         try {
             const backupPath = path.join(this.backupDir, filename);
-            
+
             if (!fs.existsSync(backupPath)) {
                 return { success: false, error: "Backup não encontrado" };
             }
-            
+
             const backupData = JSON.parse(fs.readFileSync(backupPath, "utf8"));
-            
+
             // Criar backup do estado atual antes de restaurar
             this.createBackup("pre-restore");
-            
+
             // Restaurar leads
             this.leadSystem.leads = backupData.leads;
             this.leadSystem.saveLeads();
-            
+
             console.error(`✅ Backup restaurado: ${filename} (${backupData.leadsCount} leads)`);
-            
-            return { 
-                success: true, 
+
+            return {
+                success: true,
                 leadsCount: backupData.leadsCount,
                 timestamp: backupData.timestamp
             };
@@ -1016,7 +1163,7 @@ class LeadBackupSystem {
             console.error("⏰ Executando backup automático diário...");
             this.createBackup("daily");
         }, this.backupInterval);
-        
+
         console.error(`⏰ Backup automático agendado (a cada 24 horas)`);
     }
 
@@ -1026,7 +1173,7 @@ class LeadBackupSystem {
             this.createBackup("shutdown");
             process.exit(0);
         };
-        
+
         process.on("SIGTERM", shutdown);
         process.on("SIGINT", shutdown);
     }
@@ -1100,11 +1247,11 @@ class JourneyAnalyzer {
 
     shouldMentionBonus(stage, message) {
         const messageLower = message.toLowerCase();
-        
+
         // Só mencionar bônus se o cliente perguntar explicitamente
         const bonusKeywords = ['bônus', 'bonus', 'brinde', 'presente', 'extra', 'grátis', 'gratis'];
         const isAskingAboutBonus = bonusKeywords.some(keyword => messageLower.includes(keyword));
-        
+
         // Ou se estiver na fase de negociação
         return isAskingAboutBonus || stage === "negociacao";
     }
@@ -1132,8 +1279,8 @@ class SistemaCapturaInteligencias {
         const mensagemLower = mensagem.toLowerCase();
 
         // Detectar solicitação de contato direto
-        if (mensagemLower.includes('whatsapp') || 
-            mensagemLower.includes('número') || 
+        if (mensagemLower.includes('whatsapp') ||
+            mensagemLower.includes('número') ||
             mensagemLower.includes('numero') ||
             mensagemLower.includes('falar direto') ||
             mensagemLower.includes('contato direto') ||
@@ -1145,8 +1292,8 @@ class SistemaCapturaInteligencias {
         }
 
         // Detectar solicitação de link do site
-        if (mensagemLower.includes('link') || 
-            mensagemLower.includes('site') || 
+        if (mensagemLower.includes('link') ||
+            mensagemLower.includes('site') ||
             mensagemLower.includes('endereço') ||
             mensagemLower.includes('endereco') ||
             mensagemLower.includes('url') ||
@@ -1157,7 +1304,7 @@ class SistemaCapturaInteligencias {
         }
 
         // Detectar perguntas sobre bônus
-        if (mensagemLower.includes('bônus') || 
+        if (mensagemLower.includes('bônus') ||
             mensagemLower.includes('bonus') ||
             mensagemLower.includes('vantagem') ||
             mensagemLower.includes('extra') ||
@@ -1166,8 +1313,8 @@ class SistemaCapturaInteligencias {
             mensagemLower.includes('grátis') ||
             mensagemLower.includes('gratis')) {
             inteligencias.bonus = true;
-            
-            if (mensagemLower.includes('quais') || 
+
+            if (mensagemLower.includes('quais') ||
                 mensagemLower.includes('quais são') ||
                 mensagemLower.includes('detalhes') ||
                 mensagemLower.includes('lista') ||
@@ -1177,7 +1324,7 @@ class SistemaCapturaInteligencias {
         }
 
         // Detectar perguntas sobre experiência
-        if (mensagemLower.includes('experiência') || 
+        if (mensagemLower.includes('experiência') ||
             mensagemLower.includes('experiencia') ||
             mensagemLower.includes('começar') ||
             mensagemLower.includes('iniciante') ||
@@ -1189,7 +1336,7 @@ class SistemaCapturaInteligencias {
         }
 
         // Detectar solicitação de suporte
-        if (mensagemLower.includes('suporte') || 
+        if (mensagemLower.includes('suporte') ||
             mensagemLower.includes('atendimento') ||
             mensagemLower.includes('ajuda') ||
             mensagemLower.includes('problema') ||
@@ -1213,7 +1360,7 @@ class SistemaCapturaInteligencias {
             if (contatos.whatsapp && contatos.whatsapp.length > 0) {
                 resposta += `📞 **${excitementWord.toUpperCase()}!** Você pode falar diretamente conosco:\n\n`;
                 resposta += `💬 **WhatsApp:** ${contatos.whatsapp.slice(0, 2).join(' ou ')}\n`;
-                
+
                 if (contatos.telefone && contatos.telefone.length > 0) {
                     resposta += `📞 **Telefone:** ${contatos.telefone.slice(0, 2).join(' ou ')}\n`;
                 }
@@ -1252,15 +1399,15 @@ class SistemaCapturaInteligencias {
         if (inteligencias.suporte) {
             resposta += `🛟 **SUPORTE ESPECIALIZADO**\n\n`;
             resposta += `Nossa equipe de suporte está pronta para ajudar você! `;
-            
+
             if (contatos.email && contatos.email.length > 0) {
                 resposta += `\n📧 **Email:** ${contatos.email.slice(0, 2).join(' ou ')}`;
             }
-            
+
             if (contatos.whatsapp && contatos.whatsapp.length > 0) {
                 resposta += `\n💬 **WhatsApp:** ${contatos.whatsapp.slice(0, 2).join(' ou ')}`;
             }
-            
+
             resposta += `\n\nRespondemos rapidamente para resolver qualquer dúvida ou problema!\n\n`;
         }
 
@@ -1303,7 +1450,7 @@ class SistemaExtracaoContatosAprimorado {
         try {
             // Obter todo o texto da página
             const textoPagina = $('body').text();
-            
+
             // 🎯 PADRÕES BRASILEIROS OTIMIZADOS PARA TELEFONES
             const padroesTelefone = [
                 /(\+55\s?)?(\(?\d{2}\)?\s?)?\d{4,5}[-.\s]?\d{4}/g,
@@ -1314,14 +1461,14 @@ class SistemaExtracaoContatosAprimorado {
 
             // 🎯 DETECÇÃO INTELIGENTE DE WHATSAPP vs TELEFONE COMUM
             const whatsappKeywords = ['whatsapp', 'wa.me', 'wa.me', 'whats-app', 'whatsapp', 'zap', 'direct whatsapp'];
-            
+
             // Procurar números na página
             padroesTelefone.forEach(padrao => {
                 const matches = textoPagina.match(padrao);
                 if (matches) {
                     matches.forEach(match => {
                         const numeroLimpo = match.replace(/\D/g, '');
-                        
+
                         // Validar se é um número brasileiro válido
                         if (numeroLimpo.length >= 10 && numeroLimpo.length <= 13) {
                             const contexto = textoPagina.substring(
@@ -1329,12 +1476,12 @@ class SistemaExtracaoContatosAprimorado {
                                 Math.min(textoPagina.length, textoPagina.indexOf(match) + 50)
                             ).toLowerCase();
 
-                            const isWhatsApp = whatsappKeywords.some(keyword => 
+                            const isWhatsApp = whatsappKeywords.some(keyword =>
                                 contexto.includes(keyword)
                             );
 
                             const numeroFormatado = this.formatarNumeroBrasileiro(numeroLimpo);
-                            
+
                             if (isWhatsApp) {
                                 if (!contatos.whatsapp.includes(numeroFormatado)) {
                                     contatos.whatsapp.push(numeroFormatado);
@@ -1396,7 +1543,7 @@ class SistemaExtracaoContatosAprimorado {
             $('a[href]').each((i, elem) => {
                 const href = $(elem).attr('href') || '';
                 const texto = $(elem).text();
-                
+
                 // Detectar links de WhatsApp
                 if (href.includes('wa.me') || href.includes('whatsapp') || href.includes('api.whatsapp')) {
                     const numeroMatch = href.match(/\d{10,13}/);
@@ -1407,7 +1554,7 @@ class SistemaExtracaoContatosAprimorado {
                         }
                     }
                 }
-                
+
                 // Detectar links de telefone
                 if (href.startsWith('tel:')) {
                     const numero = href.replace('tel:', '').replace(/\D/g, '');
@@ -1418,7 +1565,7 @@ class SistemaExtracaoContatosAprimorado {
                         }
                     }
                 }
-                
+
                 // Detectar links de email
                 if (href.startsWith('mailto:')) {
                     const email = href.replace('mailto:', '');
@@ -1453,7 +1600,7 @@ class SistemaExtracaoContatosAprimorado {
                 const numeroLimpo = tel.replace(/\D/g, '');
                 if (numeroLimpo.length >= 10) {
                     const numeroFormatado = this.formatarNumeroBrasileiro(numeroLimpo);
-                    
+
                     // Detectar WhatsApp pelo contexto
                     if (texto.toLowerCase().includes('whatsapp') && !contatos.whatsapp.includes(numeroFormatado)) {
                         contatos.whatsapp.push(numeroFormatado);
@@ -1479,7 +1626,7 @@ class SistemaExtracaoContatosAprimorado {
     formatarNumeroBrasileiro(numero) {
         // Remove tudo que não é dígito
         const apenasDigitos = numero.replace(/\D/g, '');
-        
+
         // Se começar com 55 (código do Brasil), mantém
         if (apenasDigitos.startsWith('55')) {
             if (apenasDigitos.length === 13) { // +55 11 99999-9999
@@ -1490,14 +1637,14 @@ class SistemaExtracaoContatosAprimorado {
                 return `+55${apenasDigitos}`;
             }
         }
-        
+
         // Para números sem código do país
         if (apenasDigitos.length === 11) { // 11 99999-9999
             return `+55${apenasDigitos}`;
         } else if (apenasDigitos.length === 10) { // 11 9999-9999
             return `+55${apenasDigitos}`;
         }
-        
+
         // Retorna o número original se não conseguir formatar
         return numero;
     }
@@ -1510,7 +1657,7 @@ const sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
 class SuperInteligenciaEmocional {
     constructor() {
         console.error("🧠 Sistema de SuperInteligência Emocional Inicializado");
-        
+
         // Mapeamento de emoções e sentimentos
         this.emociones = {
             positivas: [
@@ -1537,13 +1684,13 @@ class SuperInteligenciaEmocional {
         this.personalidades = {
             consultivo: {
                 tom: "profissional e acolhedor",
-                empatia: "moderada", 
+                empatia: "moderada",
                 estilo: "focado em soluções",
                 saudacao: "Como posso ajudá-lo hoje?",
                 despedida: "Estou aqui para o que precisar!"
             },
             empatico: {
-                tom: "acolhedor e compreensivo", 
+                tom: "acolhedor e compreensivo",
                 empatia: "alta",
                 estilo: "focado em emocional",
                 saudacao: "Oi! Como você está?",
@@ -1552,7 +1699,7 @@ class SuperInteligenciaEmocional {
             tecnico: {
                 tom: "detalhista e preciso",
                 empatia: "baixa",
-                estilo: "focado em informações", 
+                estilo: "focado em informações",
                 saudacao: "Vamos analisar sua situação",
                 despedida: "Precisa de mais detalhes?"
             },
@@ -1568,7 +1715,7 @@ class SuperInteligenciaEmocional {
         // Sistema de agendamento
         this.horariosDisponiveis = [
             "Segunda 09:00", "Segunda 14:00", "Segunda 16:00",
-            "Terça 10:00", "Terça 15:00", "Terça 17:00", 
+            "Terça 10:00", "Terça 15:00", "Terça 17:00",
             "Quarta 09:30", "Quarta 14:30", "Quarta 16:30",
             "Quinta 11:00", "Quinta 15:30", "Quinta 17:30",
             "Sexta 10:30", "Sexta 14:00", "Sexta 16:00"
@@ -1582,7 +1729,7 @@ class SuperInteligenciaEmocional {
         let urgencia = false;
 
         // Análise de emoções positivas
-        const positivas = this.emociones.positivas.filter(palavra => 
+        const positivas = this.emociones.positivas.filter(palavra =>
             mensagemLower.includes(palavra)
         ).length;
 
@@ -1601,7 +1748,7 @@ class SuperInteligenciaEmocional {
             emocao = "positivo";
             intensidade = Math.min(3, positivas);
         } else if (negativas > positivas && negativas > 0) {
-            emocao = "negativo"; 
+            emocao = "negativo";
             intensidade = Math.min(3, negativas);
         }
 
@@ -1621,7 +1768,7 @@ class SuperInteligenciaEmocional {
         if (emocao === "negativo" && intensidade >= 2) {
             personalidade = "empatico";
         } else if (jornada === "negociacao" && emocao === "positivo") {
-            personalidade = "motivacional"; 
+            personalidade = "motivacional";
         } else if (jornada === "descoberta" && emocao === "neutro") {
             personalidade = "tecnico";
         } else if (emocao === "positivo" && intensidade >= 2) {
@@ -1688,7 +1835,7 @@ class SuperInteligenciaEmocional {
             'video', 'encontro', 'conversar', 'falar', 'ligar', 'whatsapp'
         ];
 
-        const isAgendamento = palavrasAgendamento.some(palavra => 
+        const isAgendamento = palavrasAgendamento.some(palavra =>
             mensagemLower.includes(palavra)
         );
 
@@ -1696,7 +1843,7 @@ class SuperInteligenciaEmocional {
             console.error("📅 Solicitação de agendamento detectada");
             // Em vez de listar horários no chat, instruir o usuário a usar o botão "Agendar"
             return `**📅 AGENDAMENTO DETECTADO**\n\n` +
-                   `Para agendar sua reunião, por favor, clique no botão **"Agendar"** no topo da tela. Você será direcionado para a seleção de horários.`;
+                `Para agendar sua reunião, por favor, clique no botão **"Agendar"** no topo da tela. Você será direcionado para a seleção de horários.`;
         }
 
         return null;
@@ -1868,7 +2015,7 @@ class SistemaExtracaoApurado {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
             });
-            
+
             const $ = cheerio.load(data);
             const dadosExtraidos = {
                 titulo: this.limparTexto($('title').text()),
@@ -2025,13 +2172,13 @@ class SistemaExtracaoApurado {
             $(seletor).each((i, elem) => {
                 const $elem = $(elem);
                 const texto = this.limparTexto($elem.text());
-                
+
                 if (texto.length > 50 && texto.length < 1000) {
                     const termosRelevantes = this.termosBonus.concat([
                         'oferta', 'promoção', 'limitado', 'exclusivo', 'especial'
                     ]);
-                    
-                    const ehRelevante = termosRelevantes.some(termo => 
+
+                    const ehRelevante = termosRelevantes.some(termo =>
                         texto.toLowerCase().includes(termo)
                     );
 
@@ -2077,7 +2224,7 @@ class ValidacaoCruzada {
 
     validarDadosCompletos(dadosExtraidos) {
         console.error('🔍 [VALIDAÇÃO] Iniciando validação cruzada...');
-        
+
         const validacoes = {
             bonus: this.validarBonusCruzado(dadosExtraidos),
             preco: this.validarPrecos(dadosExtraidos),
@@ -2122,10 +2269,10 @@ class ValidacaoCruzada {
 
     buscarBonusEmSecoes(secoes) {
         const bonusEncontrados = [];
-        
+
         secoes.forEach(secao => {
             const texto = secao.conteudo.toLowerCase();
-            const termosEncontrados = this.termosBonus.filter(termo => 
+            const termosEncontrados = this.termosBonus.filter(termo =>
                 texto.includes(termo)
             );
 
@@ -2143,7 +2290,7 @@ class ValidacaoCruzada {
 
     buscarBonusEmTextos(textos) {
         const bonusEncontrados = [];
-        
+
         textos.forEach(texto => {
             if (this.contemTermoBonus(texto)) {
                 bonusEncontrados.push({
@@ -2159,7 +2306,7 @@ class ValidacaoCruzada {
 
     contemTermoBonus(texto) {
         if (!texto) return false;
-        return this.termosBonus.some(termo => 
+        return this.termosBonus.some(termo =>
             texto.toLowerCase().includes(termo.toLowerCase())
         );
     }
@@ -2194,8 +2341,8 @@ class ValidacaoCruzada {
 
     validarConsistencia(dados) {
         const inconsistencias = [];
-        
-        if (dados.bonus && dados.bonus.length > 0 && 
+
+        if (dados.bonus && dados.bonus.length > 0 &&
             (!dados.preco || dados.preco.length === 0)) {
             inconsistencias.push('Bônus encontrados mas preços não identificados');
         }
@@ -2281,7 +2428,7 @@ let sessionConfig = {
     secret: process.env.SESSION_SECRET || "fallback-secret-change-in-production",
     resave: false,
     saveUninitialized: false,
-    cookie: { 
+    cookie: {
         secure: process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000,
         httpOnly: true
@@ -2292,18 +2439,18 @@ let sessionConfig = {
 if (process.env.REDIS_URL) {
     const RedisStore = require("connect-redis").default;
     const redis = require("redis");
-    
+
     const redisClient = redis.createClient({
         url: process.env.REDIS_URL
     });
-    
+
     redisClient.connect().catch(console.error);
-    
+
     sessionConfig.store = new RedisStore({
         client: redisClient,
         prefix: "linkmagico:"
     });
-    
+
     console.error("✅ Redis configurado para sessões");
 } else {
     console.warn("⚠️  Redis não configurado - usando MemoryStore (não recomendado para produção)");
@@ -2337,14 +2484,14 @@ function loadApiKeys() {
             logger.info("Loading API keys from environment variable");
             return JSON.parse(process.env.API_KEYS_JSON);
         }
-        
+
         const dataFile = path.join(__dirname, "data", "api_keys.json");
         if (fs.existsSync(dataFile)) {
             logger.info("Loading API keys from file");
             const raw = fs.readFileSync(dataFile, "utf8");
             return JSON.parse(raw);
         }
-        
+
         logger.warn("No API keys found - neither in environment variable nor in file");
     } catch (error) {
         logger.error("Error loading API keys:", error.message);
@@ -2355,7 +2502,7 @@ function loadApiKeys() {
 function validateApiKey(apiKey) {
     const apiKeys = loadApiKeys();
     const keyData = apiKeys[apiKey];
-    
+
     if (keyData && keyData.active !== false) {
         return {
             success: true,
@@ -2366,7 +2513,7 @@ function validateApiKey(apiKey) {
             }
         };
     }
-    
+
     return { success: false };
 }
 
@@ -2413,29 +2560,29 @@ app.get("/", (req, res) => {
 
 app.post("/validate-api-key", (req, res) => {
     const { apiKey } = req.body;
-    
+
     if (!apiKey) {
-        return res.status(400).json({ 
-            success: false, 
-            error: "API Key é obrigatória" 
+        return res.status(400).json({
+            success: false,
+            error: "API Key é obrigatória"
         });
     }
 
     const validation = validateApiKey(apiKey);
     if (!validation.success) {
-        return res.status(401).json({ 
-            success: false, 
-            error: "API Key inválida" 
+        return res.status(401).json({
+            success: false,
+            error: "API Key inválida"
         });
     }
 
     req.session.validatedApiKey = apiKey;
     req.session.clientData = validation.client;
     req.cliente = validation.client; // Ensure req.cliente is set immediately after validation
-    
-    res.json({ 
-        success: true, 
-        message: "API Key validada com sucesso" 
+
+    res.json({
+        success: true,
+        message: "API Key validada com sucesso"
     });
 });
 
@@ -2494,7 +2641,7 @@ app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
 
 app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
     const { filename } = req.body;
-    
+
     if (!filename) {
         return res.status(400).json({
             success: false,
@@ -2653,7 +2800,7 @@ app.get("/api/docs", (req, res) => {
             note: "Obtenha sua API Key no painel administrativo"
         }
     };
-    
+
     res.json(docs);
 });
 
@@ -2662,10 +2809,10 @@ app.get("/admin/backup/status", requireApiKey, (req, res) => {
     try {
         const leadSystem = getLeadSystem(req.cliente.apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
-        
+
         const backups = backupSystem.listBackups();
         const backupDir = getTenantBackupDirPath(req.cliente.apiKey);
-        
+
         const status = {
             sistema: "Sistema de Backup de Leads",
             leadsAtivos: leadSystem.leads.length,
@@ -2678,13 +2825,13 @@ app.get("/admin/backup/status", requireApiKey, (req, res) => {
             tamanhoTotal: backups.reduce((total, backup) => total + (backup.size || 0), 0),
             status: "OPERACIONAL"
         };
-        
+
         res.json({
             success: true,
             status: status,
             backups: backups.slice(0, 5) // Últimos 5 backups
         });
-        
+
     } catch (error) {
         console.error("❌ Erro ao verificar status do backup:", error);
         res.status(500).json({
@@ -2700,13 +2847,13 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
     try {
         const leadSystem = getLeadSystem(req.cliente.apiKey);
         const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
-        
+
         // Criar backup de teste
         const resultado = backupSystem.createBackup("teste");
-        
+
         // Listar backups após teste
         const backups = backupSystem.listBackups();
-        
+
         res.json({
             success: true,
             mensagem: "Sistema de backup testado com sucesso",
@@ -2718,7 +2865,7 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
             },
             status: "SISTEMA OPERACIONAL"
         });
-        
+
     } catch (error) {
         console.error("❌ Erro no teste de backup:", error);
         res.status(500).json({
@@ -2731,10 +2878,11 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
 
 // ROTA CHAT.HTML
 app.get("/chat.html", (req, res) => {
-    const robotName = req.query.name || "Assistente IA";
+    // Aceitar tanto 'name' quanto 'robotName' para compatibilidade com widget balloon
+    const robotName = req.query.robotName || req.query.name || "Assistente IA";
     const url = req.query.url || "";
     const instructions = req.query.instructions || "";
-    
+
     const chatbotHTML = generateChatbotHTML({ robotName, url, instructions });
     res.send(chatbotHTML);
 });
@@ -2742,10 +2890,11 @@ app.get("/chat.html", (req, res) => {
 // ROTA CHATBOT COMPLETA
 app.get("/chatbot", async (req, res) => {
     try {
-        const robotName = req.query.name || "Assistente IA";
+        // Aceitar tanto 'name' quanto 'robotName' para compatibilidade com widget balloon
+        const robotName = req.query.robotName || req.query.name || "Assistente IA";
         const url = req.query.url || "";
         const instructions = req.query.instructions || "";
-        
+
         let pageData = {};
         if (url) {
             try {
@@ -2754,7 +2903,7 @@ app.get("/chatbot", async (req, res) => {
                 console.warn('Failed to extract page data:', extractError.message || extractError);
             }
         }
-        
+
         const html = generateFullChatbotHTML(pageData, robotName, instructions);
         res.set('Content-Type', 'text/html');
         res.send(html);
@@ -2895,41 +3044,41 @@ function extractCleanTextFromHTML(html) {
 // ===== Page extraction =====
 async function extractPageDataWithRetry(url, maxRetries = 3) {
     let lastError = null;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             logger.info(`Tentativa ${attempt}/${maxRetries} de extrair: ${url}`);
-            
+
             // Timeout progressivo: 30s, 45s, 60s
             const timeout = 30000 + (attempt - 1) * 15000;
-            
+
             const result = await Promise.race([
                 extractPageData(url),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error(`Timeout após ${timeout/1000}s`)), timeout)
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error(`Timeout após ${timeout / 1000}s`)), timeout)
                 )
             ]);
-            
+
             // Verificar se a extração foi bem-sucedida
             if (result && (result.cleanText || result.title || result.description)) {
                 logger.info(`✅ Extração bem-sucedida na tentativa ${attempt}`);
                 return result;
             }
-            
+
             throw new Error('Extração retornou dados vazios');
-            
+
         } catch (error) {
             lastError = error;
             logger.warn(`❌ Tentativa ${attempt} falhou: ${error.message}`);
-            
+
             if (attempt < maxRetries) {
                 const waitTime = 2000 * attempt; // 2s, 4s, 6s
-                logger.info(`⏳ Aguardando ${waitTime/1000}s antes da próxima tentativa...`);
+                logger.info(`⏳ Aguardando ${waitTime / 1000}s antes da próxima tentativa...`);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
             }
         }
     }
-    
+
     // Se todas as tentativas falharam, retornar fallback
     logger.error(`❌ Todas as ${maxRetries} tentativas falharam para: ${url}`);
     return {
@@ -2968,7 +3117,7 @@ async function extractPageData(url) {
             logger.info(`Cache hit for ${url}`);
             return cached;
         }
-        
+
         logger.info(`Starting extraction for: ${url}`);
 
         const extractedData = {
@@ -3115,9 +3264,9 @@ async function extractPageData(url) {
                 const content = await page.content();
                 const puppeteerData = await page.evaluate(() => {
                     const metaDescription = document.querySelector("meta[name=\"description\"]")?.content ||
-                                            document.querySelector("meta[property=\"og:description\"]")?.content || "";
+                        document.querySelector("meta[property=\"og:description\"]")?.content || "";
                     const title = document.querySelector("title")?.textContent ||
-                                  document.querySelector("h1")?.textContent || "";
+                        document.querySelector("h1")?.textContent || "";
                     return { metaDescription, title };
                 });
 
@@ -3138,7 +3287,7 @@ async function extractPageData(url) {
                 logger.warn("Puppeteer extraction failed:", puppeteerErr.message || puppeteerErr);
                 analytics.failedExtractions++;
             } finally {
-                try { if (browser) await browser.close(); } catch (e) {}
+                try { if (browser) await browser.close(); } catch (e) { }
             }
         }
 
@@ -3158,7 +3307,7 @@ async function extractPageData(url) {
         }
 
         extractedData.extractionTime = Date.now() - startTime;
-        
+
         setCacheData(cacheKey, extractedData);
         logger.info(`Extraction completed for ${url} in ${extractedData.extractionTime}ms using ${extractedData.method}`);
         return extractedData;
@@ -3285,7 +3434,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         // 🎯 SUPERINTELIGÊNCIA: Análise Avançada
         const userId = leadId || `user_${Date.now()}`;
         const estadoEmocional = superInteligenciaGlobal.analisarEstadoEmocional(cleanUserMessage);
-        
+
         // 🎯 ATUALIZAR MEMÓRIA DO USUÁRIO
         superInteligenciaGlobal.atualizarMemoriaUsuario(userId, {
             mensagem: cleanUserMessage,
@@ -3318,7 +3467,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         if (pageData && pageData.contatos) {
             const contatos = pageData.contatos;
             contactInfo = `INFORMAÇÕES DE CONTATO: `;
-            
+
             if (contatos.telefone.length > 0) {
                 contactInfo += `Telefones: ${contatos.telefone.slice(0, 2).join(', ')}. `;
             }
@@ -3450,12 +3599,12 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         // 🎯 SUPERINTELIGÊNCIA: Aplicar processamento avançado se resposta da IA disponível
         if (response && String(response).trim()) {
             const respostaSuperInteligente = superInteligenciaGlobal.gerarRespostaSuperInteligente(
-                cleanUserMessage, 
-                estadoEmocional, 
-                memoriaUsuario, 
+                cleanUserMessage,
+                estadoEmocional,
+                memoriaUsuario,
                 pageData
             );
-            
+
             // Combinar resposta da IA com superinteligência
             response = combinarRespostas(response, respostaSuperInteligente, estadoEmocional);
         }
@@ -3473,14 +3622,14 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         // 🎯 CORREÇÃO FINAL: Limpar resposta de qualquer caractere especial
         const finalResponse = String(response).replace(/<s>\s*\[OUT\]/g, '').replace(/<[^>]*>/g, '').replace(/\[.*?\]/g, '').trim();
         const responseTime = Date.now() - startTime;
-        
+
         console.error(`🧠 [SUPERINTELIGÊNCIA] Resposta Gerada:`);
         console.error(`   Emoção: ${estadoEmocional.emocaoPrimaria} | Intenções: ${estadoEmocional.intencoesMultiplas.length}`);
         console.error(`   Jornada: ${journeyStage} | Sarcasmo: ${estadoEmocional.sarcasmo}`);
         console.error(`   Usuário: "${cleanUserMessage.substring(0, 50)}..."`);
         console.error(`   Resposta: "${finalResponse.substring(0, 50)}..."`);
         console.error(`   Provedor: ${usedProvider}, Tempo: ${responseTime}ms`);
-        
+
         logger.info(`AI response generated in ${responseTime}ms using ${usedProvider}`);
         return finalResponse;
 
@@ -3514,12 +3663,12 @@ function analisarEngajamento(mensagemUsuario, resposta) {
 
     return {
         continuouConversa: !mensagemLower.includes('tchau') && !mensagemLower.includes('obrigado'),
-        fezPergunta: mensagemLower.includes('?') || 
-                     mensagemLower.includes('como') || 
-                     mensagemLower.includes('quando'),
-        mostrouSatisfacao: mensagemLower.includes('obrigado') || 
-                          mensagemLower.includes('perfeito') ||
-                          mensagemLower.includes('ajudou'),
+        fezPergunta: mensagemLower.includes('?') ||
+            mensagemLower.includes('como') ||
+            mensagemLower.includes('quando'),
+        mostrouSatisfacao: mensagemLower.includes('obrigado') ||
+            mensagemLower.includes('perfeito') ||
+            mensagemLower.includes('ajudou'),
         nivel: calcularNivelEngajamento(mensagemUsuario)
     };
 }
@@ -3553,10 +3702,10 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
 
     if (/contato|telefone|whatsapp|email|falar|ligar|ligação/.test(question)) {
         let contactResponse = "📞 **Opções de contato disponíveis:**\n\n";
-        
+
         if (pageData.contatos) {
             const contatos = pageData.contatos;
-            
+
             if (contatos.telefone.length > 0) {
                 contactResponse += `📞 **Telefone:** ${contatos.telefone.slice(0, 2).join(' ou ')}\n`;
             }
@@ -3572,7 +3721,7 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
         } else {
             contactResponse += `🌐 **Site oficial:** ${pageData.url || 'Não disponível'}\n`;
         }
-        
+
         contactResponse += "\nFique à vontade para entrar em contato por qualquer um desses canais!";
         return contactResponse;
     }
@@ -3591,8 +3740,8 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
 
     if (pageData.summary) {
         const summary = clampSentences(pageData.summary, 2);
-        return journeyStage === "negociacao" 
-            ? `${summary} Gostaria de saber mais sobre valores e condições?` 
+        return journeyStage === "negociacao"
+            ? `${summary} Gostaria de saber mais sobre valores e condições?`
             : summary;
     }
 
@@ -3603,7 +3752,7 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
 app.get("/health", (req, res) => {
     const uptime = process.uptime();
     const avgResponseTime = analytics.responseTimeHistory.length > 0 ?
-    Math.round(analytics.responseTimeHistory.reduce((a, b) => a + b, 0) / analytics.responseTimeHistory.length) : 0;
+        Math.round(analytics.responseTimeHistory.reduce((a, b) => a + b, 0) / analytics.responseTimeHistory.length) : 0;
 
     res.json({
         status: "healthy",
@@ -3674,19 +3823,19 @@ app.post("/api/schedule-booking", async (req, res) => {
         console.error(`   - Lead: ${lead.nome} (${lead.email})`);
         console.error(`   - Horário Solicitado: ${horario}`);
         console.error(`   - Status: Pendente de Confirmação`);
-        
+
         // 5. Resposta de Sucesso
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             booking: booking,
-            message: "Agendamento registrado com sucesso! Nossa equipe entrará em contato para confirmar." 
+            message: "Agendamento registrado com sucesso! Nossa equipe entrará em contato para confirmar."
         });
 
     } catch (error) {
         console.error("❌ Erro ao processar agendamento:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: "Erro interno ao processar agendamento" 
+        res.status(500).json({
+            success: false,
+            error: "Erro interno ao processar agendamento"
         });
     }
 });
@@ -3695,7 +3844,7 @@ app.post("/api/schedule-booking", async (req, res) => {
 app.post("/api/capture-lead", async (req, res) => {
     try {
         const { nome, email, telefone, url_origem, robotName, apiKey } = req.body || {};
-        
+
         // Validar se apiKey foi fornecida (Comentado para resolver erro 401 no frontend)
         /*
         if (!apiKey) {
@@ -3705,23 +3854,23 @@ app.post("/api/capture-lead", async (req, res) => {
             });
         }
         */
-        
+
         const leadSystem = getLeadSystem(apiKey);
 
         if (!email) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Email é obrigatório" 
+            return res.status(400).json({
+                success: false,
+                error: "Email é obrigatório"
             });
         }
 
         // Verificar se lead já existe
         const existingLead = leadSystem.findLeadByEmail(email);
         if (existingLead) {
-            return res.json({ 
-                success: true, 
+            return res.json({
+                success: true,
                 lead: existingLead,
-                message: "Lead atualizado com sucesso" 
+                message: "Lead atualizado com sucesso"
             });
         }
 
@@ -3735,20 +3884,20 @@ app.post("/api/capture-lead", async (req, res) => {
         });
 
         analytics.leadsCaptured++;
-        
+
         console.error(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             lead: newLead,
-            message: "Lead capturado com sucesso" 
+            message: "Lead capturado com sucesso"
         });
 
     } catch (error) {
         console.error("❌ Erro ao capturar lead:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: "Erro interno ao capturar lead" 
+        res.status(500).json({
+            success: false,
+            error: "Erro interno ao capturar lead"
         });
     }
 });
@@ -3761,9 +3910,9 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
 
         if (!message) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Mensagem é obrigatória" 
+            return res.status(400).json({
+                success: false,
+                error: "Mensagem é obrigatória"
             });
         }
 
@@ -3806,8 +3955,8 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
     } catch (error) {
         analytics.errors++;
         logger.error("Chat endpoint error:", error.message || error);
-        return res.status(500).json({ 
-            success: false, 
+        return res.status(500).json({
+            success: false,
             error: "Erro interno ao gerar resposta: " + (error.message || "Erro desconhecido"),
             details: error.message
         });
@@ -3822,13 +3971,13 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
 
         if (!message) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Mensagem é obrigatória" 
+            return res.status(400).json({
+                success: false,
+                error: "Mensagem é obrigatória"
             });
         }
 
-        console.error('🧠 [SUPER-INTELIGENCIA] Processando mensagem:', { 
+        console.error('🧠 [SUPER-INTELIGENCIA] Processando mensagem:', {
             messageLength: message.length,
             url: url || 'none',
             leadId: leadId || 'none'
@@ -3846,17 +3995,17 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
 
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);
-        
+
         // 🎯 CAPTURA DE INTENÇÕES DO CLIENTE
         const inteligencias = sistemaInteligencias.capturarInteligencias(message);
-        
+
         // 🎯 ANÁLISE DE JORNADA
         const journeyStage = journeyAnalyzer.analyzeJourneyStage(message);
-        
+
         // 🎯 SELEÇÃO DE PERSONALIDADE ADAPTATIVA
         const personalidade = superInteligencia.selecionarPersonalidade(
-            analiseEmocional.emocao, 
-            analiseEmocional.intensidade, 
+            analiseEmocional.emocao,
+            analiseEmocional.intensidade,
             journeyStage
         );
 
@@ -3882,28 +4031,28 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES FORAM DETECTADAS
         else if (Object.values(inteligencias).some(val => val === true)) {
             const contatos = processedPageData?.contatos || {};
-            
+
             // Gerar resposta base com empatia
             const respostaEmpatica = superInteligencia.gerarRespostaEmpatica(
-                message, 
-                analiseEmocional, 
-                personalidade, 
+                message,
+                analiseEmocional,
+                personalidade,
                 contatos
             );
-            
+
             // Combinar com resposta contextual
             const respostaContextual = sistemaInteligencias.gerarRespostaContextual(
-                inteligencias, 
-                contatos, 
+                inteligencias,
+                contatos,
                 journeyStage
             );
-            
+
             finalResponse = respostaEmpatica + respostaContextual;
             console.error(`🎭 Resposta emocional inteligente gerada`);
         } else {
             // 🎯 USAR SISTEMA ORIGINAL COM MELHORIAS EMOCIONAIS
             const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
-            
+
             // Aplicar melhorias emocionais na resposta
             if (analiseEmocional.emocao === "negativo" && analiseEmocional.intensidade >= 2) {
                 finalResponse = `🤗 **Entendo que isso é importante para você.** ` + respostaIA;
@@ -3912,7 +4061,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             } else {
                 finalResponse = respostaIA;
             }
-            
+
             console.error(`🤖 Resposta IA com melhorias emocionais`);
         }
 
@@ -3941,8 +4090,8 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
     } catch (error) {
         analytics.errors++;
         logger.error("Super inteligencia endpoint error:", error.message || error);
-        return res.status(500).json({ 
-            success: false, 
+        return res.status(500).json({
+            success: false,
             error: "Erro interno ao gerar resposta inteligente: " + (error.message || "Erro desconhecido"),
             details: error.message
         });
@@ -3956,41 +4105,41 @@ app.post("/api/extract-enhanced", async (req, res) => {
         const { url } = req.body || {};
 
         console.error("📥 [EXTRACAO APRIMORADA] Recebendo requisição para:", url);
-        
+
         if (!url) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "URL é obrigatório" 
+            return res.status(400).json({
+                success: false,
+                error: "URL é obrigatório"
             });
         }
 
-        try { 
-            new URL(url); 
-        } catch (urlErr) { 
-            return res.status(400).json({ 
-                success: false, 
-                error: "URL inválido" 
-            }); 
+        try {
+            new URL(url);
+        } catch (urlErr) {
+            return res.status(400).json({
+                success: false,
+                error: "URL inválido"
+            });
         }
 
         const extractedData = await sistemaExtracao.extrairDadosCompletos(url);
-        
+
         if (extractedData.erro) {
-            return res.status(500).json({ 
-                success: false, 
-                error: extractedData.erro 
+            return res.status(500).json({
+                success: false,
+                error: extractedData.erro
             });
         }
 
         const validacao = sistemaValidacao.validarDadosCompletos(extractedData);
-        
+
         console.error("✅ [EXTRACAO APRIMORADA] Concluída com sucesso");
         console.error(`🎯 Bônus encontrados: ${validacao.dadosValidados.bonus.length}`);
         console.error(`📞 Contatos encontrados: ${validacao.dadosValidados.contatos ? Object.keys(validacao.dadosValidados.contatos).length : 0}`);
         console.error(`📊 Confiança: ${(validacao.pontuacaoConfianca * 100).toFixed(1)}%`);
-        
-        return res.json({ 
-            success: true, 
+
+        return res.json({
+            success: true,
             data: validacao.dadosValidados,
             validacao: {
                 pontuacaoConfianca: validacao.pontuacaoConfianca,
@@ -4003,9 +4152,9 @@ app.post("/api/extract-enhanced", async (req, res) => {
         analytics.errors++;
         console.error("❌ Erro no endpoint /api/extract-enhanced:", error);
         logger.error("Extract-enhanced endpoint error:", error.message || error);
-        
-        return res.status(500).json({ 
-            success: false, 
+
+        return res.status(500).json({
+            success: false,
             error: "Erro interno ao extrair página: " + (error.message || "Erro desconhecido")
         });
     }
@@ -4018,44 +4167,44 @@ app.post("/api/extract", async (req, res) => {
         const { url, instructions, robotName } = req.body || {};
 
         console.error("📥 Recebendo requisição para extrair:", url);
-        
+
         if (!url) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "URL é obrigatório" 
+            return res.status(400).json({
+                success: false,
+                error: "URL é obrigatório"
             });
         }
 
-        try { 
-            new URL(url); 
-        } catch (urlErr) { 
-            return res.status(400).json({ 
-                success: false, 
-                error: "URL inválido" 
-            }); 
+        try {
+            new URL(url);
+        } catch (urlErr) {
+            return res.status(400).json({
+                success: false,
+                error: "URL inválido"
+            });
         }
 
         logger.info(`Starting extraction for URL: ${url}`);
-        
+
         const extractedData = await extractPageData(url);
-        
+
         if (instructions) extractedData.custom_instructions = instructions;
         if (robotName) extractedData.robot_name = robotName;
 
         console.error("✅ Extração concluída com sucesso");
-        
-        return res.json({ 
-            success: true, 
-            data: extractedData 
+
+        return res.json({
+            success: true,
+            data: extractedData
         });
 
     } catch (error) {
         analytics.errors++;
         console.error("❌ Erro no endpoint /api/extract:", error);
         logger.error("Extract endpoint error:", error.message || error);
-        
-        return res.status(500).json({ 
-            success: false, 
+
+        return res.status(500).json({
+            success: false,
             error: "Erro interno ao extrair página: " + (error.message || "Erro desconhecido"),
             details: error.message
         });
@@ -4071,7 +4220,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
         telefone: [],
-        whatsapp: [], 
+        whatsapp: [],
         email: [],
         site: [pageData.url || ''],
         endereco: []
@@ -4691,7 +4840,7 @@ setupRoutes(app);
             if (process.env.WHATSAPP_PROVIDER) {
                 await whatsappManager.sendLeadNotification(lead);
             }
-            
+
             res.json({ success: true, lead });
         } catch (error) {
             logger.error('Erro ao salvar lead estruturado:', error);
