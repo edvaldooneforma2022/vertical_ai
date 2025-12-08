@@ -1,84 +1,263 @@
-# Link Mágico v7.0: Plataforma de IA Conversacional
+📘 README.md – Link Mágico (Versão 7.x+)
+Plataforma de Inteligência Artificial Conversacional, Automação Comercial e Extração Dinâmica de Dados
 
-## O que é o Link Mágico?
+<!-- ========================================================= -->
+<!-- ====================== BANNER ============================ -->
+<!-- ========================================================= -->
 
-O Link Mágico v7.0 é uma plataforma inovadora de Inteligência Artificial Conversacional projetada para otimizar a interação com clientes e automatizar processos de vendas. Ele permite a criação de chatbots inteligentes que podem ser integrados a diversas plataformas, oferecendo respostas personalizadas e extraindo informações relevantes de páginas web para enriquecer as conversas. A ferramenta é ideal para empresas e profissionais que buscam escalar suas operações de atendimento e vendas, proporcionando uma experiência fluida e eficiente para o usuário final.
+<p align="center">
+  <img src="https://svg-banners.vercel.app/api?type=glitch&text1=LINK%20MÁGICO&width=900&height=260" />
+</p>
 
-## Como Funciona?
+<br>
 
-O Link Mágico v7.0 opera através de um fluxo de trabalho intuitivo e poderoso, dividido em etapas chave:
+<!-- ========================================================= -->
+<!-- ====================== BADGE PACK ======================== -->
+<!-- ========================================================= -->
 
-1.  **Validação de API Key:** O acesso à plataforma é protegido por uma API Key exclusiva. Cada usuário deve inserir uma chave válida para prosseguir, garantindo segurança e personalização no uso da ferramenta.
+<p align="center">
 
-2.  **Consentimento LGPD:** Após a validação da API Key, o usuário é apresentado a um modal de Preferências de Privacidade, em conformidade com a Lei Geral de Proteção de Dados (LGPD). Aqui, o usuário pode revisar a Política de Privacidade e gerenciar seus dados, garantindo transparência e controle sobre as informações.
+  <!-- Linguagens -->
+  <img src="https://img.shields.io/badge/Node.js-18.x-339933?logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" />
 
-3.  **Criação do Chatbot:** Na interface principal, o usuário configura seu assistente de vendas inteligente. Isso inclui:
-    *   **Nome do Assistente Virtual:** Um identificador para o chatbot.
-    *   **URL da Página:** O Link Mágico extrai automaticamente informações de uma URL fornecida, utilizando-as para treinar o chatbot e fornecer respostas contextuais.
-    *   **Instruções Personalizadas (opcional):** O usuário pode definir instruções específicas para o comportamento do chatbot, como tom de voz, estilo de resposta e foco em determinados aspectos da página.
+  <!-- Infra -->
+  <img src="https://img.shields.io/badge/Redis-Cache%20Layer-D92B21?logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/Crawl4AI-Web%20Scraping-blueviolet" />
+  <img src="https://img.shields.io/badge/Playwright-Dynamic%20Scraping-45ba4b?logo=microsoft-edge&logoColor=white" />
 
-4.  **Ativação e Interação do Chatbot:** Uma vez configurado, o chatbot é ativado. A plataforma gera um link direto para o chatbot e, opcionalmente, um código embed para integrar o chatbot flutuante em qualquer site. O chatbot utiliza Modelos de Linguagem Grandes (LLMs) como Groq, OpenRouter e OpenAI para gerar respostas inteligentes e dinâmicas, baseadas nos dados extraídos e nas instruções fornecidas.
+  <!-- IA -->
+  <img src="https://img.shields.io/badge/OpenAI-LLM%20Engine-412991?logo=openai&logoColor=white" />
+  <img src="https://img.shields.io/badge/Groq-Ultra%20Speed%20LLM-ff4a4a?logo=groq&logoColor=white" />
+  <img src="https://img.shields.io/badge/OpenRouter-AI%20Gateway-ffc700" />
 
-5.  **Analytics e Monitoramento:** A plataforma oferece um dashboard para acompanhar o desempenho do chatbot, incluindo o número de chatbots ativos, conversas realizadas, taxa de sucesso e tempo médio de resposta.
+  <!-- Deploy -->
+  <img src="https://img.shields.io/badge/Render-Cloud%20Deploy-46E3B7?logo=render&logoColor=white" />
 
-## Manual de Uso na Prática
+  <!-- Qualidade -->
+  <img src="https://img.shields.io/badge/Tests-Automated%20Testing-0A7" />
+  <img src="https://img.shields.io/badge/Security-WAF%20Enabled-critical" />
+  <img src="https://img.shields.io/badge/License-MIT-blue" />
 
-### 1. Acesso à Plataforma
+</p>
 
-1.  **Insira sua API Key:** Ao acessar a URL da sua instância do Link Mágico (ex: `https://linkmagico-comercial.onrender.com`), você será solicitado a inserir sua API Key. Digite-a no campo indicado e clique em "Acessar Plataforma".
+<br>
 
-    *   **Como obter uma API Key:** Se você não possui uma API Key, entre em contato com o administrador da plataforma. As chaves são geradas em um formato específico (ex: `LMV7-XXXX-YYYY-ZZZZ`) e podem ser configuradas via variável de ambiente `API_KEYS_JSON` no seu ambiente de deploy (ex: Render.com).
+<!-- ========================================================= -->
+<!-- ========== BADGES PERSONALIZADOS EXCLUSIVOS ============= -->
+<!-- ========================================================= -->
 
-2.  **Preferências de Privacidade (LGPD):** Leia atentamente as informações sobre o uso de dados. Você pode clicar em "Política de Privacidade" e "Excluir meus dados" para mais detalhes. Para continuar, marque a caixa "Confiro que a URL informada é de minha responsabilidade" e clique em "Aceitar e Continuar".
+<p align="center">
 
-### 2. Criando seu Chatbot Inteligente
+  <img src="https://img.shields.io/badge/Crawl%20AI-Powered-purple?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Dynamic%20Scraping-Enabled-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/LLM%20Optimization-85%25%20Semantic%20Cache-blue?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Multi--LLM-Fallback%20Engine-orange?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Virtual%20Browser-Playwright%20Engine-0d6efd?style=for-the-badge" />
 
-1.  **Nome do Assistente Virtual:** No campo "Nome do Assistente Virtual", digite o nome que seu chatbot terá (ex: `@agentedevendas`).
-
-2.  **URL da Página:** No campo "URL da Página", insira o link da página web da qual o chatbot deverá extrair informações para suas respostas. Certifique-se de que a URL esteja correta e acessível publicamente.
-
-3.  **Instruções Personalizadas (opcional):** Utilize este campo para refinar o comportamento do seu chatbot. Exemplos:
-    *   `"Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva."`
-    *   `"Diga poucas respostas curtas (2-3 frases), objetivas e sem repetições."`
-
-4.  **Ativar Chatbot Inteligente:** Clique no botão "Ativar Chatbot Inteligente". A plataforma processará a URL, extrairá os dados e configurará seu chatbot.
-
-### 3. Utilizando o Chatbot
-
-Após a ativação, você verá as seguintes informações e opções:
-
-*   **Link do Chatbot:** Um link direto para acessar seu chatbot. Compartilhe este link com seus clientes.
-*   **Dados Extraídos:** Um resumo dos dados que foram extraídos da URL fornecida, que o chatbot utilizará como base para suas respostas.
-*   **Botões de Redes Sociais:** Botões para compartilhar o link do seu chatbot diretamente em diversas plataformas de redes sociais (WhatsApp, Instagram, Facebook, YouTube, TikTok, Twitter, Kwai, LinkedIn, Telegram, Messenger).
-*   **Prompt:** Um botão para acessar o prompt de configuração do chatbot.
-*   **Analytics:** Um botão para visualizar as métricas de desempenho do seu chatbot.
-*   **Widget Embed Code:** Um código HTML que você pode copiar e colar em seu site para adicionar um chatbot flutuante.
-
-### 4. Interagindo com o Chatbot
-
-*   **Preview do Chatbot:** Na seção "Preview do Chatbot", você pode testar seu assistente virtual em tempo real. Digite suas perguntas no campo "Digite sua pergunta..." e veja as respostas do chatbot.
-
-## Configuração de Variáveis de Ambiente (para Deploy no Render)
-
-Para que o Link Mágico funcione corretamente em um ambiente de produção como o Render, é necessário configurar algumas variáveis de ambiente:
-
-*   `SESSION_SECRET`: Uma chave secreta para a sessão do Express. Pode ser qualquer string aleatória e segura.
-*   `API_KEYS_JSON`: Um objeto JSON contendo suas API Keys válidas. Exemplo:
-    ```json
-    {
-        "LMV7-ABC1-DEF2-GHI3": {"nome":"Cliente Teste","plano":"premium","active":true},
-        "LMV7-XYZ4-UVW5-RST6": {"nome":"Outro Cliente","plano":"basic","active":true}
-    }
-    ```
-*   `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`: As chaves de API para os respectivos modelos de linguagem que você deseja utilizar. Pelo menos uma deve ser fornecida.
-*   `GROQ_MODEL`, `OPENROUTER_MODEL`, `OPENAI_MODEL`: (Opcional) Modelos específicos a serem usados com cada provedor de LLM.
-*   `LOG_LEVEL`: (Opcional) Nível de log (ex: `info`, `warn`, `error`).
-
-## Suporte e Contato
-
-Para dúvidas, problemas ou sugestões, entre em contato com o suporte técnico.
+</p>
 
 ---
 
-**Desenvolvido por Manus AI**
-**Versão:** 7.0
+# ✨ Link Mágico — Plataforma SaaS de IA Conversacional Avançada  
+**Versão:** 7.x  
+**Status:** Estável • Produção • Multi-Tenant  
+**Tecnologias Core:** Node.js • Python • Redis • Crawl4AI • Playwright • OpenAI • Groq • OpenRouter
+
+---
+
+## 💠 Tecnologias Utilizadas (com Ícones SVG)
+
+<p align="center">
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linux/linux-original.svg" />
+  <img width="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/openai/openai-vertical.svg" />
+</p>
+
+---
+
+## 📌 Visão Geral
+
+O **Link Mágico** é uma plataforma SaaS completa de **IA Conversacional**, construída sob uma arquitetura híbrida (Node + Python) capaz de:
+
+- Realizar atendimento automatizado 24h
+- Entender contexto, emoções e intenção do usuário
+- Extrair informações da web usando navegador virtual (Crawl4AI)
+- Executar scraping dinâmico com JavaScript renderizado
+- Otimizar custos de LLM com cache inteligente baseado em NLP
+- Realizar agendamentos reais (Scheduler integrado)
+- Gerar leads e organizar dados em um CRM interno
+- Integrar WhatsApp, Gmail, APIs externas e automações profundas
+
+A plataforma se destaca por unir:
+
+✔ Inteligência Artificial real  
+✔ Automação conversacional  
+✔ Extração dinâmica de sites  
+✔ Multi-LLM com fallback inteligente  
+✔ Sistema híbrido de cache  
+✔ Arquitetura assíncrona para alta performance  
+✔ Segurança corporativa integrada  
+✔ Multi-tenant completo  
+
+---
+
+# 🎯 Objetivos do Link Mágico
+
+- **Transformar qualquer site** em um ambiente de atendimento inteligente.  
+- **Reduzir custos de LLM** com NLP + cache semântico (85%).  
+- **Extrair dados de qualquer URL** com navegador virtual.  
+- **Criar automações reais** via API Actions.  
+- **Organizar leads automaticamente** no CRM interno.  
+- **Oferecer whitelabel** para empreendedores/agências.  
+
+---
+
+# 🚀 Funcionalidades Principais
+
+## 🧠 Inteligência Conversacional
+- Personalidade adaptativa  
+- Análise emocional  
+- Memória contextual  
+- Jornada conversacional inteligente  
+
+## 🤖 Motor de IA Multi-Camadas
+- Groq → ultra-rápido  
+- OpenAI → alta precisão  
+- OpenRouter → fallback + economia  
+- Otimizador semântico baseado em NLP  
+
+## 🌐 Scraping Dinâmico + Crawl4AI
+- Navegador headless (Playwright)  
+- Execução de JavaScript real  
+- Rolagem automática  
+- Extração orientada por IA  
+- Firecrawl Replacement nativo  
+
+## 🧩 Multi-Tenant Completo
+- Isolamento total de dados  
+- Tokens dedicados por tenant  
+- Whitelabel automático  
+
+## 🔐 Segurança (WAF Inteligente)
+- Rate-limit via Redis  
+- Análise de comportamento  
+- Sanitização profunda  
+- Logs e auditoria  
+
+## ⚡ Cache Híbrido Inteligente
+- Redis (cache de extração)  
+- Cache semântico (perguntas similares 85%)  
+- Redução de custos LLM em até **80%**  
+
+---
+
+# 📅 Sistema de Agendamento Inteligente (Scheduler v1.0)
+
+Rotas:
+
+POST /api/schedule/create
+GET /api/schedule/slots
+GET /api/schedule/list
+
+
+---
+
+# 🧩 Arquitetura Técnica
+
+
+/root
+├── server.js
+├── ai/
+├── crawl4ai-adapter.js
+├── firecrawl-replacement.js
+├── llm-optimizer.js
+├── cache.js
+├── database/
+├── scheduler/
+├── public/
+├── widget.js
+├── backups/
+└── README.md
+
+
+---
+
+# 🧠 Fluxo de Operação da IA
+
+1. Usuário envia mensagem  
+2. Sistema checa cache semântico (>85%)  
+3. Se cache HIT → responde em milissegundos  
+4. Se não:
+   - Seleciona melhor modelo LLM  
+   - Analisa intenção/humor  
+   - Faz scraping se necessário  
+   - Gera resposta personalizada  
+5. Salva no cache  
+6. Classifica lead  
+7. Registra no CRM  
+
+---
+
+# 🔗 Integrações Disponíveis
+
+| Integração | Tipo | Detalhes |
+|-----------|------|----------|
+| WhatsApp | Mensagens | Automação e atendimento |
+| Gmail | E-mail | Envio/recepção |
+| Groq | IA | Modelos rápidos |
+| OpenAI | IA | Modelos avançados |
+| OpenRouter | IA | Roteamento otimizado |
+| Crawl4AI | Dados | Scraping dinâmico |
+| Scheduler | Reuniões | API completa |
+| Widget.js | Frontend | Chat para qualquer site |
+
+---
+
+# ⚙️ Instalação e Deploy
+
+### Local
+```bash
+git clone https://github.com/SEU_USUARIO/vertical_ai.git
+cd vertical_ai
+npm install
+npm start
+
+Variáveis de ambiente
+
+PORT=10000
+REDIS_URL=redis://...
+OPENAI_API_KEY=...
+GROQ_API_KEY=...
+OPENROUTER_API_KEY=...
+
+🔐 Segurança e Compliance
+
+WAF próprio
+
+Rate-limit
+
+Anti-bots
+
+Sanitização
+
+LGPD-ready
+
+🤝 Contribuição
+
+git checkout -b feature/minha-feature
+
+
+📄 Licença
+
+Licença MIT — uso comercial permitido.
+
+👨‍💻 Autor
+
+Edvaldo L. S. — Criador do Link Mágico
+IA projetada para transformar a forma como negócios atendem seus clientes.
+

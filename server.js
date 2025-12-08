@@ -29,7 +29,7 @@ const { knowledgeBaseManager } = require('./knowledge-base');
 const { setupRoutes } = require('./routes');
 const { initialize } = require('./init');
 
-console.error('✅ Módulos de melhorias carregados');
+console.log('✅ Módulos de melhorias carregados');
 // ===== NOVAS INTEGRAÇÕES V3.0 =====
 const { gmailManager } = require('./gmail-integration');
 const { whatsappManager } = require('./whatsapp-integration');
@@ -37,7 +37,7 @@ const { chatgptManager } = require('./chatgpt-integration');
 const { crmIntegrations } = require('./crm-integrations');
 const { whitelabelManager } = require('./whitelabel');
 const { structuredLeadsManager } = require('./structured-leads');
-console.error('✅ Módulos V3.0 carregados');
+console.log('✅ Módulos V3.0 carregados');
 
 const crypto = require("crypto");
 const express = require("express");
@@ -46,6 +46,7 @@ const helmet = require("helmet");
 const winston = require("winston");
 const axios = require("axios");
 const cheerio = require("cheerio");
+const FirecrawlApp = require('./firecrawl-replacement');
 const path = require("path");
 const fs = require("fs");
 const bodyParser = require("body-parser");
@@ -56,9 +57,9 @@ const session = require("express-session");
 let puppeteer = null;
 try {
     puppeteer = require("puppeteer");
-    console.error("✅ Puppeteer loaded - Dynamic rendering available");
+    console.log("✅ Puppeteer loaded - Dynamic rendering available");
 } catch (e) {
-    console.error("⚠️ Puppeteer not installed - Using basic extraction only");
+    console.log("⚠️ Puppeteer not installed - Using basic extraction only");
 }
 
 const app = express();
@@ -69,7 +70,7 @@ const conversationHistories = new Map();
 // ===== SISTEMA DE SUPERINTELIGÊNCIA CONVERSACIONAL AVANÇADA =====
 class SuperInteligenciaConversacional {
     constructor() {
-        console.error("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Inicializando Sistema Avançado");
+        console.log("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Inicializando Sistema Avançado");
 
         // Sistema de Memória Conversacional Avançada
         this.memoriaConversacional = new Map();
@@ -307,7 +308,7 @@ class SuperInteligenciaConversacional {
         // Finalização e polimento
         const respostaFinal = this.polirResposta(respostaBase, estadoEmocional, memoriaUsuario);
 
-        console.error('🧠 [SUPERINTELIGÊNCIA] Resposta gerada:', {
+        console.log('🧠 [SUPERINTELIGÊNCIA] Resposta gerada:', {
             emocao: estadoEmocional.emocaoPrimaria,
             intencoes: estadoEmocional.intencoesMultiplas,
             personalidade: personalidadeContextual.estilo,
@@ -690,7 +691,7 @@ class SuperInteligenciaConversacional {
 
 // Inicializar SuperInteligência Global
 const superInteligenciaGlobal = new SuperInteligenciaConversacional();
-console.error("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Sistema Avançado Carregado");
+console.log("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Sistema Avançado Carregado");
 
 // ===== SISTEMA DE ARMAZENAMENTO DE LEADS PERSISTENTE =====
 function getTenantLeadsFilePath(apiKey) {
@@ -702,34 +703,23 @@ function getTenantLeadsFilePath(apiKey) {
     return path.join(tenantDir, `leads-${apiKey}.json`);
 }
 
+// 📅 Função para obter caminho do arquivo de agendamentos por tenant
+function getTenantAppointmentsFilePath(apiKey) {
+    const tenantDir = path.join(__dirname, 'data', 'tenants');
+    if (!fs.existsSync(tenantDir)) {
+        fs.mkdirSync(tenantDir, { recursive: true });
+    }
+    return path.join(tenantDir, `appointments-${apiKey}.json`);
+}
+
 class LeadCaptureSystem {
     constructor(apiKey) {
         this.apiKey = apiKey;
         this.leadsFilePath = getTenantLeadsFilePath(this.apiKey);
-        this.useDatabase = USE_POSTGRES; // Usar PostgreSQL se disponível
         this.ensureDataDirectory();
-        this.leads = [];
-        this.isInitialized = false;
-
-        // Inicialização assíncrona
-        this.initializeAsync();
-    }
-
-    async initializeAsync() {
-        try {
-            this.leads = await this.loadLeads();
-            this.isInitialized = true;
-            console.error(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
-            console.error(`💾 Modo: ${this.useDatabase ? 'PostgreSQL' : 'JSON Fallback'}`);
-
-            // Migrar dados JSON para PostgreSQL se necessário
-            if (this.useDatabase) {
-                await this.migrateFromJSON();
-            }
-        } catch (error) {
-            console.error('❌ Erro na inicialização do sistema de leads:', error);
-            this.leads = [];
-        }
+        this.leads = this.loadLeads();
+        console.log(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
+        console.log(`💾 Arquivo de leads: ${this.leadsFilePath}`);
     }
 
     ensureDataDirectory() {
@@ -737,165 +727,38 @@ class LeadCaptureSystem {
             const dir = path.dirname(this.leadsFilePath);
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
-                console.error(`📁 Diretório criado: ${dir}`);
+                console.log(`📁 Diretório criado: ${dir}`);
             }
         } catch (error) {
             console.error("❌ Erro ao criar diretório:", error);
             // Fallback para diretório atual se data/ não funcionar
             this.leadsFilePath = path.join(__dirname, "leads.json");
-            console.error(`🔄 Usando fallback: ${this.leadsFilePath}`);
+            console.log(`🔄 Usando fallback: ${this.leadsFilePath}`);
         }
     }
 
-    async loadLeads() {
-        // Tentar carregar do PostgreSQL primeiro
-        if (this.useDatabase) {
-            try {
-                const dbLeads = await DatabaseHelpers.getLeadsByApiKey(this.apiKey);
-                if (dbLeads && dbLeads.length > 0) {
-                    console.error(`📥 Leads carregados do PostgreSQL: ${dbLeads.length} registros`);
-                    // Converter formato do banco para formato interno
-                    return dbLeads.map(lead => ({
-                        id: lead.id,
-                        nome: lead.nome,
-                        email: lead.email,
-                        telefone: lead.telefone,
-                        empresa: lead.empresa,
-                        cargo: lead.cargo,
-                        origem: lead.origem,
-                        journeyStage: lead.journey_stage || 'descoberta',
-                        status: lead.status || 'ativo',
-                        conversations: lead.conversations || [],
-                        bookings: lead.bookings || [],
-                        metadata: lead.metadata || {},
-                        timestamp: lead.created_at,
-                        lastInteraction: lead.last_interaction
-                    }));
-                }
-            } catch (error) {
-                console.error('⚠️ Erro ao carregar do PostgreSQL, usando fallback JSON:', error.message);
-                this.useDatabase = false;
-            }
-        }
-
-        // Fallback: Carregar do arquivo JSON
-        return this.loadLeadsFromJSON();
-    }
-
-    loadLeadsFromJSON() {
+    loadLeads() {
         try {
             if (fs.existsSync(this.leadsFilePath)) {
                 const data = fs.readFileSync(this.leadsFilePath, "utf8");
                 const leads = JSON.parse(data);
-                console.error(`📥 Leads carregados do JSON: ${leads.length} registros`);
+                console.log(`📥 Leads carregados: ${leads.length} registros`);
                 return leads;
             }
         } catch (error) {
-            console.error("❌ Erro ao carregar leads do JSON:", error);
+            console.error("❌ Erro ao carregar leads:", error);
         }
-        console.error("📝 Inicializando novo arquivo de leads");
+        console.log("📝 Inicializando novo arquivo de leads");
         return [];
     }
 
-    async migrateFromJSON() {
-        try {
-            // Verificar se há dados JSON para migrar
-            if (!fs.existsSync(this.leadsFilePath)) {
-                return; // Nenhum arquivo JSON para migrar
-            }
-
-            const jsonData = fs.readFileSync(this.leadsFilePath, "utf8");
-            const jsonLeads = JSON.parse(jsonData);
-
-            if (!jsonLeads || jsonLeads.length === 0) {
-                return; // Nenhum lead para migrar
-            }
-
-            // Verificar se já há leads no PostgreSQL
-            const dbLeads = await DatabaseHelpers.getLeadsByApiKey(this.apiKey);
-            if (dbLeads && dbLeads.length > 0) {
-                console.error(`ℹ️ PostgreSQL já tem ${dbLeads.length} leads, pulando migração`);
-                return;
-            }
-
-            console.error(`🔄 Migrando ${jsonLeads.length} leads do JSON para PostgreSQL...`);
-
-            for (const lead of jsonLeads) {
-                try {
-                    await DatabaseHelpers.saveLead(this.apiKey, {
-                        id: lead.id,
-                        nome: lead.nome,
-                        email: lead.email,
-                        telefone: lead.telefone,
-                        empresa: lead.empresa,
-                        cargo: lead.cargo,
-                        origem: lead.origem,
-                        journey_stage: lead.journeyStage || 'descoberta',
-                        status: lead.status || 'ativo',
-                        conversations: lead.conversations || [],
-                        bookings: lead.bookings || [],
-                        metadata: lead.metadata || {}
-                    });
-                } catch (err) {
-                    console.error(`⚠️ Erro ao migrar lead ${lead.id}:`, err.message);
-                }
-            }
-
-            console.error(`✅ Migração concluída: ${jsonLeads.length} leads migrados para PostgreSQL`);
-
-            // Renomear arquivo JSON como backup
-            const backupPath = this.leadsFilePath.replace('.json', '.json.migrated');
-            fs.renameSync(this.leadsFilePath, backupPath);
-            console.error(`📁 Arquivo JSON renomeado para: ${backupPath}`);
-
-        } catch (error) {
-            console.error('❌ Erro na migração de dados:', error);
-        }
-    }
-
     saveLeads() {
-        // Salvar no PostgreSQL se disponível
-        if (this.useDatabase) {
-            this.saveLeadsToDatabase();
-        }
-
-        // Sempre manter backup em JSON (para redundância)
-        return this.saveLeadsToJSON();
-    }
-
-    async saveLeadsToDatabase() {
-        try {
-            for (const lead of this.leads) {
-                await DatabaseHelpers.saveLead(this.apiKey, {
-                    id: lead.id,
-                    nome: lead.nome,
-                    email: lead.email,
-                    telefone: lead.telefone,
-                    empresa: lead.empresa,
-                    cargo: lead.cargo,
-                    origem: lead.origem,
-                    journey_stage: lead.journeyStage || 'descoberta',
-                    status: lead.status || 'ativo',
-                    conversations: lead.conversations || [],
-                    bookings: lead.bookings || [],
-                    metadata: lead.metadata || {}
-                });
-            }
-            console.error(`💾 Leads salvos no PostgreSQL: ${this.leads.length} registros`);
-            return true;
-        } catch (error) {
-            console.error('❌ Erro ao salvar leads no PostgreSQL:', error);
-            return false;
-        }
-    }
-
-    saveLeadsToJSON() {
         try {
             fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
-            console.error(`💾 Leads salvos em JSON: ${this.leads.length} registros`);
+            console.log(`💾 Leads salvos: ${this.leads.length} registros`);
             return true;
         } catch (error) {
-            console.error("❌ Erro ao salvar leads em JSON:", error);
+            console.error("❌ Erro ao salvar leads:", error);
             return false;
         }
     }
@@ -913,7 +776,7 @@ class LeadCaptureSystem {
 
         this.leads.push(lead);
         this.saveLeads();
-        console.error(`🎯 NOVO LEAD: ${lead.nome} (${lead.email})`);
+        console.log(`🎯 NOVO LEAD: ${lead.nome} (${lead.email})`);
         return lead;
     }
 
@@ -964,32 +827,107 @@ class LeadCaptureSystem {
         return this.leads.find(l => l.email === email);
     }
 
-    addBooking(bookingData) {
-        const lead = this.findLeadByEmail(bookingData.email);
+    // 🎯 Encontrar lead por conversationId para rastrear mensagens
+    findLeadByConversationId(conversationId) {
+        return this.leads.find(l => l.conversationId === conversationId);
+    }
 
-        if (!lead) {
-            console.error("❌ Erro ao adicionar agendamento: Lead não encontrado.");
-            return null;
+    // ===== 📅 SISTEMA DE AGENDAMENTOS =====
+
+    initializeAppointments() {
+        this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+        this.appointments = this.loadAppointments();
+        console.log(`📅 Sistema de Agendamentos: ${this.appointments.length} agendamentos carregados`);
+    }
+
+    loadAppointments() {
+        try {
+            if (!this.appointmentsFilePath) {
+                this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+            }
+            if (fs.existsSync(this.appointmentsFilePath)) {
+                const data = fs.readFileSync(this.appointmentsFilePath, "utf8");
+                return JSON.parse(data);
+            }
+        } catch (error) {
+            console.error("❌ Erro ao carregar agendamentos:", error);
+        }
+        return [];
+    }
+
+    saveAppointments() {
+        try {
+            if (!this.appointmentsFilePath) {
+                this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+            }
+            fs.writeFileSync(this.appointmentsFilePath, JSON.stringify(this.appointments || [], null, 2));
+            console.log(`💾 Agendamentos salvos: ${(this.appointments || []).length} registros`);
+            return true;
+        } catch (error) {
+            console.error("❌ Erro ao salvar agendamentos:", error);
+            return false;
+        }
+    }
+
+    addAppointment(appointmentData) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
         }
 
-        // Adicionar o agendamento ao lead existente
-        if (!lead.bookings) {
-            lead.bookings = [];
-        }
-
-        const booking = {
+        const appointment = {
             id: crypto.randomBytes(8).toString("hex"),
-            timestamp: new Date().toISOString(),
-            ...bookingData,
-            status: "pendente"
+            createdAt: new Date().toISOString(),
+            leadId: appointmentData.leadId || null,
+            leadName: appointmentData.leadName || 'Não informado',
+            leadEmail: appointmentData.leadEmail || 'Não informado',
+            leadPhone: appointmentData.leadPhone || '',
+            datetime: appointmentData.datetime,
+            status: 'pendente', // pendente, confirmado, cancelado, realizado
+            notes: appointmentData.notes || '',
+            robotName: appointmentData.robotName || 'Assistente IA',
+            urlOrigem: appointmentData.urlOrigem || ''
         };
 
-        lead.bookings.push(booking);
-        lead.journeyStage = "negociacao"; // Mudar o estágio da jornada
-        this.saveLeads();
+        this.appointments.push(appointment);
+        this.saveAppointments();
+        console.log(`📅 NOVO AGENDAMENTO: ${appointment.leadName} - ${appointment.datetime}`);
+        return appointment;
+    }
 
-        console.error(`📅 NOVO AGENDAMENTO: ${lead.nome} para ${booking.horario}`);
-        return booking;
+    getAppointments() {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+        return (this.appointments || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    getAppointmentById(appointmentId) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+        return this.appointments.find(a => a.id === appointmentId);
+    }
+
+    updateAppointmentStatus(appointmentId, status) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+        const appointment = this.appointments.find(a => a.id === appointmentId);
+        if (appointment && ['pendente', 'confirmado', 'cancelado', 'realizado'].includes(status)) {
+            appointment.status = status;
+            appointment.updatedAt = new Date().toISOString();
+            this.saveAppointments();
+            console.log(`📅 Agendamento ${appointmentId} atualizado para: ${status}`);
+            return appointment;
+        }
+        return null;
+    }
+
+    getAppointmentsByLeadId(leadId) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
+        return this.appointments.filter(a => a.leadId === leadId);
     }
 }
 
@@ -1031,8 +969,8 @@ class LeadBackupSystem {
         this.ensureBackupDirectory();
         this.maxBackups = 7; // Manter últimos 7 dias
         this.backupInterval = 24 * 60 * 60 * 1000; // 24 horas
-        console.error(`🔐 Sistema de Backup Inicializado`);
-        console.error(`📁 Diretório de backups: ${this.backupDir}`);
+        console.log(`🔐 Sistema de Backup Inicializado`);
+        console.log(`📁 Diretório de backups: ${this.backupDir}`);
 
         // Fazer backup inicial
         this.createBackup("startup");
@@ -1045,7 +983,7 @@ class LeadBackupSystem {
         try {
             if (!fs.existsSync(this.backupDir)) {
                 fs.mkdirSync(this.backupDir, { recursive: true });
-                console.error(`📁 Diretório de backups criado: ${this.backupDir}`);
+                console.log(`📁 Diretório de backups criado: ${this.backupDir}`);
             }
         } catch (error) {
             console.error("❌ Erro ao criar diretório de backups:", error);
@@ -1066,7 +1004,7 @@ class LeadBackupSystem {
             };
 
             fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
-            console.error(`✅ Backup criado: ${filename} (${this.leadSystem.leads.length} leads)`);
+            console.log(`✅ Backup criado: ${filename} (${this.leadSystem.leads.length} leads)`);
 
             // Limpar backups antigos
             this.cleanOldBackups();
@@ -1094,7 +1032,7 @@ class LeadBackupSystem {
                 const filesToDelete = files.slice(this.maxBackups);
                 filesToDelete.forEach(file => {
                     fs.unlinkSync(file.path);
-                    console.error(`🗑️ Backup antigo removido: ${file.name}`);
+                    console.log(`🗑️ Backup antigo removido: ${file.name}`);
                 });
             }
         } catch (error) {
@@ -1145,7 +1083,7 @@ class LeadBackupSystem {
             this.leadSystem.leads = backupData.leads;
             this.leadSystem.saveLeads();
 
-            console.error(`✅ Backup restaurado: ${filename} (${backupData.leadsCount} leads)`);
+            console.log(`✅ Backup restaurado: ${filename} (${backupData.leadsCount} leads)`);
 
             return {
                 success: true,
@@ -1160,16 +1098,16 @@ class LeadBackupSystem {
 
     scheduleAutomaticBackups() {
         setInterval(() => {
-            console.error("⏰ Executando backup automático diário...");
+            console.log("⏰ Executando backup automático diário...");
             this.createBackup("daily");
         }, this.backupInterval);
 
-        console.error(`⏰ Backup automático agendado (a cada 24 horas)`);
+        console.log(`⏰ Backup automático agendado (a cada 24 horas)`);
     }
 
     setupShutdownHook() {
         const shutdown = () => {
-            console.error("🛑 Servidor encerrando - Criando backup final...");
+            console.log("🛑 Servidor encerrando - Criando backup final...");
             this.createBackup("shutdown");
             process.exit(0);
         };
@@ -1263,7 +1201,7 @@ const journeyAnalyzer = new JourneyAnalyzer();
 // ===== SISTEMA DE CAPTURA DE INTENÇÕES DO CLIENTE =====
 class SistemaCapturaInteligencias {
     constructor() {
-        console.error("🎯 Sistema de Captura de Intenções Inicializado");
+        console.log("🎯 Sistema de Captura de Intenções Inicializado");
     }
 
     capturarInteligencias(mensagem) {
@@ -1347,7 +1285,7 @@ class SistemaCapturaInteligencias {
             inteligencias.suporte = true;
         }
 
-        console.error(`🎯 Intenções detectadas:`, inteligencias);
+        console.log(`🎯 Intenções detectadas:`, inteligencias);
         return inteligencias;
     }
 
@@ -1435,7 +1373,7 @@ const sistemaInteligencias = new SistemaCapturaInteligencias();
 // ===== SISTEMA APRIMORADO DE EXTRAÇÃO DE CONTATOS =====
 class SistemaExtracaoContatosAprimorado {
     constructor() {
-        console.error("📞 Sistema Aprimorado de Extração de Contatos Inicializado");
+        console.log("📞 Sistema Aprimorado de Extração de Contatos Inicializado");
     }
 
     extrairContatosAprimorado($) {
@@ -1485,12 +1423,12 @@ class SistemaExtracaoContatosAprimorado {
                             if (isWhatsApp) {
                                 if (!contatos.whatsapp.includes(numeroFormatado)) {
                                     contatos.whatsapp.push(numeroFormatado);
-                                    console.error(`📞 WhatsApp detectado: ${numeroFormatado}`);
+                                    console.log(`📞 WhatsApp detectado: ${numeroFormatado}`);
                                 }
                             } else {
                                 if (!contatos.telefone.includes(numeroFormatado)) {
                                     contatos.telefone.push(numeroFormatado);
-                                    console.error(`📞 Telefone detectado: ${numeroFormatado}`);
+                                    console.log(`📞 Telefone detectado: ${numeroFormatado}`);
                                 }
                             }
                         }
@@ -1503,7 +1441,7 @@ class SistemaExtracaoContatosAprimorado {
             const emails = textoPagina.match(emailRegex);
             if (emails) {
                 contatos.email = [...new Set(emails)]; // Remove duplicatas
-                console.error(`📧 Emails detectados: ${contatos.email.length}`);
+                console.log(`📧 Emails detectados: ${contatos.email.length}`);
             }
 
             // 🎯 EXTRAÇÃO DE SITES
@@ -1511,7 +1449,7 @@ class SistemaExtracaoContatosAprimorado {
             const sites = textoPagina.match(siteRegex);
             if (sites) {
                 contatos.site = [...new Set(sites.slice(0, 3))]; // Limita a 3 sites únicos
-                console.error(`🌐 Sites detectados: ${contatos.site.length}`);
+                console.log(`🌐 Sites detectados: ${contatos.site.length}`);
             }
 
             // 🎯 BUSCA EM ELEMENTOS ESPECÍFICOS PARA CONTATOS
@@ -1575,7 +1513,7 @@ class SistemaExtracaoContatosAprimorado {
                 }
             });
 
-            console.error(`📊 Resumo de contatos extraídos:`, {
+            console.log(`📊 Resumo de contatos extraídos:`, {
                 telefones: contatos.telefone.length,
                 whatsapp: contatos.whatsapp.length,
                 emails: contatos.email.length,
@@ -1656,7 +1594,7 @@ const sistemaContatosAprimorado = new SistemaExtracaoContatosAprimorado();
 // ===== SISTEMA DE SUPERINTELIGÊNCIA EMOCIONAL =====
 class SuperInteligenciaEmocional {
     constructor() {
-        console.error("🧠 Sistema de SuperInteligência Emocional Inicializado");
+        console.log("🧠 Sistema de SuperInteligência Emocional Inicializado");
 
         // Mapeamento de emoções e sentimentos
         this.emociones = {
@@ -1757,7 +1695,7 @@ class SuperInteligenciaEmocional {
             intensidade += 1;
         }
 
-        console.error(`🎭 Análise Emocional: ${emocao} (intensidade: ${intensidade}) ${urgencia ? '🚨 URGENTE' : ''}`);
+        console.log(`🎭 Análise Emocional: ${emocao} (intensidade: ${intensidade}) ${urgencia ? '🚨 URGENTE' : ''}`);
 
         return { emocao, intensidade, urgencia };
     }
@@ -1775,7 +1713,7 @@ class SuperInteligenciaEmocional {
             personalidade = "motivacional";
         }
 
-        console.error(`🎨 Personalidade selecionada: ${personalidade}`);
+        console.log(`🎨 Personalidade selecionada: ${personalidade}`);
         return this.personalidades[personalidade];
     }
 
@@ -1840,25 +1778,51 @@ class SuperInteligenciaEmocional {
         );
 
         if (isAgendamento) {
-            console.error("📅 Solicitação de agendamento detectada");
-            // Em vez de listar horários no chat, instruir o usuário a usar o botão "Agendar"
-            return `**📅 AGENDAMENTO DETECTADO**\n\n` +
-                `Para agendar sua reunião, por favor, clique no botão **"Agendar"** no topo da tela. Você será direcionado para a seleção de horários.`;
+            console.log("📅 Solicitação de agendamento detectada");
+            return this.gerarOpcoesAgendamento();
         }
 
         return null;
     }
 
-    // Esta função não é mais usada, pois o agendamento é feito via formulário
     gerarOpcoesAgendamento() {
-        return null;
+        const horarios = this.horariosDisponiveis.slice(0, 3); // 3 primeiros horários
+        let resposta = `**📅 AGENDAMENTO DISPONÍVEL**\n\n`;
+        resposta += `Encontrei estes horários para nossa conversa:\n\n`;
+
+        horarios.forEach((horario, index) => {
+            resposta += `${index + 1}. ${horario}\n`;
+        });
+
+        resposta += `\n💬 **Qual horário prefere?**\n`;
+        resposta += `📞 Ou se preferir, posso passar nossos contatos diretos!`;
+
+        return resposta;
     }
 
-    // O processamento de agendamento agora é feito via formulário e rota de API
-    // Este método é mantido apenas para compatibilidade ou para detectar confirmações
     processarAgendamento(mensagem) {
-        // Não é mais necessário processar a seleção de horário via chat, pois usamos o formulário.
-        // Mantemos a função para evitar erros, mas ela não terá mais a lógica de seleção.
+        const mensagemLower = mensagem.toLowerCase();
+
+        // Detectar seleção de horário
+        for (let i = 0; i < this.horariosDisponiveis.length; i++) {
+            if (mensagemLower.includes((i + 1).toString()) ||
+                mensagemLower.includes(this.horariosDisponiveis[i].toLowerCase())) {
+
+                const horarioSelecionado = this.horariosDisponiveis[i];
+                const mensagemConfirmacao = `✅ **AGENDAMENTO CONFIRMADO!**\n\n` +
+                    `📅 **Horário:** ${horarioSelecionado}\n` +
+                    `🎯 **Próximo passo:** Nossa equipe entrará em contato para confirmar.\n` +
+                    `📞 **Contato direto:** Veja nossos canais acima! ⬆️`;
+
+                // Retornar objeto estruturado para persistência
+                return {
+                    confirmed: true,
+                    datetime: horarioSelecionado,
+                    message: mensagemConfirmacao
+                };
+            }
+        }
+
         return null;
     }
 }
@@ -2008,7 +1972,7 @@ class SistemaExtracaoApurado {
 
     async extrairDadosCompletos(url) {
         try {
-            console.error('🌐 [EXTRACAO APRIMORADA] Conectando à:', url);
+            console.log('🌐 [EXTRACAO APRIMORADA] Conectando à:', url);
             const { data } = await axios.get(url, {
                 timeout: 30000,
                 headers: {
@@ -2030,7 +1994,7 @@ class SistemaExtracaoApurado {
                 contatos: sistemaContatosAprimorado.extrairContatosAprimorado($)
             };
 
-            console.error(`✅ [EXTRACAO] Concluída: ${dadosExtraidos.bonus.length} bônus encontrados`);
+            console.log(`✅ [EXTRACAO] Concluída: ${dadosExtraidos.bonus.length} bônus encontrados`);
             return dadosExtraidos;
         } catch (error) {
             console.error('❌ [EXTRACAO] Erro:', error.message);
@@ -2223,7 +2187,7 @@ class ValidacaoCruzada {
     }
 
     validarDadosCompletos(dadosExtraidos) {
-        console.error('🔍 [VALIDAÇÃO] Iniciando validação cruzada...');
+        console.log('🔍 [VALIDAÇÃO] Iniciando validação cruzada...');
 
         const validacoes = {
             bonus: this.validarBonusCruzado(dadosExtraidos),
@@ -2235,7 +2199,7 @@ class ValidacaoCruzada {
         const dadosValidados = this.aplicarCorrecoes(dadosExtraidos, validacoes);
         const pontuacaoConfianca = this.calcularPontuacaoConfianca(validacoes);
 
-        console.error(`✅ [VALIDAÇÃO] Concluída: ${pontuacaoConfianca * 100}% de confiança`);
+        console.log(`✅ [VALIDAÇÃO] Concluída: ${pontuacaoConfianca * 100}% de confiança`);
 
         return {
             dadosValidados,
@@ -2451,7 +2415,7 @@ if (process.env.REDIS_URL) {
         prefix: "linkmagico:"
     });
 
-    console.error("✅ Redis configurado para sessões");
+    console.log("✅ Redis configurado para sessões");
 } else {
     console.warn("⚠️  Redis não configurado - usando MemoryStore (não recomendado para produção)");
 }
@@ -2559,7 +2523,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/validate-api-key", (req, res) => {
-    const { apiKey } = req.body;
+    const apiKey = req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
         return res.status(400).json({
@@ -2600,9 +2564,15 @@ app.get("/excluir-dados", (req, res) => {
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
     const leads = leadSystem.getLeads();
-    console.error(`📊 Retornando ${leads.length} leads para admin`);
+    console.log(`📊 Retornando ${leads.length} leads para admin`);
     res.json({
         success: true,
         leads: leads,
@@ -2611,7 +2581,13 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
     const lead = leadSystem.getLeadById(req.params.id);
     if (lead) {
         res.json({ success: true, lead });
@@ -2622,15 +2598,27 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
-    const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const backupSystem = getBackupSystem(leadSystem, apiKey);
     const result = backupSystem.createBackup("manual");
     res.json(result);
 });
 
 app.get("/admin/leads/backup/list", requireApiKey, (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
-    const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const backupSystem = getBackupSystem(leadSystem, apiKey);
     const backups = backupSystem.listBackups();
     res.json({
         success: true,
@@ -2648,10 +2636,138 @@ app.post("/admin/leads/backup/restore", requireApiKey, (req, res) => {
             error: "Nome do arquivo de backup é obrigatório"
         });
     }
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
-    const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
+
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const backupSystem = getBackupSystem(leadSystem, apiKey);
     const result = backupSystem.restoreBackup(filename);
     res.json(result);
+});
+
+// ===== 📅 ENDPOINTS DE AGENDAMENTOS =====
+
+// Listar todos os agendamentos
+app.get("/admin/appointments", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointments = leadSystem.getAppointments();
+
+    console.log(`📅 Retornando ${appointments.length} agendamentos para admin`);
+    res.json({
+        success: true,
+        appointments,
+        total: appointments.length
+    });
+});
+
+// Obter agendamento específico
+app.get("/admin/appointments/:id", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointment = leadSystem.getAppointmentById(req.params.id);
+
+    if (!appointment) {
+        return res.status(404).json({ success: false, error: "Agendamento não encontrado" });
+    }
+
+    res.json({ success: true, appointment });
+});
+
+// Criar novo agendamento
+app.post("/api/appointments", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const { leadId, leadName, leadEmail, leadPhone, datetime, notes, robotName, urlOrigem } = req.body;
+
+    if (!datetime) {
+        return res.status(400).json({ success: false, error: "Data/hora é obrigatória" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointment = leadSystem.addAppointment({
+        leadId,
+        leadName,
+        leadEmail,
+        leadPhone,
+        datetime,
+        notes,
+        robotName,
+        urlOrigem
+    });
+
+    res.json({
+        success: true,
+        appointment,
+        message: "Agendamento criado com sucesso"
+    });
+});
+
+// Atualizar status do agendamento
+app.put("/admin/appointments/:id/status", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const { status } = req.body;
+
+    if (!status || !['pendente', 'confirmado', 'cancelado', 'realizado'].includes(status)) {
+        return res.status(400).json({
+            success: false,
+            error: "Status inválido. Use: pendente, confirmado, cancelado ou realizado"
+        });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointment = leadSystem.updateAppointmentStatus(req.params.id, status);
+
+    if (!appointment) {
+        return res.status(404).json({ success: false, error: "Agendamento não encontrado" });
+    }
+
+    res.json({
+        success: true,
+        appointment,
+        message: `Status atualizado para: ${status}`
+    });
+});
+
+// Obter agendamentos de um lead específico
+app.get("/admin/leads/:leadId/appointments", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const appointments = leadSystem.getAppointmentsByLeadId(req.params.leadId);
+
+    res.json({
+        success: true,
+        appointments,
+        total: appointments.length
+    });
 });
 
 // ===== DOCUMENTAÇÃO DA API =====
@@ -2807,11 +2923,12 @@ app.get("/api/docs", (req, res) => {
 // ===== STATUS DO SISTEMA DE BACKUP =====
 app.get("/admin/backup/status", requireApiKey, (req, res) => {
     try {
-        const leadSystem = getLeadSystem(req.cliente.apiKey);
-        const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
+        const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+        const leadSystem = getLeadSystem(apiKey);
+        const backupSystem = getBackupSystem(leadSystem, apiKey);
 
         const backups = backupSystem.listBackups();
-        const backupDir = getTenantBackupDirPath(req.cliente.apiKey);
+        const backupDir = getTenantBackupDirPath(apiKey);
 
         const status = {
             sistema: "Sistema de Backup de Leads",
@@ -2845,8 +2962,9 @@ app.get("/admin/backup/status", requireApiKey, (req, res) => {
 // ===== TESTE DO SISTEMA DE BACKUP =====
 app.post("/admin/backup/test", requireApiKey, (req, res) => {
     try {
-        const leadSystem = getLeadSystem(req.cliente.apiKey);
-        const backupSystem = getBackupSystem(leadSystem, req.cliente.apiKey);
+        const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+        const leadSystem = getLeadSystem(apiKey);
+        const backupSystem = getBackupSystem(leadSystem, apiKey);
 
         // Criar backup de teste
         const resultado = backupSystem.createBackup("teste");
@@ -2877,24 +2995,37 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
 });
 
 // ROTA CHAT.HTML
-app.get("/chat.html", (req, res) => {
-    // Aceitar tanto 'name' quanto 'robotName' para compatibilidade com widget balloon
-    const robotName = req.query.robotName || req.query.name || "Assistente IA";
-    const url = req.query.url || "";
-    const instructions = req.query.instructions || "";
+app.get("/chat.html", async (req, res) => {
+    try {
+        const robotName = req.query.name || "Assistente IA";
+        const url = req.query.url || "";
+        const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+        const instructions = req.query.instructions || "";
 
-    const chatbotHTML = generateChatbotHTML({ robotName, url, instructions });
-    res.send(chatbotHTML);
+        let pageData = {};
+        if (url) {
+            try {
+                pageData = await extractPageData(url);
+            } catch (extractError) {
+                console.warn('Failed to extract page data in chat.html:', extractError.message || extractError);
+            }
+        }
+
+        const chatbotHTML = generateFullChatbotHTML(pageData, robotName, instructions, apiKey);
+        res.send(chatbotHTML);
+    } catch (error) {
+        logger.error('Chat.html route error:', error.message || error);
+        res.status(500).send('Erro interno ao gerar chat.html');
+    }
 });
 
 // ROTA CHATBOT COMPLETA
 app.get("/chatbot", async (req, res) => {
     try {
-        // Aceitar tanto 'name' quanto 'robotName' para compatibilidade com widget balloon
-        const robotName = req.query.robotName || req.query.name || "Assistente IA";
+        const robotName = req.query.name || "Assistente IA";
         const url = req.query.url || "";
+        const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
-        const apiKey = req.query.apiKey || ""; // Extrair apiKey para agendamento
 
         let pageData = {};
         if (url) {
@@ -2910,7 +3041,8 @@ app.get("/chatbot", async (req, res) => {
         res.send(html);
     } catch (error) {
         logger.error('Chatbot route error:', error.message || error);
-        res.status(500).send('Erro interno ao gerar chatbot');
+        // Retorna uma mensagem de erro mais amigável para o Preview
+        res.status(500).send('<h1>Internal Server Error</h1><p>Erro ao gerar chatbot. Verifique os logs do servidor.</p>');
     }
 });
 
@@ -3419,7 +3551,7 @@ function shouldActivateSalesMode(instructions) {
 }
 
 // ===== FUNÇÃO APRIMORADA DE RESPOSTA DA IA COM SUPERINTELIGÊNCIA =====
-async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null) {
+async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null, apiKey = null) {
     const startTime = Date.now();
     try {
         if (!userMessage || !String(userMessage).trim()) {
@@ -3453,7 +3585,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
 
         // Atualizar estágio do lead se existir
         if (leadId) {
-            const leadSystem = getLeadSystem(process.env.API_KEYS_JSON ? JSON.parse(process.env.API_KEYS_JSON)[0] : "default");
+            const leadSystem = getLeadSystem(apiKey);
             leadSystem.updateLeadJourneyStage(leadId, journeyStage);
         }
 
@@ -3624,12 +3756,12 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         const finalResponse = String(response).replace(/<s>\s*\[OUT\]/g, '').replace(/<[^>]*>/g, '').replace(/\[.*?\]/g, '').trim();
         const responseTime = Date.now() - startTime;
 
-        console.error(`🧠 [SUPERINTELIGÊNCIA] Resposta Gerada:`);
-        console.error(`   Emoção: ${estadoEmocional.emocaoPrimaria} | Intenções: ${estadoEmocional.intencoesMultiplas.length}`);
-        console.error(`   Jornada: ${journeyStage} | Sarcasmo: ${estadoEmocional.sarcasmo}`);
-        console.error(`   Usuário: "${cleanUserMessage.substring(0, 50)}..."`);
-        console.error(`   Resposta: "${finalResponse.substring(0, 50)}..."`);
-        console.error(`   Provedor: ${usedProvider}, Tempo: ${responseTime}ms`);
+        console.log(`🧠 [SUPERINTELIGÊNCIA] Resposta Gerada:`);
+        console.log(`   Emoção: ${estadoEmocional.emocaoPrimaria} | Intenções: ${estadoEmocional.intencoesMultiplas.length}`);
+        console.log(`   Jornada: ${journeyStage} | Sarcasmo: ${estadoEmocional.sarcasmo}`);
+        console.log(`   Usuário: "${cleanUserMessage.substring(0, 50)}..."`);
+        console.log(`   Resposta: "${finalResponse.substring(0, 50)}..."`);
+        console.log(`   Provedor: ${usedProvider}, Tempo: ${responseTime}ms`);
 
         logger.info(`AI response generated in ${responseTime}ms using ${usedProvider}`);
         return finalResponse;
@@ -3751,6 +3883,12 @@ function generateLocalResponse(userMessage, pageData = {}, instructions = "", jo
 
 // ===== API Routes =====
 app.get("/health", (req, res) => {
+    // Implementação da rota /health...
+});
+
+// Rota de status para o dashboard (alias para /health)
+app.get("/api/system/status", (req, res) => {
+    // Reutiliza a lógica de /health
     const uptime = process.uptime();
     const avgResponseTime = analytics.responseTimeHistory.length > 0 ?
         Math.round(analytics.responseTimeHistory.reduce((a, b) => a + b, 0) / analytics.responseTimeHistory.length) : 0;
@@ -3782,81 +3920,49 @@ app.get("/health", (req, res) => {
     });
 });
 
-// ===== ENDPOINT: Agendamento de Reunião =====
-app.post("/api/schedule-booking", async (req, res) => {
-    try {
-        const { nome, email, horario, apiKey } = req.body || {};
+app.get("/health", (req, res) => {
+    const uptime = process.uptime();
+    const avgResponseTime = analytics.responseTimeHistory.length > 0 ?
+        Math.round(analytics.responseTimeHistory.reduce((a, b) => a + b, 0) / analytics.responseTimeHistory.length) : 0;
 
-        // 1. Validação de Dados Essenciais
-        if (!apiKey) {
-            return res.status(401).json({ success: false, error: "API Key é obrigatória" });
+    res.json({
+        status: "healthy",
+        uptime: Math.floor(uptime),
+        timestamp: new Date().toISOString(),
+        version: "7.0.0",
+        analytics: {
+            totalRequests: analytics.totalRequests,
+            chatRequests: analytics.chatRequests,
+            extractRequests: analytics.extractRequests,
+            errors: analytics.errors,
+            activeChats: analytics.activeChats.size,
+            avgResponseTime,
+            successfulExtractions: analytics.successfulExtractions,
+            failedExtractions: analytics.failedExtractions,
+            cacheSize: dataCache.size,
+            leadsCaptured: analytics.leadsCaptured
+        },
+        services: {
+            groq: !!process.env.GROQ_API_KEY,
+            openai: !!process.env.OPENAI_API_KEY,
+            openrouter: !!process.env.OPENROUTER_API_KEY,
+            puppeteer: !!puppeteer,
+            superinteligencia: true
         }
-        if (!email || !horario) {
-            return res.status(400).json({ success: false, error: "Email e Horário são obrigatórios para agendamento" });
-        }
-
-        const leadSystem = getLeadSystem(apiKey);
-        let lead = leadSystem.findLeadByEmail(email);
-
-        // 2. Se o lead não existir, criar um lead básico
-        if (!lead) {
-            lead = leadSystem.addLead({
-                nome: nome || "Agendamento - Não Informado",
-                email: email,
-                telefone: req.body.telefone || "Não Informado",
-                url_origem: req.body.url_origem || "",
-                robotName: req.body.robotName || "Assistente IA",
-                journeyStage: "negociacao"
-            });
-        }
-
-        // 3. Adicionar o agendamento ao lead
-        const booking = leadSystem.addBooking({
-            nome: lead.nome,
-            email: lead.email,
-            horario: horario,
-            url_origem: req.body.url_origem || "",
-            robotName: req.body.robotName || "Assistente IA"
-        });
-
-        // 4. Notificação (Simulada)
-        console.error(`🔔 NOTIFICAÇÃO DE AGENDAMENTO - API Key: ${apiKey}`);
-        console.error(`   - Lead: ${lead.nome} (${lead.email})`);
-        console.error(`   - Horário Solicitado: ${horario}`);
-        console.error(`   - Status: Pendente de Confirmação`);
-
-        // 5. Resposta de Sucesso
-        res.json({
-            success: true,
-            booking: booking,
-            message: "Agendamento registrado com sucesso! Nossa equipe entrará em contato para confirmar."
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao processar agendamento:", error);
-        res.status(500).json({
-            success: false,
-            error: "Erro interno ao processar agendamento"
-        });
-    }
+    });
 });
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
     try {
-        const { nome, email, telefone, url_origem, robotName, apiKey } = req.body || {};
-
-        // Validar se apiKey foi fornecida (Comentado para resolver erro 401 no frontend)
-        /*
-        if (!apiKey) {
-            return res.status(401).json({ 
-                success: false, 
-                error: "API Key é obrigatória" 
-            });
-        }
-        */
-
-        const leadSystem = getLeadSystem(apiKey);
+        const { nome, email, telefone, url_origem, robotName, conversationId } = req.body || {};
 
         if (!email) {
             return res.status(400).json({
@@ -3875,18 +3981,19 @@ app.post("/api/capture-lead", async (req, res) => {
             });
         }
 
-        // Criar novo lead
+        // Criar novo lead com conversationId para rastrear mensagens
         const newLead = leadSystem.addLead({
             nome: nome || "Não informado",
             email,
             telefone: telefone || "Não informado",
             url_origem: url_origem || "",
-            robotName: robotName || "Assistente IA"
+            robotName: robotName || "Assistente IA",
+            conversationId: conversationId || null
         });
 
         analytics.leadsCaptured++;
 
-        console.error(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
+        console.log(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
 
         res.json({
             success: true,
@@ -3903,9 +4010,32 @@ app.post("/api/capture-lead", async (req, res) => {
     }
 });
 
+// ===== 📅 ENDPOINT: Buscar agendamentos de um lead =====
+app.get("/api/appointments/:leadId", async (req, res) => {
+    const apiKey = req.session.validatedApiKey || req.query.apiKey ||
+        (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "API Key não fornecida" });
+    }
+
+    const leadSystem = getLeadSystem(apiKey);
+    const { leadId } = req.params;
+
+    try {
+        const appointments = leadSystem.getAppointmentsByLeadId(leadId);
+        res.json({ success: true, appointments: appointments || [] });
+    } catch (error) {
+        console.error("❌ Erro ao buscar agendamentos:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
+
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
@@ -3928,15 +4058,23 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
         }
 
         // 🎯 ATUALIZAR CONVERSA DO LEAD SE EXISTIR
-        if (leadId) {
-            leadSystem.updateLeadConversation(leadId, message, true);
+        // Buscar lead por leadId ou conversationId
+        let effectiveLeadId = leadId;
+        if (!effectiveLeadId && conversationId) {
+            const leadByConversation = leadSystem.findLeadByConversationId(conversationId);
+            if (leadByConversation) {
+                effectiveLeadId = leadByConversation.id;
+            }
+        }
+        if (effectiveLeadId) {
+            leadSystem.updateLeadConversation(effectiveLeadId, message, true);
         }
 
-        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
+        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey);
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
-        if (leadId) {
-            leadSystem.updateLeadConversation(leadId, aiResponse, false);
+        if (effectiveLeadId) {
+            leadSystem.updateLeadConversation(effectiveLeadId, aiResponse, false);
         }
 
         let finalResponse = aiResponse;
@@ -3966,7 +4104,8 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const leadSystem = getLeadSystem(req.cliente.apiKey);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
@@ -3978,7 +4117,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             });
         }
 
-        console.error('🧠 [SUPER-INTELIGENCIA] Processando mensagem:', {
+        console.log('🧠 [SUPER-INTELIGENCIA] Processando mensagem:', {
             messageLength: message.length,
             url: url || 'none',
             leadId: leadId || 'none'
@@ -4011,9 +4150,17 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         );
 
         // 🎯 ATUALIZAR CONVERSA DO LEAD SE EXISTIR
-        if (leadId) {
-            leadSystem.updateLeadConversation(leadId, message, true);
-            leadSystem.updateLeadJourneyStage(leadId, journeyStage);
+        // Buscar lead por leadId ou conversationId
+        let effectiveLeadId = leadId;
+        if (!effectiveLeadId && conversationId) {
+            const leadByConversation = leadSystem.findLeadByConversationId(conversationId);
+            if (leadByConversation) {
+                effectiveLeadId = leadByConversation.id;
+            }
+        }
+        if (effectiveLeadId) {
+            leadSystem.updateLeadConversation(effectiveLeadId, message, true);
+            leadSystem.updateLeadJourneyStage(effectiveLeadId, journeyStage);
         }
 
         let finalResponse = "";
@@ -4022,13 +4169,31 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         const respostaAgendamento = superInteligencia.detectarAgendamento(message);
         if (respostaAgendamento) {
             finalResponse = respostaAgendamento;
-            console.error("📅 Resposta de agendamento gerada");
+            console.log("📅 Resposta de agendamento gerada");
         }
         // 🎯 PROCESSAR CONFIRMAÇÃO DE AGENDAMENTO
-        else if (superInteligencia.processarAgendamento(message)) {
-            finalResponse = superInteligencia.processarAgendamento(message);
-            console.error("✅ Confirmação de agendamento processada");
+        else if (superInteligencia.processarAgendamento(message)?.confirmed) {
+            const agendamentoData = superInteligencia.processarAgendamento(message);
+            finalResponse = agendamentoData.message;
+
+            // 🎯 PERSISTIR AGENDAMENTO NO SISTEMA
+            if (effectiveLeadId) {
+                const lead = leadSystem.getLeadById(effectiveLeadId);
+                leadSystem.addAppointment({
+                    leadId: effectiveLeadId,
+                    leadName: lead?.nome || 'Não informado',
+                    leadEmail: lead?.email || 'Não informado',
+                    leadPhone: lead?.telefone || '',
+                    datetime: agendamentoData.datetime,
+                    robotName: robotName || 'Assistente IA',
+                    urlOrigem: url || '',
+                    notes: `Agendado via chat`
+                });
+                console.log(`📅 AGENDAMENTO SALVO para lead ${effectiveLeadId}`);
+            }
+            console.log("✅ Confirmação de agendamento processada");
         }
+
         // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES FORAM DETECTADAS
         else if (Object.values(inteligencias).some(val => val === true)) {
             const contatos = processedPageData?.contatos || {};
@@ -4049,10 +4214,10 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             );
 
             finalResponse = respostaEmpatica + respostaContextual;
-            console.error(`🎭 Resposta emocional inteligente gerada`);
+            console.log(`🎭 Resposta emocional inteligente gerada`);
         } else {
             // 🎯 USAR SISTEMA ORIGINAL COM MELHORIAS EMOCIONAIS
-            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId);
+            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey);
 
             // Aplicar melhorias emocionais na resposta
             if (analiseEmocional.emocao === "negativo" && analiseEmocional.intensidade >= 2) {
@@ -4063,12 +4228,12 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
                 finalResponse = respostaIA;
             }
 
-            console.error(`🤖 Resposta IA com melhorias emocionais`);
+            console.log(`🤖 Resposta IA com melhorias emocionais`);
         }
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
-        if (leadId) {
-            leadSystem.updateLeadConversation(leadId, finalResponse, false);
+        if (effectiveLeadId) {
+            leadSystem.updateLeadConversation(effectiveLeadId, finalResponse, false);
         }
 
         return res.json({
@@ -4105,7 +4270,7 @@ app.post("/api/extract-enhanced", async (req, res) => {
     try {
         const { url } = req.body || {};
 
-        console.error("📥 [EXTRACAO APRIMORADA] Recebendo requisição para:", url);
+        console.log("📥 [EXTRACAO APRIMORADA] Recebendo requisição para:", url);
 
         if (!url) {
             return res.status(400).json({
@@ -4134,10 +4299,10 @@ app.post("/api/extract-enhanced", async (req, res) => {
 
         const validacao = sistemaValidacao.validarDadosCompletos(extractedData);
 
-        console.error("✅ [EXTRACAO APRIMORADA] Concluída com sucesso");
-        console.error(`🎯 Bônus encontrados: ${validacao.dadosValidados.bonus.length}`);
-        console.error(`📞 Contatos encontrados: ${validacao.dadosValidados.contatos ? Object.keys(validacao.dadosValidados.contatos).length : 0}`);
-        console.error(`📊 Confiança: ${(validacao.pontuacaoConfianca * 100).toFixed(1)}%`);
+        console.log("✅ [EXTRACAO APRIMORADA] Concluída com sucesso");
+        console.log(`🎯 Bônus encontrados: ${validacao.dadosValidados.bonus.length}`);
+        console.log(`📞 Contatos encontrados: ${validacao.dadosValidados.contatos ? Object.keys(validacao.dadosValidados.contatos).length : 0}`);
+        console.log(`📊 Confiança: ${(validacao.pontuacaoConfianca * 100).toFixed(1)}%`);
 
         return res.json({
             success: true,
@@ -4167,7 +4332,7 @@ app.post("/api/extract", async (req, res) => {
     try {
         const { url, instructions, robotName } = req.body || {};
 
-        console.error("📥 Recebendo requisição para extrair:", url);
+        console.log("📥 Recebendo requisição para extrair:", url);
 
         if (!url) {
             return res.status(400).json({
@@ -4192,7 +4357,7 @@ app.post("/api/extract", async (req, res) => {
         if (instructions) extractedData.custom_instructions = instructions;
         if (robotName) extractedData.robot_name = robotName;
 
-        console.error("✅ Extração concluída com sucesso");
+        console.log("✅ Extração concluída com sucesso");
 
         return res.json({
             success: true,
@@ -4217,7 +4382,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
     const escapedPageData = JSON.stringify(pageData || {});
     const safeRobotName = String(robotName || 'Assistente IA').replace(/"/g, '&quot;');
     const safeInstructions = String(customInstructions || '').replace(/"/g, '&quot;');
-    const safeApiKey = String(apiKey || '').replace(/"/g, '&quot;');
 
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
@@ -4293,15 +4457,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         <div class="chat-messages" id="chatMessages" style="display:none">
             <div class="chat-message bot">Olá! Sou ${safeRobotName}, estou aqui para tirar todas as suas dúvidas. Como posso ajudar você hoje?</div>
         </div>
-        <div id="agendamentoForm" class="lm-agendamento-form" style="display: none; flex-direction: column; padding: 20px; gap: 15px; background-color: #f9fafb; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h3 style="color: #1f2937; margin-top: 0;">📅 Agendar Reunião</h3>
-            <input type="text" id="agendamentoNome" placeholder="Seu Nome" class="lm-input" readonly style="background-color: #e5e7eb;">
-            <input type="email" id="agendamentoEmail" placeholder="Seu Email" class="lm-input" readonly style="background-color: #e5e7eb;">
-            <select id="agendamentoHorario" class="lm-input" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;"></select>
-            <button id="submitAgendamento" class="lm-button" style="background-color: #10b981; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Confirmar Agendamento</button>
-            <button id="cancelAgendamento" class="lm-button" style="background-color: #ef4444; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancelar</button>
-        </div>
-
         <div class="chat-input-container" id="chatInputContainer" style="display:none">
             <input type="text" class="chat-input" id="messageInput" placeholder="Digite sua mensagem..." autocomplete="off">
             <button class="send-button" id="sendButton"><i class="fas fa-paper-plane"></i></button>
@@ -4314,12 +4469,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         </div>
     </div>
     <script>
-        // Extrair parâmetros da URL
-        const urlParams = new URLSearchParams(window.location.search);
-        // Usar apiKey injetada pelo servidor ou extrair da URL como fallback
-        const apiKey = "${safeApiKey}" || urlParams.get('apiKey') || "";
-        const apiBase = window.location.origin; // Base URL para chamadas de API
-        
         const pageData = ${escapedPageData};
         const robotName = "${safeRobotName}";
         const customInstructions = "${safeInstructions}";
@@ -4331,99 +4480,15 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         const chatInputContainer = document.getElementById('chatInputContainer');
         const startChatBtn = document.getElementById('startChat');
         let leadId = null;
+        const currentApiKey = "${apiKey || ''}";
         let agendamentoAtivo = false;
 
         // Função para iniciar agendamento
         function iniciarAgendamento() {
-            // Se o lead ainda não foi capturado, capturar primeiro
-            if (!leadId) {
-                console.error('Por favor, preencha o formulário de leads primeiro para que possamos agendar.');
-                return;
-            }
-
-            // Ocultar o chat e mostrar o formulário de agendamento
-            chatMessages.style.display = 'none';
-            chatInputContainer.style.display = 'none';
-            document.getElementById('agendamentoForm').style.display = 'flex';
-            document.getElementById('agendamentoNome').value = document.getElementById('leadName').value.trim();
-            document.getElementById('agendamentoEmail').value = document.getElementById('leadEmail').value.trim();
-            
-            // Mostrar os horários disponíveis (simulação)
-            const horarios = [
-                "Segunda 09:00", "Terça 14:00", "Quarta 16:00",
-                "Quinta 10:00", "Sexta 15:00"
-            ];
-            const select = document.getElementById('agendamentoHorario');
-            select.innerHTML = '<option value="">Selecione um horário</option>';
-            horarios.forEach(h => {
-                const option = document.createElement('option');
-                option.value = h;
-                option.textContent = h;
-                select.appendChild(option);
-            });
+            const mensagem = "Gostaria de agendar uma reunião";
+            messageInput.value = mensagem;
+            sendMessage();
         }
-
-        // Função para submeter o agendamento
-        document.getElementById('submitAgendamento').addEventListener('click', async function() {
-            const nome = document.getElementById('agendamentoNome').value.trim();
-            const email = document.getElementById('agendamentoEmail').value.trim();
-            const horario = document.getElementById('agendamentoHorario').value;
-            // Usar apiKey global (definida no início do script)
-            const url_origem = urlParams.get('url');
-            const robotNameParam = urlParams.get('robotName') || robotName;
-
-            if (!horario) {
-                console.error('Por favor, selecione um horário disponível.');
-                return;
-            }
-
-            try {
-                const response = await fetch(apiBase + '/api/schedule-booking', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        nome,
-                        email,
-                        horario,
-                        apiKey,
-                        url_origem,
-                        robotName: robotNameParam
-                    }),
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-
-                    console.error('✅ Agenda Confirmado! Nossa equipe entrará em contato para confirmar o horário de ' + horario + '.');
-                    // FIX: Corrigido escopo da apiKey na submissão do agendamento para resolver erro 401.
-                    
-                    // Voltar para a tela de chat
-                    document.getElementById('agendamentoForm').style.display = 'none';
-                    chatMessages.style.display = 'flex';
-                    chatInputContainer.style.display = 'flex';
-                    
-                    // Enviar mensagem de confirmação no chat
-                    console.log('Agendamento para ' + horario + ' registrado com sucesso! Notificação de agendamento enviada.');
-
-                } else {
-                    console.error('Erro ao agendar: ' + result.error);
-                }
-            } catch (error) {
-                console.error('Erro ao submeter agendamento:', error);
-                console.error('Erro de conexão ao tentar agendar. Tente novamente mais tarde.');
-            }
-        });
-
-        // Função para cancelar o agendamento
-        document.getElementById('cancelAgendamento').addEventListener('click', function() {
-            document.getElementById('agendamentoForm').style.display = 'none';
-            chatMessages.style.display = 'flex';
-            chatInputContainer.style.display = 'flex';
-            appendMessage('🤖', 'Agendamento cancelado. Se precisar de ajuda, é só perguntar!', 'bot');
-        });
 
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
@@ -4431,7 +4496,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             const email = document.getElementById('leadEmail').value.trim();
             const phone = document.getElementById('leadPhone').value.trim();
             if (!email) {
-                console.error('Por favor, informe seu email');
+                alert('Por favor, informe seu email');
                 return;
             }
             try {
@@ -4444,7 +4509,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         telefone: phone || 'Não informado',
                         url_origem: window.location.href,
                         robotName: robotName,
-                        apiKey: apiKey
+                        apiKey: currentApiKey || new URLSearchParams(window.location.search).get('apiKey') || ''
                     })
                 });
                 const data = await response.json();
@@ -4458,7 +4523,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 }
             } catch (error) {
                 console.error('Erro ao capturar lead:', error);
-                console.error('Erro ao processar. Tente novamente.');
+                alert('Erro ao processar. Tente novamente.');
             }
         });
 
@@ -4590,15 +4655,6 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             <span class="typing-dot"></span>
             <span>Digitando...</span>
         </div>
-        <div id="agendamentoForm" class="lm-agendamento-form" style="display: none; flex-direction: column; padding: 20px; gap: 15px; background-color: #f9fafb; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h3 style="color: #1f2937; margin-top: 0;">📅 Agendar Reunião</h3>
-            <input type="text" id="agendamentoNome" placeholder="Seu Nome" class="lm-input" readonly style="background-color: #e5e7eb;">
-            <input type="email" id="agendamentoEmail" placeholder="Seu Email" class="lm-input" readonly style="background-color: #e5e7eb;">
-            <select id="agendamentoHorario" class="lm-input" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;"></select>
-            <button id="submitAgendamento" class="lm-button" style="background-color: #10b981; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Confirmar Agendamento</button>
-            <button id="cancelAgendamento" class="lm-button" style="background-color: #ef4444; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancelar</button>
-        </div>
-
         <div class="chat-input-container" id="chatInputContainer" style="display:none">
             <input type="text" class="chat-input" id="chatInput" placeholder="Digite sua pergunta..." maxlength="500">
             <button class="send-button" id="sendButton">
@@ -4607,10 +4663,6 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         </div>
     </div>
     <script>
-        // Extrair apiKey da URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const apiKey = urlParams.get('apiKey');
-        
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
@@ -4626,6 +4678,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         };
         let isTyping = false;
         let leadId = null;
+        const currentApiKey = "${apiKey || ''}";
 
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
@@ -4633,7 +4686,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             const email = document.getElementById('leadEmail').value.trim();
             const phone = document.getElementById('leadPhone').value.trim();
             if (!email) {
-                console.error('Por favor, informe seu email');
+                alert('Por favor, informe seu email');
                 return;
             }
             try {
@@ -4644,9 +4697,9 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                         nome: name || 'Não informado',
                         email: email,
                         telefone: phone || 'Não informado',
-                        url_origem: window.location.href,
-                        robotName: config.robotName,
-                        apiKey: apiKey
+url_origem: window.location.href,
+                        robotName: robotName,
+                        apiKey: currentApiKey || new URLSearchParams(window.location.search).get('apiKey') || ''
                     })
                 });
                 const data = await response.json();
@@ -4659,7 +4712,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
                 }
             } catch (error) {
                 console.error('Erro ao capturar lead:', error);
-                console.error('Erro ao processar. Tente novamente.');
+                alert('Erro ao processar. Tente novamente.');
             }
         });
 
@@ -4740,6 +4793,60 @@ function generateChatbotHTML({ robotName, url, instructions }) {
 // funcione corretamente em sites externos dos clientes
 
 // ===== CONFIGURAR NOVAS ROTAS =====
+
+// ===== MIDDLEWARE DE AUTENTICAÇÃO PARA ROTAS V3.0 =====
+function requireApiKeyV3(req, res, next) {
+    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+
+    if (apiKey) {
+        const validation = validateApiKey(apiKey);
+        if (validation.success) {
+            req.session.validatedApiKey = apiKey;
+            req.session.clientData = validation.client;
+            req.cliente = validation.client;
+            return next();
+        }
+    }
+
+    if (req.session && req.session.validatedApiKey) {
+        req.cliente = req.session.clientData;
+        return next();
+    }
+
+    return res.status(401).json({
+        success: false,
+        error: "API Key não fornecida ou inválida. Autenticação necessária."
+    });
+}
+
+// ===== MIDDLEWARE DE VALIDAÇÃO DE PROPRIEDADE DO CHATBOT =====
+function validateChatbotOwnership(req, res, next) {
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey;
+    const chatbotId = req.params.chatbotId || req.body.chatbotId;
+
+    if (!apiKey) {
+        return res.status(401).json({
+            success: false,
+            error: "API Key não fornecida"
+        });
+    }
+
+    if (!chatbotId) {
+        return res.status(400).json({
+            success: false,
+            error: "ChatbotId não fornecido"
+        });
+    }
+
+    // Verificar se o chatbotId pertence ao tenant
+    // Por segurança, o chatbotId deve começar com a apiKey ou ter um mapeamento
+    // Por enquanto, apenas garantir que apiKey existe
+    req.validatedChatbotId = chatbotId;
+    req.validatedApiKey = apiKey;
+
+    next();
+}
+
 setupRoutes(app);
 
 // ===== INICIALIZAR SISTEMAS =====
@@ -4752,7 +4859,7 @@ setupRoutes(app);
     // ===== ROTAS DAS NOVAS INTEGRAÇÕES V3.0 =====
 
     // Gmail Integration
-    app.post('/api/gmail/send', async (req, res) => {
+    app.post('/api/gmail/send', requireApiKeyV3, async (req, res) => {
         try {
             const { to, subject, html, text } = req.body;
             const result = await gmailManager.sendEmail({ to, subject, html, text });
@@ -4763,13 +4870,13 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/gmail/status', (req, res) => {
+    app.get('/api/gmail/status', requireApiKeyV3, (req, res) => {
         const status = gmailManager.getStatus();
         res.json(status);
     });
 
     // WhatsApp Integration
-    app.post('/api/whatsapp/send', async (req, res) => {
+    app.post('/api/whatsapp/send', requireApiKeyV3, async (req, res) => {
         try {
             const { to, message } = req.body;
             const result = await whatsappManager.sendMessage(to, message);
@@ -4780,13 +4887,13 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/whatsapp/status', (req, res) => {
+    app.get('/api/whatsapp/status', requireApiKeyV3, (req, res) => {
         const status = whatsappManager.getStatus();
         res.json(status);
     });
 
     // ChatGPT Integration
-    app.post('/api/chatgpt/generate', async (req, res) => {
+    app.post('/api/chatgpt/generate', requireApiKeyV3, async (req, res) => {
         try {
             const { prompt, model, pageContent } = req.body;
             const result = await chatgptManager.generateResponse(prompt, pageContent, model);
@@ -4797,18 +4904,18 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/chatgpt/status', (req, res) => {
+    app.get('/api/chatgpt/status', requireApiKeyV3, (req, res) => {
         const status = chatgptManager.getStatus();
         res.json(status);
     });
 
-    app.get('/api/chatgpt/models', (req, res) => {
+    app.get('/api/chatgpt/models', requireApiKeyV3, (req, res) => {
         const models = chatgptManager.getAvailableModels();
         res.json(models);
     });
 
     // Whitelabel System
-    app.post('/api/whitelabel/:chatbotId', async (req, res) => {
+    app.post('/api/whitelabel/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const config = req.body;
@@ -4820,7 +4927,7 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/whitelabel/:chatbotId', async (req, res) => {
+    app.get('/api/whitelabel/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const config = await whitelabelManager.getConfig(chatbotId);
@@ -4832,7 +4939,7 @@ setupRoutes(app);
     });
 
     // Structured Leads
-    app.post('/api/leads/structured', async (req, res) => {
+    app.post('/api/leads/structured', requireApiKeyV3, async (req, res) => {
         try {
             const { chatbotId, leadData, metadata } = req.body;
             const lead = await structuredLeadsManager.saveLead(chatbotId, leadData, metadata);
@@ -4852,7 +4959,7 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/leads/structured/:chatbotId', async (req, res) => {
+    app.get('/api/leads/structured/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const { status, limit, offset } = req.query;
@@ -4864,7 +4971,7 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/leads/export/:chatbotId', async (req, res) => {
+    app.get('/api/leads/export/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const csv = await structuredLeadsManager.exportToCSV(chatbotId);
@@ -4877,7 +4984,7 @@ setupRoutes(app);
         }
     });
 
-    app.get('/api/leads/stats/:chatbotId', async (req, res) => {
+    app.get('/api/leads/stats/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const stats = await structuredLeadsManager.getStats(chatbotId);
@@ -4889,12 +4996,12 @@ setupRoutes(app);
     });
 
     // CRM Integrations (documentação)
-    app.get('/api/crm/templates', (req, res) => {
+    app.get('/api/crm/templates', requireApiKeyV3, (req, res) => {
         const templates = crmIntegrations.getAllTemplates();
         res.json({ success: true, templates });
     });
 
-    app.get('/api/crm/templates/:crm', (req, res) => {
+    app.get('/api/crm/templates/:crm', requireApiKeyV3, (req, res) => {
         const { crm } = req.params;
         const template = crmIntegrations.getTemplate(crm);
         if (template) {
@@ -4904,30 +5011,30 @@ setupRoutes(app);
         }
     });
 
-    console.error('✅ Rotas V3.0 configuradas');
+    console.log('✅ Rotas V3.0 configuradas');
 
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 
-        console.error(`🌐 Servidor rodando em http://0.0.0.0:${PORT}`);
-        console.error(`📊 Dashboard: http://0.0.0.0:${PORT}/api/system/status`);
-        console.error(`🚀 LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:${PORT}`);
-        console.error(`📊 Health check: http://0.0.0.0:${PORT}/health`);
-        console.error(`🤖 Chatbot disponível em: http://0.0.0.0:${PORT}/chatbot`);
-        console.error(`🔧 Widget JS disponível em: http://0.0.0.0:${PORT}/public/widget.js`);
-        console.error(`🎯 Sistema de captura de leads PERSISTENTE ATIVADO`);
-        console.error(`📈 Painel de leads: http://0.0.0.0:${PORT}/admin/leads`);
-        console.error(`📞 Extração de contatos: ATIVADA`);
-        console.error(`🧠 SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA`);
-        console.error(`🎭 Detecção de sarcasmo e ironia: IMPLEMENTADA`);
-        console.error(`🧩 Análise de múltiplas intenções: FUNCIONANDO`);
-        console.error(`💾 Memória conversacional avançada: OPERACIONAL`);
-        console.error(`🎨 Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL`);
-        console.error(`🚨 Detecção de urgência: ATIVADA`);
-        console.error(`📅 Sistema de agendamento: IMPLEMENTADO`);
-        console.error(`🎯 Botões fixos no topo: FUNCIONANDO`);
-        console.error(`👥 Jornada do cliente: Análise inteligente ATIVADA`);
-        console.error(`🧠 Endpoint superinteligente: /api/process-chat-inteligente`);
-        console.error(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
+        console.log(`🌐 Servidor rodando em http://0.0.0.0:${PORT}`);
+        console.log(`📊 Dashboard: http://0.0.0.0:${PORT}/api/system/status`);
+        console.log(`🚀 LinkMágico v7.0 SUPERINTELIGENTE running on http://0.0.0.0:${PORT}`);
+        console.log(`📊 Health check: http://0.0.0.0:${PORT}/health`);
+        console.log(`🤖 Chatbot disponível em: http://0.0.0.0:${PORT}/chatbot`);
+        console.log(`🔧 Widget JS disponível em: http://0.0.0.0:${PORT}/public/widget.js`);
+        console.log(`🎯 Sistema de captura de leads PERSISTENTE ATIVADO`);
+        console.log(`📈 Painel de leads: http://0.0.0.0:${PORT}/admin/leads`);
+        console.log(`📞 Extração de contatos: ATIVADA`);
+        console.log(`🧠 SUPERINTELIGÊNCIA CONVERSACIONAL: ATIVADA`);
+        console.log(`🎭 Detecção de sarcasmo e ironia: IMPLEMENTADA`);
+        console.log(`🧩 Análise de múltiplas intenções: FUNCIONANDO`);
+        console.log(`💾 Memória conversacional avançada: OPERACIONAL`);
+        console.log(`🎨 Personalidades adaptativas: CONSULTIVO, EMPÁTICO, TÉCNICO, MOTIVACIONAL`);
+        console.log(`🚨 Detecção de urgência: ATIVADA`);
+        console.log(`📅 Sistema de agendamento: IMPLEMENTADO`);
+        console.log(`🎯 Botões fixos no topo: FUNCIONANDO`);
+        console.log(`👥 Jornada do cliente: Análise inteligente ATIVADA`);
+        console.log(`🧠 Endpoint superinteligente: /api/process-chat-inteligente`);
+        console.log(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
     });
 })();
