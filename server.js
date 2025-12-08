@@ -4394,7 +4394,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 if (result.success) {
 
                     console.error('✅ Agenda Confirmado! Nossa equipe entrará em contato para confirmar o horário de ' + horario + '.');
-                 (FIX: Corrigido escopo da apiKey na submissão do agendamento para resolver erro 401.)
+                    // FIX: Corrigido escopo da apiKey na submissão do agendamento para resolver erro 401.
                     
                     // Voltar para a tela de chat
                     document.getElementById('agendamentoForm').style.display = 'none';
