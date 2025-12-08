@@ -717,9 +717,67 @@ class LeadCaptureSystem {
         this.apiKey = apiKey;
         this.leadsFilePath = getTenantLeadsFilePath(this.apiKey);
         this.ensureDataDirectory();
-        this.leads = this.loadLeads();
+        this.leads = this.loadLeadsSync(); // Carrega JSON primeiro (síncrono)
+        this._postgresInitialized = false;
+
+        // Inicializar PostgreSQL assincronamente (se disponível)
+        if (USE_POSTGRES) {
+            this.initializePostgres();
+        }
+
         console.log(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
         console.log(`💾 Arquivo de leads: ${this.leadsFilePath}`);
+        console.log(`🗄️ PostgreSQL: ${USE_POSTGRES ? 'Habilitado' : 'Desabilitado (usando JSON)'}`);
+    }
+
+    // Inicializar PostgreSQL e migrar dados JSON se necessário
+    async initializePostgres() {
+        try {
+            // Buscar leads do PostgreSQL
+            const dbLeads = await DatabaseHelpers.getLeads(this.apiKey);
+
+            // Se PostgreSQL vazio e JSON tem dados, migrar
+            if (dbLeads.length === 0 && this.leads.length > 0) {
+                console.log(`🔄 Migrando ${this.leads.length} leads de JSON para PostgreSQL...`);
+                for (const lead of this.leads) {
+                    await DatabaseHelpers.saveLead(this.apiKey, {
+                        id: lead.id,
+                        nome: lead.nome || lead.name,
+                        email: lead.email,
+                        telefone: lead.telefone || lead.phone,
+                        message: lead.message,
+                        url_origem: lead.url_origem || lead.url,
+                        source: lead.source || 'widget',
+                        status: lead.status || 'ativo',
+                        metadata: lead.metadata || {},
+                        conversations: lead.conversations || []
+                    });
+                }
+                console.log(`✅ Migração concluída: ${this.leads.length} leads migrados para PostgreSQL`);
+            } else if (dbLeads.length > 0) {
+                // PostgreSQL tem dados, usar como fonte primária
+                this.leads = dbLeads.map(lead => ({
+                    id: lead.id,
+                    nome: lead.nome,
+                    email: lead.email,
+                    telefone: lead.telefone,
+                    message: lead.message,
+                    url_origem: lead.url_origem,
+                    source: lead.source,
+                    status: lead.status,
+                    timestamp: lead.created_at,
+                    lastInteraction: lead.updated_at,
+                    conversations: lead.conversations || [],
+                    journeyStage: lead.metadata?.journeyStage || 'descoberta'
+                }));
+                console.log(`🗄️ ${dbLeads.length} leads carregados do PostgreSQL`);
+            }
+
+            this._postgresInitialized = true;
+        } catch (error) {
+            console.error('❌ Erro ao inicializar PostgreSQL para leads:', error);
+            console.log('🔄 Continuando com JSON como fallback');
+        }
     }
 
     ensureDataDirectory() {
@@ -737,29 +795,63 @@ class LeadCaptureSystem {
         }
     }
 
-    loadLeads() {
+    // Carregamento síncrono de JSON (para inicialização)
+    loadLeadsSync() {
         try {
             if (fs.existsSync(this.leadsFilePath)) {
                 const data = fs.readFileSync(this.leadsFilePath, "utf8");
                 const leads = JSON.parse(data);
-                console.log(`📥 Leads carregados: ${leads.length} registros`);
+                console.log(`📥 Leads carregados do JSON: ${leads.length} registros`);
                 return leads;
             }
         } catch (error) {
-            console.error("❌ Erro ao carregar leads:", error);
+            console.error("❌ Erro ao carregar leads do JSON:", error);
         }
         console.log("📝 Inicializando novo arquivo de leads");
         return [];
     }
 
-    saveLeads() {
+    // Alias para compatibilidade
+    loadLeads() {
+        return this.loadLeadsSync();
+    }
+
+    // Salvar leads em PostgreSQL (primário) e JSON (backup)
+    async saveLeads() {
         try {
+            // Salvar em PostgreSQL se disponível
+            if (USE_POSTGRES) {
+                for (const lead of this.leads) {
+                    await DatabaseHelpers.saveLead(this.apiKey, {
+                        id: lead.id,
+                        nome: lead.nome || lead.name,
+                        email: lead.email,
+                        telefone: lead.telefone || lead.phone,
+                        message: lead.message,
+                        url_origem: lead.url_origem || lead.url,
+                        source: lead.source || 'widget',
+                        status: lead.status || 'ativo',
+                        metadata: { journeyStage: lead.journeyStage },
+                        conversations: lead.conversations || []
+                    });
+                }
+                console.log(`🗄️ Leads salvos no PostgreSQL: ${this.leads.length} registros`);
+            }
+
+            // Sempre salvar em JSON como backup local
             fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
-            console.log(`💾 Leads salvos: ${this.leads.length} registros`);
+            console.log(`💾 Leads salvos no JSON: ${this.leads.length} registros`);
             return true;
         } catch (error) {
             console.error("❌ Erro ao salvar leads:", error);
-            return false;
+            // Fallback: salvar apenas em JSON
+            try {
+                fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
+                return true;
+            } catch (jsonError) {
+                console.error("❌ Erro ao salvar leads em JSON:", jsonError);
+                return false;
+            }
         }
     }
 
@@ -836,11 +928,61 @@ class LeadCaptureSystem {
 
     initializeAppointments() {
         this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
-        this.appointments = this.loadAppointments();
+        this.appointments = this.loadAppointmentsSync();
         console.log(`📅 Sistema de Agendamentos: ${this.appointments.length} agendamentos carregados`);
+
+        // Inicializar PostgreSQL para agendamentos
+        if (USE_POSTGRES) {
+            this.initializeAppointmentsPostgres();
+        }
     }
 
-    loadAppointments() {
+    // Inicializar agendamentos do PostgreSQL com migração
+    async initializeAppointmentsPostgres() {
+        try {
+            const dbAppointments = await DatabaseHelpers.getAppointments(this.apiKey);
+
+            // Se PostgreSQL vazio e JSON tem dados, migrar
+            if (dbAppointments.length === 0 && this.appointments.length > 0) {
+                console.log(`🔄 Migrando ${this.appointments.length} agendamentos de JSON para PostgreSQL...`);
+                for (const apt of this.appointments) {
+                    await DatabaseHelpers.saveAppointment(this.apiKey, {
+                        id: apt.id,
+                        leadId: apt.leadId,
+                        datetime: apt.datetime,
+                        status: apt.status,
+                        notes: apt.notes,
+                        metadata: {
+                            leadName: apt.leadName,
+                            leadEmail: apt.leadEmail,
+                            leadPhone: apt.leadPhone,
+                            robotName: apt.robotName,
+                            urlOrigem: apt.urlOrigem,
+                            createdAt: apt.createdAt
+                        }
+                    });
+                }
+                console.log(`✅ Migração de agendamentos concluída`);
+            } else if (dbAppointments.length > 0) {
+                // PostgreSQL tem dados, usar como fonte primária
+                this.appointments = dbAppointments.map(apt => ({
+                    id: apt.id,
+                    leadId: apt.lead_id,
+                    datetime: apt.datetime,
+                    status: apt.status,
+                    notes: apt.notes,
+                    createdAt: apt.created_at,
+                    ...apt.metadata
+                }));
+                console.log(`🗄️ ${dbAppointments.length} agendamentos carregados do PostgreSQL`);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao inicializar PostgreSQL para agendamentos:', error);
+        }
+    }
+
+    // Carregamento síncrono de JSON
+    loadAppointmentsSync() {
         try {
             if (!this.appointmentsFilePath) {
                 this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
@@ -850,22 +992,58 @@ class LeadCaptureSystem {
                 return JSON.parse(data);
             }
         } catch (error) {
-            console.error("❌ Erro ao carregar agendamentos:", error);
+            console.error("❌ Erro ao carregar agendamentos do JSON:", error);
         }
         return [];
     }
 
-    saveAppointments() {
+    // Alias para compatibilidade
+    loadAppointments() {
+        return this.loadAppointmentsSync();
+    }
+
+    // Salvar agendamentos em PostgreSQL e JSON
+    async saveAppointments() {
         try {
+            // Salvar em PostgreSQL se disponível
+            if (USE_POSTGRES) {
+                for (const apt of (this.appointments || [])) {
+                    await DatabaseHelpers.saveAppointment(this.apiKey, {
+                        id: apt.id,
+                        leadId: apt.leadId,
+                        datetime: apt.datetime,
+                        status: apt.status,
+                        notes: apt.notes,
+                        metadata: {
+                            leadName: apt.leadName,
+                            leadEmail: apt.leadEmail,
+                            leadPhone: apt.leadPhone,
+                            robotName: apt.robotName,
+                            urlOrigem: apt.urlOrigem,
+                            createdAt: apt.createdAt
+                        }
+                    });
+                }
+                console.log(`🗄️ Agendamentos salvos no PostgreSQL: ${(this.appointments || []).length} registros`);
+            }
+
+            // Sempre salvar em JSON como backup
             if (!this.appointmentsFilePath) {
                 this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
             }
             fs.writeFileSync(this.appointmentsFilePath, JSON.stringify(this.appointments || [], null, 2));
-            console.log(`💾 Agendamentos salvos: ${(this.appointments || []).length} registros`);
+            console.log(`💾 Agendamentos salvos no JSON: ${(this.appointments || []).length} registros`);
             return true;
         } catch (error) {
             console.error("❌ Erro ao salvar agendamentos:", error);
-            return false;
+            // Fallback JSON
+            try {
+                fs.writeFileSync(this.appointmentsFilePath, JSON.stringify(this.appointments || [], null, 2));
+                return true;
+            } catch (jsonError) {
+                console.error("❌ Erro ao salvar agendamentos em JSON:", jsonError);
+                return false;
+            }
         }
     }
 
