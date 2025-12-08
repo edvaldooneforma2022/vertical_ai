@@ -1,18 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkMágico v7.0 - IA Conversacional Inteligente para Vendas Online</title>
-    <meta name="description"
-        content="Nova geração de chatbot com IA avançada, extração universal de dados e deep linking multiplataforma. Transforme suas páginas de vendas em conversas inteligentes.">
-
+    <meta name="description" content="Nova geração de chatbot com IA avançada, extração universal de dados e deep linking multiplataforma. Transforme suas páginas de vendas em conversas inteligentes.">
+    
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-
+    
     <style>
         :root {
             --primary: #3b82f6;
@@ -52,13 +49,13 @@
             --glass-bg: rgba(30, 41, 59, 0.8);
             --glass-border: rgba(148, 163, 184, 0.2);
         }
-
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--gradient-bg);
@@ -67,7 +64,7 @@
             line-height: 1.6;
             overflow-x: hidden;
         }
-
+        
         /* Header */
         .header {
             position: sticky;
@@ -78,7 +75,7 @@
             border-bottom: 1px solid var(--glass-border);
             box-shadow: var(--shadow-lg);
         }
-
+        
         .header-content {
             max-width: 1200px;
             margin: 0 auto;
@@ -87,13 +84,13 @@
             justify-content: space-between;
             padding: 1rem 2rem;
         }
-
+        
         .logo {
             display: flex;
             align-items: center;
             gap: 1rem;
         }
-
+        
         .logo-icon {
             width: 40px;
             height: 40px;
@@ -106,7 +103,7 @@
             font-size: 1.2rem;
             box-shadow: var(--shadow-md);
         }
-
+        
         .logo-text h1 {
             font-size: 1.4rem;
             font-weight: 700;
@@ -116,7 +113,7 @@
             background-clip: text;
             margin: 0;
         }
-
+        
         .version-badge {
             background: var(--gradient-success);
             color: white;
@@ -129,7 +126,7 @@
             box-shadow: var(--shadow-md);
             margin-left: 0.5rem;
         }
-
+        
         .status-indicator {
             display: flex;
             align-items: center;
@@ -140,7 +137,7 @@
             border: 1px solid rgba(16, 185, 129, 0.3);
             backdrop-filter: blur(10px);
         }
-
+        
         .status-dot {
             width: 8px;
             height: 8px;
@@ -148,25 +145,18 @@
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
-
+        
         @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
-
+        
         .status-text {
             font-size: 0.875rem;
             font-weight: 600;
             color: var(--success);
         }
-
+        
         .lgpd-badge {
             cursor: pointer;
             background: rgba(59, 130, 246, 0.1);
@@ -179,13 +169,13 @@
             font-weight: 600;
             color: var(--primary-light);
         }
-
+        
         .lgpd-badge:hover {
             background: rgba(59, 130, 246, 0.2);
             transform: translateY(-1px);
             box-shadow: var(--shadow-md);
         }
-
+        
         /* Main Container */
         .main-container {
             max-width: 1200px;
@@ -196,7 +186,7 @@
             gap: 2rem;
             min-height: calc(100vh - 140px);
         }
-
+        
         /* Control Panel */
         .control-panel {
             background: var(--glass-bg);
@@ -209,24 +199,24 @@
             position: sticky;
             top: 120px;
         }
-
+        
         .panel-header {
             text-align: center;
             margin-bottom: 2rem;
         }
-
+        
         .panel-title {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--dark-text);
             margin-bottom: 0.5rem;
         }
-
+        
         .panel-subtitle {
             color: var(--dark-text-secondary);
             font-size: 0.9rem;
         }
-
+        
         .success-alert {
             background: var(--gradient-success);
             color: white;
@@ -239,7 +229,7 @@
             position: relative;
             overflow: hidden;
         }
-
+        
         .success-alert::before {
             content: '';
             position: absolute;
@@ -247,28 +237,23 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
             animation: shimmer 3s infinite;
         }
-
+        
         @keyframes shimmer {
-            0% {
-                transform: translateX(-100%) translateY(-100%) rotate(45deg);
-            }
-
-            100% {
-                transform: translateX(100%) translateY(100%) rotate(45deg);
-            }
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
         }
-
+        
         .form-section {
             margin-bottom: 1.5rem;
         }
-
+        
         .form-group {
             margin-bottom: 1.25rem;
         }
-
+        
         .form-label {
             display: flex;
             align-items: center;
@@ -278,12 +263,12 @@
             color: var(--dark-text);
             font-size: 0.9rem;
         }
-
+        
         .form-label i {
             color: var(--primary-light);
             width: 16px;
         }
-
+        
         .form-input {
             width: 100%;
             padding: 0.875rem 1.2rem;
@@ -294,31 +279,31 @@
             background: var(--dark-surface);
             color: var(--dark-text);
         }
-
+        
         .form-input::placeholder {
             color: var(--dark-text-muted);
         }
-
+        
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
             background: var(--dark-elevated);
         }
-
+        
         .form-textarea {
             min-height: 90px;
             resize: vertical;
             font-family: inherit;
         }
-
+        
         .input-hint {
             font-size: 0.75rem;
             color: var(--dark-text-muted);
             margin-top: 0.25rem;
             font-style: italic;
         }
-
+        
         .btn {
             padding: 1rem 1.5rem;
             border: none;
@@ -335,7 +320,7 @@
             position: relative;
             overflow: hidden;
         }
-
+        
         .btn::before {
             content: '';
             position: absolute;
@@ -343,26 +328,26 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             transition: left 0.5s;
         }
-
+        
         .btn:hover::before {
             left: 100%;
         }
-
+        
         .btn-primary {
             background: var(--gradient-primary);
             color: white;
             box-shadow: var(--shadow-lg);
             width: 100%;
         }
-
+        
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 20px 40px rgba(59, 130, 246, 0.4);
         }
-
+        
         /* ===== NOVA SEÇÃO: LINK DO CHATBOT ===== */
         .chatbot-link-section {
             background: rgba(59, 130, 246, 0.1);
@@ -373,24 +358,23 @@
             backdrop-filter: blur(10px);
             display: none;
         }
-
+        
         .chatbot-link-section.active {
             display: block;
             animation: fadeInUp 0.5s ease;
         }
-
+        
         @keyframes fadeInUp {
             from {
                 opacity: 0;
                 transform: translateY(10px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-
+        
         .chatbot-link-title {
             font-size: 1.1rem;
             font-weight: 700;
@@ -400,7 +384,7 @@
             align-items: center;
             gap: 0.5rem;
         }
-
+        
         .chatbot-link-url {
             background: var(--dark-surface);
             border: 1px solid var(--dark-border);
@@ -412,17 +396,17 @@
             word-break: break-all;
             position: relative;
         }
-
+        
         .chatbot-link-url a {
             color: var(--primary-light);
             text-decoration: none;
             font-weight: 600;
         }
-
+        
         .chatbot-link-url a:hover {
             text-decoration: underline;
         }
-
+        
         .copy-link-btn {
             position: absolute;
             top: 0.5rem;
@@ -436,12 +420,12 @@
             font-size: 0.75rem;
             transition: all 0.3s ease;
         }
-
+        
         .copy-link-btn:hover {
             background: rgba(59, 130, 246, 0.2);
             transform: translateY(-1px);
         }
-
+        
         .extracted-data-section {
             background: var(--dark-surface);
             border: 1px solid var(--dark-border);
@@ -449,27 +433,27 @@
             padding: 1.2rem;
             margin-top: 1rem;
         }
-
+        
         .extracted-data-title {
             font-size: 0.9rem;
             font-weight: 600;
             color: var(--dark-text);
             margin-bottom: 0.5rem;
         }
-
+        
         .extracted-data-content {
             font-size: 0.8rem;
             color: var(--dark-text-secondary);
             line-height: 1.4;
         }
-
+        
         .social-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 0.6rem;
             margin-top: 1.5rem;
         }
-
+        
         .social-btn {
             padding: 0.8rem 0.4rem;
             border: none;
@@ -486,71 +470,36 @@
             position: relative;
             overflow: hidden;
         }
-
+        
         .social-btn:hover {
             transform: translateY(-3px) scale(1.05);
             box-shadow: var(--shadow-lg);
         }
-
+        
         .social-btn i {
             font-size: 1.1rem;
         }
-
-        .whatsapp {
-            background: linear-gradient(135deg, #25d366, #1ebe57);
-        }
-
-        .instagram {
-            background: linear-gradient(135deg, #f09433, #dc2743, #cc2366, #bc1888);
-        }
-
-        .facebook {
-            background: linear-gradient(135deg, #1877f2, #0c63d4);
-        }
-
-        .youtube {
-            background: linear-gradient(135deg, #ff0000, #cc0000);
-        }
-
-        .tiktok {
-            background: linear-gradient(135deg, #000000, #333333);
-        }
-
-        .twitter {
-            background: linear-gradient(135deg, #1da1f2, #0c7abf);
-        }
-
-        .kwai {
-            background: linear-gradient(135deg, #ff6600, #e55100);
-        }
-
-        .linkedin {
-            background: linear-gradient(135deg, #0077b5, #005885);
-        }
-
-        .telegram {
-            background: linear-gradient(135deg, #0088cc, #006699);
-        }
-
-        .messenger {
-            background: linear-gradient(135deg, #006aff, #0056cc);
-        }
-
-        .prompt {
-            background: linear-gradient(135deg, #10b981, #059669);
-        }
-
-        .analytics {
-            background: linear-gradient(135deg, #6366f1, #4f46e5);
-        }
-
+        
+        .whatsapp { background: linear-gradient(135deg, #25d366, #1ebe57); }
+        .instagram { background: linear-gradient(135deg, #f09433, #dc2743, #cc2366, #bc1888); }
+        .facebook { background: linear-gradient(135deg, #1877f2, #0c63d4); }
+        .youtube { background: linear-gradient(135deg, #ff0000, #cc0000); }
+        .tiktok { background: linear-gradient(135deg, #000000, #333333); }
+        .twitter { background: linear-gradient(135deg, #1da1f2, #0c7abf); }
+        .kwai { background: linear-gradient(135deg, #ff6600, #e55100); }
+        .linkedin { background: linear-gradient(135deg, #0077b5, #005885); }
+        .telegram { background: linear-gradient(135deg, #0088cc, #006699); }
+        .messenger { background: linear-gradient(135deg, #006aff, #0056cc); }
+        .prompt { background: linear-gradient(135deg, #10b981, #059669); }
+        .analytics { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+        
         /* Dashboard */
         .dashboard {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
         }
-
+        
         .dashboard-header {
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
@@ -560,7 +509,7 @@
             box-shadow: var(--shadow-xl);
             position: relative;
         }
-
+        
         .dashboard-header::before {
             content: '';
             position: absolute;
@@ -571,26 +520,26 @@
             background: var(--gradient-primary);
             border-radius: 24px 24px 0 0;
         }
-
+        
         .dashboard-title {
             font-size: 1.75rem;
             font-weight: 700;
             color: var(--dark-text);
             margin-bottom: 0.5rem;
         }
-
+        
         .dashboard-subtitle {
             color: var(--dark-text-secondary);
             font-size: 0.95rem;
         }
-
+        
         /* Analytics Cards */
         .analytics-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 1.2rem;
         }
-
+        
         .analytics-card {
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
@@ -602,7 +551,7 @@
             position: relative;
             overflow: hidden;
         }
-
+        
         .analytics-card::before {
             content: '';
             position: absolute;
@@ -612,20 +561,20 @@
             height: 3px;
             background: var(--gradient-primary);
         }
-
+        
         .analytics-card:hover {
             transform: translateY(-4px);
             box-shadow: var(--shadow-xl);
             border-color: var(--primary);
         }
-
+        
         .card-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 1rem;
         }
-
+        
         .card-title {
             font-weight: 600;
             color: var(--dark-text-secondary);
@@ -633,7 +582,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-
+        
         .card-icon {
             width: 36px;
             height: 36px;
@@ -646,7 +595,7 @@
             font-size: 1.1rem;
             box-shadow: var(--shadow-md);
         }
-
+        
         .card-value {
             font-size: 2.2rem;
             font-weight: 800;
@@ -654,7 +603,7 @@
             line-height: 1;
             margin-bottom: 0.5rem;
         }
-
+        
         .card-change {
             display: flex;
             align-items: center;
@@ -663,7 +612,7 @@
             font-weight: 600;
             color: var(--success);
         }
-
+        
         /* Chat Preview */
         .chat-preview {
             background: var(--glass-bg);
@@ -676,7 +625,7 @@
             flex-direction: column;
             height: 400px;
         }
-
+        
         .chat-header {
             padding: 1.2rem 1.5rem;
             background: var(--gradient-primary);
@@ -686,7 +635,7 @@
             justify-content: space-between;
             position: relative;
         }
-
+        
         .chat-header::before {
             content: '';
             position: absolute;
@@ -694,33 +643,33 @@
             left: 0;
             right: 0;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
         }
-
+        
         .chat-title {
             font-size: 1.1rem;
             font-weight: 600;
         }
-
+        
         .chat-messages {
             flex: 1;
             padding: 1.2rem;
             overflow-y: auto;
             background: var(--dark-surface);
         }
-
+        
         .message {
             margin-bottom: 1rem;
             display: flex;
             align-items: flex-end;
             gap: 0.6rem;
         }
-
+        
         .message.user {
             justify-content: flex-end;
             flex-direction: row-reverse;
         }
-
+        
         .message-avatar {
             width: 32px;
             height: 32px;
@@ -734,11 +683,11 @@
             flex-shrink: 0;
             box-shadow: var(--shadow-md);
         }
-
+        
         .user .message-avatar {
             background: var(--gradient-success);
         }
-
+        
         .message-content {
             max-width: 70%;
             padding: 0.8rem 1rem;
@@ -747,30 +696,30 @@
             line-height: 1.4;
             box-shadow: var(--shadow-sm);
         }
-
+        
         .bot .message-content {
             background: var(--dark-elevated);
             color: var(--dark-text);
             border: 1px solid var(--dark-border);
         }
-
+        
         .user .message-content {
             background: var(--gradient-primary);
             color: white;
         }
-
+        
         .chat-input {
             padding: 1.2rem;
             background: var(--dark-surface);
             border-top: 1px solid var(--dark-border);
         }
-
+        
         .input-group {
             display: flex;
             gap: 0.8rem;
             align-items: center;
         }
-
+        
         .chat-input-field {
             flex: 1;
             padding: 0.8rem 1rem;
@@ -781,17 +730,17 @@
             background: var(--dark-elevated);
             color: var(--dark-text);
         }
-
+        
         .chat-input-field::placeholder {
             color: var(--dark-text-muted);
         }
-
+        
         .chat-input-field:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
         }
-
+        
         .send-btn {
             width: 40px;
             height: 40px;
@@ -806,12 +755,12 @@
             transition: all 0.3s ease;
             box-shadow: var(--shadow-md);
         }
-
+        
         .send-btn:hover {
             transform: scale(1.1);
             box-shadow: var(--shadow-lg);
         }
-
+        
         /* Widget Code Generator */
         .widget-generator {
             background: var(--glass-bg);
@@ -821,7 +770,7 @@
             padding: 2rem;
             box-shadow: var(--shadow-xl);
         }
-
+        
         .widget-title {
             font-size: 1.25rem;
             font-weight: 700;
@@ -831,7 +780,7 @@
             align-items: center;
             gap: 0.5rem;
         }
-
+        
         .code-block {
             background: var(--dark);
             color: var(--accent);
@@ -845,7 +794,7 @@
             margin-top: 0.75rem;
             border: 1px solid var(--dark-border);
         }
-
+        
         .copy-btn {
             position: absolute;
             top: 1rem;
@@ -860,19 +809,19 @@
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
         }
-
+        
         .copy-btn:hover {
             background: rgba(59, 130, 246, 0.2);
             transform: translateY(-1px);
         }
-
+        
         /* Loading States */
         .loading {
             display: none;
             text-align: center;
             padding: 2rem;
         }
-
+        
         .spinner {
             width: 40px;
             height: 40px;
@@ -881,21 +830,16 @@
             border-radius: 50%;
             margin: 0 auto 1rem;
         }
-
+        
         .spinner.active {
             animation: spin 1s linear infinite;
         }
-
+        
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-
+        
         .typing-indicator {
             display: none;
             padding: 1rem 2rem;
@@ -903,12 +847,12 @@
             font-style: italic;
             text-align: center;
         }
-
+        
         /* Results */
         .result {
             display: none;
         }
-
+        
         .success-message {
             background: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.3);
@@ -919,7 +863,7 @@
             font-weight: 600;
             backdrop-filter: blur(10px);
         }
-
+        
         /* Toast Notification */
         .toast-container {
             position: fixed;
@@ -927,7 +871,7 @@
             right: 20px;
             z-index: 10000;
         }
-
+        
         .toast {
             background-color: #333;
             color: #fff;
@@ -942,23 +886,23 @@
             align-items: center;
             gap: 10px;
         }
-
+        
         .toast.show {
             opacity: 1;
         }
-
+        
         .toast.success {
             background-color: var(--success);
         }
-
+        
         .toast.error {
             background-color: var(--error);
         }
-
+        
         .toast i {
             font-size: 1.2em;
         }
-
+        
         /* Privacy Footer */
         .privacy-footer {
             text-align: center;
@@ -969,16 +913,16 @@
             font-size: 0.8rem;
             color: var(--dark-text-muted);
         }
-
+        
         .privacy-footer a {
             color: var(--primary-light);
             text-decoration: none;
         }
-
+        
         .privacy-footer a:hover {
             text-decoration: underline;
         }
-
+        
         /* Consent Modal */
         .consent-modal {
             display: none;
@@ -992,7 +936,7 @@
             justify-content: center;
             padding: 1rem;
         }
-
+        
         .consent-backdrop {
             position: absolute;
             top: 0;
@@ -1002,7 +946,7 @@
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(5px);
         }
-
+        
         .consent-content {
             background: var(--dark-surface);
             border-radius: 20px;
@@ -1014,7 +958,7 @@
             box-shadow: var(--shadow-xl);
             overflow: hidden;
         }
-
+        
         .consent-header {
             background: var(--gradient-primary);
             color: white;
@@ -1022,13 +966,13 @@
             text-align: center;
             position: relative;
         }
-
+        
         .consent-header h3 {
             margin: 0;
             font-size: 1.3rem;
             font-weight: 600;
         }
-
+        
         .close-btn {
             position: absolute;
             top: 1rem;
@@ -1046,15 +990,15 @@
             justify-content: center;
             transition: background 0.3s ease;
         }
-
+        
         .close-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
-
+        
         .consent-body {
             padding: 1.5rem;
         }
-
+        
         .consent-warning {
             display: flex;
             align-items: center;
@@ -1065,24 +1009,24 @@
             padding: 1rem;
             margin-bottom: 1.5rem;
         }
-
+        
         .consent-warning i {
             color: var(--warning);
             font-size: 1.5rem;
             flex-shrink: 0;
         }
-
+        
         .consent-details p {
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
-
+        
         .consent-details ul {
             margin-left: 1.5rem;
             margin-bottom: 1rem;
             color: var(--dark-text-secondary);
         }
-
+        
         .legal-basis {
             background: rgba(59, 130, 246, 0.1);
             border-left: 4px solid var(--primary);
@@ -1091,11 +1035,11 @@
             font-size: 0.85rem;
             color: var(--primary-light);
         }
-
+        
         .url-verification {
             margin: 1.5rem 0;
         }
-
+        
         .url-verification label {
             display: flex;
             align-items: center;
@@ -1103,20 +1047,20 @@
             cursor: pointer;
             font-size: 0.9rem;
         }
-
+        
         .robots-check {
             margin-top: 0.5rem;
             font-size: 0.8rem;
             color: var(--dark-text-muted);
             font-style: italic;
         }
-
+        
         .consent-footer {
             display: flex;
             gap: 1rem;
             margin-top: 1.5rem;
         }
-
+        
         .btn-secondary {
             flex: 1;
             padding: 1rem;
@@ -1128,11 +1072,11 @@
             font-weight: 600;
             transition: all 0.3s ease;
         }
-
+        
         .btn-secondary:hover {
             background: var(--dark-elevated);
         }
-
+        
         .btn-primary-consent {
             flex: 1;
             background: var(--gradient-primary);
@@ -1144,89 +1088,87 @@
             transition: all 0.3s ease;
             border: none;
         }
-
+        
         .btn-primary-consent:hover {
             opacity: 0.9;
         }
-
+        
         .consent-links {
             text-align: center;
             margin-top: 1.5rem;
             font-size: 0.85rem;
         }
-
+        
         .consent-links a {
             color: var(--primary-light);
             text-decoration: none;
             margin: 0 0.5rem;
         }
-
+        
         .consent-links a:hover {
             text-decoration: underline;
         }
-
+        
         /* Scrollbar Styling */
         ::-webkit-scrollbar {
             width: 8px;
         }
-
+        
         ::-webkit-scrollbar-track {
             background: var(--dark-surface);
             border-radius: 4px;
         }
-
+        
         ::-webkit-scrollbar-thumb {
             background: var(--dark-border);
             border-radius: 4px;
         }
-
+        
         ::-webkit-scrollbar-thumb:hover {
             background: var(--primary);
         }
-
+        
         /* Responsive */
         @media (max-width: 768px) {
             .main-container {
                 grid-template-columns: 1fr;
                 padding: 0 1rem 1rem 1rem;
             }
-
+        
             .control-panel {
                 position: static;
                 top: auto;
             }
-
+        
             .header-content {
                 flex-direction: column;
                 gap: 1rem;
                 padding: 1rem;
             }
-
-            .status-indicator,
-            .lgpd-badge {
+        
+            .status-indicator, .lgpd-badge {
                 padding: 0.5rem 1rem;
                 font-size: 0.8rem;
             }
-
+        
             .analytics-grid {
                 grid-template-columns: 1fr;
             }
-
+        
             .chat-preview {
                 height: 300px;
             }
-
+        
             .consent-content {
                 margin: 1rem;
             }
-
+            
             .social-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
         }
     </style>
 </head>
-
 <body>
     <div class="toast-container" id="toastContainer"></div>
 
@@ -1254,7 +1196,7 @@
     <main class="main-container">
         <div class="control-panel">
             <div class="panel-header">
-                <h2 class="panel-title">Criar Chatbot</h2>
+                <h2 class="panel-title">Criar Agente Autônomo</h2>
                 <p class="panel-subtitle">Configure seu assistente de vendas inteligente</p>
             </div>
 
@@ -1264,33 +1206,21 @@
 
             <div class="form-section">
                 <div class="form-group">
-                    <label for="robotName" class="form-label"><i class="fas fa-robot"></i> Nome do Assistente
-                        Virtual:</label>
-                    <input type="text" id="robotName" class="form-input" value="@teste"
-                        placeholder="Ex: @AssistenteDeVendas">
+                    <label for="robotName" class="form-label"><i class="fas fa-robot"></i> Nome do Assistente Virtual:</label>
+                    <input type="text" id="robotName" class="form-input" value="@teste" placeholder="Ex: @AssistenteDeVendas">
                 </div>
                 <div class="form-group">
                     <label for="salesUrl" class="form-label"><i class="fas fa-link"></i> URL da Página:</label>
-                    <input type="url" id="salesUrl" class="form-input" value="https://www.arsenalsecretodosceos.com.br"
-                        placeholder="Ex: https://seusite.com/pagina-de-vendas">
+                    <input type="url" id="salesUrl" class="form-input" value="https://www.arsenalsecretodosceos.com.br" placeholder="Ex: https://seusite.com/pagina-de-vendas">
                     <p class="input-hint">A URL deve ser da sua página de vendas ou de conteúdo relevante.</p>
                 </div>
                 <div class="form-group">
-                    <label for="customInstructions" class="form-label"><i class="fas fa-comment-dots"></i> Instruções
-                        Personalizadas (opcional):</label>
-                    <textarea id="customInstructions" class="form-input form-textarea"
-                        placeholder="Ex: Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva">Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva</textarea>
+                    <label for="customInstructions" class="form-label"><i class="fas fa-comment-dots"></i> Instruções Personalizadas (opcional):</label>
+                    <textarea id="customInstructions" class="form-input form-textarea" placeholder="Ex: Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva">Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva</textarea>
                     <p class="input-hint">Dica: peça respostas curtas (2-3 frases), objetivas e sem repetições.</p>
                 </div>
-                <div class="form-group">
-                    <label for="apiKeyInput" class="form-label"><i class="fas fa-key"></i> API Key (para
-                        Agendamentos):</label>
-                    <input type="text" id="apiKeyInput" class="form-input" placeholder="Ex: LMV7-XXXX-XXXX-XXXX">
-                    <p class="input-hint">Sua chave única para identificar o tenant. Obtenha em Configurações > API
-                        Keys.</p>
-                </div>
                 <button class="btn btn-primary" id="activateChatbotBtn">
-                    <i class="fas fa-play-circle"></i> Ativar Chatbot Inteligente
+                    <i class="fas fa-play-circle"></i> Ativar Assistente Inteligente
                 </button>
             </div>
 
@@ -1305,51 +1235,45 @@
                         <i class="fas fa-copy"></i> Copiar
                     </button>
                 </div>
-
+                
                 <div class="extracted-data-section">
                     <div class="extracted-data-title">Dados Extraídos:</div>
                     <div class="extracted-data-content" id="extractedDataContent">
-                        <strong>Resumo:</strong> <span id="extractedSummary">Os dados serão carregados após a
-                            ativação...</span>
+                        <strong>Resumo:</strong> <span id="extractedSummary">Os dados serão carregados após a ativação...</span>
                     </div>
                 </div>
             </div>
 
             <div class="social-grid">
                 <button class="social-btn whatsapp" id="shareWhatsApp"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                <button class="social-btn instagram" id="shareInstagram"><i class="fab fa-instagram"></i>
-                    Instagram</button>
+                <button class="social-btn instagram" id="shareInstagram"><i class="fab fa-instagram"></i> Instagram</button>
                 <button class="social-btn facebook" id="shareFacebook"><i class="fab fa-facebook"></i> Facebook</button>
                 <button class="social-btn youtube" id="shareYouTube"><i class="fab fa-youtube"></i> YouTube</button>
                 <button class="social-btn tiktok" id="shareTikTok"><i class="fab fa-tiktok"></i> TikTok</button>
                 <button class="social-btn twitter" id="shareTwitter"><i class="fab fa-twitter"></i> Twitter</button>
                 <button class="social-btn kwai" id="shareKwai"><i class="fas fa-video"></i> Kwai</button>
                 <button class="social-btn linkedin" id="shareLinkedIn"><i class="fab fa-linkedin"></i> LinkedIn</button>
-                <button class="social-btn telegram" id="shareTelegram"><i class="fab fa-telegram-plane"></i>
-                    Telegram</button>
-                <button class="social-btn messenger" id="shareMessenger"><i class="fab fa-facebook-messenger"></i>
-                    Messenger</button>
+                <button class="social-btn telegram" id="shareTelegram"><i class="fab fa-telegram-plane"></i> Telegram</button>
+                <button class="social-btn messenger" id="shareMessenger"><i class="fab fa-facebook-messenger"></i> Messenger</button>
                 <button class="social-btn prompt" id="promptBtn"><i class="fas fa-lightbulb"></i> Prompt</button>
-                <button class="social-btn analytics" id="analyticsBtn"><i class="fas fa-chart-line"></i>
-                    Analytics</button>
+                <button class="social-btn analytics" id="analyticsBtn"><i class="fas fa-chart-line"></i> Analytics</button>
             </div>
         </div>
 
         <div class="dashboard">
             <div class="dashboard-header">
                 <h2 class="dashboard-title">Dashboard Analytics</h2>
-                <p class="dashboard-subtitle">Acompanhe o desempenho do seu chatbot em tempo real</p>
+                <p class="dashboard-subtitle">Acompanhe o desempenho do seu Agente Autônomo em tempo real</p>
             </div>
 
             <div class="analytics-grid">
                 <div class="analytics-card">
                     <div class="card-header">
-                        <span class="card-title">Chatbots Ativos</span>
+                        <span class="card-title">Agentes Ativos</span>
                         <div class="card-icon"><i class="fas fa-robot"></i></div>
                     </div>
                     <div class="card-value" id="activeChatbots">0</div>
-                    <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="createdToday">0</span> Criados
-                        hoje</div>
+                    <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="createdToday">0</span> Criados hoje</div>
                 </div>
                 <div class="analytics-card">
                     <div class="card-header">
@@ -1357,8 +1281,7 @@
                         <div class="card-icon"><i class="fas fa-comments"></i></div>
                     </div>
                     <div class="card-value" id="conversationsToday">0</div>
-                    <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="messagesSent">0</span> Mensagens
-                        enviadas</div>
+                    <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="messagesSent">0</span> Mensagens enviadas</div>
                 </div>
                 <div class="analytics-card">
                     <div class="card-header">
@@ -1380,14 +1303,14 @@
 
             <div class="chat-preview">
                 <div class="chat-header">
-                    <span class="chat-title">Preview do Chatbot</span>
+                    <span class="chat-title">Preview do Assistente</span>
                 </div>
                 <iframe id="chatbotFrame" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
 
             <div class="widget-generator">
                 <h3 class="widget-title"><i class="fas fa-code"></i> Gerador de Código do Widget</h3>
-                <p class="panel-subtitle">Copie e cole este código em qualquer página para integrar seu chatbot.</p>
+                <p class="panel-subtitle">Copie e cole este código em qualquer página para integrar seu Assistente de vendas</p>
                 <div class="code-block">
                     <button class="copy-btn" id="copyWidgetCodeBtn"><i class="fas fa-copy"></i> Copiar</button>
                     <pre><code id="widgetCodeDisplay">&lt;!-- LinkMágico Chatbot Widget --&gt;
@@ -1399,7 +1322,7 @@
         primaryColor: "#3b82f6"
     };
 &lt;/script&gt;
-&lt;script src="/public/widget.js"&gt;&lt;/script&gt;</code></pre>
+&lt;script src="https://SEU-SERVIDOR.onrender.com/public/widget.js"&gt;&lt;/script&gt;</code></pre>
                 </div>
             </div>
         </div>
@@ -1415,8 +1338,7 @@
             <div class="consent-body">
                 <div class="consent-warning">
                     <i class="fas fa-shield-alt"></i>
-                    <p>Para continuar usando o LinkMágico, precisamos do seu consentimento para processar dados pessoais
-                        conforme a LGPD.</p>
+                    <p>Para continuar usando o LinkMágico, precisamos do seu consentimento para processar dados pessoais conforme a LGPD.</p>
                 </div>
                 <div class="consent-details">
                     <p>Usamos informações para:</p>
@@ -1434,8 +1356,7 @@
                         <input type="checkbox" id="urlResponsibilityCheckbox">
                         Confiro que a URL informada é de minha responsabilidade
                     </label>
-                    <p class="robots-check">Recomendado: verifique robots.txt e políticas de página antes de extrair
-                        dados.</p>
+                    <p class="robots-check">Recomendado: verifique robots.txt e políticas de página antes de extrair dados.</p>
                 </div>
                 <div class="consent-footer">
                     <button class="btn-secondary" id="rejectConsentBtn">Recusar</button>
@@ -1514,7 +1435,7 @@
         const successAlert = document.getElementById('successAlert');
         const widgetCodeDisplay = document.getElementById('widgetCodeDisplay');
         const copyWidgetCodeBtn = document.getElementById('copyWidgetCodeBtn');
-
+        
         // Novos elementos
         const chatbotLinkSection = document.getElementById('chatbotLinkSection');
         const chatbotLinkUrl = document.getElementById('chatbotLinkUrl');
@@ -1546,12 +1467,11 @@
             activateChatbotBtn.innerHTML = '<i class="fas fa-play-circle"></i> Ativar Chatbot Inteligente';
         }
 
-        function generateChatbotUrl(robotName, salesUrl, instructions, apiKey) {
+        function generateChatbotUrl(robotName, salesUrl, instructions) {
             const params = new URLSearchParams({
                 name: robotName,
                 url: salesUrl,
-                instructions: instructions,
-                apiKey: apiKey || ''
+                instructions: instructions
             });
             return `${window.location.origin}/chatbot?${params.toString()}`;
         }
@@ -1560,52 +1480,52 @@
             const shareText = `Converse com ${robotName} - Assistente IA inteligente para vendas`;
             const encodedUrl = encodeURIComponent(chatbotUrl);
             const encodedText = encodeURIComponent(shareText);
-
+            
             // WhatsApp
             shareWhatsApp.onclick = () => {
                 window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank');
             };
-
+            
             // Instagram (simplificado - abre em nova aba)
             shareInstagram.onclick = () => {
                 window.open('https://www.instagram.com/', '_blank');
             };
-
+            
             // Facebook
             shareFacebook.onclick = () => {
                 window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`, '_blank');
             };
-
+            
             // YouTube (simplificado)
             shareYouTube.onclick = () => {
                 window.open('https://www.youtube.com/', '_blank');
             };
-
+            
             // TikTok (simplificado)
             shareTikTok.onclick = () => {
                 window.open('https://www.tiktok.com/', '_blank');
             };
-
+            
             // Twitter
             shareTwitter.onclick = () => {
                 window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
             };
-
+            
             // Kwai (simplificado)
             shareKwai.onclick = () => {
                 window.open('https://www.kwai.com/', '_blank');
             };
-
+            
             // LinkedIn
             shareLinkedIn.onclick = () => {
                 window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
             };
-
+            
             // Telegram
             shareTelegram.onclick = () => {
                 window.open(`https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`, '_blank');
             };
-
+            
             // Messenger (simplificado)
             shareMessenger.onclick = () => {
                 window.open(`https://www.facebook.com/dialog/send?link=${encodedUrl}&app_id=YOUR_APP_ID&redirect_uri=${encodedUrl}`, '_blank');
@@ -1616,7 +1536,6 @@
             const robotName = robotNameInput.value;
             const salesUrl = salesUrlInput.value;
             const customInstructions = customInstructionsInput.value;
-            const apiKeyValue = document.getElementById('apiKeyInput').value.trim();
 
             if (!robotName || !salesUrl) {
                 showToast('Por favor, preencha o nome do assistente e a URL da página.', 'error');
@@ -1640,20 +1559,20 @@
                     throw new Error(data.error || 'Erro desconhecido na extração.');
                 }
 
-                // Gerar URL do chatbot (inclui apiKey para agendamentos)
-                currentChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
-
+                // Gerar URL do chatbot
+                currentChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions);
+                
                 // Atualizar seção do link do chatbot
                 chatbotLinkUrl.href = currentChatbotUrl;
                 chatbotLinkUrl.textContent = currentChatbotUrl;
-
+                
                 // Atualizar dados extraídos
                 if (data.data && data.data.summary) {
                     extractedSummary.textContent = data.data.summary;
                 } else {
                     extractedSummary.textContent = 'Dados extraídos com sucesso da página.';
                 }
-
+                
                 // Mostrar seção do link do chatbot
                 chatbotLinkSection.classList.add('active');
 
@@ -1668,8 +1587,9 @@
                 });
                 chatbotFrame.src = `/chat.html?${chatbotParams.toString()}`;
 
-                // Atualiza o código do widget
-                widgetCodeDisplay.innerHTML = `&lt;!-- LinkMágico Chatbot Widget --&gt;\n&lt;script&gt;\n    window.LinkMagicoWidgetConfig = {\n        robotName: "${robotName}",\n        salesUrl: "${salesUrl}",\n        instructions: "${customInstructions}",\n        primaryColor: "#3b82f6"\n    };\n&lt;/script&gt;\n&lt;script src="/public/widget.js"&gt;&lt;/script&gt;`;
+                // Atualiza o código do widget com URL ABSOLUTA do servidor
+                const serverDomain = window.location.origin; // Ex: https://linkmagico-comercial.onrender.com
+                widgetCodeDisplay.innerHTML = `&lt;!-- LinkMágico Chatbot Widget --&gt;\n&lt;script&gt;\n    window.LinkMagicoWidgetConfig = {\n        robotName: "${robotName}",\n        salesUrl: "${salesUrl}",\n        instructions: "${customInstructions}",\n        primaryColor: "#3b82f6"\n    };\n&lt;/script&gt;\n&lt;script src="${serverDomain}/public/widget.js"&gt;&lt;/script&gt;`;
 
                 successAlert.style.display = 'block';
                 showToast('Chatbot ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
@@ -1677,7 +1597,7 @@
                 // Atualizar analytics
                 document.getElementById('activeChatbots').textContent = '1';
                 document.getElementById('createdToday').textContent = '1';
-
+                
                 // Carregar dados de leads
                 loadDashboardLeads();
 
@@ -1724,85 +1644,69 @@
 
     </script>
 
-
+    
     <!-- ===== NOVOS SISTEMAS - LINK MÁGICO V2.0 ===== -->
-    <div id="newSystemsPanel"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; overflow-y:auto;">
+    <div id="newSystemsPanel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; overflow-y:auto;">
         <div style="max-width:1400px; margin:2rem auto; padding:2rem;">
-            <button onclick="closeNewSystems()"
-                style="position:fixed; top:20px; right:20px; background:#ef4444; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600; z-index:10000;">
+            <button onclick="closeNewSystems()" style="position:fixed; top:20px; right:20px; background:#ef4444; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600; z-index:10000;">
                 <i class="fas fa-times"></i> Fechar
             </button>
-
+            
             <h1 style="color:#60a5fa; font-size:2rem; margin-bottom:2rem; text-align:center;">
                 🚀 Sistemas Avançados - Link Mágico V2.0
             </h1>
-
+            
             <!-- Tabs -->
-            <div class="new-tabs"
-                style="display:flex; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; justify-content:center;">
-                <button class="new-tab active" onclick="showNewTab('analytics')"
-                    style="background:#3b82f6; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+            <div class="new-tabs" style="display:flex; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; justify-content:center;">
+                <button class="new-tab active" onclick="showNewTab('analytics')" style="background:#3b82f6; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📊 Analytics
                 </button>
-                <button class="new-tab" onclick="showNewTab('webhooks')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('webhooks')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     🔗 Webhooks
                 </button>
-                <button class="new-tab" onclick="showNewTab('knowledge')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('knowledge')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📚 Knowledge Base
                 </button>
-                <button class="new-tab" onclick="showNewTab('billing')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('billing')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     💳 Billing
                 </button>
-                <button class="new-tab" onclick="showNewTab('llm')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('llm')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     🎯 Otimização LLM
                 </button>
-                <button class="new-tab" onclick="showNewTab('system')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('system')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     ⚙️ Sistema
                 </button>
-                <button class="new-tab" onclick="showNewTab('gmail')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('gmail')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📧 Gmail
                 </button>
-                <button class="new-tab" onclick="showNewTab('whatsapp')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('whatsapp')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📱 WhatsApp
                 </button>
-                <button class="new-tab" onclick="showNewTab('chatgpt')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('chatgpt')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     🤖 ChatGPT
                 </button>
-                <button class="new-tab" onclick="showNewTab('whitelabel')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('whitelabel')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     🎨 Whitelabel
                 </button>
-                <button class="new-tab" onclick="showNewTab('leads')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('leads')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📝 Leads
                 </button>
             </div>
-
+            
             <!-- Tab Contents -->
             <div id="tab-analytics" class="new-tab-content" style="display:block;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px; margin-bottom:1rem;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">📊 Analytics Profissional</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Visualize métricas detalhadas do seu chatbot</p>
-
-                    <div
-                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1rem; margin-bottom:2rem;">
+                    
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1rem; margin-bottom:2rem;">
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Total de Mensagens</div>
                             <div id="analytics-messages" style="color:#60a5fa; font-size:2rem; font-weight:700;">-</div>
                         </div>
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Conversas</div>
-                            <div id="analytics-conversations" style="color:#10b981; font-size:2rem; font-weight:700;">-
-                            </div>
+                            <div id="analytics-conversations" style="color:#10b981; font-size:2rem; font-weight:700;">-</div>
                         </div>
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Leads Capturados</div>
@@ -1813,53 +1717,45 @@
                             <div id="analytics-success" style="color:#06d6a0; font-size:2rem; font-weight:700;">-</div>
                         </div>
                     </div>
-
-                    <button onclick="loadAnalytics()"
-                        style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
+                    
+                    <button onclick="loadAnalytics()" style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
                         🔄 Atualizar Analytics
                     </button>
                 </div>
             </div>
-
+            
             <div id="tab-webhooks" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">🔗 Webhooks</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure webhooks para integrar com sistemas
-                        externos</p>
-
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure webhooks para integrar com sistemas externos</p>
+                    
                     <div id="webhooks-list" style="margin-bottom:2rem;">
                         <p style="color:#94a3b8;">Carregando webhooks...</p>
                     </div>
-
-                    <button onclick="showAddWebhook()"
-                        style="background:#10b981; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
+                    
+                    <button onclick="showAddWebhook()" style="background:#10b981; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
                         ➕ Adicionar Webhook
                     </button>
                 </div>
             </div>
-
+            
             <div id="tab-knowledge" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">📚 Knowledge Base</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie FAQs e documentos do seu chatbot</p>
-
+                    
                     <div style="margin-bottom:2rem;">
-                        <label
-                            style="color:#cbd5e1; display:block; margin-bottom:0.5rem; font-weight:600;">Pergunta:</label>
-                        <input id="faq-question" type="text" placeholder="Ex: Qual o horário de funcionamento?"
-                            style="width:100%; padding:1rem; border:2px solid #475569; border-radius:12px; background:#334155; color:#f8fafc; margin-bottom:1rem;">
-
-                        <label
-                            style="color:#cbd5e1; display:block; margin-bottom:0.5rem; font-weight:600;">Resposta:</label>
-                        <textarea id="faq-answer" placeholder="Ex: Funcionamos de segunda a sexta, das 9h às 18h"
-                            style="width:100%; padding:1rem; border:2px solid #475569; border-radius:12px; background:#334155; color:#f8fafc; min-height:100px; margin-bottom:1rem;"></textarea>
-
-                        <button onclick="addFAQ()"
-                            style="background:#10b981; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
+                        <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem; font-weight:600;">Pergunta:</label>
+                        <input id="faq-question" type="text" placeholder="Ex: Qual o horário de funcionamento?" style="width:100%; padding:1rem; border:2px solid #475569; border-radius:12px; background:#334155; color:#f8fafc; margin-bottom:1rem;">
+                        
+                        <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem; font-weight:600;">Resposta:</label>
+                        <textarea id="faq-answer" placeholder="Ex: Funcionamos de segunda a sexta, das 9h às 18h" style="width:100%; padding:1rem; border:2px solid #475569; border-radius:12px; background:#334155; color:#f8fafc; min-height:100px; margin-bottom:1rem;"></textarea>
+                        
+                        <button onclick="addFAQ()" style="background:#10b981; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
                             ➕ Adicionar FAQ
                         </button>
                     </div>
-
+                    
                     <div id="faqs-list" style="margin-top:2rem;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">FAQs Cadastradas:</h3>
                         <div id="faqs-container" style="color:#94a3b8;">
@@ -1868,24 +1764,23 @@
                     </div>
                 </div>
             </div>
-
+            
             <div id="tab-billing" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">💳 Planos e Billing</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie planos e assinaturas</p>
-
-                    <div id="plans-container"
-                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem;">
+                    
+                    <div id="plans-container" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem;">
                         <p style="color:#94a3b8;">Carregando planos...</p>
                     </div>
                 </div>
             </div>
-
+            
             <div id="tab-llm" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">🎯 Otimização LLM</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Economize até 60% nos custos de IA</p>
-
+                    
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Cache Hits</div>
@@ -1900,155 +1795,137 @@
                             <div id="llm-cache-rate" style="color:#f59e0b; font-size:2rem; font-weight:700;">-</div>
                         </div>
                     </div>
-
-                    <button onclick="loadLLMStats()"
-                        style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:2rem;">
+                    
+                    <button onclick="loadLLMStats()" style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:2rem;">
                         🔄 Atualizar Estatísticas
                     </button>
                 </div>
             </div>
-
+            
             <div id="tab-system" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">⚙️ Status do Sistema</h2>
                     <div id="system-status" style="color:#cbd5e1;">
                         <p>Carregando status...</p>
                     </div>
-
-                    <button onclick="loadSystemStatus()"
-                        style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:2rem;">
+                    
+                    <button onclick="loadSystemStatus()" style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:2rem;">
                         🔄 Atualizar Status
                     </button>
                 </div>
             </div>
-
+            
             <!-- Tab Gmail -->
             <div id="tab-gmail" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">📧 Integração Gmail</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure envio automático de emails</p>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
                         <div id="gmail-status" style="color:#94a3b8;">Carregando...</div>
                     </div>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Envio</h3>
-                        <input type="email" id="test-email" placeholder="email@exemplo.com"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <button onclick="testGmail()"
-                            style="background:#3b82f6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                        <input type="email" id="test-email" placeholder="email@exemplo.com" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        <button onclick="testGmail()" style="background:#3b82f6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
                             Enviar Email de Teste
                         </button>
                     </div>
                 </div>
             </div>
-
+            
             <!-- Tab WhatsApp -->
             <div id="tab-whatsapp" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">📱 Integração WhatsApp</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure notificações via WhatsApp</p>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
                         <div id="whatsapp-status" style="color:#94a3b8;">Carregando...</div>
                     </div>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Envio</h3>
-                        <input type="tel" id="test-phone" placeholder="+5511999999999"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <button onclick="testWhatsApp()"
-                            style="background:#25d366; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                        <input type="tel" id="test-phone" placeholder="+5511999999999" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        <button onclick="testWhatsApp()" style="background:#25d366; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
                             Enviar Mensagem de Teste
                         </button>
                     </div>
                 </div>
             </div>
-
+            
             <!-- Tab ChatGPT -->
             <div id="tab-chatgpt" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Integração ChatGPT</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Use GPT-4 para respostas de alta qualidade</p>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
                         <div id="chatgpt-status" style="color:#94a3b8;">Carregando...</div>
                     </div>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Modelos Disponíveis</h3>
                         <div id="chatgpt-models" style="color:#94a3b8;">Carregando...</div>
                     </div>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Geração</h3>
-                        <textarea id="test-prompt" placeholder="Digite uma pergunta..."
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem; min-height:100px;"></textarea>
-                        <button onclick="testChatGPT()"
-                            style="background:#10a37f; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                        <textarea id="test-prompt" placeholder="Digite uma pergunta..." style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem; min-height:100px;"></textarea>
+                        <button onclick="testChatGPT()" style="background:#10a37f; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
                             Gerar Resposta
                         </button>
-                        <div id="chatgpt-response"
-                            style="margin-top:1rem; padding:1rem; background:#1e293b; border-radius:8px; color:#cbd5e1; display:none;">
-                        </div>
+                        <div id="chatgpt-response" style="margin-top:1rem; padding:1rem; background:#1e293b; border-radius:8px; color:#cbd5e1; display:none;"></div>
                     </div>
                 </div>
             </div>
-
+            
             <!-- Tab Whitelabel -->
             <div id="tab-whitelabel" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">🎨 Whitelabel</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Personalize a marca do seu chatbot</p>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração</h3>
-
+                        
                         <label style="color:#94a3b8; display:block; margin-bottom:0.5rem;">Nome da Empresa:</label>
-                        <input type="text" id="wl-company" placeholder="Minha Empresa"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-
+                        <input type="text" id="wl-company" placeholder="Minha Empresa" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        
                         <label style="color:#94a3b8; display:block; margin-bottom:0.5rem;">URL do Logo:</label>
-                        <input type="url" id="wl-logo" placeholder="https://exemplo.com/logo.png"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-
+                        <input type="url" id="wl-logo" placeholder="https://exemplo.com/logo.png" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        
                         <label style="color:#94a3b8; display:block; margin-bottom:0.5rem;">Cor Primária:</label>
-                        <input type="color" id="wl-primary" value="#3b82f6"
-                            style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid #475569; background:#1e293b; margin-bottom:1rem;">
-
+                        <input type="color" id="wl-primary" value="#3b82f6" style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid #475569; background:#1e293b; margin-bottom:1rem;">
+                        
                         <label style="color:#94a3b8; display:block; margin-bottom:0.5rem;">Cor Secundária:</label>
-                        <input type="color" id="wl-secondary" value="#8b5cf6"
-                            style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid #475569; background:#1e293b; margin-bottom:1.5rem;">
-
-                        <button onclick="saveWhitelabel()"
-                            style="background:#3b82f6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; width:100%;">
+                        <input type="color" id="wl-secondary" value="#8b5cf6" style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid #475569; background:#1e293b; margin-bottom:1.5rem;">
+                        
+                        <button onclick="saveWhitelabel()" style="background:#3b82f6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; width:100%;">
                             Salvar Configuração
                         </button>
                     </div>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">Preview</h3>
-                        <div id="wl-preview"
-                            style="padding:2rem; background:#1e293b; border-radius:8px; text-align:center;">
+                        <div id="wl-preview" style="padding:2rem; background:#1e293b; border-radius:8px; text-align:center;">
                             <div style="color:#94a3b8;">Configure os campos acima para ver o preview</div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <!-- Tab Leads -->
             <div id="tab-leads" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">📝 Leads Estruturados</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie leads capturados com campos estruturados
-                    </p>
-
-                    <div
-                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:2rem;">
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie leads capturados com campos estruturados</p>
+                    
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:2rem;">
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Total de Leads</div>
                             <div id="leads-total" style="color:#60a5fa; font-size:2rem; font-weight:700;">-</div>
@@ -2066,36 +1943,31 @@
                             <div id="leads-cold" style="color:#3b82f6; font-size:2rem; font-weight:700;">-</div>
                         </div>
                     </div>
-
+                    
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <div
-                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
                             <h3 style="color:#cbd5e1; margin:0;">Lista de Leads</h3>
-                            <button onclick="exportLeads()"
-                                style="background:#10b981; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            <button onclick="exportLeads()" style="background:#10b981; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
                                 📥 Exportar CSV
                             </button>
                         </div>
                         <div id="leads-list" style="color:#94a3b8;">Carregando...</div>
                     </div>
-
+                    
                     <!-- Seção de Backup -->
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">🔐 Backup de Leads</h3>
-                        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:1rem;">Backups automáticos diários +
-                            backup manual sob demanda</p>
-
+                        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:1rem;">Backups automáticos diários + backup manual sob demanda</p>
+                        
                         <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
-                            <button onclick="createBackup()"
-                                style="background:#3b82f6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; flex:1;">
+                            <button onclick="createBackup()" style="background:#3b82f6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; flex:1;">
                                 💾 Criar Backup Agora
                             </button>
-                            <button onclick="loadBackups()"
-                                style="background:#8b5cf6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; flex:1;">
+                            <button onclick="loadBackups()" style="background:#8b5cf6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; flex:1;">
                                 🔄 Atualizar Lista
                             </button>
                         </div>
-
+                        
                         <div id="backups-list" style="max-height:300px; overflow-y:auto;">
                             <p style="color:#94a3b8;">Carregando backups...</p>
                         </div>
@@ -2104,59 +1976,51 @@
             </div>
         </div>
     </div>
-
+    
     <!-- Botão para abrir novos sistemas -->
-    <button id="openNewSystemsBtn" onclick="openNewSystems()"
-        style="position:fixed; bottom:20px; right:20px; background:linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600; box-shadow:0 10px 25px rgba(59,130,246,0.4); z-index:1000; display:flex; align-items:center; gap:0.5rem; animation:pulse 2s infinite;">
+    <button id="openNewSystemsBtn" onclick="openNewSystems()" style="position:fixed; bottom:20px; right:20px; background:linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600; box-shadow:0 10px 25px rgba(59,130,246,0.4); z-index:1000; display:flex; align-items:center; gap:0.5rem; animation:pulse 2s infinite;">
         <i class="fas fa-rocket"></i> Novos Sistemas V2.0
     </button>
-
+    
     <style>
         @keyframes pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.05);
-            }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
-
+        
         .new-tab.active {
             background: #3b82f6 !important;
         }
-
+        
         .new-tab:hover {
             opacity: 0.8;
         }
     </style>
-
+    
     <script>
         // Funções para os novos sistemas
         function openNewSystems() {
             document.getElementById('newSystemsPanel').style.display = 'block';
             loadSystemStatus();
         }
-
+        
         function closeNewSystems() {
             document.getElementById('newSystemsPanel').style.display = 'none';
         }
-
+        
         function showNewTab(tabName) {
             // Esconder todos os conteúdos
             document.querySelectorAll('.new-tab-content').forEach(el => el.style.display = 'none');
-
+            
             // Remover active de todas as tabs
             document.querySelectorAll('.new-tab').forEach(el => el.classList.remove('active'));
-
+            
             // Mostrar conteúdo selecionado
             document.getElementById('tab-' + tabName).style.display = 'block';
-
+            
             // Ativar tab
             event.target.classList.add('active');
-
+            
             // Carregar dados da tab
             if (tabName === 'analytics') loadAnalytics();
             if (tabName === 'webhooks') loadWebhooks();
@@ -2171,7 +2035,7 @@
                 loadBackups(); // Carregar backups também
             }
         }
-
+        
         async function loadAnalytics() {
             try {
                 // Buscar dados de leads
@@ -2181,15 +2045,15 @@
                     }
                 });
                 const leadsData = await leadsResponse.json();
-
+                
                 if (leadsData.success && leadsData.leads) {
                     const leads = leadsData.leads;
                     const totalLeads = leads.length;
-
+                    
                     // Calcular total de mensagens (soma de todas as conversas)
                     let totalMessages = 0;
                     let totalConversations = 0;
-
+                    
                     leads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
                             totalConversations += lead.conversations.length;
@@ -2200,21 +2064,21 @@
                             });
                         }
                     });
-
+                    
                     // Calcular taxa de sucesso (leads com email ou telefone / total)
                     const leadsWithContact = leads.filter(lead => {
                         const telefone = lead.telefone || lead.phone;
                         return lead.email || telefone;
                     }).length;
-
+                    
                     const successRate = totalLeads > 0 ? Math.round((leadsWithContact / totalLeads) * 100) : 100;
-
+                    
                     // Atualizar interface
                     document.getElementById('analytics-messages').textContent = totalMessages;
                     document.getElementById('analytics-conversations').textContent = totalConversations;
                     document.getElementById('analytics-leads').textContent = totalLeads;
                     document.getElementById('analytics-success').textContent = successRate + '%';
-
+                    
                     console.log(`📊 Analytics carregado: ${totalMessages} mensagens, ${totalConversations} conversas, ${totalLeads} leads, ${successRate}% sucesso`);
                 } else {
                     // Se não houver dados, mostrar zeros
@@ -2232,12 +2096,12 @@
                 document.getElementById('analytics-success').textContent = '0%';
             }
         }
-
+        
         async function loadWebhooks() {
             try {
                 const response = await fetch('/api/webhooks/default');
                 const data = await response.json();
-
+                
                 const container = document.getElementById('webhooks-list');
                 if (data.success && data.webhooks.length > 0) {
                     container.innerHTML = data.webhooks.map(w => `
@@ -2253,23 +2117,23 @@
                 console.error('Erro ao carregar webhooks:', error);
             }
         }
-
+        
         async function addFAQ() {
             const question = document.getElementById('faq-question').value;
             const answer = document.getElementById('faq-answer').value;
-
+            
             if (!question || !answer) {
                 alert('Preencha pergunta e resposta!');
                 return;
             }
-
+            
             try {
                 const response = await fetch('/api/knowledge/default/faq', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, answer })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question, answer})
                 });
-
+                
                 const data = await response.json();
                 if (data.success) {
                     alert('FAQ adicionada com sucesso!');
@@ -2282,12 +2146,12 @@
                 alert('Erro ao adicionar FAQ');
             }
         }
-
+        
         async function loadFAQs() {
             try {
                 const response = await fetch('/api/knowledge/default');
                 const data = await response.json();
-
+                
                 const container = document.getElementById('faqs-container');
                 if (data.success && data.knowledge.faqs && data.knowledge.faqs.length > 0) {
                     container.innerHTML = data.knowledge.faqs.map(faq => `
@@ -2303,12 +2167,12 @@
                 console.error('Erro ao carregar FAQs:', error);
             }
         }
-
+        
         async function loadPlans() {
             try {
                 const response = await fetch('/api/plans');
                 const data = await response.json();
-
+                
                 const container = document.getElementById('plans-container');
                 if (data.success) {
                     container.innerHTML = data.plans.map(plan => `
@@ -2329,12 +2193,12 @@
                 console.error('Erro ao carregar planos:', error);
             }
         }
-
+        
         async function loadLLMStats() {
             try {
                 const response = await fetch('/api/llm/stats/default?days=30');
                 const data = await response.json();
-
+                
                 if (data.success && data.savings) {
                     document.getElementById('llm-cache-hits').textContent = data.savings.cacheHits || 0;
                     document.getElementById('llm-savings').textContent = 'R$ ' + (data.savings.savings || 0);
@@ -2344,12 +2208,12 @@
                 console.error('Erro ao carregar stats LLM:', error);
             }
         }
-
+        
         async function loadSystemStatus() {
             try {
                 const response = await fetch('/api/system/status');
                 const data = await response.json();
-
+                
                 const container = document.getElementById('system-status');
                 if (data.success) {
                     container.innerHTML = `
@@ -2378,27 +2242,27 @@
                 document.getElementById('system-status').innerHTML = '<p style="color:#ef4444;">Erro ao carregar status do sistema</p>';
             }
         }
-
+        
         function showAddWebhook() {
             alert('Funcionalidade de adicionar webhook em desenvolvimento. Use a API diretamente por enquanto.');
         }
-
+        
         // Carregar FAQs ao abrir a tab
         setTimeout(() => {
             if (document.getElementById('tab-knowledge').style.display === 'block') {
                 loadFAQs();
             }
         }, 1000);
-
-
+    
+        
         // ===== FUNÇÕES DAS NOVAS INTEGRAÇÕES V3 =====
-
+        
         async function loadGmailStatus() {
             try {
                 const response = await fetch('/api/gmail/status');
                 const data = await response.json();
                 const statusEl = document.getElementById('gmail-status');
-
+                
                 if (data.configured) {
                     statusEl.innerHTML = '<div style="color:#10b981;">✅ Gmail configurado e pronto para uso</div>';
                 } else {
@@ -2408,25 +2272,25 @@
                 console.error('Erro ao carregar status Gmail:', error);
             }
         }
-
+        
         async function testGmail() {
             const email = document.getElementById('test-email').value;
             if (!email) {
                 alert('Digite um email!');
                 return;
             }
-
+            
             try {
                 const response = await fetch('/api/gmail/send', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         to: email,
                         subject: 'Teste Link Mágico V3',
                         html: '<h1>Email de teste!</h1><p>Se você recebeu este email, a integração Gmail está funcionando! 🎉</p>'
                     })
                 });
-
+                
                 const data = await response.json();
                 if (data.success) {
                     alert('Email enviado com sucesso! Verifique a caixa de entrada.');
@@ -2438,13 +2302,13 @@
                 alert('Erro ao enviar email');
             }
         }
-
+        
         async function loadWhatsAppStatus() {
             try {
                 const response = await fetch('/api/whatsapp/status');
                 const data = await response.json();
                 const statusEl = document.getElementById('whatsapp-status');
-
+                
                 if (data.configured) {
                     statusEl.innerHTML = `<div style="color:#10b981;">✅ WhatsApp configurado (${data.provider})</div>`;
                 } else {
@@ -2454,24 +2318,24 @@
                 console.error('Erro ao carregar status WhatsApp:', error);
             }
         }
-
+        
         async function testWhatsApp() {
             const phone = document.getElementById('test-phone').value;
             if (!phone) {
                 alert('Digite um número de telefone!');
                 return;
             }
-
+            
             try {
                 const response = await fetch('/api/whatsapp/send', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         to: phone,
                         message: '🎉 Teste Link Mágico V3! Se você recebeu esta mensagem, a integração WhatsApp está funcionando!'
                     })
                 });
-
+                
                 const data = await response.json();
                 if (data.success) {
                     alert('Mensagem enviada com sucesso!');
@@ -2483,24 +2347,24 @@
                 alert('Erro ao enviar mensagem');
             }
         }
-
+        
         async function loadChatGPTStatus() {
             try {
                 const response = await fetch('/api/chatgpt/status');
                 const data = await response.json();
                 const statusEl = document.getElementById('chatgpt-status');
-
+                
                 if (data.configured) {
                     statusEl.innerHTML = '<div style="color:#10b981;">✅ ChatGPT configurado e pronto</div>';
                 } else {
                     statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ ChatGPT não configurado. Configure CHATGPT_API_KEY no .env</div>';
                 }
-
+                
                 // Carregar modelos
                 const modelsResponse = await fetch('/api/chatgpt/models');
                 const modelsData = await modelsResponse.json();
                 const modelsEl = document.getElementById('chatgpt-models');
-
+                
                 if (modelsData.length > 0) {
                     modelsEl.innerHTML = modelsData.map(m => `
                         <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
@@ -2513,28 +2377,28 @@
                 console.error('Erro ao carregar status ChatGPT:', error);
             }
         }
-
+        
         async function testChatGPT() {
             const prompt = document.getElementById('test-prompt').value;
             if (!prompt) {
                 alert('Digite uma pergunta!');
                 return;
             }
-
+            
             const responseEl = document.getElementById('chatgpt-response');
             responseEl.style.display = 'block';
             responseEl.innerHTML = '<div style="color:#94a3b8;">Gerando resposta...</div>';
-
+            
             try {
                 const response = await fetch('/api/chatgpt/generate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         prompt: prompt,
                         model: 'gpt-4-turbo'
                     })
                 });
-
+                
                 const data = await response.json();
                 if (data.success) {
                     responseEl.innerHTML = `<div style="color:#cbd5e1;">${data.result.response}</div>`;
@@ -2546,7 +2410,7 @@
                 responseEl.innerHTML = '<div style="color:#ef4444;">Erro ao gerar resposta</div>';
             }
         }
-
+        
         async function saveWhitelabel() {
             const config = {
                 companyName: document.getElementById('wl-company').value,
@@ -2554,14 +2418,14 @@
                 primaryColor: document.getElementById('wl-primary').value,
                 secondaryColor: document.getElementById('wl-secondary').value
             };
-
+            
             try {
                 const response = await fetch('/api/whitelabel/default', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(config)
                 });
-
+                
                 const data = await response.json();
                 if (data.success) {
                     alert('Configuração salva com sucesso!');
@@ -2574,7 +2438,7 @@
                 alert('Erro ao salvar configuração');
             }
         }
-
+        
         function updateWhitelabelPreview(config) {
             const preview = document.getElementById('wl-preview');
             preview.innerHTML = `
@@ -2584,7 +2448,7 @@
                 </div>
             `;
         }
-
+        
         async function loadLeadsStats() {
             try {
                 // Usar endpoint real /admin/leads
@@ -2594,48 +2458,48 @@
                     }
                 });
                 const data = await response.json();
-
+                
                 if (data.success && data.leads) {
                     const leads = data.leads;
-
+                    
                     // Calcular estatísticas
                     const total = leads.length;
-
+                    
                     // Classificar leads por interesse (simulação baseada em dados disponíveis)
                     const hot = leads.filter(lead => {
                         // Leads com email E telefone são considerados "hot"
                         const telefone = lead.telefone || lead.phone;
                         return lead.email && telefone;
                     }).length;
-
+                    
                     const warm = leads.filter(lead => {
                         // Leads com email OU telefone (mas não ambos) são "warm"
                         const telefone = lead.telefone || lead.phone;
                         return (lead.email || telefone) && !(lead.email && telefone);
                     }).length;
-
+                    
                     const cold = total - hot - warm;
-
+                    
                     // Atualizar estatísticas
                     document.getElementById('leads-total').textContent = total;
                     document.getElementById('leads-hot').textContent = hot;
                     document.getElementById('leads-warm').textContent = warm;
                     document.getElementById('leads-cold').textContent = cold;
-
+                    
                     // Carregar lista (últimos 10 leads)
                     const listEl = document.getElementById('leads-list');
                     const recentLeads = leads.slice(-10).reverse(); // Últimos 10, mais recentes primeiro
-
+                    
                     if (recentLeads.length > 0) {
                         listEl.innerHTML = recentLeads.map(lead => {
                             // Determinar classificação
                             let classification = 'cold';
                             let bgColor = '#3b82f6';
-
+                            
                             // Usar campos corretos: nome, telefone (não name, phone)
                             const nome = lead.nome || lead.name || '';
                             const telefone = lead.telefone || lead.phone || '';
-
+                            
                             if (lead.email && telefone) {
                                 classification = 'hot';
                                 bgColor = '#ef4444';
@@ -2643,12 +2507,12 @@
                                 classification = 'warm';
                                 bgColor = '#f59e0b';
                             }
-
+                            
                             // Formatar data
                             const date = new Date(lead.timestamp);
                             const dateStr = date.toLocaleDateString('pt-BR');
                             const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
+                            
                             return `
                                 <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem; cursor:pointer;" onclick="showLeadDetails('${lead.id}')">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -2673,7 +2537,7 @@
                     } else {
                         listEl.innerHTML = '<p style="color:#94a3b8;">Nenhum lead capturado ainda.</p>';
                     }
-
+                    
                     console.log(`📊 Leads V2.0 carregados: ${total} total (${hot} hot, ${warm} warm, ${cold} cold)`);
                 }
             } catch (error) {
@@ -2681,7 +2545,7 @@
                 document.getElementById('leads-list').innerHTML = '<p style="color:#ef4444;">Erro ao carregar leads. Verifique a conexão.</p>';
             }
         }
-
+        
         // Função para carregar leads no dashboard principal
         async function loadDashboardLeads() {
             try {
@@ -2691,29 +2555,29 @@
                     }
                 });
                 const data = await response.json();
-
+                
                 if (data.success && data.leads) {
                     const leads = data.leads;
                     const totalLeads = leads.length;
-
+                    
                     // Calcular leads de hoje
                     const today = new Date().toDateString();
                     const leadsToday = leads.filter(lead => {
                         const leadDate = new Date(lead.timestamp).toDateString();
                         return leadDate === today;
                     }).length;
-
+                    
                     // Calcular conversas e mensagens
                     let totalConversations = 0;
                     let totalMessages = 0;
                     let conversationsToday = 0;
                     let messagesToday = 0;
-
+                    
                     leads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
                             lead.conversations.forEach(conv => {
                                 totalConversations++;
-
+                                
                                 // Verificar se a conversa é de hoje
                                 if (conv.timestamp) {
                                     const convDate = new Date(conv.timestamp).toDateString();
@@ -2721,12 +2585,12 @@
                                         conversationsToday++;
                                     }
                                 }
-
+                                
                                 // Contar mensagens
                                 if (conv.messages && Array.isArray(conv.messages)) {
                                     const msgCount = conv.messages.length;
                                     totalMessages += msgCount;
-
+                                    
                                     // Contar mensagens de hoje
                                     conv.messages.forEach(msg => {
                                         if (msg.timestamp) {
@@ -2740,13 +2604,13 @@
                             });
                         }
                     });
-
+                    
                     // Atualizar dashboard
                     document.getElementById('totalLeads').textContent = totalLeads;
                     document.getElementById('leadsToday').textContent = leadsToday;
                     document.getElementById('conversationsToday').textContent = conversationsToday;
                     document.getElementById('messagesSent').textContent = messagesToday;
-
+                    
                     console.log(`📊 Dashboard atualizado: ${totalLeads} leads (${leadsToday} hoje), ${conversationsToday} conversas hoje, ${messagesToday} mensagens hoje`);
                 }
             } catch (error) {
@@ -2755,7 +2619,7 @@
                 document.getElementById('leadsToday').textContent = '0';
             }
         }
-
+        
         // Função para mostrar detalhes do lead em modal
         function showLeadDetails(leadId) {
             fetch('/admin/leads', {
@@ -2763,26 +2627,26 @@
                     'X-API-Key': 'linkmagico-api-key-2024'
                 }
             })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.leads) {
-                        const lead = data.leads.find(l => l.id === leadId);
-                        if (lead) {
-                            const date = new Date(lead.timestamp);
-                            const dateStr = date.toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: 'long',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-
-                            // Usar campos corretos do lead
-                            const nome = lead.nome || lead.name || 'Não informado';
-                            const telefone = lead.telefone || lead.phone || 'Não informado';
-                            const url = lead.url_origem || lead.url || 'Não disponível';
-
-                            const modalContent = `
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.leads) {
+                    const lead = data.leads.find(l => l.id === leadId);
+                    if (lead) {
+                        const date = new Date(lead.timestamp);
+                        const dateStr = date.toLocaleDateString('pt-BR', { 
+                            day: '2-digit', 
+                            month: 'long', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        // Usar campos corretos do lead
+                        const nome = lead.nome || lead.name || 'Não informado';
+                        const telefone = lead.telefone || lead.phone || 'Não informado';
+                        const url = lead.url_origem || lead.url || 'Não disponível';
+                        
+                        const modalContent = `
                             <div style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; display:flex; align-items:center; justify-content:center;" onclick="this.remove()">
                                 <div style="background:#1e293b; padding:2rem; border-radius:16px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto;" onclick="event.stopPropagation()">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
@@ -2825,17 +2689,17 @@
                                 </div>
                             </div>
                         `;
-
-                            document.body.insertAdjacentHTML('beforeend', modalContent);
-                        }
+                        
+                        document.body.insertAdjacentHTML('beforeend', modalContent);
                     }
-                })
-                .catch(error => {
-                    console.error('Erro ao carregar detalhes do lead:', error);
-                    alert('Erro ao carregar detalhes do lead');
-                });
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar detalhes do lead:', error);
+                alert('Erro ao carregar detalhes do lead');
+            });
         }
-
+        
         async function exportLeads() {
             try {
                 // Buscar todos os leads
@@ -2845,19 +2709,19 @@
                     }
                 });
                 const data = await response.json();
-
+                
                 if (data.success && data.leads && data.leads.length > 0) {
                     // Criar CSV
                     const headers = ['ID', 'Nome', 'Email', 'Telefone', 'Mensagem', 'URL', 'Data/Hora'];
                     const rows = data.leads.map(lead => {
                         const date = new Date(lead.timestamp);
                         const dateStr = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR');
-
+                        
                         // Usar campos corretos (nome, telefone, url_origem)
                         const nome = lead.nome || lead.name || '';
                         const telefone = lead.telefone || lead.phone || '';
                         const url = lead.url_origem || lead.url || '';
-
+                        
                         return [
                             lead.id || '',
                             nome,
@@ -2868,24 +2732,24 @@
                             dateStr
                         ].map(field => `"${field}"`).join(',');
                     });
-
+                    
                     const csv = [headers.join(','), ...rows].join('\n');
-
+                    
                     // Criar blob e download
                     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM para UTF-8
                     const link = document.createElement('a');
                     const url = URL.createObjectURL(blob);
-
+                    
                     const now = new Date();
-                    const filename = `leads_linkmagico_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours()}${now.getMinutes()}.csv`;
-
+                    const filename = `leads_linkmagico_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours()}${now.getMinutes()}.csv`;
+                    
                     link.setAttribute('href', url);
                     link.setAttribute('download', filename);
                     link.style.visibility = 'hidden';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-
+                    
                     showToast(`✅ ${data.leads.length} leads exportados com sucesso!`, 'success');
                 } else {
                     showToast('⚠️ Nenhum lead disponível para exportar', 'warning');
@@ -2895,12 +2759,12 @@
                 showToast('❌ Erro ao exportar leads', 'error');
             }
         }
-
+        
         // ===== FUNÇÕES DE BACKUP =====
         async function createBackup() {
             try {
                 showToast('💾 Criando backup...', 'info');
-
+                
                 const response = await fetch('/admin/leads/backup/create', {
                     method: 'POST',
                     headers: {
@@ -2908,9 +2772,9 @@
                         'Content-Type': 'application/json'
                     }
                 });
-
+                
                 const result = await response.json();
-
+                
                 if (result.success) {
                     showToast('✅ Backup criado com sucesso!', 'success');
                     loadBackups(); // Recarregar lista
@@ -2922,7 +2786,7 @@
                 showToast('❌ Erro ao criar backup', 'error');
             }
         }
-
+        
         async function loadBackups() {
             try {
                 const response = await fetch('/admin/leads/backup/list', {
@@ -2930,17 +2794,17 @@
                         'X-API-Key': 'linkmagico-api-key-2024'
                     }
                 });
-
+                
                 const data = await response.json();
-
+                
                 const container = document.getElementById('backups-list');
-
+                
                 if (data.success && data.backups && data.backups.length > 0) {
                     container.innerHTML = data.backups.map(backup => {
                         const date = new Date(backup.timestamp);
                         const dateStr = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR');
                         const sizeKB = (backup.size / 1024).toFixed(2);
-
+                        
                         const typeLabels = {
                             'manual': '👤 Manual',
                             'daily': '⏰ Diário',
@@ -2948,9 +2812,9 @@
                             'shutdown': '🛑 Shutdown',
                             'pre-restore': '⚠️ Pré-restauração'
                         };
-
+                        
                         const typeLabel = typeLabels[backup.type] || backup.type;
-
+                        
                         return `
                             <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.75rem; border-left:4px solid #3b82f6;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
@@ -2969,7 +2833,7 @@
                             </div>
                         `;
                     }).join('');
-
+                    
                     console.log(`📦 ${data.backups.length} backups carregados`);
                 } else {
                     container.innerHTML = '<p style="color:#94a3b8;">Nenhum backup disponível ainda.</p>';
@@ -2979,15 +2843,15 @@
                 document.getElementById('backups-list').innerHTML = '<p style="color:#ef4444;">Erro ao carregar backups</p>';
             }
         }
-
+        
         async function restoreBackup(filename) {
             if (!confirm(`⚠️ Tem certeza que deseja restaurar este backup?\n\nIsso irá substituir todos os leads atuais!\n\nUm backup do estado atual será criado antes da restauração.`)) {
                 return;
             }
-
+            
             try {
                 showToast('♻️ Restaurando backup...', 'info');
-
+                
                 const response = await fetch('/admin/leads/backup/restore', {
                     method: 'POST',
                     headers: {
@@ -2996,12 +2860,12 @@
                     },
                     body: JSON.stringify({ filename })
                 });
-
+                
                 const result = await response.json();
-
+                
                 if (result.success) {
                     showToast(`✅ Backup restaurado! ${result.leadsCount} leads recuperados.`, 'success');
-
+                    
                     // Recarregar dados
                     loadBackups();
                     loadLeadsStats();
@@ -3014,7 +2878,7 @@
                 showToast('❌ Erro ao restaurar backup', 'error');
             }
         }
-
+        
         // Carregar leads do dashboard ao iniciar
         window.addEventListener('DOMContentLoaded', () => {
             loadDashboardLeads();
@@ -3022,6 +2886,5 @@
             setInterval(loadDashboardLeads, 30000);
         });
     </script>
-</body>
-
+    </body>
 </html>
