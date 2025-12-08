@@ -4315,6 +4315,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         // Extrair apiKey da URL
         const urlParams = new URLSearchParams(window.location.search);
         const apiKey = urlParams.get('apiKey');
+        const apiBase = window.location.origin; // Base URL para chamadas de API
         
         const pageData = ${escapedPageData};
         const robotName = "${safeRobotName}";
