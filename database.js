@@ -804,6 +804,52 @@ const DatabaseHelpers = {
             console.error('❌ Erro ao atualizar status do agendamento:', error);
             return false;
         }
+    },
+
+    // =====================================================
+    // 🔧 MÉTODOS GENÉRICOS PARA COMPATIBILIDADE (V3.1)
+    // =====================================================
+
+    /**
+     * Executar query genérica (para CREATE TABLE, INSERT, UPDATE, DELETE)
+     * Compatibilidade com whitelabel.js e structured-leads.js
+     */
+    async run(query, params = []) {
+        try {
+            const result = await db.query(query, params);
+            return result;
+        } catch (error) {
+            console.error('❌ Erro ao executar query:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar um único registro
+     * Compatibilidade com whitelabel.js e structured-leads.js
+     */
+    async get(query, params = []) {
+        try {
+            const result = await db.query(query, params);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error('❌ Erro ao buscar registro:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar múltiplos registros
+     * Compatibilidade com módulos que usam all()
+     */
+    async all(query, params = []) {
+        try {
+            const result = await db.query(query, params);
+            return result.rows || [];
+        } catch (error) {
+            console.error('❌ Erro ao buscar registros:', error);
+            throw error;
+        }
     }
 };
 
