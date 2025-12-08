@@ -2757,83 +2757,133 @@
         }
 
         // Função para mostrar detalhes do lead em modal
-        function showLeadDetails(leadId) {
-            fetch('/admin/leads', {
-                headers: {
-                    'X-API-Key': 'linkmagico-api-key-2024'
+        async function showLeadDetails(leadId) {
+            try {
+                // Buscar dados do lead
+                const leadsResponse = await fetch('/admin/leads', {
+                    headers: {
+                        'X-API-Key': 'linkmagico-api-key-2024'
+                    }
+                });
+                const leadsData = await leadsResponse.json();
+
+                if (!leadsData.success || !leadsData.leads) {
+                    throw new Error('Erro ao carregar leads');
                 }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.leads) {
-                        const lead = data.leads.find(l => l.id === leadId);
-                        if (lead) {
-                            const date = new Date(lead.timestamp);
-                            const dateStr = date.toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: 'long',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
 
-                            // Usar campos corretos do lead
-                            const nome = lead.nome || lead.name || 'Não informado';
-                            const telefone = lead.telefone || lead.phone || 'Não informado';
-                            const url = lead.url_origem || lead.url || 'Não disponível';
+                const lead = leadsData.leads.find(l => l.id === leadId);
+                if (!lead) {
+                    throw new Error('Lead não encontrado');
+                }
 
-                            const modalContent = `
-                            <div style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; display:flex; align-items:center; justify-content:center;" onclick="this.remove()">
-                                <div style="background:#1e293b; padding:2rem; border-radius:16px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto;" onclick="event.stopPropagation()">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-                                        <h2 style="color:#60a5fa; margin:0;">📋 Detalhes do Lead</h2>
-                                        <button onclick="this.closest('[style*=fixed]').remove()" style="background:#ef4444; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
-                                            ✕ Fechar
-                                        </button>
-                                    </div>
-                                    
-                                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
-                                        <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Nome</div>
-                                        <div style="color:#cbd5e1; font-size:1.1rem; font-weight:600;">${nome}</div>
-                                    </div>
-                                    
-                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
-                                        <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                                            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📧 Email</div>
-                                            <div style="color:#cbd5e1; font-weight:600;">${lead.email || 'Não informado'}</div>
-                                        </div>
-                                        <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                                            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📱 Telefone</div>
-                                            <div style="color:#cbd5e1; font-weight:600;">${telefone}</div>
+                // 📅 Buscar agendamentos do lead
+                let appointmentsHtml = '';
+                try {
+                    const appointmentsResponse = await fetch(`/api/appointments/${leadId}`);
+                    const appointmentsData = await appointmentsResponse.json();
+
+                    if (appointmentsData.success && appointmentsData.appointments && appointmentsData.appointments.length > 0) {
+                        const statusLabels = {
+                            'pendente': { label: 'Pendente', color: '#f59e0b' },
+                            'confirmado': { label: 'Confirmado', color: '#10b981' },
+                            'cancelado': { label: 'Cancelado', color: '#ef4444' },
+                            'realizado': { label: 'Realizado', color: '#3b82f6' }
+                        };
+
+                        const appointmentsList = appointmentsData.appointments.map(apt => {
+                            const statusInfo = statusLabels[apt.status] || statusLabels['pendente'];
+                            const aptDate = apt.datetime || 'Data não informada';
+                            const notes = apt.notes || '';
+
+                            return `
+                                <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-top:0.75rem; border-left:4px solid ${statusInfo.color};">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <div style="color:#cbd5e1; font-weight:600;">📅 ${aptDate}</div>
+                                        <div style="background:${statusInfo.color}; color:white; padding:0.25rem 0.75rem; border-radius:4px; font-size:0.8rem; font-weight:600;">
+                                            ${statusInfo.label}
                                         </div>
                                     </div>
-                                    
-                                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
-                                        <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">💬 Mensagem</div>
-                                        <div style="color:#cbd5e1; line-height:1.6;">${lead.message || 'Nenhuma mensagem'}</div>
-                                    </div>
-                                    
-                                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
-                                        <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🕒 Data de Captura</div>
-                                        <div style="color:#cbd5e1; font-weight:600;">${dateStr}</div>
-                                    </div>
-                                    
-                                    <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                                        <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🔗 URL de Origem</div>
-                                        <div style="color:#60a5fa; word-break:break-all;">${url}</div>
-                                    </div>
+                                    ${notes ? `<div style="color:#94a3b8; font-size:0.85rem; margin-top:0.5rem;">📝 ${notes}</div>` : ''}
                                 </div>
+                            `;
+                        }).join('');
+
+                        appointmentsHtml = `
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📅 Agendamentos</div>
+                                ${appointmentsList}
                             </div>
                         `;
-
-                            document.body.insertAdjacentHTML('beforeend', modalContent);
-                        }
                     }
-                })
-                .catch(error => {
-                    console.error('Erro ao carregar detalhes do lead:', error);
-                    alert('Erro ao carregar detalhes do lead');
+                } catch (aptError) {
+                    console.warn('Não foi possível carregar agendamentos:', aptError);
+                }
+
+                const date = new Date(lead.timestamp);
+                const dateStr = date.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
                 });
+
+                // Usar campos corretos do lead
+                const nome = lead.nome || lead.name || 'Não informado';
+                const telefone = lead.telefone || lead.phone || 'Não informado';
+                const url = lead.url_origem || lead.url || 'Não disponível';
+
+                const modalContent = `
+                <div style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; display:flex; align-items:center; justify-content:center;" onclick="this.remove()">
+                    <div style="background:#1e293b; padding:2rem; border-radius:16px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                            <h2 style="color:#60a5fa; margin:0;">📋 Detalhes do Lead</h2>
+                            <button onclick="this.closest('[style*=fixed]').remove()" style="background:#ef4444; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                                ✕ Fechar
+                            </button>
+                        </div>
+                        
+                        <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
+                            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Nome</div>
+                            <div style="color:#cbd5e1; font-size:1.1rem; font-weight:600;">${nome}</div>
+                        </div>
+                        
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📧 Email</div>
+                                <div style="color:#cbd5e1; font-weight:600;">${lead.email || 'Não informado'}</div>
+                            </div>
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📱 Telefone</div>
+                                <div style="color:#cbd5e1; font-weight:600;">${telefone}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
+                            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">💬 Mensagem</div>
+                            <div style="color:#cbd5e1; line-height:1.6;">${lead.message || 'Nenhuma mensagem'}</div>
+                        </div>
+                        
+                        ${appointmentsHtml}
+                        
+                        <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
+                            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🕒 Data de Captura</div>
+                            <div style="color:#cbd5e1; font-weight:600;">${dateStr}</div>
+                        </div>
+                        
+                        <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🔗 URL de Origem</div>
+                            <div style="color:#60a5fa; word-break:break-all;">${url}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                document.body.insertAdjacentHTML('beforeend', modalContent);
+            } catch (error) {
+                console.error('Erro ao carregar detalhes do lead:', error);
+                alert('Erro ao carregar detalhes do lead');
+            }
         }
 
         async function exportLeads() {
