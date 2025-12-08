@@ -2894,6 +2894,7 @@ app.get("/chatbot", async (req, res) => {
         const robotName = req.query.robotName || req.query.name || "Assistente IA";
         const url = req.query.url || "";
         const instructions = req.query.instructions || "";
+        const apiKey = req.query.apiKey || ""; // Extrair apiKey para agendamento
 
         let pageData = {};
         if (url) {
@@ -2904,7 +2905,7 @@ app.get("/chatbot", async (req, res) => {
             }
         }
 
-        const html = generateFullChatbotHTML(pageData, robotName, instructions);
+        const html = generateFullChatbotHTML(pageData, robotName, instructions, apiKey);
         res.set('Content-Type', 'text/html');
         res.send(html);
     } catch (error) {
@@ -4212,10 +4213,11 @@ app.post("/api/extract", async (req, res) => {
 });
 
 // ===== FUNÇÃO: Geração Completa do HTML do Chatbot =====
-function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '') {
+function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '', apiKey = '') {
     const escapedPageData = JSON.stringify(pageData || {});
     const safeRobotName = String(robotName || 'Assistente IA').replace(/"/g, '&quot;');
     const safeInstructions = String(customInstructions || '').replace(/"/g, '&quot;');
+    const safeApiKey = String(apiKey || '').replace(/"/g, '&quot;');
 
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
@@ -4312,9 +4314,10 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         </div>
     </div>
     <script>
-        // Extrair apiKey da URL
+        // Extrair parâmetros da URL
         const urlParams = new URLSearchParams(window.location.search);
-        const apiKey = urlParams.get('apiKey');
+        // Usar apiKey injetada pelo servidor ou extrair da URL como fallback
+        const apiKey = "${safeApiKey}" || urlParams.get('apiKey') || "";
         const apiBase = window.location.origin; // Base URL para chamadas de API
         
         const pageData = ${escapedPageData};
@@ -4365,9 +4368,9 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             const nome = document.getElementById('agendamentoNome').value.trim();
             const email = document.getElementById('agendamentoEmail').value.trim();
             const horario = document.getElementById('agendamentoHorario').value;
-            const apiKey = urlParams.get('apiKey');
+            // Usar apiKey global (definida no início do script)
             const url_origem = urlParams.get('url');
-            const robotName = urlParams.get('robotName');
+            const robotNameParam = urlParams.get('robotName') || robotName;
 
             if (!horario) {
                 console.error('Por favor, selecione um horário disponível.');
@@ -4386,7 +4389,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         horario,
                         apiKey,
                         url_origem,
-                        robotName
+                        robotName: robotNameParam
                     }),
                 });
 
