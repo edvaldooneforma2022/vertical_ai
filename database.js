@@ -176,12 +176,45 @@ function getPostgresTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 
+        // Tabela de Leads por Tenant (para migração futura de JSON)
+        `CREATE TABLE IF NOT EXISTS tenant_leads (
+            id VARCHAR(255) PRIMARY KEY,
+            api_key VARCHAR(255) NOT NULL,
+            nome TEXT,
+            email TEXT,
+            telefone TEXT,
+            message TEXT,
+            url_origem TEXT,
+            source TEXT DEFAULT 'widget',
+            status TEXT DEFAULT 'novo',
+            metadata JSONB DEFAULT '{}',
+            conversations JSONB DEFAULT '[]',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Agendamentos por Tenant
+        `CREATE TABLE IF NOT EXISTS tenant_appointments (
+            id VARCHAR(255) PRIMARY KEY,
+            api_key VARCHAR(255) NOT NULL,
+            lead_id VARCHAR(255),
+            datetime TEXT,
+            status TEXT DEFAULT 'pendente',
+            notes TEXT,
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
         // Índices para performance
         `CREATE INDEX IF NOT EXISTS idx_conversations_chatbot ON conversations(chatbot_id)`,
         `CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp)`,
         `CREATE INDEX IF NOT EXISTS idx_analytics_chatbot_date ON analytics(chatbot_id, date)`,
         `CREATE INDEX IF NOT EXISTS idx_extraction_cache_hash ON extraction_cache(url_hash)`,
-        `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`
+        `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_leads_api_key ON tenant_leads(api_key)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_api_key ON tenant_appointments(api_key)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`
     ];
 }
 
@@ -267,6 +300,36 @@ function getSQLiteTables() {
             metadata TEXT DEFAULT '{}',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
+        )`,
+
+        // Tabela de Leads por Tenant (para migração futura de JSON)
+        `CREATE TABLE IF NOT EXISTS tenant_leads (
+            id TEXT PRIMARY KEY,
+            api_key TEXT NOT NULL,
+            nome TEXT,
+            email TEXT,
+            telefone TEXT,
+            message TEXT,
+            url_origem TEXT,
+            source TEXT DEFAULT 'widget',
+            status TEXT DEFAULT 'novo',
+            metadata TEXT DEFAULT '{}',
+            conversations TEXT DEFAULT '[]',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Agendamentos por Tenant
+        `CREATE TABLE IF NOT EXISTS tenant_appointments (
+            id TEXT PRIMARY KEY,
+            api_key TEXT NOT NULL,
+            lead_id TEXT,
+            datetime TEXT,
+            status TEXT DEFAULT 'pendente',
+            notes TEXT,
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`
     ];
 }
@@ -539,6 +602,203 @@ const DatabaseHelpers = {
         }
         const result = await db.query(query, USE_POSTGRES ? [chatbot_id, parsedDays] : [chatbot_id, parsedDays]);
         return result.rows;
+    },
+
+    // ===== CRUD para tenant_leads =====
+
+    /**
+     * Salvar lead no PostgreSQL/SQLite
+     */
+    async saveLead(apiKey, leadData) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO tenant_leads (id, api_key, nome, email, telefone, message, url_origem, source, status, metadata, conversations)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+               ON CONFLICT (id) DO UPDATE SET
+                   nome = $3, email = $4, telefone = $5, message = $6, 
+                   url_origem = $7, status = $9, metadata = $10, conversations = $11,
+                   updated_at = CURRENT_TIMESTAMP
+               RETURNING *`
+            : `INSERT OR REPLACE INTO tenant_leads (id, api_key, nome, email, telefone, message, url_origem, source, status, metadata, conversations, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
+
+        const params = [
+            leadData.id,
+            apiKey,
+            leadData.nome || null,
+            leadData.email || null,
+            leadData.telefone || null,
+            leadData.message || null,
+            leadData.url_origem || null,
+            leadData.source || 'widget',
+            leadData.status || 'novo',
+            JSON.stringify(leadData.metadata || {}),
+            JSON.stringify(leadData.conversations || [])
+        ];
+
+        const result = await db.query(query, params);
+        return result.rows[0];
+    },
+
+    /**
+     * Buscar todos os leads de um tenant
+     */
+    async getLeads(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_leads WHERE api_key = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_leads WHERE api_key = ? ORDER BY created_at DESC`;
+
+        const result = await db.query(query, [apiKey]);
+        return result.rows.map(lead => {
+            if (!USE_POSTGRES) {
+                lead.metadata = JSON.parse(lead.metadata || '{}');
+                lead.conversations = JSON.parse(lead.conversations || '[]');
+            }
+            return lead;
+        });
+    },
+
+    /**
+     * Buscar lead por ID
+     */
+    async getLeadById(apiKey, leadId) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_leads WHERE api_key = $1 AND id = $2`
+            : `SELECT * FROM tenant_leads WHERE api_key = ? AND id = ?`;
+
+        const result = await db.query(query, [apiKey, leadId]);
+        const lead = result.rows[0];
+
+        if (lead && !USE_POSTGRES) {
+            lead.metadata = JSON.parse(lead.metadata || '{}');
+            lead.conversations = JSON.parse(lead.conversations || '[]');
+        }
+
+        return lead;
+    },
+
+    /**
+     * Atualizar lead
+     */
+    async updateLead(apiKey, leadId, data) {
+        const query = USE_POSTGRES
+            ? `UPDATE tenant_leads SET 
+                nome = COALESCE($3, nome),
+                email = COALESCE($4, email),
+                telefone = COALESCE($5, telefone),
+                status = COALESCE($6, status),
+                metadata = COALESCE($7, metadata),
+                conversations = COALESCE($8, conversations),
+                updated_at = CURRENT_TIMESTAMP
+               WHERE api_key = $1 AND id = $2
+               RETURNING *`
+            : `UPDATE tenant_leads SET 
+                nome = COALESCE(?, nome),
+                email = COALESCE(?, email),
+                telefone = COALESCE(?, telefone),
+                status = COALESCE(?, status),
+                metadata = COALESCE(?, metadata),
+                conversations = COALESCE(?, conversations),
+                updated_at = datetime('now')
+               WHERE api_key = ? AND id = ?`;
+
+        const params = USE_POSTGRES
+            ? [
+                apiKey, leadId,
+                data.nome, data.email, data.telefone, data.status,
+                data.metadata ? JSON.stringify(data.metadata) : null,
+                data.conversations ? JSON.stringify(data.conversations) : null
+            ]
+            : [
+                data.nome, data.email, data.telefone, data.status,
+                data.metadata ? JSON.stringify(data.metadata) : null,
+                data.conversations ? JSON.stringify(data.conversations) : null,
+                apiKey, leadId
+            ];
+
+        const result = await db.query(query, params);
+        return result.rows[0];
+    },
+
+    // ===== CRUD para tenant_appointments =====
+
+    /**
+     * Salvar agendamento no PostgreSQL/SQLite
+     */
+    async saveAppointment(apiKey, appointmentData) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO tenant_appointments (id, api_key, lead_id, datetime, status, notes, metadata)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               ON CONFLICT (id) DO UPDATE SET
+                   datetime = $4, status = $5, notes = $6, metadata = $7,
+                   updated_at = CURRENT_TIMESTAMP
+               RETURNING *`
+            : `INSERT OR REPLACE INTO tenant_appointments (id, api_key, lead_id, datetime, status, notes, metadata, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
+
+        const params = [
+            appointmentData.id,
+            apiKey,
+            appointmentData.leadId || null,
+            appointmentData.datetime || null,
+            appointmentData.status || 'pendente',
+            appointmentData.notes || null,
+            JSON.stringify(appointmentData.metadata || {})
+        ];
+
+        const result = await db.query(query, params);
+        return result.rows[0];
+    },
+
+    /**
+     * Buscar todos os agendamentos de um tenant
+     */
+    async getAppointments(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_appointments WHERE api_key = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_appointments WHERE api_key = ? ORDER BY created_at DESC`;
+
+        const result = await db.query(query, [apiKey]);
+        return result.rows.map(apt => {
+            if (!USE_POSTGRES) {
+                apt.metadata = JSON.parse(apt.metadata || '{}');
+            }
+            return apt;
+        });
+    },
+
+    /**
+     * Buscar agendamentos por lead ID
+     */
+    async getAppointmentsByLeadId(apiKey, leadId) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_appointments WHERE api_key = $1 AND lead_id = $2 ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_appointments WHERE api_key = ? AND lead_id = ? ORDER BY created_at DESC`;
+
+        const result = await db.query(query, [apiKey, leadId]);
+        return result.rows.map(apt => {
+            if (!USE_POSTGRES) {
+                apt.metadata = JSON.parse(apt.metadata || '{}');
+            }
+            return apt;
+        });
+    },
+
+    /**
+     * Atualizar status do agendamento
+     */
+    async updateAppointmentStatus(apiKey, appointmentId, status) {
+        const query = USE_POSTGRES
+            ? `UPDATE tenant_appointments SET status = $3, updated_at = CURRENT_TIMESTAMP 
+               WHERE api_key = $1 AND id = $2 RETURNING *`
+            : `UPDATE tenant_appointments SET status = ?, updated_at = datetime('now') 
+               WHERE api_key = ? AND id = ?`;
+
+        const params = USE_POSTGRES
+            ? [apiKey, appointmentId, status]
+            : [status, apiKey, appointmentId];
+
+        const result = await db.query(query, params);
+        return result.rows[0];
     }
 };
 

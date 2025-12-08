@@ -359,6 +359,17 @@ class WhitelabelManager {
             };
         }
     }
+
+    // Alias methods for backward compatibility with server.js
+    // server.js chama saveConfig/getConfig mas os métodos reais são saveSettings/getSettings
+    async saveConfig(chatbotId, config) {
+        // Usar 'professional' como plano padrão para permitir whitelabel
+        return await this.saveSettings(chatbotId, config, 'professional');
+    }
+
+    async getConfig(chatbotId) {
+        return await this.getSettings(chatbotId);
+    }
 }
 
 // Singleton instance
