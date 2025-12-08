@@ -693,11 +693,7 @@ class SuperInteligenciaConversacional {
 const superInteligenciaGlobal = new SuperInteligenciaConversacional();
 console.log("🧠 SUPERINTELIGÊNCIA CONVERSACIONAL - Sistema Avançado Carregado");
 
-// ===== SISTEMA DE ARMAZENAMENTO DE LEADS PERSISTENTE (PostgreSQL) =====
-// 🎯 CORREÇÃO CIRÚRGICA: Migrado de JSON local para PostgreSQL
-// Interface pública mantida 100% compatível com versão anterior
-
-// Funções auxiliares para compatibilidade (mantidas para fallback)
+// ===== SISTEMA DE ARMAZENAMENTO DE LEADS PERSISTENTE =====
 function getTenantLeadsFilePath(apiKey) {
     const dataDir = path.join(__dirname, "data");
     const tenantDir = path.join(dataDir, "tenants");
@@ -707,6 +703,7 @@ function getTenantLeadsFilePath(apiKey) {
     return path.join(tenantDir, `leads-${apiKey}.json`);
 }
 
+// 📅 Função para obter caminho do arquivo de agendamentos por tenant
 function getTenantAppointmentsFilePath(apiKey) {
     const tenantDir = path.join(__dirname, 'data', 'tenants');
     if (!fs.existsSync(tenantDir)) {
@@ -718,158 +715,55 @@ function getTenantAppointmentsFilePath(apiKey) {
 class LeadCaptureSystem {
     constructor(apiKey) {
         this.apiKey = apiKey;
-        this.leads = []; // Cache local para performance
-        this.appointments = []; // Cache local para agendamentos
-        this._initialized = false;
-
-        // Inicialização assíncrona
-        this._initPromise = this._initialize();
-    }
-
-    async _initialize() {
-        try {
-            // Carregar leads do PostgreSQL
-            this.leads = await DatabaseHelpers.getTenantLeads(this.apiKey);
-
-            // Carregar agendamentos do PostgreSQL
-            this.appointments = await DatabaseHelpers.getTenantAppointments(this.apiKey);
-
-            this._initialized = true;
-            console.log(`📊 Sistema de Leads Inicializado (PostgreSQL): ${this.leads.length} leads carregados`);
-            console.log(`📅 Agendamentos carregados: ${this.appointments.length} registros`);
-
-            // Migrar dados antigos do JSON se existirem
-            await this._migrateFromJsonIfNeeded();
-
-        } catch (error) {
-            console.error("❌ Erro ao inicializar LeadCaptureSystem com PostgreSQL:", error);
-            // Fallback para JSON local em caso de erro
-            this._initializeFromJson();
-        }
-    }
-
-    // Migra dados antigos do JSON para PostgreSQL (executa apenas uma vez)
-    async _migrateFromJsonIfNeeded() {
-        const jsonPath = getTenantLeadsFilePath(this.apiKey);
-        const migrationFlagPath = jsonPath + '.migrated';
-
-        if (fs.existsSync(jsonPath) && !fs.existsSync(migrationFlagPath)) {
-            try {
-                const jsonData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-                if (Array.isArray(jsonData) && jsonData.length > 0) {
-                    console.log(`🔄 Migrando ${jsonData.length} leads de JSON para PostgreSQL...`);
-
-                    for (const lead of jsonData) {
-                        // Verificar se o lead já existe no banco
-                        const existing = await DatabaseHelpers.getTenantLeadById(this.apiKey, lead.id);
-                        if (!existing) {
-                            await DatabaseHelpers.upsertTenantLead(this.apiKey, lead);
-                        }
-                    }
-
-                    // Marcar como migrado
-                    fs.writeFileSync(migrationFlagPath, new Date().toISOString());
-                    console.log(`✅ Migração de leads concluída`);
-
-                    // Recarregar do banco
-                    this.leads = await DatabaseHelpers.getTenantLeads(this.apiKey);
-                }
-            } catch (error) {
-                console.error("⚠️ Erro na migração de JSON:", error);
-            }
-        }
-
-        // Migrar agendamentos também
-        const appointmentsJsonPath = getTenantAppointmentsFilePath(this.apiKey);
-        const appointmentsMigrationFlag = appointmentsJsonPath + '.migrated';
-
-        if (fs.existsSync(appointmentsJsonPath) && !fs.existsSync(appointmentsMigrationFlag)) {
-            try {
-                const jsonData = JSON.parse(fs.readFileSync(appointmentsJsonPath, 'utf8'));
-                if (Array.isArray(jsonData) && jsonData.length > 0) {
-                    console.log(`🔄 Migrando ${jsonData.length} agendamentos de JSON para PostgreSQL...`);
-
-                    for (const appt of jsonData) {
-                        const existing = await DatabaseHelpers.getTenantAppointmentById(this.apiKey, appt.id);
-                        if (!existing) {
-                            await DatabaseHelpers.createTenantAppointment(this.apiKey, appt);
-                        }
-                    }
-
-                    fs.writeFileSync(appointmentsMigrationFlag, new Date().toISOString());
-                    console.log(`✅ Migração de agendamentos concluída`);
-
-                    this.appointments = await DatabaseHelpers.getTenantAppointments(this.apiKey);
-                }
-            } catch (error) {
-                console.error("⚠️ Erro na migração de agendamentos:", error);
-            }
-        }
-    }
-
-    // Fallback para JSON local (compatibilidade retroativa)
-    _initializeFromJson() {
         this.leadsFilePath = getTenantLeadsFilePath(this.apiKey);
-        this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+        this.ensureDataDirectory();
+        this.leads = this.loadLeads();
+        console.log(`📊 Sistema de Leads Inicializado: ${this.leads.length} leads carregados`);
+        console.log(`💾 Arquivo de leads: ${this.leadsFilePath}`);
+    }
 
+    ensureDataDirectory() {
         try {
             const dir = path.dirname(this.leadsFilePath);
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
+                console.log(`📁 Diretório criado: ${dir}`);
             }
         } catch (error) {
             console.error("❌ Erro ao criar diretório:", error);
-        }
-
-        // Carregar do JSON
-        try {
-            if (fs.existsSync(this.leadsFilePath)) {
-                this.leads = JSON.parse(fs.readFileSync(this.leadsFilePath, "utf8"));
-            }
-            if (fs.existsSync(this.appointmentsFilePath)) {
-                this.appointments = JSON.parse(fs.readFileSync(this.appointmentsFilePath, "utf8"));
-            }
-        } catch (error) {
-            console.error("❌ Erro ao carregar dados JSON:", error);
-        }
-
-        this._initialized = true;
-        this._useJsonFallback = true;
-        console.log(`📊 Sistema de Leads Inicializado (JSON Fallback): ${this.leads.length} leads`);
-    }
-
-    // Garantir inicialização antes de operações
-    async _ensureInitialized() {
-        if (!this._initialized) {
-            await this._initPromise;
-        }
-    }
-
-    // ===== MÉTODOS DE LEADS (Interface preservada) =====
-
-    ensureDataDirectory() {
-        // Mantido para compatibilidade
-        const dir = path.join(__dirname, 'data', 'tenants');
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+            // Fallback para diretório atual se data/ não funcionar
+            this.leadsFilePath = path.join(__dirname, "leads.json");
+            console.log(`🔄 Usando fallback: ${this.leadsFilePath}`);
         }
     }
 
     loadLeads() {
-        // Retorna cache local (carregado do PostgreSQL na inicialização)
-        return this.leads;
+        try {
+            if (fs.existsSync(this.leadsFilePath)) {
+                const data = fs.readFileSync(this.leadsFilePath, "utf8");
+                const leads = JSON.parse(data);
+                console.log(`📥 Leads carregados: ${leads.length} registros`);
+                return leads;
+            }
+        } catch (error) {
+            console.error("❌ Erro ao carregar leads:", error);
+        }
+        console.log("📝 Inicializando novo arquivo de leads");
+        return [];
     }
 
     saveLeads() {
-        // Não necessário mais - cada operação já salva no banco
-        // Mantido para compatibilidade com código existente
-        console.log(`💾 Leads sincronizados com PostgreSQL: ${this.leads.length} registros`);
-        return true;
+        try {
+            fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
+            console.log(`💾 Leads salvos: ${this.leads.length} registros`);
+            return true;
+        } catch (error) {
+            console.error("❌ Erro ao salvar leads:", error);
+            return false;
+        }
     }
 
-    async addLead(leadData) {
-        await this._ensureInitialized();
-
+    addLead(leadData) {
         const lead = {
             id: crypto.randomBytes(8).toString("hex"),
             timestamp: new Date().toISOString(),
@@ -880,70 +774,44 @@ class LeadCaptureSystem {
             status: "ativo"
         };
 
-        try {
-            // Salvar no PostgreSQL
-            await DatabaseHelpers.upsertTenantLead(this.apiKey, lead);
-
-            // Atualizar cache local
-            this.leads.push(lead);
-
-            console.log(`🎯 NOVO LEAD (PostgreSQL): ${lead.nome} (${lead.email})`);
-        } catch (error) {
-            console.error("❌ Erro ao salvar lead no PostgreSQL:", error);
-            // Fallback: manter no cache local
-            this.leads.push(lead);
-        }
-
+        this.leads.push(lead);
+        this.saveLeads();
+        console.log(`🎯 NOVO LEAD: ${lead.nome} (${lead.email})`);
         return lead;
     }
 
-    async updateLeadConversation(leadId, message, isUser = true) {
-        await this._ensureInitialized();
-
+    updateLeadConversation(leadId, message, isUser = true) {
         const lead = this.leads.find(l => l.id === leadId);
         if (lead) {
-            // Limpar mensagem
+            // 🎯 CORREÇÃO: Remover caracteres especiais como <s> [OUT]
             const cleanMessage = this.cleanMessage(message);
 
-            // Atualizar cache local
             lead.conversations.push({
                 timestamp: new Date().toISOString(),
                 message: cleanMessage,
                 isUser
             });
             lead.lastInteraction = new Date().toISOString();
-
-            try {
-                // Salvar no PostgreSQL
-                await DatabaseHelpers.updateTenantLeadConversation(this.apiKey, leadId, cleanMessage, isUser);
-            } catch (error) {
-                console.error("❌ Erro ao atualizar conversa no PostgreSQL:", error);
-            }
+            this.saveLeads();
         }
     }
 
+    // 🎯 NOVA FUNÇÃO: Limpar mensagem de caracteres especiais
     cleanMessage(message) {
         if (!message) return '';
         return String(message)
-            .replace(/<s>\s*\[OUT\]/g, '')
-            .replace(/<[^>]*>/g, '')
-            .replace(/\[.*?\]/g, '')
-            .replace(/\s+/g, ' ')
+            .replace(/<s>\s*\[OUT\]/g, '') // Remove <s> [OUT]
+            .replace(/<[^>]*>/g, '') // Remove todas as tags HTML
+            .replace(/\[.*?\]/g, '') // Remove colchetes
+            .replace(/\s+/g, ' ') // Normaliza espaços
             .trim();
     }
 
-    async updateLeadJourneyStage(leadId, stage) {
-        await this._ensureInitialized();
-
+    updateLeadJourneyStage(leadId, stage) {
         const lead = this.leads.find(l => l.id === leadId);
         if (lead && ["descoberta", "negociacao", "fidelizacao"].includes(stage)) {
             lead.journeyStage = stage;
-
-            try {
-                await DatabaseHelpers.updateTenantLeadJourneyStage(this.apiKey, leadId, stage);
-            } catch (error) {
-                console.error("❌ Erro ao atualizar estágio:", error);
-            }
+            this.saveLeads();
         }
     }
 
@@ -959,28 +827,52 @@ class LeadCaptureSystem {
         return this.leads.find(l => l.email === email);
     }
 
+    // 🎯 Encontrar lead por conversationId para rastrear mensagens
     findLeadByConversationId(conversationId) {
         return this.leads.find(l => l.conversationId === conversationId);
     }
 
-    // ===== MÉTODOS DE AGENDAMENTOS (Interface preservada) =====
+    // ===== 📅 SISTEMA DE AGENDAMENTOS =====
 
     initializeAppointments() {
-        // Mantido para compatibilidade - já inicializado no constructor
+        this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+        this.appointments = this.loadAppointments();
         console.log(`📅 Sistema de Agendamentos: ${this.appointments.length} agendamentos carregados`);
     }
 
     loadAppointments() {
-        return this.appointments;
+        try {
+            if (!this.appointmentsFilePath) {
+                this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+            }
+            if (fs.existsSync(this.appointmentsFilePath)) {
+                const data = fs.readFileSync(this.appointmentsFilePath, "utf8");
+                return JSON.parse(data);
+            }
+        } catch (error) {
+            console.error("❌ Erro ao carregar agendamentos:", error);
+        }
+        return [];
     }
 
     saveAppointments() {
-        console.log(`💾 Agendamentos sincronizados com PostgreSQL: ${this.appointments.length} registros`);
-        return true;
+        try {
+            if (!this.appointmentsFilePath) {
+                this.appointmentsFilePath = getTenantAppointmentsFilePath(this.apiKey);
+            }
+            fs.writeFileSync(this.appointmentsFilePath, JSON.stringify(this.appointments || [], null, 2));
+            console.log(`💾 Agendamentos salvos: ${(this.appointments || []).length} registros`);
+            return true;
+        } catch (error) {
+            console.error("❌ Erro ao salvar agendamentos:", error);
+            return false;
+        }
     }
 
-    async addAppointment(appointmentData) {
-        await this._ensureInitialized();
+    addAppointment(appointmentData) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
 
         const appointment = {
             id: crypto.randomBytes(8).toString("hex"),
@@ -990,53 +882,51 @@ class LeadCaptureSystem {
             leadEmail: appointmentData.leadEmail || 'Não informado',
             leadPhone: appointmentData.leadPhone || '',
             datetime: appointmentData.datetime,
-            status: 'pendente',
+            status: 'pendente', // pendente, confirmado, cancelado, realizado
             notes: appointmentData.notes || '',
             robotName: appointmentData.robotName || 'Assistente IA',
             urlOrigem: appointmentData.urlOrigem || ''
         };
 
-        try {
-            await DatabaseHelpers.createTenantAppointment(this.apiKey, appointment);
-            this.appointments.push(appointment);
-            console.log(`📅 NOVO AGENDAMENTO (PostgreSQL): ${appointment.leadName} - ${appointment.datetime}`);
-        } catch (error) {
-            console.error("❌ Erro ao salvar agendamento:", error);
-            this.appointments.push(appointment);
-        }
-
+        this.appointments.push(appointment);
+        this.saveAppointments();
+        console.log(`📅 NOVO AGENDAMENTO: ${appointment.leadName} - ${appointment.datetime}`);
         return appointment;
     }
 
     getAppointments() {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
         return (this.appointments || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     getAppointmentById(appointmentId) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
         return this.appointments.find(a => a.id === appointmentId);
     }
 
-    async updateAppointmentStatus(appointmentId, status) {
-        await this._ensureInitialized();
-
+    updateAppointmentStatus(appointmentId, status) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
         const appointment = this.appointments.find(a => a.id === appointmentId);
         if (appointment && ['pendente', 'confirmado', 'cancelado', 'realizado'].includes(status)) {
             appointment.status = status;
             appointment.updatedAt = new Date().toISOString();
-
-            try {
-                await DatabaseHelpers.updateTenantAppointmentStatus(this.apiKey, appointmentId, status);
-                console.log(`📅 Agendamento ${appointmentId} atualizado para: ${status}`);
-            } catch (error) {
-                console.error("❌ Erro ao atualizar status:", error);
-            }
-
+            this.saveAppointments();
+            console.log(`📅 Agendamento ${appointmentId} atualizado para: ${status}`);
             return appointment;
         }
         return null;
     }
 
     getAppointmentsByLeadId(leadId) {
+        if (!this.appointments) {
+            this.appointments = this.loadAppointments();
+        }
         return this.appointments.filter(a => a.leadId === leadId);
     }
 }
@@ -3132,8 +3022,7 @@ app.get("/chat.html", async (req, res) => {
 // ROTA CHATBOT COMPLETA
 app.get("/chatbot", async (req, res) => {
     try {
-        // 🎯 CORREÇÃO: Aceitar tanto 'name' quanto 'robotName' como parâmetro
-        const robotName = req.query.name || req.query.robotName || "Assistente IA";
+        const robotName = req.query.name || "Assistente IA";
         const url = req.query.url || "";
         const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
