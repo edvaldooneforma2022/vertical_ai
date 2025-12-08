@@ -20,7 +20,7 @@ let db;
 if (USE_POSTGRES) {
     // PostgreSQL para produção
     const { Pool } = require('pg');
-    
+
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.NODE_ENV === 'production' ? {
@@ -41,7 +41,7 @@ if (USE_POSTGRES) {
     // SQLite para desenvolvimento
     const Database = require('better-sqlite3');
     const dbPath = path.join(__dirname, 'data', 'linkmagico.db');
-    
+
     // Garantir que o diretório existe
     const dataDir = path.dirname(dbPath);
     if (!fs.existsSync(dataDir)) {
@@ -276,12 +276,78 @@ function getSQLiteTables() {
  */
 const DatabaseHelpers = {
     /**
+     * 🔧 Executar query genérica (INSERT, UPDATE, DELETE, CREATE)
+     */
+    async run(query, params = []) {
+        try {
+            if (USE_POSTGRES) {
+                // Converter ? para $1, $2, etc para PostgreSQL
+                let pgQuery = query;
+                let paramIndex = 1;
+                pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
+                await db.query(pgQuery, params);
+            } else {
+                // SQLite usa ? diretamente
+                const sqliteQuery = query.replace(/\$(\d+)/g, '?');
+                db.sqlite.prepare(sqliteQuery).run(params);
+            }
+            return true;
+        } catch (error) {
+            console.error('❌ DatabaseHelpers.run error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * 🔧 Buscar uma única linha
+     */
+    async get(query, params = []) {
+        try {
+            if (USE_POSTGRES) {
+                let pgQuery = query;
+                let paramIndex = 1;
+                pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
+                const result = await db.query(pgQuery, params);
+                return result.rows[0] || null;
+            } else {
+                const sqliteQuery = query.replace(/\$(\d+)/g, '?');
+                return db.sqlite.prepare(sqliteQuery).get(params);
+            }
+        } catch (error) {
+            console.error('❌ DatabaseHelpers.get error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * 🔧 Buscar múltiplas linhas
+     */
+    async all(query, params = []) {
+        try {
+            if (USE_POSTGRES) {
+                let pgQuery = query;
+                let paramIndex = 1;
+                pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
+                const result = await db.query(pgQuery, params);
+                return result.rows;
+            } else {
+                const sqliteQuery = query.replace(/\$(\d+)/g, '?');
+                return db.sqlite.prepare(sqliteQuery).all(params);
+            }
+        } catch (error) {
+            console.error('❌ DatabaseHelpers.all error:', error);
+            return [];
+        }
+    },
+
+    /**
      * Criar ou atualizar chatbot
      */
     async upsertChatbot(chatbotData) {
+
         const { id, api_key, name, url, extracted_data, config, user_email, plan } = chatbotData;
-        
-        const query = USE_POSTGRES 
+
+        const query = USE_POSTGRES
             ? `INSERT INTO chatbots (id, api_key, name, url, extracted_data, config, user_email, plan, last_active)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
                ON CONFLICT (id) DO UPDATE SET
@@ -292,11 +358,11 @@ const DatabaseHelpers = {
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
 
         const params = [
-            id, 
-            api_key, 
-            name, 
-            url, 
-            JSON.stringify(extracted_data), 
+            id,
+            api_key,
+            name,
+            url,
+            JSON.stringify(extracted_data),
             JSON.stringify(config),
             user_email,
             plan || 'free'
@@ -314,11 +380,11 @@ const DatabaseHelpers = {
             ? `SELECT * FROM chatbots WHERE api_key = $1`
             : `SELECT * FROM chatbots WHERE api_key = ?`;
 
-               const parsedDays = parseInt(days, 10);
+        const parsedDays = parseInt(days, 10);
         if (isNaN(parsedDays) || parsedDays <= 0) {
             throw new Error('Invalid days parameter');
         }
-        const result = await db.query(query, [chatbot_id, parsedDays]);      const chatbot = result.rows[0];
+        const result = await db.query(query, [chatbot_id, parsedDays]); const chatbot = result.rows[0];
 
         if (chatbot && !USE_POSTGRES) {
             chatbot.extracted_data = JSON.parse(chatbot.extracted_data || '{}');
