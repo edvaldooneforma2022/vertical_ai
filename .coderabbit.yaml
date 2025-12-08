@@ -1,0 +1,33 @@
+version: 1
+
+reviews:
+  enable: true
+  auto_review: true
+  auto_review_on:
+    - pull_request
+    - push
+
+rules:
+  summarize_changes: true
+  describe_problems: true
+  suggest_fixes: true
+  provide_code_examples: true
+  detect_secrets: true
+  detect_security_issues: true
+  run_additional_checks: true
+
+review_status:
+  show_review_status: true
+  fail_on:
+    - security_issue
+    - bug_risk
+    - performance_issue
+
+chat:
+  enable: true
+  auto_reply: true
+
+comments:
+  inline: true
+  threads: true
+  collapse_minor: true
