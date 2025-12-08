@@ -7,22 +7,12 @@ const path = require('path');
 
 class StructuredLeadsManager {
     constructor() {
-        this._initialized = false;
         this.leadFields = {
             required: ['name', 'email'],
             optional: ['phone', 'company', 'position', 'website', 'notes'],
             custom: []
         };
     }
-
-    // Garantir que a tabela foi inicializada (lazy initialization)
-    async ensureInitialized() {
-        if (!this._initialized) {
-            await this.initialize();
-            this._initialized = true;
-        }
-    }
-
 
     // Inicializar tabela de leads estruturados
     async initialize() {
@@ -103,10 +93,10 @@ class StructuredLeadsManager {
     // Validar telefone (formato brasileiro)
     validatePhone(phone) {
         if (!phone) return true; // Opcional
-
+        
         // Remove caracteres não numéricos
         const cleaned = phone.replace(/\D/g, '');
-
+        
         // Aceita: 11 dígitos (celular com DDD) ou 10 dígitos (fixo com DDD)
         return cleaned.length === 10 || cleaned.length === 11;
     }
@@ -114,7 +104,7 @@ class StructuredLeadsManager {
     // Validar URL
     validateUrl(url) {
         if (!url) return true; // Opcional
-
+        
         try {
             new URL(url);
             return true;
@@ -196,11 +186,7 @@ class StructuredLeadsManager {
             };
         }
 
-        // Garantir que a tabela existe
-        await this.ensureInitialized();
-
         try {
-
             const id = `lead_${chatbotId}_${Date.now()}`;
             const score = this.calculateLeadScore(leadData);
             const status = this.determineLeadStatus(score);
@@ -323,7 +309,7 @@ class StructuredLeadsManager {
     async exportToCSV(chatbotId, filters = {}) {
         try {
             const result = await this.getLeads(chatbotId, filters);
-
+            
             if (!result.success || result.leads.length === 0) {
                 return {
                     success: false,
@@ -373,7 +359,7 @@ class StructuredLeadsManager {
             // Salvar arquivo
             const filename = `leads_${chatbotId}_${Date.now()}.csv`;
             const filepath = path.join('/tmp', filename);
-
+            
             await fs.writeFile(filepath, csvContent, 'utf8');
 
             console.log(`✅ CSV exportado: ${filename}`);
@@ -397,7 +383,7 @@ class StructuredLeadsManager {
     async updateLeadStatus(leadId, newStatus) {
         try {
             const validStatuses = ['new', 'contacted', 'qualified', 'converted', 'lost'];
-
+            
             if (!validStatuses.includes(newStatus)) {
                 return {
                     success: false,
@@ -454,7 +440,7 @@ class StructuredLeadsManager {
                     cold: stats.cold_leads || 0,
                     avgScore: parseFloat((stats.avg_score || 0).toFixed(2)),
                     converted: stats.converted || 0,
-                    conversionRate: stats.total > 0
+                    conversionRate: stats.total > 0 
                         ? parseFloat(((stats.converted / stats.total) * 100).toFixed(2))
                         : 0
                 }
@@ -500,8 +486,10 @@ class StructuredLeadsManager {
 // Singleton instance
 const structuredLeadsManager = new StructuredLeadsManager();
 
-// NOTA: Inicialização lazy - será chamada automaticamente na primeira operação
-// Isso evita timeout de conexão durante o startup do servidor
+// Inicializar automaticamente
+(async () => {
+    await structuredLeadsManager.initialize();
+})();
 
 module.exports = {
     structuredLeadsManager,
