@@ -62,7 +62,20 @@ try {
     console.log("⚠️ Puppeteer not installed - Using basic extraction only");
 }
 
+// ===== SWAGGER/OPENAPI DOCUMENTATION =====
+let setupSwagger;
+try {
+    setupSwagger = require('./swagger-config').setupSwagger;
+} catch (e) {
+    console.log('⚠️ Swagger não configurado - Instale: npm install swagger-ui-express yamljs');
+}
+
 const app = express();
+
+// ===== CONFIGURAR SWAGGER (Documentação da API) =====
+if (setupSwagger) {
+    setupSwagger(app);
+}
 
 // Declarando conversationHistories no escopo global ou adequado
 const conversationHistories = new Map();
