@@ -3188,7 +3188,7 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
 // ROTA CHAT.HTML
 app.get("/chat.html", async (req, res) => {
     try {
-        const robotName = req.query.name || "Assistente IA";
+        const robotName = req.query.robotName || req.query.name || "Assistente IA";
         const url = req.query.url || "";
         const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
@@ -3213,7 +3213,7 @@ app.get("/chat.html", async (req, res) => {
 // ROTA CHATBOT COMPLETA
 app.get("/chatbot", async (req, res) => {
     try {
-        const robotName = req.query.name || "Assistente IA";
+        const robotName = req.query.robotName || req.query.name || "Assistente IA";
         const url = req.query.url || "";
         const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
