@@ -2620,7 +2620,12 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: true, // Permite qualquer origem dinamicamente (necessário para widget em sites de clientes)
+    origin: function (origin, callback) {
+        // Permitir requests sem 'origin' (como mobile apps, curl ou same-origin/preview)
+        if (!origin) return callback(null, true);
+        // Permitir todas as origens (modo SaaS para widgets externos)
+        return callback(null, true);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"]
