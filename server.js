@@ -2620,7 +2620,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: ["https://linkmagico-comercial.onrender.com", "https://link-m-gico-v6-0-hmpl.onrender.com", "http://localhost:3000", "http://localhost:8080"],
+    origin: true, // Permite qualquer origem dinamicamente (necessário para widget em sites de clientes)
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"]
