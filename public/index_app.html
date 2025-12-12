@@ -844,6 +844,21 @@
             position: relative;
             margin-top: 0.75rem;
             border: 1px solid var(--dark-border);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .code-block code {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .copy-btn {
