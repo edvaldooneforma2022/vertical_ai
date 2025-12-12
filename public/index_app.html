@@ -1684,7 +1684,7 @@
                 chatbotFrame.src = `/chat.html?${chatbotParams.toString()}`;
 
                 // Atualiza o código do widget com script inline moderno v2.0
-                widgetCodeDisplay.innerHTML = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, '#3b82f6');
+                widgetCodeDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, '#3b82f6');
 
                 successAlert.style.display = 'block';
                 showToast('Chatbot ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
@@ -1745,8 +1745,8 @@
             const color = primaryColor || '#3b82f6';
             const key = apiKey || 'SUA_API_KEY';
 
-            return `&lt;!-- LinkMágico Chatbot Widget v2.0 - Design Moderno --&gt;
-&lt;script&gt;
+            return `<!-- LinkMágico Chatbot Widget v2.0 - Design Moderno -->
+<script>
 (function() {
     'use strict';
     var config = {
@@ -1846,7 +1846,7 @@
     input.addEventListener('keypress', function(e) { if (e.key === 'Enter') sendMessage(); });
     console.log('✅ LinkMágico Widget v2.0 carregado!');
 })();
-&lt;/script&gt;`;
+<\/script>`;
         }
 
     </script>
