@@ -4574,10 +4574,25 @@ app.post("/api/extract", async (req, res) => {
 });
 
 // ===== FUNÇÃO: Geração Completa do HTML do Chatbot =====
+// Helper para escapar strings para uso em contexto JavaScript inline
+function escapeForJS(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/\\/g, '\\\\')   // Escape barras invertidas primeiro
+        .replace(/"/g, '\\"')     // Escape aspas duplas
+        .replace(/'/g, "\\'")     // Escape aspas simples
+        .replace(/\n/g, '\\n')    // Escape quebras de linha
+        .replace(/\r/g, '\\r')    // Escape retorno de carro
+        .replace(/\t/g, '\\t')    // Escape tabs
+        .replace(/</g, '\\u003c') // Escape < para evitar </script>
+        .replace(/>/g, '\\u003e'); // Escape >
+}
+
 function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '', apiKey = '') {
     const escapedPageData = JSON.stringify(pageData || {});
-    const safeRobotName = String(robotName || 'Assistente IA').replace(/"/g, '&quot;');
-    const safeInstructions = String(customInstructions || '').replace(/"/g, '&quot;');
+    const safeRobotName = escapeForJS(robotName || 'Assistente IA');
+    const safeInstructions = escapeForJS(customInstructions || '');
+
 
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
@@ -4779,9 +4794,10 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 }
 
 function generateChatbotHTML({ robotName, url, instructions }) {
-    const escapedRobotName = String(robotName).replace(/"/g, "&quot;");
-    const escapedUrl = String(url).replace(/"/g, "&quot;");
-    const escapedInstructions = String(instructions).replace(/"/g, "&quot;");
+    const escapedRobotName = escapeForJS(String(robotName || 'Assistente IA'));
+    const escapedUrl = escapeForJS(String(url || ''));
+    const escapedInstructions = escapeForJS(String(instructions || ''));
+
 
     return `<!doctype html>
 <html lang="pt-BR">
