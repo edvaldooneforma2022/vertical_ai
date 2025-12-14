@@ -48,6 +48,16 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const FirecrawlApp = require('./firecrawl-replacement');
 const path = require("path");
+
+// 🚀 ENHANCED CONTENT EXTRACTOR - OCR + Dynamic Content
+let enhancedExtractor = null;
+try {
+    const { getEnhancedExtractor } = require('./enhanced-content-extractor');
+    enhancedExtractor = getEnhancedExtractor({ verbose: false });
+    console.log('✅ Enhanced Content Extractor carregado (OCR + Dynamic)');
+} catch (e) {
+    console.log('⚠️ Enhanced Content Extractor não disponível:', e.message);
+}
 const fs = require("fs");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
@@ -3617,6 +3627,55 @@ async function extractPageData(url) {
                 analytics.failedExtractions++;
             } finally {
                 try { if (browser) await browser.close(); } catch (e) { }
+            }
+        }
+
+        // 🚀 ENHANCED EXTRACTION: OCR + Dynamic Content + Floating Elements
+        if (enhancedExtractor) {
+            try {
+                logger.info(`🚀 [ENHANCED] Starting enhanced extraction for ${url}`);
+                const enhancedContent = await enhancedExtractor.extractComplete(url, {
+                    enableOCR: true,
+                    maxOCRImages: 10,
+                    enableFloating: true,
+                    enableDynamic: true
+                });
+
+                // Merge enhanced content with existing data
+                if (enhancedContent.ocrText && enhancedContent.ocrText.length > 20) {
+                    extractedData.cleanText += '\n\n[CONTEÚDO EXTRAÍDO DE IMAGENS]\n' + enhancedContent.ocrText;
+                    extractedData.imagesText = [enhancedContent.ocrText];
+                    logger.info(`✅ [ENHANCED] OCR: ${enhancedContent.processedImages} imagens processadas`);
+                }
+
+                if (enhancedContent.floatingContent && enhancedContent.floatingContent.length > 20) {
+                    extractedData.cleanText += '\n\n[ELEMENTOS DINÂMICOS/FLUTUANTES]\n' + enhancedContent.floatingContent;
+                    logger.info(`✅ [ENHANCED] Floating elements captured`);
+                }
+
+                if (enhancedContent.iframeContent && enhancedContent.iframeContent.length > 20) {
+                    extractedData.cleanText += '\n\n[CONTEÚDO DE IFRAMES]\n' + enhancedContent.iframeContent;
+                    logger.info(`✅ [ENHANCED] Iframe content captured`);
+                }
+
+                // Use dynamic text if it's more complete
+                if (enhancedContent.dynamicText && enhancedContent.dynamicText.length > extractedData.cleanText.length * 1.2) {
+                    extractedData.cleanText = enhancedContent.dynamicText;
+                    extractedData.method = 'enhanced-extraction';
+                    logger.info(`✅ [ENHANCED] Using enhanced dynamic text (${enhancedContent.dynamicText.length} chars)`);
+                }
+
+                extractedData.enhancedExtraction = {
+                    ocrTextLength: enhancedContent.ocrText?.length || 0,
+                    floatingContentLength: enhancedContent.floatingContent?.length || 0,
+                    iframeContentLength: enhancedContent.iframeContent?.length || 0,
+                    processedImages: enhancedContent.processedImages || 0,
+                    extractionTime: enhancedContent.extractionTime || 0
+                };
+
+            } catch (enhancedError) {
+                logger.warn(`⚠️ [ENHANCED] Enhanced extraction failed, continuing with basic: ${enhancedError.message}`);
+                // Não interrompe o fluxo - continua com extração básica
             }
         }
 
