@@ -215,14 +215,14 @@ class EnhancedContentExtractor {
                 timeout: 40000
             });
 
-            // Aguardar carregamento adicional
-            await page.waitForTimeout(2000);
+            // Aguardar carregamento adicional (compatível com todas versões Puppeteer)
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Scroll completo para carregar conteúdo lazy
             await this._scrollPage(page);
 
             // Aguardar mais um pouco após scroll
-            await page.waitForTimeout(1500);
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
             // Extrair todo o texto visível
             const pageContent = await page.evaluate((contentSelectors) => {
@@ -240,10 +240,10 @@ class EnhancedContentExtractor {
                 // Função para verificar se elemento é visível
                 const isVisible = (el) => {
                     const style = window.getComputedStyle(el);
-                    return style.display !== 'none' && 
-                           style.visibility !== 'hidden' && 
-                           style.opacity !== '0' &&
-                           el.offsetHeight > 0;
+                    return style.display !== 'none' &&
+                        style.visibility !== 'hidden' &&
+                        style.opacity !== '0' &&
+                        el.offsetHeight > 0;
                 };
 
                 // Extrair de seletores específicos primeiro
@@ -263,7 +263,7 @@ class EnhancedContentExtractor {
 
                 // Extrair texto do body como fallback
                 const bodyText = cleanText(document.body.textContent);
-                
+
                 return {
                     texts: texts.slice(0, 500), // Limitar quantidade
                     bodyLength: bodyText.length
@@ -524,7 +524,7 @@ class EnhancedContentExtractor {
                 this.options.ocrLanguages,
                 {
                     langPath: langPath,
-                    logger: this.options.verbose ? console.log : () => {}
+                    logger: this.options.verbose ? console.log : () => { }
                 }
             );
 
