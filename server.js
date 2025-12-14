@@ -3631,15 +3631,24 @@ async function extractPageData(url) {
         }
 
         // 🚀 ENHANCED EXTRACTION: OCR + Dynamic Content + Floating Elements
+        // ⏱️ Wrapped with timeout to prevent blocking
         if (enhancedExtractor) {
             try {
                 logger.info(`🚀 [ENHANCED] Starting enhanced extraction for ${url}`);
-                const enhancedContent = await enhancedExtractor.extractComplete(url, {
+
+                // Timeout de 30 segundos para evitar bloqueio
+                const enhancedPromise = enhancedExtractor.extractComplete(url, {
                     enableOCR: true,
-                    maxOCRImages: 10,
+                    maxOCRImages: 5, // Reduzido para performance
                     enableFloating: true,
                     enableDynamic: true
                 });
+
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Enhanced extraction timeout (30s)')), 30000)
+                );
+
+                const enhancedContent = await Promise.race([enhancedPromise, timeoutPromise]);
 
                 // Merge enhanced content with existing data
                 if (enhancedContent.ocrText && enhancedContent.ocrText.length > 20) {
@@ -3678,6 +3687,7 @@ async function extractPageData(url) {
                 // Não interrompe o fluxo - continua com extração básica
             }
         }
+
 
         // Final processing
         try {
