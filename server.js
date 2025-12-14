@@ -3880,6 +3880,26 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             }
         }
 
+        // 🎯 NOVO: INFORMAÇÕES DE PREÇO EXTRAÍDAS
+        let priceInfo = "";
+        if (pageData && pageData.price_detected && pageData.price_detected.length > 0) {
+            priceInfo = `💰 PREÇOS DETECTADOS: ${pageData.price_detected.join(', ')}. `;
+        }
+
+        // 🎯 NOVO: CONTEÚDO COMPLETO DA PÁGINA (limitado para não exceder tokens)
+        let pageContentSummary = "";
+        if (pageData && pageData.cleanText) {
+            // Limitar a 3000 caracteres para não exceder limite de tokens
+            const cleanTextLimited = pageData.cleanText.substring(0, 3000);
+            pageContentSummary = cleanTextLimited;
+        }
+
+        // 🎯 NOVO: Texto extraído de imagens (OCR)
+        let ocrInfo = "";
+        if (pageData && pageData.imagesText && pageData.imagesText.length > 0) {
+            ocrInfo = `📸 TEXTO DE IMAGENS: ${pageData.imagesText.slice(0, 2).join(' | ')}`;
+        }
+
         // 🎯 PROMPT SUPERINTELIGENTE
         const systemPrompt = `Você é um assistente de vendas SUPERINTELIGENTE com capacidades humanas avançadas.
 
@@ -3909,11 +3929,18 @@ Título: ${pageData.title || 'Não disponível'}
 
 Descrição: ${pageData.description || 'Não disponível'}
 
+${priceInfo}
+
 ${bonusInfo}
 
 ${contactInfo}
 
+${ocrInfo}
+
 URL: ${pageData.url || 'Não disponível'}
+
+📄 CONTEÚDO COMPLETO DO PRODUTO/SERVIÇO:
+${pageContentSummary || 'Conteúdo não disponível'}
 
 🧩 INTENÇÕES IDENTIFICADAS: ${estadoEmocional.intencoesMultiplas.join(', ') || 'Nenhuma específica'}
 
