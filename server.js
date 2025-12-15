@@ -4439,8 +4439,24 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         }
 
         let processedPageData = pageData;
-        if (!processedPageData && url) {
-            processedPageData = await extractPageData(url);
+
+        // 🚨 CORREÇÃO CRÍTICA: O widget envia pageData apenas com URL
+        // Precisamos verificar se tem conteúdo real, senão extrair
+        const hasContent = processedPageData && (processedPageData.cleanText || processedPageData.title);
+        const targetUrl = url || (processedPageData && processedPageData.url);
+
+        if (!hasContent && targetUrl) {
+            console.log(`🔄 [WIDGET FIX] PageData incompleto detectado. Iniciando extração para: ${targetUrl}`);
+            try {
+                const extractionResult = await extractPageData(targetUrl);
+                // Mesclar com o que já vein (ex: instructions, robotName)
+                processedPageData = { ...processedPageData, ...extractionResult };
+            } catch (extractErr) {
+                console.error("❌ Erro na extração automática do widget:", extractErr);
+                // Continua com o que tem para não quebrar
+            }
+        } else if (!processedPageData && targetUrl) {
+            processedPageData = await extractPageData(targetUrl);
         }
 
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
