@@ -3541,6 +3541,24 @@ async function extractPageData(url) {
 
                 extractedData.bonuses_detected = extractBonuses(bodyText);
 
+                // 🎯 NOVO: EXTRAIR PREÇOS DA PÁGINA
+                const pricePatterns = [
+                    /R\$\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?/gi,  // R$ 49,90 ou R$ 1.299,00
+                    /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?\s*reais/gi, // 49,90 reais
+                    /R\$\s*\d+(?:[.,]\d+)?(?:\/(?:mês|ano|mes|dia))?/gi // R$ 49/ano
+                ];
+                const detectedPrices = new Set();
+                pricePatterns.forEach(pattern => {
+                    const matches = bodyText.match(pattern);
+                    if (matches) {
+                        matches.forEach(price => detectedPrices.add(price.trim()));
+                    }
+                });
+                extractedData.price_detected = Array.from(detectedPrices).slice(0, 10);
+                if (extractedData.price_detected.length > 0) {
+                    logger.info(`💰 Preços detectados: ${extractedData.price_detected.join(', ')}`);
+                }
+
                 // 🎯 EXTRAIR CONTATOS
                 extractedData.contatos = sistemaContatosAprimorado.extrairContatosAprimorado($);
 
@@ -3886,11 +3904,11 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             priceInfo = `💰 PREÇOS DETECTADOS: ${pageData.price_detected.join(', ')}. `;
         }
 
-        // 🎯 NOVO: CONTEÚDO COMPLETO DA PÁGINA (limitado para não exceder tokens)
+        // 🎯 NOVO: CONTEÚDO COMPLETO DA PÁGINA (limite maior para informação completa)
         let pageContentSummary = "";
         if (pageData && pageData.cleanText) {
-            // Limitar a 3000 caracteres para não exceder limite de tokens
-            const cleanTextLimited = pageData.cleanText.substring(0, 3000);
+            // Limitar a 6000 caracteres para incluir mais conteúdo
+            const cleanTextLimited = pageData.cleanText.substring(0, 6000);
             pageContentSummary = cleanTextLimited;
         }
 
