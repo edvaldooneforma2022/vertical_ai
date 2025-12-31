@@ -2206,7 +2206,7 @@
                                 📥 Exportar CSV
                             </button>
                         </div>
-                        <div id="leads-list" style="color:#94a3b8;">Carregando...</div>
+                        <div id="leads-list" style="color:#94a3b8; max-height:500px; overflow-y:auto;">Carregando...</div>
                     </div>
 
                     <!-- Seção de Backup -->
@@ -2752,12 +2752,12 @@
                     document.getElementById('leads-warm').textContent = warm;
                     document.getElementById('leads-cold').textContent = cold;
 
-                    // Carregar lista (últimos 10 leads)
+                    // Carregar lista de TODOS os leads (ordenados do mais recente para o mais antigo)
                     const listEl = document.getElementById('leads-list');
-                    const recentLeads = leads.slice(-10).reverse(); // Últimos 10, mais recentes primeiro
+                    const sortedLeads = leads.slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                    if (recentLeads.length > 0) {
-                        listEl.innerHTML = recentLeads.map(lead => {
+                    if (sortedLeads.length > 0) {
+                        listEl.innerHTML = sortedLeads.map(lead => {
                             // Determinar classificação
                             let classification = 'cold';
                             let bgColor = '#3b82f6';
