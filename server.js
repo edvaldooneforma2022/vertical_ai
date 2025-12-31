@@ -5280,7 +5280,34 @@ setupRoutes(app);
         }
     });
 
-    // Structured Leads
+    // 🎨 Endpoint PÚBLICO para widget externo buscar cores do whitelabel
+    // Não requer autenticação pois são apenas cores visuais (não expõe dados sensíveis)
+    app.get('/api/whitelabel-public/:chatbotId', async (req, res) => {
+        try {
+            const { chatbotId } = req.params;
+            const result = await whitelabelManager.getConfig(chatbotId);
+
+            // Retornar apenas as cores (sem dados sensíveis)
+            const publicConfig = {
+                primaryColor: result?.settings?.primaryColor || result?.primaryColor || '#3b82f6',
+                secondaryColor: result?.settings?.secondaryColor || result?.secondaryColor || '#8b5cf6',
+                companyName: result?.settings?.companyName || result?.companyName || null,
+                logoUrl: result?.settings?.logoUrl || result?.logoUrl || null
+            };
+
+            res.json({ success: true, config: publicConfig });
+        } catch (error) {
+            // Em caso de erro, retornar cores padrão (não quebrar o widget)
+            res.json({
+                success: true,
+                config: {
+                    primaryColor: '#3b82f6',
+                    secondaryColor: '#8b5cf6'
+                }
+            });
+        }
+    });
+
     app.post('/api/leads/structured', requireApiKeyV3, async (req, res) => {
         try {
             const { chatbotId, leadData, metadata } = req.body;

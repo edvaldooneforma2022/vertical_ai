@@ -1,6 +1,6 @@
 // LinkMágico Commercial Widget v6.0
 // Enterprise-grade chatbot widget with security and analytics
-(function(window, document) {
+(function (window, document) {
     'use strict';
 
     // Prevent multiple initializations
@@ -13,7 +13,7 @@
     const scripts = document.querySelectorAll('script[src*="widget.js"]');
     const currentScript = scripts[scripts.length - 1];
     const scriptSrc = currentScript ? currentScript.src : '';
-    
+
     // Extract server domain from script URL
     let detectedServerDomain = '';
     if (scriptSrc) {
@@ -25,11 +25,11 @@
             console.warn('LinkMagico Widget: Could not auto-detect server domain');
         }
     }
-    
+
     // Optional token from URL parameters
     const urlParams = new URLSearchParams(scriptSrc.split('?')[1] || '');
     const widgetToken = urlParams.get('token');
-    
+
     // Token is optional - widget can work without it for basic functionality
     if (!widgetToken) {
         console.log('LinkMagico Widget: No token provided, using configuration-based authentication');
@@ -79,14 +79,14 @@
             borderRadius: '24px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
-            
+
             // Commercial features
             branding: true,
             analytics: true,
             customCSS: '',
             retryAttempts: 3,
             timeout: 15000,
-            
+
             // Callbacks
             onOpen: null,
             onClose: null,
@@ -96,7 +96,7 @@
         },
 
         // Initialize the widget
-        init: function(userConfig) {
+        init: async function (userConfig) {
             if (this.initialized) {
                 console.warn('LinkMagico Widget already initialized');
                 return;
@@ -105,7 +105,10 @@
             try {
                 // Merge configuration
                 this.config = this.mergeConfig(this.config, userConfig || {});
-                
+
+                // 🎨 Buscar cores do Whitelabel do servidor
+                await this.loadWhitelabelColors();
+
                 // Validate domain (if configured on server)
                 if (!this.validateDomain()) {
                     console.error('LinkMagico Widget: Domain not authorized');
@@ -124,7 +127,7 @@
 
                 this.initialized = true;
                 this.log('LinkMagico Commercial Widget v' + this.version + ' initialized');
-                
+
                 // Track initialization
                 this.trackEvent('widget_initialized');
 
@@ -134,8 +137,46 @@
             }
         },
 
+        // 🎨 Buscar cores do Whitelabel do servidor
+        loadWhitelabelColors: async function () {
+            try {
+                const apiBase = this.config.apiBase;
+                // Usar endpoint público (não requer autenticação)
+                const response = await fetch(apiBase + '/api/whitelabel-public/default', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.config) {
+                        const wlConfig = data.config;
+
+                        // Aplicar cores do whitelabel
+                        if (wlConfig.primaryColor) {
+                            this.config.primaryColor = wlConfig.primaryColor;
+                        }
+                        if (wlConfig.secondaryColor) {
+                            this.config.secondaryColor = wlConfig.secondaryColor;
+                        }
+
+                        console.log('🎨 LinkMagico Widget: Cores whitelabel aplicadas', {
+                            primary: this.config.primaryColor,
+                            secondary: this.config.secondaryColor
+                        });
+                    }
+                }
+            } catch (error) {
+                // Se falhar, usa cores padrão - não interrompe o widget
+                console.warn('LinkMagico Widget: Não foi possível carregar whitelabel, usando cores padrão', error.message);
+            }
+        },
+
+
         // Deep merge configuration objects
-        mergeConfig: function(defaultConfig, userConfig) {
+        mergeConfig: function (defaultConfig, userConfig) {
             var merged = {};
             for (var key in defaultConfig) {
                 merged[key] = defaultConfig[key];
@@ -149,43 +190,43 @@
         },
 
         // Validate domain authorization
-        validateDomain: function() {
+        validateDomain: function () {
             // Domain validation is handled server-side
             // This is just a client-side check for obvious issues
             const currentDomain = window.location.hostname;
-            
+
             // Allow localhost for development
             if (currentDomain === 'localhost' || currentDomain === '127.0.0.1') {
                 return true;
             }
-            
+
             // Allow any domain - server will validate
             return true;
         },
 
         // Rate limiting check
-        checkRateLimit: function() {
+        checkRateLimit: function () {
             const now = Date.now();
             const window = this.security.rateLimitWindow;
-            
+
             // Clean old messages
-            this.security.messageHistory = this.security.messageHistory.filter(time => 
+            this.security.messageHistory = this.security.messageHistory.filter(time =>
                 now - time < window
             );
-            
+
             // Check if under limit
             if (this.security.messageHistory.length >= this.security.maxMessagesPerWindow) {
                 this.handleRateLimit();
                 return false;
             }
-            
+
             // Add current message
             this.security.messageHistory.push(now);
             return true;
         },
 
         // Handle rate limiting
-        handleRateLimit: function() {
+        handleRateLimit: function () {
             this.showError('Muitas mensagens enviadas. Aguarde um momento.');
             if (this.config.onRateLimit) {
                 this.config.onRateLimit();
@@ -194,7 +235,7 @@
         },
 
         // Create the widget HTML structure
-        createWidget: function() {
+        createWidget: function () {
             try {
                 // Create main container
                 var container = document.createElement('div');
@@ -230,7 +271,7 @@
         },
 
         // Generate widget HTML with enhanced security
-        getWidgetHTML: function() {
+        getWidgetHTML: function () {
             var position = this.config.position;
             var positionClass = 'lm-position-' + position;
 
@@ -323,7 +364,7 @@
         },
 
         // Enhanced CSS with commercial styling
-        getWidgetCSS: function() {
+        getWidgetCSS: function () {
             var config = this.config;
             var primaryColor = config.primaryColor;
             var secondaryColor = config.secondaryColor;
@@ -950,7 +991,7 @@
         },
 
         // Inject CSS styles with enhanced error handling
-        injectStyles: function() {
+        injectStyles: function () {
             if (document.getElementById('linkmagico-widget-styles')) {
                 return; // Styles already injected
             }
@@ -966,33 +1007,33 @@
         },
 
         // Enhanced event binding with error handling
-        bindEvents: function() {
+        bindEvents: function () {
             var self = this;
 
             try {
                 // Widget button click
-                this.bindEvent('lm-widget-button', 'click', function() {
+                this.bindEvent('lm-widget-button', 'click', function () {
                     self.toggleChat();
                 });
 
                 // Close and minimize buttons
-                this.bindEvent('lm-chat-close', 'click', function() {
+                this.bindEvent('lm-chat-close', 'click', function () {
                     self.closeChat();
                 });
 
-                this.bindEvent('lm-chat-minimize', 'click', function() {
+                this.bindEvent('lm-chat-minimize', 'click', function () {
                     self.minimizeChat();
                 });
 
                 // Send button and input events
-                this.bindEvent('lm-send-button', 'click', function() {
+                this.bindEvent('lm-send-button', 'click', function () {
                     self.sendMessage();
                 });
 
                 var input = document.getElementById('lm-message-input');
                 if (input) {
                     // Enter key handling
-                    input.addEventListener('keydown', function(e) {
+                    input.addEventListener('keydown', function (e) {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
                             self.sendMessage();
@@ -1000,34 +1041,34 @@
                     });
 
                     // Auto-resize and character count
-                    input.addEventListener('input', function() {
+                    input.addEventListener('input', function () {
                         self.autoResizeInput(this);
                         self.updateCharCounter(this);
                     });
 
                     // Focus handling
-                    input.addEventListener('focus', function() {
+                    input.addEventListener('focus', function () {
                         self.hideBadge();
                     });
                 }
 
                 // Error message close
-                this.bindEvent('lm-error-close', 'click', function() {
+                this.bindEvent('lm-error-close', 'click', function () {
                     self.hideError();
                 });
 
                 // Overlay click to close on mobile
-                this.bindEvent('lm-widget-overlay', 'click', function() {
+                this.bindEvent('lm-widget-overlay', 'click', function () {
                     self.closeChat();
                 });
 
                 // Global event listeners
-                window.addEventListener('resize', function() {
+                window.addEventListener('resize', function () {
                     self.handleResize();
                 });
 
                 // Handle visibility change for analytics
-                document.addEventListener('visibilitychange', function() {
+                document.addEventListener('visibilitychange', function () {
                     if (!document.hidden && self.isOpen) {
                         self.hideBadge();
                         self.trackEvent('widget_focused');
@@ -1040,7 +1081,7 @@
         },
 
         // Helper function for safe event binding
-        bindEvent: function(elementId, eventType, handler) {
+        bindEvent: function (elementId, eventType, handler) {
             var element = document.getElementById(elementId);
             if (element) {
                 element.addEventListener(eventType, handler);
@@ -1048,7 +1089,7 @@
         },
 
         // Enhanced chat control methods
-        toggleChat: function() {
+        toggleChat: function () {
             if (this.isOpen) {
                 this.closeChat();
             } else {
@@ -1056,7 +1097,7 @@
             }
         },
 
-        openChat: function() {
+        openChat: function () {
             try {
                 var chat = document.getElementById('lm-widget-chat');
                 var overlay = document.getElementById('lm-widget-overlay');
@@ -1072,7 +1113,7 @@
                     }
 
                     // Focus input after animation
-                    setTimeout(function() {
+                    setTimeout(function () {
                         var input = document.getElementById('lm-message-input');
                         if (input) {
                             input.focus();
@@ -1082,7 +1123,7 @@
                     // Track and callback
                     this.trackEvent('chat_opened');
                     this.dispatchEvent('chatOpened');
-                    
+
                     if (this.config.onOpen) {
                         this.config.onOpen();
                     }
@@ -1093,7 +1134,7 @@
             }
         },
 
-        closeChat: function() {
+        closeChat: function () {
             try {
                 var chat = document.getElementById('lm-widget-chat');
                 var overlay = document.getElementById('lm-widget-overlay');
@@ -1111,9 +1152,9 @@
                         duration: Date.now() - this.startTime,
                         messageCount: this.messageCount
                     });
-                    
+
                     this.dispatchEvent('chatClosed');
-                    
+
                     if (this.config.onClose) {
                         this.config.onClose();
                     }
@@ -1123,13 +1164,13 @@
             }
         },
 
-        minimizeChat: function() {
+        minimizeChat: function () {
             this.closeChat();
             this.trackEvent('chat_minimized');
         },
 
         // Enhanced message sending with security
-        sendMessage: function() {
+        sendMessage: function () {
             var input = document.getElementById('lm-message-input');
             var message = input ? input.value.trim() : '';
 
@@ -1178,7 +1219,7 @@
         },
 
         // Enhanced API call with retry logic
-        callAPI: function(message, retryCount) {
+        callAPI: function (message, retryCount) {
             var self = this;
             retryCount = retryCount || 0;
 
@@ -1204,77 +1245,77 @@
                 body: JSON.stringify(payload),
                 signal: controller.signal
             })
-            .then(function(response) {
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) {
-                    throw new Error('API request failed: ' + response.status + ' ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(function(data) {
-                self.hideTyping();
-                self.setInputState(true);
+                .then(function (response) {
+                    clearTimeout(timeoutId);
 
-                if (data.success && data.response) {
-                    self.addMessage(data.response, false);
-                    
-                    // Handle bonuses if present
-                    if (data.bonuses_detected && data.bonuses_detected.length > 0) {
-                        var bonusText = "🎁 Bônus inclusos: " + data.bonuses_detected.slice(0, 3).join(", ");
-                        setTimeout(function() {
-                            self.addMessage(bonusText, false);
-                        }, 500);
+                    if (!response.ok) {
+                        throw new Error('API request failed: ' + response.status + ' ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    self.hideTyping();
+                    self.setInputState(true);
+
+                    if (data.success && data.response) {
+                        self.addMessage(data.response, false);
+
+                        // Handle bonuses if present
+                        if (data.bonuses_detected && data.bonuses_detected.length > 0) {
+                            var bonusText = "🎁 Bônus inclusos: " + data.bonuses_detected.slice(0, 3).join(", ");
+                            setTimeout(function () {
+                                self.addMessage(bonusText, false);
+                            }, 500);
+                        }
+
+                        // Track successful response
+                        self.trackEvent('message_received', {
+                            hasBonus: !!(data.bonuses_detected && data.bonuses_detected.length > 0)
+                        });
+
+                        // Callback
+                        if (self.config.onMessage) {
+                            self.config.onMessage(message, data.response);
+                        }
+                    } else {
+                        throw new Error(data.error || 'Invalid response format');
+                    }
+                })
+                .catch(function (error) {
+                    clearTimeout(timeoutId);
+                    self.hideTyping();
+                    self.setInputState(true);
+
+                    // Handle different error types
+                    if (error.name === 'AbortError') {
+                        self.handleError('request_timeout', 'Timeout - tente novamente');
+                    } else if (error.message.includes('401')) {
+                        self.handleError('auth_failed', 'Token inválido');
+                    } else if (error.message.includes('403')) {
+                        self.handleError('access_denied', 'Domínio não autorizado');
+                    } else if (error.message.includes('429')) {
+                        self.handleError('rate_limit', 'Muitas mensagens - aguarde');
+                    } else if (retryCount < self.config.retryAttempts) {
+                        // Retry with exponential backoff
+                        var delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+                        setTimeout(function () {
+                            self.callAPI(message, retryCount + 1);
+                        }, delay);
+                        return;
+                    } else {
+                        self.handleError('api_failed', 'Erro de conexão');
                     }
 
-                    // Track successful response
-                    self.trackEvent('message_received', {
-                        hasBonus: !!(data.bonuses_detected && data.bonuses_detected.length > 0)
+                    // Track error
+                    self.trackEvent('message_error', {
+                        error: error.message,
+                        retryCount: retryCount
                     });
-
-                    // Callback
-                    if (self.config.onMessage) {
-                        self.config.onMessage(message, data.response);
-                    }
-                } else {
-                    throw new Error(data.error || 'Invalid response format');
-                }
-            })
-            .catch(function(error) {
-                clearTimeout(timeoutId);
-                self.hideTyping();
-                self.setInputState(true);
-                
-                // Handle different error types
-                if (error.name === 'AbortError') {
-                    self.handleError('request_timeout', 'Timeout - tente novamente');
-                } else if (error.message.includes('401')) {
-                    self.handleError('auth_failed', 'Token inválido');
-                } else if (error.message.includes('403')) {
-                    self.handleError('access_denied', 'Domínio não autorizado');
-                } else if (error.message.includes('429')) {
-                    self.handleError('rate_limit', 'Muitas mensagens - aguarde');
-                } else if (retryCount < self.config.retryAttempts) {
-                    // Retry with exponential backoff
-                    var delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-                    setTimeout(function() {
-                        self.callAPI(message, retryCount + 1);
-                    }, delay);
-                    return;
-                } else {
-                    self.handleError('api_failed', 'Erro de conexão');
-                }
-
-                // Track error
-                self.trackEvent('message_error', {
-                    error: error.message,
-                    retryCount: retryCount
                 });
-            });
         },
 
         // Enhanced message display
-        addMessage: function(content, isUser) {
+        addMessage: function (content, isUser) {
             try {
                 var messagesContainer = document.getElementById('lm-chat-messages');
                 if (!messagesContainer) return;
@@ -1316,7 +1357,7 @@
         },
 
         // Process message content with enhanced URL handling
-        processMessageContent: function(content) {
+        processMessageContent: function (content) {
             var container = document.createElement('div');
             var urlRegex = /(https?:\/\/[^\s]+)/g;
             var parts = content.split(urlRegex);
@@ -1332,10 +1373,10 @@
                     ctaLink.rel = 'noopener noreferrer';
                     ctaLink.className = 'lm-cta-button';
                     ctaLink.innerHTML = 'Acessar agora <i class="fas fa-external-link-alt"></i>';
-                    
+
                     // Track CTA clicks
                     ctaLink.addEventListener('click', this.trackEvent.bind(this, 'cta_clicked', { url: part }));
-                    
+
                     container.appendChild(ctaLink);
                 } else if (part.trim()) {
                     // Add text content
@@ -1351,11 +1392,11 @@
         },
 
         // Enhanced error handling
-        handleError: function(errorType, message) {
+        handleError: function (errorType, message) {
             console.error('LinkMagico Widget Error (' + errorType + '):', message);
-            
+
             this.showError(message || 'Ocorreu um erro inesperado.');
-            
+
             if (this.config.onError) {
                 this.config.onError(errorType, message);
             }
@@ -1366,20 +1407,20 @@
             });
         },
 
-        showError: function(message) {
+        showError: function (message) {
             var errorElement = document.getElementById('lm-error-message');
             var errorText = document.getElementById('lm-error-text');
-            
+
             if (errorElement && errorText) {
                 errorText.textContent = message;
                 errorElement.style.display = 'block';
-                
+
                 // Auto-hide after 5 seconds
                 setTimeout(this.hideError.bind(this), 5000);
             }
         },
 
-        hideError: function() {
+        hideError: function () {
             var errorElement = document.getElementById('lm-error-message');
             if (errorElement) {
                 errorElement.style.display = 'none';
@@ -1387,7 +1428,7 @@
         },
 
         // Utility methods
-        showTyping: function() {
+        showTyping: function () {
             var typingIndicator = document.getElementById('lm-typing-indicator');
             if (typingIndicator) {
                 typingIndicator.style.display = 'flex';
@@ -1395,25 +1436,25 @@
             }
         },
 
-        hideTyping: function() {
+        hideTyping: function () {
             var typingIndicator = document.getElementById('lm-typing-indicator');
             if (typingIndicator) {
                 typingIndicator.style.display = 'none';
             }
         },
 
-        autoResizeInput: function(input) {
+        autoResizeInput: function (input) {
             if (input) {
                 input.style.height = 'auto';
                 input.style.height = Math.min(input.scrollHeight, 120) + 'px';
             }
         },
 
-        updateCharCounter: function(input) {
+        updateCharCounter: function (input) {
             var counter = document.getElementById('lm-char-count');
             if (counter && input) {
                 counter.textContent = input.value.length;
-                
+
                 // Change color based on usage
                 var usage = input.value.length / this.security.maxMessageLength;
                 if (usage > 0.9) {
@@ -1426,7 +1467,7 @@
             }
         },
 
-        setInputState: function(enabled) {
+        setInputState: function (enabled) {
             var input = document.getElementById('lm-message-input');
             var button = document.getElementById('lm-send-button');
 
@@ -1434,21 +1475,21 @@
             if (button) button.disabled = !enabled;
         },
 
-        scrollToBottom: function() {
+        scrollToBottom: function () {
             var messagesContainer = document.getElementById('lm-chat-messages');
             if (messagesContainer) {
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         },
 
-        hideBadge: function() {
+        hideBadge: function () {
             var badge = document.getElementById('lm-widget-badge');
             if (badge) {
                 badge.style.display = 'none';
             }
         },
 
-        limitMessages: function() {
+        limitMessages: function () {
             var messagesContainer = document.getElementById('lm-chat-messages');
             if (!messagesContainer) return;
 
@@ -1463,15 +1504,15 @@
             }
         },
 
-        containsURL: function(text) {
+        containsURL: function (text) {
             return /https?:\/\/[^\s]+/.test(text);
         },
 
-        isMobile: function() {
+        isMobile: function () {
             return window.innerWidth <= this.config.mobileBreakpoint;
         },
 
-        handleResize: function() {
+        handleResize: function () {
             if (this.isOpen && this.isMobile()) {
                 var overlay = document.getElementById('lm-widget-overlay');
                 if (overlay) {
@@ -1480,14 +1521,14 @@
             }
         },
 
-        escapeHtml: function(text) {
+        escapeHtml: function (text) {
             var div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         },
 
         // Analytics and tracking
-        trackEvent: function(eventName, data) {
+        trackEvent: function (eventName, data) {
             if (!this.config.analytics) return;
 
             try {
@@ -1514,7 +1555,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(eventData),
                         keepalive: true
-                    }).catch(function() {
+                    }).catch(function () {
                         // Ignore analytics failures
                     });
                 }
@@ -1524,7 +1565,7 @@
         },
 
         // Event system
-        dispatchEvent: function(eventName, data) {
+        dispatchEvent: function (eventName, data) {
             try {
                 var event = new CustomEvent('linkmagico:' + eventName, {
                     detail: data || {}
@@ -1538,26 +1579,26 @@
             }
         },
 
-        log: function() {
+        log: function () {
             if (this.config.debug) {
                 console.log.apply(console, arguments);
             }
         },
 
         // Public API methods
-        open: function() {
+        open: function () {
             this.openChat();
         },
 
-        close: function() {
+        close: function () {
             this.closeChat();
         },
 
-        toggle: function() {
+        toggle: function () {
             this.toggleChat();
         },
 
-        sendMessage: function(message) {
+        sendMessage: function (message) {
             if (message && typeof message === 'string') {
                 var input = document.getElementById('lm-message-input');
                 if (input) {
@@ -1567,9 +1608,9 @@
             }
         },
 
-        updateConfig: function(newConfig) {
+        updateConfig: function (newConfig) {
             this.config = this.mergeConfig(this.config, newConfig);
-            
+
             // Re-inject styles with new config
             var existingStyles = document.getElementById('linkmagico-widget-styles');
             if (existingStyles) {
@@ -1577,7 +1618,7 @@
             }
         },
 
-        getState: function() {
+        getState: function () {
             return {
                 initialized: this.initialized,
                 isOpen: this.isOpen,
@@ -1588,7 +1629,7 @@
             };
         },
 
-        destroy: function() {
+        destroy: function () {
             try {
                 // Track destruction
                 this.trackEvent('widget_destroyed');
@@ -1622,7 +1663,7 @@
     window.LinkMagicoWidget = LinkMagicoWidget;
 
     // Auto-initialize if config is provided
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Priority 1: Check for window.LinkMagicoWidgetConfig (recommended method)
         if (window.LinkMagicoWidgetConfig) {
             try {
@@ -1633,7 +1674,7 @@
                 console.error('Failed to auto-initialize LinkMagico Widget from window config:', error);
             }
         }
-        
+
         // Priority 2: Check for data attributes
         var scripts = document.querySelectorAll('script[data-linkmagico-config]');
         if (scripts.length > 0) {
@@ -1649,7 +1690,7 @@
     });
 
     // Track page unload for analytics
-    window.addEventListener('beforeunload', function() {
+    window.addEventListener('beforeunload', function () {
         if (LinkMagicoWidget.initialized) {
             LinkMagicoWidget.trackEvent('page_unload', {
                 uptime: Date.now() - LinkMagicoWidget.startTime,
@@ -1660,7 +1701,7 @@
 
     // AMD/CommonJS compatibility
     if (typeof define === 'function' && define.amd) {
-        define(function() {
+        define(function () {
             return LinkMagicoWidget;
         });
     } else if (typeof module !== 'undefined' && module.exports) {
