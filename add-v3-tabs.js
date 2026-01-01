@@ -364,7 +364,13 @@ const newFunctions = `
                 
                 const data = await response.json();
                 if (data.success) {
-                    alert('Configuração salva com sucesso!');
+                    // Sincronizar com variável global para gerador de widget
+                    if (typeof whitelabelColors !== 'undefined') {
+                        whitelabelColors.primaryColor = config.primaryColor;
+                        whitelabelColors.secondaryColor = config.secondaryColor;
+                        console.log('✅ Cores whitelabel sincronizadas:', whitelabelColors);
+                    }
+                    alert('Configuração salva com sucesso! As cores serão aplicadas ao widget.');
                     updateWhitelabelPreview(config);
                 } else {
                     alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
