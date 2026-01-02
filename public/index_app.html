@@ -1592,7 +1592,33 @@
             activateChatbotBtn.innerHTML = '<i class="fas fa-play-circle"></i> Ativar Assistente IA';
         }
 
-        function generateChatbotUrl(robotName, salesUrl, instructions, apiKey) {
+        // 🔗 Gerar URL curta do chatbot via API (com fallback para URL longa)
+        async function generateChatbotUrl(robotName, salesUrl, instructions, apiKey) {
+            try {
+                // Tentar gerar URL curta via API
+                const response = await fetch('/api/assistant-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        robotName: robotName,
+                        salesUrl: salesUrl,
+                        instructions: instructions,
+                        apiKey: apiKey || '',
+                        primaryColor: whitelabelColors.primaryColor
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.shortUrl) {
+                    console.log('🔗 URL curta gerada:', data.shortUrl);
+                    return data.shortUrl;
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao gerar URL curta, usando fallback:', error);
+            }
+
+            // Fallback: URL longa (mantém compatibilidade)
             const params = new URLSearchParams({
                 name: robotName,
                 url: salesUrl,
@@ -1686,8 +1712,8 @@
                     throw new Error(data.error || 'Erro desconhecido na extração.');
                 }
 
-                // Gerar URL do chatbot (inclui apiKey para agendamentos)
-                currentChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
+                // Gerar URL do chatbot (agora usando short URL)
+                currentChatbotUrl = await generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
 
                 // Atualizar seção do link do chatbot
                 chatbotLinkUrl.href = currentChatbotUrl;
@@ -1926,19 +1952,24 @@
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     ⚙️ Sistema
                 </button>
-                <button class="new-tab" onclick="showNewTab('gmail')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('gmail')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📧 Gmail
                 </button>
-                <button class="new-tab" onclick="showNewTab('whatsapp')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('whatsapp')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📱 WhatsApp
                 </button>
-                <button class="new-tab" onclick="showNewTab('chatgpt')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('chatgpt')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     🤖 ChatGPT
                 </button>
-                <button class="new-tab" onclick="showNewTab('whitelabel')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('whitelabel')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     🎨 Whitelabel
                 </button>
-                <button class="new-tab" onclick="showNewTab('leads')" style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                <button class="new-tab" onclick="showNewTab('leads')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📝 Leads
                 </button>
                 <button class="new-tab" onclick="showNewTab('gmail')"
@@ -3386,16 +3417,16 @@
             // Atualizar a cada 30 segundos
             setInterval(loadDashboardLeads, 30000);
         });
-    
-        
+
+
         // ===== FUNÇÕES DAS NOVAS INTEGRAÇÕES V3 =====
-        
+
         async function loadGmailStatus() {
             try {
                 const response = await fetch('/api/gmail/status');
                 const data = await response.json();
                 const statusEl = document.getElementById('gmail-status');
-                
+
                 if (data.configured) {
                     statusEl.innerHTML = '<div style="color:#10b981;">✅ Gmail configurado e pronto para uso</div>';
                 } else {
@@ -3405,25 +3436,25 @@
                 console.error('Erro ao carregar status Gmail:', error);
             }
         }
-        
+
         async function testGmail() {
             const email = document.getElementById('test-email').value;
             if (!email) {
                 alert('Digite um email!');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/gmail/send', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         to: email,
                         subject: 'Teste Link Mágico V3',
                         html: '<h1>Email de teste!</h1><p>Se você recebeu este email, a integração Gmail está funcionando! 🎉</p>'
                     })
                 });
-                
+
                 const data = await response.json();
                 if (data.success) {
                     alert('Email enviado com sucesso! Verifique a caixa de entrada.');
@@ -3435,13 +3466,13 @@
                 alert('Erro ao enviar email');
             }
         }
-        
+
         async function loadWhatsAppStatus() {
             try {
                 const response = await fetch('/api/whatsapp/status');
                 const data = await response.json();
                 const statusEl = document.getElementById('whatsapp-status');
-                
+
                 if (data.configured) {
                     statusEl.innerHTML = `<div style="color:#10b981;">✅ WhatsApp configurado (${data.provider})</div>`;
                 } else {
@@ -3451,24 +3482,24 @@
                 console.error('Erro ao carregar status WhatsApp:', error);
             }
         }
-        
+
         async function testWhatsApp() {
             const phone = document.getElementById('test-phone').value;
             if (!phone) {
                 alert('Digite um número de telefone!');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/whatsapp/send', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         to: phone,
                         message: '🎉 Teste Link Mágico V3! Se você recebeu esta mensagem, a integração WhatsApp está funcionando!'
                     })
                 });
-                
+
                 const data = await response.json();
                 if (data.success) {
                     alert('Mensagem enviada com sucesso!');
@@ -3480,24 +3511,24 @@
                 alert('Erro ao enviar mensagem');
             }
         }
-        
+
         async function loadChatGPTStatus() {
             try {
                 const response = await fetch('/api/chatgpt/status');
                 const data = await response.json();
                 const statusEl = document.getElementById('chatgpt-status');
-                
+
                 if (data.configured) {
                     statusEl.innerHTML = '<div style="color:#10b981;">✅ ChatGPT configurado e pronto</div>';
                 } else {
                     statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ ChatGPT não configurado. Configure CHATGPT_API_KEY no .env</div>';
                 }
-                
+
                 // Carregar modelos
                 const modelsResponse = await fetch('/api/chatgpt/models');
                 const modelsData = await modelsResponse.json();
                 const modelsEl = document.getElementById('chatgpt-models');
-                
+
                 if (modelsData.length > 0) {
                     modelsEl.innerHTML = modelsData.map(m => `
                         <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
@@ -3510,28 +3541,28 @@
                 console.error('Erro ao carregar status ChatGPT:', error);
             }
         }
-        
+
         async function testChatGPT() {
             const prompt = document.getElementById('test-prompt').value;
             if (!prompt) {
                 alert('Digite uma pergunta!');
                 return;
             }
-            
+
             const responseEl = document.getElementById('chatgpt-response');
             responseEl.style.display = 'block';
             responseEl.innerHTML = '<div style="color:#94a3b8;">Gerando resposta...</div>';
-            
+
             try {
                 const response = await fetch('/api/chatgpt/generate', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         prompt: prompt,
                         model: 'gpt-4-turbo'
                     })
                 });
-                
+
                 const data = await response.json();
                 if (data.success) {
                     responseEl.innerHTML = `<div style="color:#cbd5e1;">${data.result.response}</div>`;
@@ -3543,7 +3574,7 @@
                 responseEl.innerHTML = '<div style="color:#ef4444;">Erro ao gerar resposta</div>';
             }
         }
-        
+
         async function saveWhitelabel() {
             const config = {
                 companyName: document.getElementById('wl-company').value,
@@ -3551,14 +3582,14 @@
                 primaryColor: document.getElementById('wl-primary').value,
                 secondaryColor: document.getElementById('wl-secondary').value
             };
-            
+
             try {
                 const response = await fetch('/api/whitelabel/default', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
-                
+
                 const data = await response.json();
                 if (data.success) {
                     // Sincronizar com variável global para gerador de widget
@@ -3577,7 +3608,7 @@
                 alert('Erro ao salvar configuração');
             }
         }
-        
+
         function updateWhitelabelPreview(config) {
             const preview = document.getElementById('wl-preview');
             preview.innerHTML = `
@@ -3587,23 +3618,23 @@
                 </div>
             `;
         }
-        
+
         async function loadLeadsStats() {
             try {
                 const response = await fetch('/api/leads/stats/default');
                 const data = await response.json();
-                
+
                 if (data.success) {
                     document.getElementById('leads-total').textContent = data.stats.total || 0;
                     document.getElementById('leads-hot').textContent = data.stats.hot || 0;
                     document.getElementById('leads-warm').textContent = data.stats.warm || 0;
                     document.getElementById('leads-cold').textContent = data.stats.cold || 0;
                 }
-                
+
                 // Carregar lista
                 const leadsResponse = await fetch('/api/leads/structured/default?limit=10');
                 const leadsData = await leadsResponse.json();
-                
+
                 const listEl = document.getElementById('leads-list');
                 if (leadsData.success && leadsData.leads.length > 0) {
                     listEl.innerHTML = leadsData.leads.map(lead => `
@@ -3626,7 +3657,7 @@
                 console.error('Erro ao carregar leads:', error);
             }
         }
-        
+
         async function exportLeads() {
             try {
                 window.open('/api/leads/export/default', '_blank');

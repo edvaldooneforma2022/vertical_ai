@@ -2696,7 +2696,7 @@ function requireApiKey(req, res, next) {
         return next();
     }
 
-    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+    let apiKey = req.query.apiKey || req.body.apiKey || req.headers['x-api-key'] || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
 
     if (apiKey) {
         const validation = validateApiKey(apiKey);
@@ -5381,6 +5381,115 @@ setupRoutes(app);
     });
 
     console.log('✅ Rotas V3.0 configuradas');
+
+    // ===== 🔗 SISTEMA DE LINKS CURTOS (Short URLs) =====
+
+    /**
+     * POST /api/assistant-config
+     * Cria uma nova configuração de assistente e retorna um short ID
+     */
+    app.post('/api/assistant-config', async (req, res) => {
+        try {
+            const { robotName, salesUrl, instructions, apiKey, primaryColor } = req.body;
+
+            if (!robotName || !salesUrl) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'robotName e salesUrl são obrigatórios'
+                });
+            }
+
+            const configData = {
+                robotName,
+                salesUrl,
+                instructions: instructions || '',
+                apiKey: apiKey || '',
+                primaryColor: primaryColor || '#3b82f6'
+            };
+
+            const result = await DatabaseHelpers.saveAssistantConfig(configData);
+
+            const baseUrl = process.env.BASE_URL || `https://${req.get('host')}`;
+            const shortUrl = `${baseUrl}/a/${result.shortId}`;
+
+            console.log(`🔗 Short URL criada: ${shortUrl}`);
+
+            res.json({
+                success: true,
+                shortId: result.shortId,
+                shortUrl: shortUrl,
+                config: configData
+            });
+        } catch (error) {
+            console.error('❌ Erro ao criar short URL:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao criar configuração de assistente'
+            });
+        }
+    });
+
+    /**
+     * GET /api/assistant-config/:shortId
+     * Retorna a configuração de um assistente pelo short ID
+     */
+    app.get('/api/assistant-config/:shortId', async (req, res) => {
+        try {
+            const { shortId } = req.params;
+
+            if (!shortId || shortId.length !== 8) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Short ID inválido'
+                });
+            }
+
+            const config = await DatabaseHelpers.getAssistantConfig(shortId);
+
+            if (!config) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Configuração não encontrada'
+                });
+            }
+
+            res.json({
+                success: true,
+                config: {
+                    robotName: config.robot_name,
+                    salesUrl: config.sales_url,
+                    instructions: config.instructions,
+                    apiKey: config.api_key,
+                    primaryColor: config.primary_color,
+                    accessCount: config.access_count
+                }
+            });
+        } catch (error) {
+            console.error('❌ Erro ao buscar configuração:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao buscar configuração'
+            });
+        }
+    });
+
+    /**
+     * GET /a/:shortId
+     * Página do chatbot via short URL
+     */
+    app.get('/a/:shortId', async (req, res) => {
+        try {
+            const { shortId } = req.params;
+
+            // Servir a página HTML do chatbot (a.html resolverá a config via API)
+            res.sendFile(path.join(__dirname, 'public', 'a.html'));
+        } catch (error) {
+            console.error('❌ Erro ao servir página short URL:', error);
+            res.status(500).send('Erro ao carregar página');
+        }
+    });
+
+    console.log('🔗 Sistema de Short URLs configurado');
 
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);

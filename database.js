@@ -206,6 +206,20 @@ function getPostgresTables() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 
+        // 🔗 Tabela de Configurações de Assistentes (Short URLs)
+        `CREATE TABLE IF NOT EXISTS assistant_configs (
+            id VARCHAR(16) PRIMARY KEY,
+            api_key VARCHAR(255) NOT NULL,
+            robot_name TEXT NOT NULL,
+            sales_url TEXT NOT NULL,
+            instructions TEXT,
+            primary_color VARCHAR(20) DEFAULT '#3b82f6',
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            access_count INTEGER DEFAULT 0
+        )`,
+
         // Índices para performance
         `CREATE INDEX IF NOT EXISTS idx_conversations_chatbot ON conversations(chatbot_id)`,
         `CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp)`,
@@ -214,7 +228,8 @@ function getPostgresTables() {
         `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`,
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_api_key ON tenant_leads(api_key)`,
         `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_api_key ON tenant_appointments(api_key)`,
-        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`
+        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_assistant_configs_api_key ON assistant_configs(api_key)`
     ];
 }
 
@@ -330,6 +345,20 @@ function getSQLiteTables() {
             metadata TEXT DEFAULT '{}',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // 🔗 Tabela de Configurações de Assistentes (Short URLs)
+        `CREATE TABLE IF NOT EXISTS assistant_configs (
+            id TEXT PRIMARY KEY,
+            api_key TEXT NOT NULL,
+            robot_name TEXT NOT NULL,
+            sales_url TEXT NOT NULL,
+            instructions TEXT,
+            primary_color TEXT DEFAULT '#3b82f6',
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
+            access_count INTEGER DEFAULT 0
         )`
     ];
 }
@@ -799,6 +828,95 @@ const DatabaseHelpers = {
 
         const result = await db.query(query, params);
         return result.rows[0];
+    },
+
+    // ===== 🔗 CRUD para assistant_configs (Short URLs) =====
+
+    /**
+     * Gerar ID curto único para short URL
+     */
+    generateShortId() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < 8; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    },
+
+    /**
+     * Salvar configuração de assistente e retornar short ID
+     */
+    async saveAssistantConfig(configData) {
+        const shortId = this.generateShortId();
+
+        const query = USE_POSTGRES
+            ? `INSERT INTO assistant_configs (id, api_key, robot_name, sales_url, instructions, primary_color, metadata)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               RETURNING *`
+            : `INSERT INTO assistant_configs (id, api_key, robot_name, sales_url, instructions, primary_color, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+        const params = [
+            shortId,
+            configData.apiKey || '',
+            configData.robotName || 'Assistente IA',
+            configData.salesUrl || '',
+            configData.instructions || '',
+            configData.primaryColor || '#3b82f6',
+            JSON.stringify(configData.metadata || {})
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`🔗 Configuração de assistente salva: ${shortId}`);
+            return { shortId, ...configData };
+        } catch (error) {
+            // Se ID já existe (raro), tentar novamente
+            if (error.message && error.message.includes('UNIQUE')) {
+                console.log('⚠️ Colisão de ID, regenerando...');
+                return this.saveAssistantConfig(configData);
+            }
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar configuração por short ID
+     */
+    async getAssistantConfig(shortId) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM assistant_configs WHERE id = $1`
+            : `SELECT * FROM assistant_configs WHERE id = ?`;
+
+        const result = await db.query(query, [shortId]);
+        const config = result.rows[0];
+
+        if (config) {
+            // Atualizar estatísticas de acesso
+            this.updateAssistantConfigAccess(shortId);
+
+            if (!USE_POSTGRES && config.metadata) {
+                config.metadata = JSON.parse(config.metadata);
+            }
+        }
+
+        return config;
+    },
+
+    /**
+     * Atualizar estatísticas de acesso
+     */
+    async updateAssistantConfigAccess(shortId) {
+        const query = USE_POSTGRES
+            ? `UPDATE assistant_configs SET last_accessed = CURRENT_TIMESTAMP, access_count = access_count + 1 WHERE id = $1`
+            : `UPDATE assistant_configs SET last_accessed = datetime('now'), access_count = access_count + 1 WHERE id = ?`;
+
+        try {
+            await db.query(query, [shortId]);
+        } catch (error) {
+            console.error('⚠️ Erro ao atualizar estatísticas de acesso:', error);
+        }
     }
 };
 
