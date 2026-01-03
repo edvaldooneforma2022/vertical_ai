@@ -2692,12 +2692,11 @@ function requireApiKey(req, res, next) {
     logger.info(`[requireApiKey] Path: ${req.path}, Session Validated: ${!!(req.session && req.session.validatedApiKey)}`);
 
     // Permitir acesso a rotas públicas sem API Key
-    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/a/")) {
+    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot") {
         return next();
     }
 
-    // 🔧 CORREÇÃO: Incluir X-API-Key header para suporte a Short URLs
-    let apiKey = req.headers['x-api-key'] || req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
 
     if (apiKey) {
         const validation = validateApiKey(apiKey);
@@ -2716,17 +2715,6 @@ function requireApiKey(req, res, next) {
 
     // Se a API Key não for encontrada ou for inválida, e não houver sessão validada, redirecionar para a página inicial
     return res.redirect("/");
-}
-
-// 🔧 Helper para extração unificada de API Key (suporta header, session, body, query)
-function getApiKeyFromRequest(req) {
-    return req.headers['x-api-key'] ||
-        (req.session && req.session.validatedApiKey) ||
-        (req.body && req.body.apiKey) ||
-        (req.query && req.query.apiKey) ||
-        (req.session && req.session.user && req.session.user.apiKey) ||
-        (req.cliente && req.cliente.apiKey) ||
-        null;
 }
 
 app.use(requireApiKey);
@@ -2780,103 +2768,9 @@ app.get("/excluir-dados", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "excluir-dados.html"));
 });
 
-// ===== 🔗 SISTEMA DE SHORT URL PARA ASSISTENTES =====
-// Armazenamento em memória das configurações de assistentes (em produção usar Redis/DB)
-const assistantConfigs = new Map();
-
-// Gerar shortId único de 8 caracteres
-function generateShortId() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
-
-// POST /api/assistant-config - Criar configuração e retornar link curto
-app.post("/api/assistant-config", (req, res) => {
-    try {
-        const { robotName, salesUrl, instructions, apiKey, primaryColor } = req.body;
-
-        if (!robotName || !salesUrl) {
-            return res.status(400).json({
-                success: false,
-                error: "Nome do assistente e URL são obrigatórios"
-            });
-        }
-
-        // Gerar shortId único
-        let shortId = generateShortId();
-        while (assistantConfigs.has(shortId)) {
-            shortId = generateShortId();
-        }
-
-        // Salvar configuração
-        const config = {
-            robotName,
-            salesUrl,
-            instructions: instructions || '',
-            apiKey: apiKey || '',
-            primaryColor: primaryColor || '#3b82f6',
-            createdAt: new Date().toISOString()
-        };
-
-        assistantConfigs.set(shortId, config);
-        console.log(`🔗 Short URL criada: /a/${shortId} para ${robotName}`);
-
-        res.json({
-            success: true,
-            shortId,
-            shortUrl: `/a/${shortId}`,
-            fullUrl: `${req.protocol}://${req.get('host')}/a/${shortId}`
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao criar assistant-config:", error);
-        res.status(500).json({
-            success: false,
-            error: "Erro interno ao criar link curto"
-        });
-    }
-});
-
-// GET /api/assistant-config/:shortId - Recuperar configuração
-app.get("/api/assistant-config/:shortId", (req, res) => {
-    try {
-        const { shortId } = req.params;
-        const config = assistantConfigs.get(shortId);
-
-        if (!config) {
-            return res.status(404).json({
-                success: false,
-                error: "Configuração não encontrada"
-            });
-        }
-
-        res.json({
-            success: true,
-            config
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao recuperar assistant-config:", error);
-        res.status(500).json({
-            success: false,
-            error: "Erro interno ao recuperar configuração"
-        });
-    }
-});
-
-// GET /a/:shortId - Servir página do chatbot com Short URL
-app.get("/a/:shortId", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "a.html"));
-});
-
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
-    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
-    const apiKey = getApiKeyFromRequest(req);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -2893,8 +2787,7 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
-    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
-    const apiKey = getApiKeyFromRequest(req);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -2911,8 +2804,7 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
-    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
-    const apiKey = getApiKeyFromRequest(req);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -4372,8 +4264,7 @@ app.get("/health", (req, res) => {
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
-    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
-    const apiKey = getApiKeyFromRequest(req);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -4523,8 +4414,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
-    const apiKey = getApiKeyFromRequest(req);
+    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
