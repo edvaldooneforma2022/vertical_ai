@@ -21,7 +21,7 @@ async function initializeCache() {
     if (USE_REDIS) {
         try {
             const redis = require('redis');
-            
+
             cacheClient = redis.createClient({
                 url: process.env.REDIS_URL,
                 socket: {
@@ -50,7 +50,7 @@ async function initializeCache() {
             });
 
             await cacheClient.connect();
-            
+
             return cacheClient;
         } catch (error) {
             console.error('❌ Erro ao conectar Redis, usando cache in-memory:', error.message);
@@ -66,7 +66,7 @@ async function initializeCache() {
  */
 function initializeInMemoryCache() {
     console.log('✅ Cache In-Memory inicializado');
-    
+
     const cache = new Map();
     const expirations = new Map();
 
@@ -159,6 +159,34 @@ function initializeInMemoryCache() {
  */
 const CacheManager = {
     /**
+     * Generic set method (delegates to cacheClient)
+     */
+    async set(key, value, ttlSeconds = 3600) {
+        try {
+            if (cacheClient && cacheClient.setEx) {
+                await cacheClient.setEx(key, ttlSeconds, value);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao salvar no cache:', error);
+        }
+    },
+
+    /**
+     * Generic get method (delegates to cacheClient)
+     */
+    async get(key) {
+        try {
+            if (cacheClient && cacheClient.get) {
+                return await cacheClient.get(key);
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Erro ao buscar do cache:', error);
+            return null;
+        }
+    },
+
+    /**
      * Cache de extração de dados (24 horas)
      */
     async cacheExtraction(url, data) {
@@ -194,7 +222,7 @@ const CacheManager = {
         const crypto = require('crypto');
         const questionHash = crypto.createHash('md5').update(question.toLowerCase()).digest('hex');
         const key = `response:${chatbotId}:${questionHash}`;
-        
+
         try {
             await cacheClient.setEx(key, 60 * 60, JSON.stringify(response));
             console.log('✅ Resposta cacheada');
@@ -207,7 +235,7 @@ const CacheManager = {
         const crypto = require('crypto');
         const questionHash = crypto.createHash('md5').update(question.toLowerCase()).digest('hex');
         const key = `response:${chatbotId}:${questionHash}`;
-        
+
         try {
             const cached = await cacheClient.get(key);
             if (cached) {
@@ -226,10 +254,10 @@ const CacheManager = {
      */
     async checkRateLimit(apiKey, maxRequests = 100, windowSeconds = 60) {
         const key = `ratelimit:${apiKey}`;
-        
+
         try {
             const current = await cacheClient.incr(key);
-            
+
             if (current === 1) {
                 await cacheClient.expire(key, windowSeconds);
             }
