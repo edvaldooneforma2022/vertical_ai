@@ -2696,7 +2696,7 @@ function requireApiKey(req, res, next) {
         return next();
     }
 
-    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+    let apiKey = req.headers['x-api-key'] || req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
 
     if (apiKey) {
         const validation = validateApiKey(apiKey);
@@ -4264,7 +4264,7 @@ app.get("/health", (req, res) => {
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey || req.query.apiKey;
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -4344,7 +4344,7 @@ app.get("/api/appointments/:leadId", async (req, res) => {
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -4414,7 +4414,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
