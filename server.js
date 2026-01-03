@@ -2692,11 +2692,12 @@ function requireApiKey(req, res, next) {
     logger.info(`[requireApiKey] Path: ${req.path}, Session Validated: ${!!(req.session && req.session.validatedApiKey)}`);
 
     // Permitir acesso a rotas públicas sem API Key
-    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot") {
+    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/a/")) {
         return next();
     }
 
-    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+    // 🔧 CORREÇÃO: Incluir X-API-Key header para suporte a Short URLs
+    let apiKey = req.headers['x-api-key'] || req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
 
     if (apiKey) {
         const validation = validateApiKey(apiKey);
@@ -2715,6 +2716,17 @@ function requireApiKey(req, res, next) {
 
     // Se a API Key não for encontrada ou for inválida, e não houver sessão validada, redirecionar para a página inicial
     return res.redirect("/");
+}
+
+// 🔧 Helper para extração unificada de API Key (suporta header, session, body, query)
+function getApiKeyFromRequest(req) {
+    return req.headers['x-api-key'] ||
+        (req.session && req.session.validatedApiKey) ||
+        (req.body && req.body.apiKey) ||
+        (req.query && req.query.apiKey) ||
+        (req.session && req.session.user && req.session.user.apiKey) ||
+        (req.cliente && req.cliente.apiKey) ||
+        null;
 }
 
 app.use(requireApiKey);
@@ -2770,7 +2782,8 @@ app.get("/excluir-dados", (req, res) => {
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
+    const apiKey = getApiKeyFromRequest(req);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -2787,7 +2800,8 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
+    const apiKey = getApiKeyFromRequest(req);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -2804,7 +2818,8 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
 
 // ===== ROTAS DE BACKUP DE LEADS =====
 app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
+    const apiKey = getApiKeyFromRequest(req);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -4264,7 +4279,8 @@ app.get("/health", (req, res) => {
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
+    const apiKey = getApiKeyFromRequest(req);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -4414,7 +4430,8 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
+    const apiKey = getApiKeyFromRequest(req);
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
