@@ -1655,8 +1655,39 @@
                     throw new Error(data.error || 'Erro desconhecido na extração.');
                 }
 
-                // Gerar URL do chatbot (inclui apiKey para agendamentos)
-                currentChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
+                // Gerar URL do chatbot longo (mantém compatibilidade)
+                const longChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
+
+                // Criar Short URL via API
+                let shortUrlData = null;
+                try {
+                    const shortUrlResponse = await fetch('/api/create-short-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            robotName,
+                            salesUrl,
+                            instructions: customInstructions,
+                            apiKey: apiKeyValue
+                        })
+                    });
+
+                    shortUrlData = await shortUrlResponse.json();
+                    
+                    if (shortUrlData.success) {
+                        // Usar short URL como link principal
+                        currentChatbotUrl = shortUrlData.shortUrl;
+                        console.log('✅ Short URL gerada:', currentChatbotUrl);
+                    } else {
+                        // Fallback para link longo se short URL falhar
+                        currentChatbotUrl = longChatbotUrl;
+                        console.warn('⚠️ Short URL failed, using long URL:', shortUrlData.error);
+                    }
+                } catch (shortUrlError) {
+                    // Fallback silencioso para link longo
+                    currentChatbotUrl = longChatbotUrl;
+                    console.warn('⚠️ Short URL creation failed, using long URL:', shortUrlError);
+                }
 
                 // Atualizar seção do link do chatbot
                 chatbotLinkUrl.href = currentChatbotUrl;
@@ -1672,7 +1703,7 @@
                 // Mostrar seção do link do chatbot
                 chatbotLinkSection.classList.add('active');
 
-                // Atualizar links de compartilhamento social
+                // Atualizar links de compartilhamento social (usar short URL)
                 updateSocialShareLinks(currentChatbotUrl, robotName);
 
                 // Atualiza o iframe do chatbot preview
@@ -1687,7 +1718,13 @@
                 widgetCodeDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, '#3b82f6');
 
                 successAlert.style.display = 'block';
-                showToast('Assistente ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
+                
+                // Mensagem customizada baseada no sucesso da short URL
+                if (shortUrlData && shortUrlData.success) {
+                    showToast('✅ Assistente ativado! Link curto gerado para redes sociais.', 'success');
+                } else {
+                    showToast('Assistente ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
+                }
 
                 // Atualizar analytics
                 document.getElementById('activeChatbots').textContent = '1';

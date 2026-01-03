@@ -5380,7 +5380,176 @@ setupRoutes(app);
         }
     });
 
+    // ===== SHORT URLS - Sistema de Encurtamento de Links =====
+
+    // Importar gerador de short URLs
+    const { ShortUrlGenerator } = require('./short-url-generator');
+
+    /**
+     * 🔗 Redirecionamento de Short URL
+     * GET /l/:shortCode
+     * 
+     * Resolve código curto e redireciona para /chatbot com parâmetros completos
+     * Usa cache Redis para performance
+     */
+    app.get('/l/:shortCode', async (req, res) => {
+        try {
+            const { shortCode } = req.params;
+
+            // Validar formato do código
+            if (!ShortUrlGenerator.isValid(shortCode)) {
+                logger.warn(`Short code inválido: ${shortCode}`);
+                return res.status(404).send('Link não encontrado');
+            }
+
+            // Buscar no cache primeiro (Redis)
+            let shortUrl = await CacheManager.get(`short_url:${shortCode}`);
+
+            if (!shortUrl) {
+                // Cache miss - buscar no banco
+                shortUrl = await DatabaseHelpers.getShortUrl(shortCode);
+
+                if (!shortUrl) {
+                    logger.warn(`Short URL não encontrado: ${shortCode}`);
+                    return res.status(404).send('Link não encontrado ou expirado');
+                }
+
+                // Salvar no cache (1 hora)
+                await CacheManager.set(`short_url:${shortCode}`, JSON.stringify(shortUrl), 3600);
+                logger.info(`✅ Short URL ${shortCode} em cache`);
+            } else {
+                shortUrl = JSON.parse(shortUrl);
+            }
+
+            // Incrementar contador de acessos (async, não bloqueia)
+            DatabaseHelpers.updateShortUrlAccess(shortCode).catch(err => {
+                logger.error('Erro ao atualizar contador de acessos:', err);
+            });
+
+            // Analytics tracking
+            try {
+                analyticsManager.trackEvent(shortUrl.api_key, 'short_url_accessed', {
+                    shortCode,
+                    robotName: shortUrl.robot_name,
+                    timestamp: new Date()
+                });
+            } catch (analyticsError) {
+                logger.error('Erro no tracking de analytics:', analyticsError);
+            }
+
+            // Redirecionar para a rota /chatbot existente
+            const params = new URLSearchParams({
+                name: shortUrl.robot_name || 'Assistente IA',
+                url: shortUrl.sales_url || '',
+                instructions: shortUrl.instructions || '',
+                apiKey: shortUrl.api_key
+            });
+
+            logger.info(`🔗 Redirecionando ${shortCode} para chatbot (tenant: ${shortUrl.api_key})`);
+            res.redirect(`/chatbot?${params.toString()}`);
+
+        } catch (error) {
+            logger.error('❌ Erro no redirect de short URL:', error);
+            res.status(500).send('Erro ao processar link');
+        }
+    });
+
+    /**
+     * 📝 Criar Short URL
+     * POST /api/create-short-url
+     * 
+     * Cria um novo short URL para um tenant
+     * Body: { robotName, salesUrl, instructions, apiKey }
+     */
+    app.post('/api/create-short-url', async (req, res) => {
+        try {
+            const { robotName, salesUrl, instructions, apiKey } = req.body;
+
+            // Validações
+            if (!apiKey) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'API Key is required'
+                });
+            }
+
+            if (!robotName || !salesUrl) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Robot name and sales URL are required'
+                });
+            }
+
+            // Gerar código curto único
+            const shortCode = await ShortUrlGenerator.generateUnique(
+                (code) => DatabaseHelpers.shortCodeExists(code)
+            );
+
+            // Construir long URL (formato atual)
+            const params = new URLSearchParams({
+                name: robotName,
+                url: salesUrl,
+                instructions: instructions || '',
+                apiKey: apiKey
+            });
+            const longUrl = `/chatbot?${params.toString()}`;
+
+            // Salvar no banco
+            await DatabaseHelpers.createShortUrl(apiKey, {
+                shortCode,
+                longUrl,
+                robotName,
+                salesUrl,
+                instructions: instructions || '',
+                metadata: {
+                    createdVia: 'dashboard',
+                    userAgent: req.headers['user-agent']
+                }
+            });
+
+            // Salvar no cache Redis (1 hora)
+            const cacheData = {
+                short_code: shortCode,
+                api_key: apiKey,
+                long_url: longUrl,
+                robot_name: robotName,
+                sales_url: salesUrl,
+                instructions: instructions || ''
+            };
+            await CacheManager.set(`short_url:${shortCode}`, JSON.stringify(cacheData), 3600);
+
+            // Analytics
+            analyticsManager.trackEvent(apiKey, 'short_url_created', {
+                shortCode,
+                robotName
+            });
+
+            // Construir short URL completo
+            const protocol = req.protocol;
+            const host = req.get('host');
+            const shortUrl = `${protocol}://${host}/l/${shortCode}`;
+
+            logger.info(`✅ Short URL criado: ${shortUrl} para tenant ${apiKey}`);
+
+            res.json({
+                success: true,
+                shortCode,
+                shortUrl,
+                longUrl: `${protocol}://${host}${longUrl}`,
+                message: 'Short URL created successfully'
+            });
+
+        } catch (error) {
+            logger.error('❌ Erro ao criar short URL:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to create short URL: ' + error.message
+            });
+        }
+    });
+
     console.log('✅ Rotas V3.0 configuradas');
+    console.log('🔗 Short URLs habilitadas: GET /l/:code, POST /api/create-short-url');
 
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);

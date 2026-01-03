@@ -206,6 +206,22 @@ function getPostgresTables() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 
+        // Tabela de Short URLs
+        `CREATE TABLE IF NOT EXISTS short_urls (
+            id SERIAL PRIMARY KEY,
+            short_code VARCHAR(10) UNIQUE NOT NULL,
+            api_key VARCHAR(255) NOT NULL,
+            long_url TEXT NOT NULL,
+            robot_name VARCHAR(255),
+            sales_url TEXT,
+            instructions TEXT,
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            access_count INTEGER DEFAULT 0,
+            status VARCHAR(20) DEFAULT 'active'
+        )`,
+
         // Índices para performance
         `CREATE INDEX IF NOT EXISTS idx_conversations_chatbot ON conversations(chatbot_id)`,
         `CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp)`,
@@ -214,7 +230,9 @@ function getPostgresTables() {
         `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`,
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_api_key ON tenant_leads(api_key)`,
         `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_api_key ON tenant_appointments(api_key)`,
-        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`
+        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_short_urls_code ON short_urls(short_code)`,
+        `CREATE INDEX IF NOT EXISTS idx_short_urls_api_key ON short_urls(api_key)`
     ];
 }
 
@@ -330,6 +348,22 @@ function getSQLiteTables() {
             metadata TEXT DEFAULT '{}',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Short URLs
+        `CREATE TABLE IF NOT EXISTS short_urls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            short_code TEXT UNIQUE NOT NULL,
+            api_key TEXT NOT NULL,
+            long_url TEXT NOT NULL,
+            robot_name TEXT,
+            sales_url TEXT,
+            instructions TEXT,
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
+            access_count INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'active'
         )`
     ];
 }
@@ -799,6 +833,104 @@ const DatabaseHelpers = {
 
         const result = await db.query(query, params);
         return result.rows[0];
+    },
+
+    // ===== CRUD para short_urls =====
+
+    /**
+     * Criar short URL
+     */
+    async createShortUrl(apiKey, shortUrlData) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO short_urls (short_code, api_key, long_url, robot_name, sales_url, instructions, metadata)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               RETURNING *`
+            : `INSERT INTO short_urls (short_code, api_key, long_url, robot_name, sales_url, instructions, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+        const params = [
+            shortUrlData.shortCode,
+            apiKey,
+            shortUrlData.longUrl,
+            shortUrlData.robotName || null,
+            shortUrlData.salesUrl || null,
+            shortUrlData.instructions || null,
+            JSON.stringify(shortUrlData.metadata || {})
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`✅ Short URL criada: ${shortUrlData.shortCode} para tenant ${apiKey}`);
+            return result.rows[0];
+        } catch (error) {
+            console.error('❌ Erro ao criar short URL:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar short URL por código
+     */
+    async getShortUrl(shortCode) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM short_urls WHERE short_code = $1 AND status = 'active'`
+            : `SELECT * FROM short_urls WHERE short_code = ? AND status = 'active'`;
+
+        const result = await db.query(query, [shortCode]);
+        const shortUrl = result.rows[0];
+
+        if (shortUrl && !USE_POSTGRES) {
+            shortUrl.metadata = JSON.parse(shortUrl.metadata || '{}');
+        }
+
+        return shortUrl;
+    },
+
+    /**
+     * Atualizar contador de acessos de short URL
+     */
+    async updateShortUrlAccess(shortCode) {
+        const query = USE_POSTGRES
+            ? `UPDATE short_urls 
+               SET access_count = access_count + 1, 
+                   last_accessed = CURRENT_TIMESTAMP 
+               WHERE short_code = $1`
+            : `UPDATE short_urls 
+               SET access_count = access_count + 1, 
+                   last_accessed = datetime('now') 
+               WHERE short_code = ?`;
+
+        await db.query(query, [shortCode]);
+    },
+
+    /**
+     * Listar short URLs de um tenant
+     */
+    async getShortUrlsByApiKey(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM short_urls WHERE api_key = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM short_urls WHERE api_key = ? ORDER BY created_at DESC`;
+
+        const result = await db.query(query, [apiKey]);
+        return result.rows.map(shortUrl => {
+            if (!USE_POSTGRES) {
+                shortUrl.metadata = JSON.parse(shortUrl.metadata || '{}');
+            }
+            return shortUrl;
+        });
+    },
+
+    /**
+     * Verificar se short code já existe
+     */
+    async shortCodeExists(shortCode) {
+        const query = USE_POSTGRES
+            ? `SELECT COUNT(*) as count FROM short_urls WHERE short_code = $1`
+            : `SELECT COUNT(*) as count FROM short_urls WHERE short_code = ?`;
+
+        const result = await db.query(query, [shortCode]);
+        const count = USE_POSTGRES ? parseInt(result.rows[0].count) : result.rows[0].count;
+        return count > 0;
     }
 };
 
