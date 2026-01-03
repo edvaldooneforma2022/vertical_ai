@@ -2692,7 +2692,7 @@ function requireApiKey(req, res, next) {
     logger.info(`[requireApiKey] Path: ${req.path}, Session Validated: ${!!(req.session && req.session.validatedApiKey)}`);
 
     // Permitir acesso a rotas públicas sem API Key
-    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot") {
+    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/l/")) {
         return next();
     }
 
