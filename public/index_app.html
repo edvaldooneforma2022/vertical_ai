@@ -1561,14 +1561,47 @@
             activateChatbotBtn.innerHTML = '<i class="fas fa-play-circle"></i> Ativar Assistente IA';
         }
 
-        function generateChatbotUrl(robotName, salesUrl, instructions, apiKey) {
-            const params = new URLSearchParams({
-                name: robotName,
-                url: salesUrl,
-                instructions: instructions,
-                apiKey: apiKey || ''
-            });
-            return `${window.location.origin}/chatbot?${params.toString()}`;
+        // 🔗 CORREÇÃO: Função assíncrona para gerar Short URL via API
+        async function generateChatbotUrl(robotName, salesUrl, instructions, apiKey) {
+            try {
+                const response = await fetch('/api/assistant-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        robotName,
+                        salesUrl,
+                        instructions,
+                        apiKey
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('🔗 Short URL criada:', data.fullUrl);
+                    return data.fullUrl;
+                } else {
+                    console.warn('⚠️ Fallback para URL longa:', data.error);
+                    // Fallback para URL longa caso API falhe
+                    const params = new URLSearchParams({
+                        name: robotName,
+                        url: salesUrl,
+                        instructions: instructions,
+                        apiKey: apiKey || ''
+                    });
+                    return `${window.location.origin}/chatbot?${params.toString()}`;
+                }
+            } catch (error) {
+                console.error('❌ Erro ao criar short URL:', error);
+                // Fallback para URL longa
+                const params = new URLSearchParams({
+                    name: robotName,
+                    url: salesUrl,
+                    instructions: instructions,
+                    apiKey: apiKey || ''
+                });
+                return `${window.location.origin}/chatbot?${params.toString()}`;
+            }
         }
 
         function updateSocialShareLinks(chatbotUrl, robotName) {
@@ -1655,8 +1688,8 @@
                     throw new Error(data.error || 'Erro desconhecido na extração.');
                 }
 
-                // Gerar URL do chatbot (inclui apiKey para agendamentos)
-                currentChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
+                // Gerar URL do chatbot (inclui apiKey para agendamentos) - AGORA ASYNC
+                currentChatbotUrl = await generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
 
                 // Atualizar seção do link do chatbot
                 chatbotLinkUrl.href = currentChatbotUrl;

@@ -2780,6 +2780,99 @@ app.get("/excluir-dados", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "excluir-dados.html"));
 });
 
+// ===== 🔗 SISTEMA DE SHORT URL PARA ASSISTENTES =====
+// Armazenamento em memória das configurações de assistentes (em produção usar Redis/DB)
+const assistantConfigs = new Map();
+
+// Gerar shortId único de 8 caracteres
+function generateShortId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// POST /api/assistant-config - Criar configuração e retornar link curto
+app.post("/api/assistant-config", (req, res) => {
+    try {
+        const { robotName, salesUrl, instructions, apiKey, primaryColor } = req.body;
+
+        if (!robotName || !salesUrl) {
+            return res.status(400).json({
+                success: false,
+                error: "Nome do assistente e URL são obrigatórios"
+            });
+        }
+
+        // Gerar shortId único
+        let shortId = generateShortId();
+        while (assistantConfigs.has(shortId)) {
+            shortId = generateShortId();
+        }
+
+        // Salvar configuração
+        const config = {
+            robotName,
+            salesUrl,
+            instructions: instructions || '',
+            apiKey: apiKey || '',
+            primaryColor: primaryColor || '#3b82f6',
+            createdAt: new Date().toISOString()
+        };
+
+        assistantConfigs.set(shortId, config);
+        console.log(`🔗 Short URL criada: /a/${shortId} para ${robotName}`);
+
+        res.json({
+            success: true,
+            shortId,
+            shortUrl: `/a/${shortId}`,
+            fullUrl: `${req.protocol}://${req.get('host')}/a/${shortId}`
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao criar assistant-config:", error);
+        res.status(500).json({
+            success: false,
+            error: "Erro interno ao criar link curto"
+        });
+    }
+});
+
+// GET /api/assistant-config/:shortId - Recuperar configuração
+app.get("/api/assistant-config/:shortId", (req, res) => {
+    try {
+        const { shortId } = req.params;
+        const config = assistantConfigs.get(shortId);
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                error: "Configuração não encontrada"
+            });
+        }
+
+        res.json({
+            success: true,
+            config
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao recuperar assistant-config:", error);
+        res.status(500).json({
+            success: false,
+            error: "Erro interno ao recuperar configuração"
+        });
+    }
+});
+
+// GET /a/:shortId - Servir página do chatbot com Short URL
+app.get("/a/:shortId", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "a.html"));
+});
+
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 app.get("/admin/leads", requireApiKey, (req, res) => {
     // 🔧 CORREÇÃO: Usar helper unificado para suportar X-API-Key header
