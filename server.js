@@ -2756,9 +2756,26 @@ app.post("/validate-api-key", (req, res) => {
     });
 });
 
+// ===== ENDPOINT PARA RETORNAR API KEY DA SESSÃO (para dashboard whitelabel) =====
+app.get("/api/session/me", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey;
+    if (!apiKey) {
+        return res.status(401).json({
+            success: false,
+            error: "Sessão não encontrada"
+        });
+    }
+    res.json({
+        success: true,
+        apiKey: apiKey,
+        clientData: req.session.clientData || null
+    });
+});
+
 app.get("/app", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index_app.html"));
 });
+
 
 app.get("/privacy.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "privacy.html"));
@@ -3233,6 +3250,15 @@ app.get("/chatbot", async (req, res) => {
         const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
 
+        // 🎨 Extrair parâmetros de whitelabel da URL
+        const whitelabel = {
+            companyName: req.query.wlCompany || null,
+            logoUrl: req.query.wlLogo || null,
+            primaryColor: req.query.wlPrimary || null,
+            secondaryColor: req.query.wlSecondary || null,
+            showPoweredBy: req.query.wlPoweredBy !== '0' // Default true
+        };
+
         let pageData = {};
         if (url) {
             try {
@@ -3242,7 +3268,7 @@ app.get("/chatbot", async (req, res) => {
             }
         }
 
-        const html = generateFullChatbotHTML(pageData, robotName, instructions, apiKey);
+        const html = generateFullChatbotHTML(pageData, robotName, instructions, apiKey, whitelabel);
         res.set('Content-Type', 'text/html');
         res.send(html);
     } catch (error) {
@@ -4718,11 +4744,20 @@ function escapeForJS(str) {
         .replace(/>/g, '\\u003e'); // Escape >
 }
 
-function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '', apiKey = '') {
+function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '', apiKey = '', whitelabel = {}) {
     const escapedPageData = JSON.stringify(pageData || {});
     const safeRobotName = escapeForJS(robotName || 'Assistente IA');
     const safeInstructions = escapeForJS(customInstructions || '');
 
+    // 🎨 Cores do whitelabel (com fallback para cores padrão)
+    const primaryColor = whitelabel.primaryColor || '#3b82f6';
+    const secondaryColor = whitelabel.secondaryColor || '#1e40af';
+    const bgPrimary = whitelabel.primaryColor || '#667eea';
+    const bgSecondary = whitelabel.secondaryColor || '#764ba2';
+
+    // Título da página: usar nome da empresa do whitelabel se definido
+    const companyBrand = whitelabel.companyName || 'LinkMágico';
+    const pageTitle = `${companyBrand} - ${safeRobotName}`;
 
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
@@ -4740,25 +4775,25 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>LinkMágico Chatbot - ${safeRobotName}</title>
+    <title>${pageTitle}</title>
     <meta name="description" content="Chatbot IA - ${safeRobotName}"/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+        body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,${bgPrimary} 0%,${bgSecondary} 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
         .chat-container{width:100%;max-width:800px;height:90vh;background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.15);display:flex;flex-direction:column;overflow:hidden}
-        .chat-header{background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white;padding:20px;text-align:center;position:relative}
+        .chat-header{background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;padding:20px;text-align:center;position:relative}
         .chat-header h1{font-size:1.5rem;font-weight:600}
         .chat-header .subtitle{font-size:0.9rem;opacity:0.9;margin-top:5px}
         .chat-messages{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:15px;background:#f8fafc}
         .chat-message{max-width:70%;padding:15px;border-radius:15px;font-size:0.95rem;line-height:1.4}
-        .chat-message.user{background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white;align-self:flex-end;border-bottom-right-radius:5px}
+        .chat-message.user{background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;align-self:flex-end;border-bottom-right-radius:5px}
         .chat-message.bot{background:#f1f5f9;color:#334155;align-self:flex-start;border-bottom-left-radius:5px}
         .chat-input-container{padding:20px;background:white;border-top:1px solid #e2e8f0;display:flex;gap:10px}
         .chat-input{flex:1;border:1px solid #e2e8f0;border-radius:25px;padding:12px 20px;font-size:0.95rem;outline:none;transition:all 0.3s}
-        .chat-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
-        .send-button{background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);border:none;border-radius:50%;width:50px;height:50px;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s}
+        .chat-input:focus{border-color:${primaryColor};box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+        .send-button{background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);border:none;border-radius:50%;width:50px;height:50px;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s}
         .send-button:hover{transform:scale(1.05);box-shadow:0 5px 15px rgba(59,130,246,0.4)}
         .send-button:disabled{opacity:0.6;cursor:not-allowed;transform:none}
         .typing-indicator{display:none;align-items:center;gap:5px;color:#64748b;font-size:0.9rem;margin-top:10px}
@@ -4767,15 +4802,15 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         .typing-dot:nth-child(3){animation-delay:0.4s}
         @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
         .lead-form{background:white;padding:25px;margin:20px;border-radius:15px;box-shadow:0 8px 25px rgba(0,0,0,0.1);text-align:center}
-        .lead-form h3{color:#1e40af;margin-bottom:10px}
+        .lead-form h3{color:${secondaryColor};margin-bottom:10px}
         .lead-form p{color:#64748b;margin-bottom:20px}
         .lead-form input{width:100%;padding:15px;margin-bottom:15px;border:2px solid #e2e8f0;border-radius:10px;font-size:1rem;transition:all 0.3s}
-        .lead-form input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
-        .lead-form button{width:100%;background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white;border:none;padding:15px;border-radius:10px;cursor:pointer;font-size:1.1rem;font-weight:600;transition:all 0.3s}
+        .lead-form input:focus{border-color:${primaryColor};box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+        .lead-form button{width:100%;background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;border:none;padding:15px;border-radius:10px;cursor:pointer;font-size:1.1rem;font-weight:600;transition:all 0.3s}
         .lead-form button:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(59,130,246,0.3)}
         .contact-buttons{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap}
         .contact-button{flex:1;min-width:120px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:all 0.3s;text-decoration:none;color:#334155;font-size:0.9rem;display:flex;align-items:center;justify-content:center;gap:5px}
-        .contact-button:hover{background:#3b82f6;color:white;transform:translateY(-2px)}
+        .contact-button:hover{background:${primaryColor};color:white;transform:translateY(-2px)}
         .lm-botoes-fixos a, .lm-botoes-fixos button { font-size: 0.85rem; }
         @media (max-width:768px){.chat-container{height:100vh;border-radius:0}.chat-message{max-width:85%}.lead-form{margin:10px;padding:20px}.contact-button{min-width:100px;font-size:0.8rem}.lm-botoes-fixos{padding:10px !important}.lm-botoes-fixos a, .lm-botoes-fixos button{padding:10px 15px !important;font-size:0.8rem !important}}
     </style>
@@ -5437,7 +5472,19 @@ setupRoutes(app);
                 logger.error('Erro no tracking de analytics:', analyticsError);
             }
 
-            // Redirecionar para a rota /chatbot existente
+            // 🎨 Buscar configuração de whitelabel para este tenant
+            let whitelabel = {};
+            try {
+                const wlResult = await whitelabelManager.getConfig(shortUrl.api_key);
+                if (wlResult.success && !wlResult.isDefault) {
+                    whitelabel = wlResult.settings || {};
+                    logger.info(`🎨 Whitelabel carregado para tenant ${shortUrl.api_key}`);
+                }
+            } catch (wlError) {
+                logger.warn('Não foi possível carregar whitelabel:', wlError);
+            }
+
+            // Redirecionar para a rota /chatbot existente COM parâmetros de whitelabel
             const params = new URLSearchParams({
                 name: shortUrl.robot_name || 'Assistente IA',
                 url: shortUrl.sales_url || '',
@@ -5445,7 +5492,14 @@ setupRoutes(app);
                 apiKey: shortUrl.api_key
             });
 
-            logger.info(`🔗 Redirecionando ${shortCode} para chatbot (tenant: ${shortUrl.api_key})`);
+            // Adicionar parâmetros de whitelabel se existirem
+            if (whitelabel.companyName) params.set('wlCompany', whitelabel.companyName);
+            if (whitelabel.logoUrl) params.set('wlLogo', whitelabel.logoUrl);
+            if (whitelabel.primaryColor) params.set('wlPrimary', whitelabel.primaryColor);
+            if (whitelabel.secondaryColor) params.set('wlSecondary', whitelabel.secondaryColor);
+            if (whitelabel.showPoweredBy !== undefined) params.set('wlPoweredBy', whitelabel.showPoweredBy ? '1' : '0');
+
+            logger.info(`🔗 Redirecionando ${shortCode} para chatbot (tenant: ${shortUrl.api_key}, whitelabel: ${!!whitelabel.companyName})`);
             res.redirect(`/chatbot?${params.toString()}`);
 
         } catch (error) {

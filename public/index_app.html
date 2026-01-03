@@ -2786,15 +2786,27 @@
                 secondaryColor: document.getElementById('wl-secondary').value
             };
 
+            const statusEl = document.getElementById('wl-status');
+            
             try {
-                const response = await fetch('/api/whitelabel/default', {
+                // Buscar API key do tenant da sessão
+                const sessionRes = await fetch('/api/session/me');
+                const sessionData = await sessionRes.json();
+                
+                if (!sessionData.success || !sessionData.apiKey) {
+                    statusEl.innerHTML = '<span style="color:#ef4444;">❌ Sessão expirada. Faça login novamente.</span>';
+                    return;
+                }
+                
+                const chatbotId = sessionData.apiKey; // Usar API key como chatbotId
+                
+                const response = await fetch(`/api/whitelabel/${encodeURIComponent(chatbotId)}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
 
                 const data = await response.json();
-                const statusEl = document.getElementById('wl-status');
                 if (data.success) {
                     statusEl.innerHTML = '<span style="color:#10b981;">✅ Configuração salva com sucesso!</span>';
                     setTimeout(() => { statusEl.innerHTML = ''; }, 3000);
@@ -2803,7 +2815,7 @@
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                document.getElementById('wl-status').innerHTML = '<span style="color:#ef4444;">❌ Erro ao salvar configuração</span>';
+                statusEl.innerHTML = '<span style="color:#ef4444;">❌ Erro ao salvar configuração</span>';
             }
         }
 
@@ -2840,11 +2852,22 @@
 
         async function loadWhitelabelConfig() {
             try {
-                const response = await fetch('/api/whitelabel/default');
+                // Buscar API key do tenant da sessão
+                const sessionRes = await fetch('/api/session/me');
+                const sessionData = await sessionRes.json();
+                
+                if (!sessionData.success || !sessionData.apiKey) {
+                    console.warn('Sessão não encontrada para carregar whitelabel');
+                    return;
+                }
+                
+                const chatbotId = sessionData.apiKey; // Usar API key como chatbotId
+                
+                const response = await fetch(`/api/whitelabel/${encodeURIComponent(chatbotId)}`);
                 const data = await response.json();
 
                 if (data.success && data.config) {
-                    const config = data.config;
+                    const config = data.config.settings || data.config;
 
                     // Preencher campos com valores salvos
                     if (config.companyName) document.getElementById('wl-company').value = config.companyName;
@@ -2854,7 +2877,7 @@
 
                     // Atualizar preview com valores carregados
                     updateWhitelabelPreview(config);
-                    console.log('📋 Configuração Whitelabel carregada');
+                    console.log('📋 Configuração Whitelabel carregada para tenant:', chatbotId);
                 }
             } catch (error) {
                 console.warn('Não foi possível carregar config whitelabel:', error);
