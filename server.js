@@ -3977,6 +3977,17 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             pageContentSummary = cleanTextLimited;
         }
 
+        // 🎯 NOVO: CONTEÚDO DA BASE DE CONHECIMENTO (FAQ e Documentos)
+        let kbContext = "";
+        try {
+            if (apiKey) {
+                // Tenta compilar até 4000 caracteres de contexto da base de conhecimento
+                kbContext = knowledgeBaseManager.compileContext(apiKey, 4000);
+            }
+        } catch (kbErr) {
+            console.error("⚠️ Erro ao compilar contexto da Knowledge Base:", kbErr);
+        }
+
         // 🎯 NOVO: Texto extraído de imagens (OCR)
         let ocrInfo = "";
         if (pageData && pageData.imagesText && pageData.imagesText.length > 0) {
@@ -4024,6 +4035,9 @@ URL: ${pageData.url || 'Não disponível'}
 
 📄 CONTEÚDO COMPLETO DO PRODUTO/SERVIÇO:
 ${pageContentSummary || 'Conteúdo não disponível'}
+
+📚 CONHECIMENTO ESPECÍFICO (BASE DE CONHECIMENTO):
+${kbContext || 'Nenhum dado específico cadastrado na base de conhecimento.'}
 
 🧩 INTENÇÕES IDENTIFICADAS: ${estadoEmocional.intencoesMultiplas.join(', ') || 'Nenhuma específica'}
 
