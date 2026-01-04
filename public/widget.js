@@ -141,8 +141,8 @@
         loadWhitelabelColors: async function () {
             try {
                 const apiBase = this.config.apiBase;
-                // Usar apiKey do token ou 'default' como fallback
-                const chatbotId = this.token || 'default';
+                // Usar apiKey da configuração, do token ou 'default' como fallback
+                const chatbotId = this.config.apiKey || this.token || 'default';
 
                 // Usar endpoint público (não requer autenticação)
                 const response = await fetch(apiBase + '/api/whitelabel-public/' + encodeURIComponent(chatbotId), {
