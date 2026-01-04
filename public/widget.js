@@ -1665,13 +1665,19 @@
     // Expose widget to global scope
     window.LinkMagicoWidget = LinkMagicoWidget;
 
-    // Auto-initialize if config is provided
-    document.addEventListener('DOMContentLoaded', function () {
+    // Function to run auto-initialization
+    function runAutoInit() {
+        if (LinkMagicoWidget.initialized) return;
+
         // Priority 1: Check for window.LinkMagicoWidgetConfig (recommended method)
         if (window.LinkMagicoWidgetConfig) {
             try {
                 console.log('LinkMagico Widget: Initializing with window.LinkMagicoWidgetConfig');
-                LinkMagicoWidget.init(window.LinkMagicoWidgetConfig);
+                // Support both apiKey and apikey (lowercase)
+                const config = window.LinkMagicoWidgetConfig;
+                if (!config.apiKey && config.apikey) config.apiKey = config.apikey;
+
+                LinkMagicoWidget.init(config);
                 return;
             } catch (error) {
                 console.error('Failed to auto-initialize LinkMagico Widget from window config:', error);
@@ -1690,7 +1696,15 @@
                 console.error('Failed to auto-initialize LinkMagico Widget from data attribute:', error);
             }
         }
-    });
+    }
+
+    // Auto-initialize if config is provided
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runAutoInit);
+    } else {
+        // DOM already ready, run immediately
+        runAutoInit();
+    }
 
     // Track page unload for analytics
     window.addEventListener('beforeunload', function () {

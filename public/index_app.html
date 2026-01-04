@@ -1779,6 +1779,7 @@
         function generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, primaryColor) {
             const color = primaryColor || '#3b82f6';
             const key = apiKey || 'SUA_API_KEY';
+            const serverUrl = window.location.origin;
 
             return `<!-- LinkMágico Chatbot Widget -->
 <script>
@@ -1787,10 +1788,19 @@
         salesUrl: "${salesUrl}",
         instructions: "${instructions}",
         primaryColor: "${color}",
-        apiKey: "${key}"
+        apiKey: "${key}",
+        apikey: "${key}" // Compatibilidade
     };
-<\/script>
-<script src="${window.location.origin}/public/widget.js"><\/script>`;
+
+    (function() {
+        var s = document.createElement('script');
+        s.type = 'text/javascript';
+        s.async = true;
+        s.src = '${serverUrl}/public/widget.js';
+        var x = document.getElementsByTagName('script')[0];
+        x.parentNode.insertBefore(s, x);
+    })();
+<\/script>`;
         }
 
 
