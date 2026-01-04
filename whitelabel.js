@@ -77,17 +77,46 @@ class WhitelabelManager {
         await this.ensureInitialized();
 
         try {
-            const id = `wl_${chatbotId}_${Date.now()}`;
+            // ID determinístico baseado apenas no chatbotId para permitir UPDATE
+            const id = `wl_${chatbotId}`;
 
+            // Detectar se estamos usando PostgreSQL
+            const USE_POSTGRES = process.env.DATABASE_URL || process.env.USE_POSTGRES === 'true';
 
-            const query = `
-                INSERT OR REPLACE INTO whitelabel_settings (
-                    id, chatbot_id, plan_type, company_name, logo_url,
-                    primary_color, secondary_color, powered_by_text,
-                    show_powered_by, custom_domain, favicon_url, custom_css,
-                    updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            `;
+            let query;
+            if (USE_POSTGRES) {
+                // PostgreSQL: usar ON CONFLICT para upsert
+                query = `
+                    INSERT INTO whitelabel_settings (
+                        id, chatbot_id, plan_type, company_name, logo_url,
+                        primary_color, secondary_color, powered_by_text,
+                        show_powered_by, custom_domain, favicon_url, custom_css,
+                        updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP)
+                    ON CONFLICT (id) DO UPDATE SET
+                        plan_type = $3,
+                        company_name = $4,
+                        logo_url = $5,
+                        primary_color = $6,
+                        secondary_color = $7,
+                        powered_by_text = $8,
+                        show_powered_by = $9,
+                        custom_domain = $10,
+                        favicon_url = $11,
+                        custom_css = $12,
+                        updated_at = CURRENT_TIMESTAMP
+                `;
+            } else {
+                // SQLite: INSERT OR REPLACE funciona quando ID é fixo
+                query = `
+                    INSERT OR REPLACE INTO whitelabel_settings (
+                        id, chatbot_id, plan_type, company_name, logo_url,
+                        primary_color, secondary_color, powered_by_text,
+                        show_powered_by, custom_domain, favicon_url, custom_css,
+                        updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                `;
+            }
 
             await DatabaseHelpers.run(query, [
                 id,
