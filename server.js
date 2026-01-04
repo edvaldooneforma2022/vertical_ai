@@ -3225,6 +3225,26 @@ app.get("/chat.html", async (req, res) => {
         const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
 
+        // 🎨 Buscar whitelabel do banco de dados se apiKey presente
+        let whitelabel = {};
+        if (apiKey) {
+            try {
+                const wlResult = await whitelabelManager.getConfig(apiKey);
+                if (wlResult.success && !wlResult.isDefault && wlResult.settings) {
+                    whitelabel = {
+                        companyName: wlResult.settings.companyName || null,
+                        logoUrl: wlResult.settings.logoUrl || null,
+                        primaryColor: wlResult.settings.primaryColor || null,
+                        secondaryColor: wlResult.settings.secondaryColor || null,
+                        showPoweredBy: wlResult.settings.showPoweredBy !== false
+                    };
+                    console.log(`🎨 Whitelabel carregado do banco para /chat.html (tenant: ${apiKey})`);
+                }
+            } catch (wlError) {
+                console.warn('Não foi possível carregar whitelabel para chat.html:', wlError.message);
+            }
+        }
+
         let pageData = {};
         if (url) {
             try {
@@ -3234,7 +3254,7 @@ app.get("/chat.html", async (req, res) => {
             }
         }
 
-        const chatbotHTML = generateFullChatbotHTML(pageData, robotName, instructions, apiKey);
+        const chatbotHTML = generateFullChatbotHTML(pageData, robotName, instructions, apiKey, whitelabel);
         res.send(chatbotHTML);
     } catch (error) {
         logger.error('Chat.html route error:', error.message || error);
@@ -3251,13 +3271,32 @@ app.get("/chatbot", async (req, res) => {
         const instructions = req.query.instructions || "";
 
         // 🎨 Extrair parâmetros de whitelabel da URL
-        const whitelabel = {
+        let whitelabel = {
             companyName: req.query.wlCompany || null,
             logoUrl: req.query.wlLogo || null,
             primaryColor: req.query.wlPrimary || null,
             secondaryColor: req.query.wlSecondary || null,
             showPoweredBy: req.query.wlPoweredBy !== '0' // Default true
         };
+
+        // 🎨 Se não tiver cores na URL e tiver apiKey, buscar do banco de dados
+        if (!whitelabel.primaryColor && apiKey) {
+            try {
+                const wlResult = await whitelabelManager.getConfig(apiKey);
+                if (wlResult.success && !wlResult.isDefault && wlResult.settings) {
+                    whitelabel = {
+                        companyName: wlResult.settings.companyName || whitelabel.companyName,
+                        logoUrl: wlResult.settings.logoUrl || whitelabel.logoUrl,
+                        primaryColor: wlResult.settings.primaryColor || null,
+                        secondaryColor: wlResult.settings.secondaryColor || null,
+                        showPoweredBy: wlResult.settings.showPoweredBy !== false
+                    };
+                    console.log(`🎨 Whitelabel carregado do banco para /chatbot (tenant: ${apiKey})`);
+                }
+            } catch (wlError) {
+                console.warn('Não foi possível carregar whitelabel do banco:', wlError.message);
+            }
+        }
 
         let pageData = {};
         if (url) {
