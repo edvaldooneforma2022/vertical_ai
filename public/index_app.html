@@ -2504,12 +2504,13 @@
                 const sessionRes = await fetch('/api/session/me');
                 const sessionData = await sessionRes.json();
 
-                if (!sessionData.success || !sessionData.user?.apiKey) {
+                // Corrigir a leitura da API Key (o endpoint retorna apiKey diretamente)
+                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
+
+                if (!sessionData.success || !chatbotId) {
                     alert('Erro de autenticação. Por favor, recarregue a página.');
                     return;
                 }
-
-                const chatbotId = sessionData.user.apiKey;
 
                 const response = await fetch(`/api/knowledge/${chatbotId}/faq`, {
                     method: 'POST',
@@ -2536,9 +2537,8 @@
                 const sessionRes = await fetch('/api/session/me');
                 const sessionData = await sessionRes.json();
 
-                if (!sessionData.success || !sessionData.user?.apiKey) return;
-
-                const chatbotId = sessionData.user.apiKey;
+                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
+                if (!sessionData.success || !chatbotId) return;
 
                 const response = await fetch(`/api/knowledge/${chatbotId}`);
                 const data = await response.json();
@@ -2566,7 +2566,9 @@
             try {
                 const sessionRes = await fetch('/api/session/me');
                 const sessionData = await sessionRes.json();
-                const chatbotId = sessionData.user.apiKey;
+                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
+
+                if (!chatbotId) return;
 
                 const response = await fetch(`/api/knowledge/${chatbotId}/faq/${faqId}`, {
                     method: 'DELETE'
