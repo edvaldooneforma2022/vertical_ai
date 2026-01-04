@@ -155,23 +155,30 @@ class WhitelabelManager {
         await this.ensureInitialized();
 
         try {
-            const query = `
+            // Detectar se estamos usando PostgreSQL (mesmo padrão do saveSettings)
+            const USE_POSTGRES = process.env.DATABASE_URL || process.env.USE_POSTGRES === 'true';
 
-                SELECT * FROM whitelabel_settings 
-                WHERE chatbot_id = ? 
-                ORDER BY created_at DESC 
-                LIMIT 1
-            `;
+            // PostgreSQL usa $1, SQLite usa ?
+            const query = USE_POSTGRES
+                ? `SELECT * FROM whitelabel_settings WHERE chatbot_id = $1 ORDER BY created_at DESC LIMIT 1`
+                : `SELECT * FROM whitelabel_settings WHERE chatbot_id = ? ORDER BY created_at DESC LIMIT 1`;
 
             const settings = await DatabaseHelpers.get(query, [chatbotId]);
 
             if (!settings) {
+                console.log(`🎨 Whitelabel: nenhuma configuração encontrada para chatbot ${chatbotId}, usando padrão`);
                 return {
                     success: true,
                     settings: this.defaultBranding,
                     isDefault: true
                 };
             }
+
+            console.log(`🎨 Whitelabel carregado com sucesso para chatbot ${chatbotId}:`, {
+                companyName: settings.company_name,
+                primaryColor: settings.primary_color,
+                secondaryColor: settings.secondary_color
+            });
 
             return {
                 success: true,
@@ -181,7 +188,8 @@ class WhitelabelManager {
                     primaryColor: settings.primary_color,
                     secondaryColor: settings.secondary_color,
                     poweredByText: settings.powered_by_text,
-                    showPoweredBy: settings.show_powered_by === 1,
+                    // Compatibilidade: SQLite retorna 0/1, PostgreSQL retorna true/false
+                    showPoweredBy: settings.show_powered_by === 1 || settings.show_powered_by === true,
                     customDomain: settings.custom_domain,
                     faviconUrl: settings.favicon_url,
                     customCss: settings.custom_css
