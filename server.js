@@ -4545,8 +4545,36 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);
 
+        // 🎯 NOVO: BUSCAR NA BASE DE CONHECIMENTO PRIMEIRO (Prioridade absoluta)
+        let kbMatch = null;
+        if (apiKey) {
+            try {
+                const results = knowledgeBaseManager.search(apiKey, message, 1);
+                if (results && results.length > 0 && results[0].relevance > 0.3) {
+                    kbMatch = results[0];
+                    console.log(`📚 [KB MATCH] Relevância: ${kbMatch.relevance} para "${kbMatch.entry.question || kbMatch.entry.title}"`);
+                }
+            } catch (searchErr) {
+                console.error("⚠️ Erro na busca KB:", searchErr);
+            }
+        }
+
         // 🎯 CAPTURA DE INTENÇÕES DO CLIENTE
-        const inteligencias = sistemaInteligencias.capturarInteligencias(message);
+        let inteligencias = sistemaInteligencias.capturarInteligencias(message);
+
+        // Se encontramos uma dúvida na KB, vamos desativar "inteligências" genéricas 
+        // para permitir que a IA responda usando o conhecimento específico.
+        if (kbMatch && !inteligencias.contatoDireto) {
+            console.log("📚 KB Match encontrado. Desativando inteligências genéricas para priorizar conhecimento específico.");
+            inteligencias = {
+                contatoDireto: false,
+                linkSite: false,
+                bonus: false,
+                detalhesBonus: false,
+                experiencia: false,
+                suporte: false
+            };
+        }
 
         // 🎯 ANÁLISE DE JORNADA
         const journeyStage = journeyAnalyzer.analyzeJourneyStage(message);
