@@ -222,6 +222,34 @@ function getPostgresTables() {
             status VARCHAR(20) DEFAULT 'active'
         )`,
 
+        // Tabela de Configurações WhatsApp por Tenant (NOVO - Multi-Tenant)
+        `CREATE TABLE IF NOT EXISTS whatsapp_settings (
+            id SERIAL PRIMARY KEY,
+            api_key VARCHAR(255) UNIQUE NOT NULL,
+            provider VARCHAR(20) NOT NULL,
+            
+            -- Configurações Twilio
+            twilio_account_sid VARCHAR(255),
+            twilio_auth_token VARCHAR(255),
+            twilio_from_number VARCHAR(50),
+            
+            -- Configurações Evolution API
+            evolution_api_url TEXT,
+            evolution_api_key VARCHAR(255),
+            evolution_instance_name VARCHAR(100),
+            
+            -- Configurações gerais
+            notification_phone VARCHAR(50),
+            is_active BOOLEAN DEFAULT true,
+            test_mode BOOLEAN DEFAULT false,
+            
+            -- Metadados
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            
+            FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
+        )`,
+
         // Índices para performance
         `CREATE INDEX IF NOT EXISTS idx_conversations_chatbot ON conversations(chatbot_id)`,
         `CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp)`,
@@ -232,7 +260,8 @@ function getPostgresTables() {
         `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_api_key ON tenant_appointments(api_key)`,
         `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`,
         `CREATE INDEX IF NOT EXISTS idx_short_urls_code ON short_urls(short_code)`,
-        `CREATE INDEX IF NOT EXISTS idx_short_urls_api_key ON short_urls(api_key)`
+        `CREATE INDEX IF NOT EXISTS idx_short_urls_api_key ON short_urls(api_key)`,
+        `CREATE INDEX IF NOT EXISTS idx_whatsapp_settings_api_key ON whatsapp_settings(api_key)`
     ];
 }
 
@@ -364,6 +393,34 @@ function getSQLiteTables() {
             last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
             access_count INTEGER DEFAULT 0,
             status TEXT DEFAULT 'active'
+        )`,
+
+        // Tabela de Configurações WhatsApp por Tenant (NOVO - Multi-Tenant)
+        `CREATE TABLE IF NOT EXISTS whatsapp_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            api_key TEXT UNIQUE NOT NULL,
+            provider TEXT NOT NULL,
+            
+            -- Configurações Twilio
+            twilio_account_sid TEXT,
+            twilio_auth_token TEXT,
+            twilio_from_number TEXT,
+            
+            -- Configurações Evolution API
+            evolution_api_url TEXT,
+            evolution_api_key TEXT,
+            evolution_instance_name TEXT,
+            
+            -- Configurações gerais
+            notification_phone TEXT,
+            is_active INTEGER DEFAULT 1,
+            test_mode INTEGER DEFAULT 0,
+            
+            -- Metadados
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            
+            FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
         )`
     ];
 }
@@ -931,6 +988,115 @@ const DatabaseHelpers = {
         const result = await db.query(query, [shortCode]);
         const count = USE_POSTGRES ? parseInt(result.rows[0].count) : result.rows[0].count;
         return count > 0;
+    },
+
+    // ===== CRUD para whatsapp_settings (NOVO - Multi-Tenant) =====
+
+    /**
+     * Salvar configurações WhatsApp de um tenant
+     */
+    async saveWhatsAppSettings(apiKey, settings) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO whatsapp_settings (
+                   api_key, provider, twilio_account_sid, twilio_auth_token, 
+                   twilio_from_number, evolution_api_url, evolution_api_key,
+                   evolution_instance_name, notification_phone, is_active
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+               ON CONFLICT (api_key) DO UPDATE SET
+                   provider = $2, twilio_account_sid = $3, twilio_auth_token = $4,
+                   twilio_from_number = $5, evolution_api_url = $6, 
+                   evolution_api_key = $7, evolution_instance_name = $8,
+                   notification_phone = $9, is_active = $10,
+                   updated_at = CURRENT_TIMESTAMP
+               RETURNING *`
+            : `INSERT OR REPLACE INTO whatsapp_settings (
+                   api_key, provider, twilio_account_sid, twilio_auth_token,
+                   twilio_from_number, evolution_api_url, evolution_api_key,
+                   evolution_instance_name, notification_phone, is_active,
+                   updated_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
+
+        const params = [
+            apiKey,
+            settings.provider,
+            settings.twilioAccountSid || null,
+            settings.twilioAuthToken || null,
+            settings.twilioFromNumber || null,
+            settings.evolutionApiUrl || null,
+            settings.evolutionApiKey || null,
+            settings.evolutionInstanceName || null,
+            settings.notificationPhone || null,
+            settings.isActive !== undefined ? settings.isActive : true
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`✅ WhatsApp configurado para tenant ${apiKey} (${settings.provider})`);
+            return result.rows[0];
+        } catch (error) {
+            console.error('❌ Erro ao salvar configurações WhatsApp:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar configurações WhatsApp de um tenant
+     */
+    async getWhatsAppSettings(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM whatsapp_settings WHERE api_key = $1 AND is_active = true`
+            : `SELECT * FROM whatsapp_settings WHERE api_key = ? AND is_active = 1`;
+
+        const result = await db.query(query, [apiKey]);
+        const settings = result.rows[0];
+
+        if (!settings) {
+            return null;
+        }
+
+        // Converter boolean para SQLite (0/1)
+        if (!USE_POSTGRES) {
+            settings.is_active = settings.is_active === 1;
+            settings.test_mode = settings.test_mode === 1;
+        }
+
+        return settings;
+    },
+
+    /**
+     * Deletar configurações WhatsApp de um tenant
+     */
+    async deleteWhatsAppSettings(apiKey) {
+        const query = USE_POSTGRES
+            ? `DELETE FROM whatsapp_settings WHERE api_key = $1`
+            : `DELETE FROM whatsapp_settings WHERE api_key = ?`;
+
+        try {
+            await db.query(query, [apiKey]);
+            console.log(`✅ Configurações WhatsApp removidas para tenant ${apiKey}`);
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Erro ao deletar configurações WhatsApp:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Listar todos os tenants com WhatsApp configurado
+     */
+    async listWhatsAppSettings() {
+        const query = USE_POSTGRES
+            ? `SELECT api_key, provider, notification_phone, is_active, created_at 
+               FROM whatsapp_settings 
+               WHERE is_active = true
+               ORDER BY created_at DESC`
+            : `SELECT api_key, provider, notification_phone, is_active, created_at 
+               FROM whatsapp_settings 
+               WHERE is_active = 1
+               ORDER BY created_at DESC`;
+
+        const result = await db.query(query);
+        return result.rows || [];
     }
 };
 
