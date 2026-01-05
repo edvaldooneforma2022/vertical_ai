@@ -3981,8 +3981,12 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         let kbContext = "";
         try {
             if (apiKey) {
+                console.log(`🔍 [KB DEBUG] Buscando contexto para apiKey: ${apiKey}`);
                 // Tenta compilar até 4000 caracteres de contexto da base de conhecimento
                 kbContext = knowledgeBaseManager.compileContext(apiKey, 4000);
+                console.log(`🔍 [KB DEBUG] Contexto retornado (${kbContext.length} chars): ${kbContext ? 'Sim' : 'Vazio'}`);
+            } else {
+                console.log(`⚠️ [KB DEBUG] Nenhuma apiKey disponível para busca na Knowledge Base`);
             }
         } catch (kbErr) {
             console.error("⚠️ Erro ao compilar contexto da Knowledge Base:", kbErr);
