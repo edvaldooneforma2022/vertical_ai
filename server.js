@@ -5691,6 +5691,10 @@ setupRoutes(app);
     console.log('✅ Rotas V3.0 configuradas');
     console.log('🔗 Short URLs habilitadas: GET /l/:code, POST /api/create-short-url');
 
+    // ===== MULTI-TENANT WHATSAPP ROUTES (NOVO) =====
+    require('./whatsapp-routes')(app, logger);  // Carrega e registra rotas WhatsApp multi-tenant
+    console.log('✅ Rotas Multi-Tenant WhatsApp integradas');
+
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 
