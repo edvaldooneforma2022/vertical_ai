@@ -4550,9 +4550,9 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         if (apiKey) {
             try {
                 const results = knowledgeBaseManager.search(apiKey, message, 1);
-                if (results && results.length > 0 && results[0].relevance > 0.3) {
+                if (results && results.length > 0 && results[0].score >= 1) {
                     kbMatch = results[0];
-                    console.log(`📚 [KB MATCH] Relevância: ${kbMatch.relevance} para "${kbMatch.entry.question || kbMatch.entry.title}"`);
+                    console.log(`📚 [KB MATCH] Score: ${kbMatch.score} para "${kbMatch.data?.question || kbMatch.data?.title}"`);
                 }
             } catch (searchErr) {
                 console.error("⚠️ Erro na busca KB:", searchErr);
@@ -4565,7 +4565,8 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         // Se encontramos uma dúvida na KB, vamos desativar "inteligências" genéricas 
         // para permitir que a IA responda usando o conhecimento específico.
         if (kbMatch && !inteligencias.contatoDireto) {
-            console.log("📚 KB Match encontrado. Desativando inteligências genéricas para priorizar conhecimento específico.");
+            console.log("📚 KB Match encontrado. Priorizando conhecimento específico sobre regras genéricas.");
+            // Desativa inteligências genéricas para não dar resposta duplicada ou genérica
             inteligencias = {
                 contatoDireto: false,
                 linkSite: false,
