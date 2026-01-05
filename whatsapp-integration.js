@@ -8,6 +8,8 @@ class WhatsAppIntegration {
         this.provider = null; // 'twilio' ou 'evolution'
         this.isConfigured = false;
         this.config = {};
+        // NOVO: Cache de instâncias por tenant para multi-tenancy
+        this.tenantInstances = new Map();
         this.messageTemplates = {
             newLead: `🎉 *Novo Lead Capturado!*
 
@@ -335,6 +337,129 @@ Continue assim! 🚀`
             ready: this.isReady()
         };
     }
+
+    // ===== MULTI-TENANT METHODS (NOVO) =====
+
+    /**
+     * NOVO: Obter ou criar instância WhatsApp para um tenant específico
+     * @param {string} apiKey - API key do tenant
+     * @returns {WhatsAppIntegration} Instância configurada para o tenant ou global (fallback)
+     */
+    async getTenantInstance(apiKey) {
+        // Verificar cache
+        if (this.tenantInstances.has(apiKey)) {
+            console.log(`📦 Usando instância WhatsApp em cache para tenant ${apiKey}`);
+            return this.tenantInstances.get(apiKey);
+        }
+
+        // Buscar configurações do banco
+        try {
+            const { DatabaseHelpers } = require('./database');
+            const settings = await DatabaseHelpers.getWhatsAppSettings(apiKey);
+
+            if (!settings) {
+                // FALLBACK: Usar configuração global (admin)
+                console.log(`⚠️ Tenant ${apiKey} sem WhatsApp próprio, usando configuração global`);
+                return this; // Retorna instância global
+            }
+
+            // Criar instância isolada para o tenant
+            const tenantInstance = new WhatsAppIntegration();
+
+            if (settings.provider === 'twilio') {
+                tenantInstance.configureTwilio({
+                    accountSid: settings.twilio_account_sid,
+                    authToken: settings.twilio_auth_token,
+                    fromNumber: settings.twilio_from_number
+                });
+            } else if (settings.provider === 'evolution') {
+                tenantInstance.configureEvolution({
+                    apiUrl: settings.evolution_api_url,
+                    apiKey: settings.evolution_api_key,
+                    instanceName: settings.evolution_instance_name
+                });
+            }
+
+            // Armazenar em cache
+            this.tenantInstances.set(apiKey, tenantInstance);
+            console.log(`✅ Instância WhatsApp criada para tenant ${apiKey} (${settings.provider})`);
+
+            return tenantInstance;
+        } catch (error) {
+            console.error(`❌ Erro ao obter instância para tenant ${apiKey}:`, error);
+            // Em caso de erro, usar global como fallback
+            return this;
+        }
+    }
+
+    /**
+     * NOVO: Enviar notificação de lead com suporte multi-tenant
+     * @param {string} apiKey - API key do tenant
+     * @param {Object} lead - Dados do lead
+     * @param {string} ownerPhone - Telefone do dono (opcional)
+     */
+    async sendLeadNotificationForTenant(apiKey, lead, ownerPhone = null) {
+        try {
+            const instance = await this.getTenantInstance(apiKey);
+
+            // Determinar telefone do dono
+            let phone = ownerPhone;
+            if (!phone) {
+                phone = await this._getOwnerPhoneFromSettings(apiKey);
+            }
+            if (!phone) {
+                phone = process.env.NOTIFICATION_PHONE || process.env.ADMIN_PHONE;
+            }
+
+            if (!phone) {
+                console.log(`⚠️ Tenant ${apiKey}: sem telefone configurado para notificações`);
+                return { success: false, reason: 'no_phone' };
+            }
+
+            // Usar método existente da instância
+            const template = instance.messageTemplates.newLead;
+            const variables = {
+                leadName: lead.name || lead.nome || 'Novo Lead',
+                leadEmail: lead.email || 'Não informado',
+                leadPhone: lead.phone || lead.telefone || 'Não informado',
+                chatbotName: 'Seu Chatbot',
+                timestamp: new Date().toLocaleString('pt-BR')
+            };
+
+            const message = instance.replaceVariables(template, variables);
+            return await instance.sendMessage(phone, message);
+        } catch (error) {
+            console.error(`❌ Erro ao enviar notificação para tenant ${apiKey}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * NOVO: Obter telefone do dono das configurações do tenant
+     * @param {string} apiKey - API key do tenant
+     * @returns {string|null} Telefone ou null
+     */
+    async _getOwnerPhoneFromSettings(apiKey) {
+        try {
+            const { DatabaseHelpers } = require('./database');
+            const settings = await DatabaseHelpers.getWhatsAppSettings(apiKey);
+            return settings?.notification_phone || null;
+        } catch (error) {
+            console.error('❌ Erro ao buscar telefone do dono:', error);
+            return null;
+        }
+    }
+
+    /**
+     * NOVO: Invalidar cache de um tenant (útil após atualizar configurações)
+     * @param {string} apiKey - API key do tenant
+     */
+    clearTenantCache(apiKey) {
+        if (this.tenantInstances.has(apiKey)) {
+            this.tenantInstances.delete(apiKey);
+            console.log(`🗑️ Cache invalidado para tenant ${apiKey}`);
+        }
+    }
 }
 
 // Singleton instance
@@ -358,6 +483,9 @@ if (process.env.WHATSAPP_PROVIDER === 'twilio') {
 module.exports = {
     whatsappIntegration,
     whatsappManager: whatsappIntegration, // Alias para compatibilidade com server.js
-    WhatsAppIntegration
+    WhatsAppIntegration,
+    // NOVO: Exportar método multi-tenant
+    getTenantInstance: (apiKey) => whatsappIntegration.getTenantInstance(apiKey),
+    clearTenantCache: (apiKey) => whatsappIntegration.clearTenantCache(apiKey)
 };
 
