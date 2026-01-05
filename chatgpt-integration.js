@@ -103,7 +103,7 @@ class ChatGPTIntegration {
             };
         } catch (error) {
             console.error('❌ Erro ao chamar ChatGPT:', error.response?.data || error.message);
-            
+
             return {
                 success: false,
                 error: error.response?.data?.error?.message || error.message,
@@ -148,7 +148,7 @@ Mantenha a conversa natural e amigável. Responda com base no contexto fornecido
 
         const costPer1k = modelInfo.costPer1kTokens;
         const cost = (tokens / 1000) * costPer1k;
-        
+
         return parseFloat(cost.toFixed(6));
     }
 
@@ -188,8 +188,8 @@ Mantenha a conversa natural e amigável. Responda com base no contexto fornecido
 
             if (result.success) {
                 console.log('✅ Conexão ChatGPT testada com sucesso');
-                return { 
-                    success: true, 
+                return {
+                    success: true,
                     message: 'Conexão OK',
                     model: result.model,
                     response: result.response
@@ -216,7 +216,7 @@ Mantenha a conversa natural e amigável. Responda com base no contexto fornecido
     // Comparar custo entre modelos
     compareCosts(tokens) {
         const comparison = {};
-        
+
         for (const [modelName, modelInfo] of Object.entries(this.models)) {
             comparison[modelName] = {
                 name: modelInfo.name,
@@ -275,6 +275,7 @@ if (process.env.CHATGPT_API_KEY) {
 
 module.exports = {
     chatgptIntegration,
+    chatgptManager: chatgptIntegration, // Alias para compatibilidade com server.js
     ChatGPTIntegration
 };
 
