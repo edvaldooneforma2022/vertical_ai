@@ -421,6 +421,20 @@ function getSQLiteTables() {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             
             FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
+        )`,
+
+        // Tabela de Configurações ChatGPT por Tenant (Multi-Tenant)
+        `CREATE TABLE IF NOT EXISTS chatgpt_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            api_key TEXT UNIQUE NOT NULL,
+            openai_api_key TEXT NOT NULL,
+            default_model TEXT DEFAULT 'gpt-4-turbo',
+            temperature REAL DEFAULT 0.7,
+            max_tokens INTEGER DEFAULT 1000,
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
         )`
     ];
 }
@@ -1097,6 +1111,84 @@ const DatabaseHelpers = {
 
         const result = await db.query(query);
         return result.rows || [];
+    },
+
+    // ===== CRUD para chatgpt_settings (Multi-Tenant) =====
+
+    /**
+     * Salvar configurações ChatGPT de um tenant
+     */
+    async saveChatGPTSettings(apiKey, settings) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO chatgpt_settings (
+                   api_key, openai_api_key, default_model, temperature, max_tokens, is_active
+               ) VALUES ($1, $2, $3, $4, $5, $6)
+               ON CONFLICT (api_key) DO UPDATE SET
+                   openai_api_key = $2, default_model = $3, temperature = $4,
+                   max_tokens = $5, is_active = $6, updated_at = CURRENT_TIMESTAMP
+               RETURNING *`
+            : `INSERT OR REPLACE INTO chatgpt_settings (
+                   api_key, openai_api_key, default_model, temperature, max_tokens, is_active, updated_at
+               ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`;
+
+        const params = [
+            apiKey,
+            settings.openaiApiKey,
+            settings.defaultModel || 'gpt-4-turbo',
+            settings.temperature !== undefined ? settings.temperature : 0.7,
+            settings.maxTokens || 1000,
+            settings.isActive !== undefined ? settings.isActive : true
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`✅ ChatGPT configurado para tenant ${apiKey} (${settings.defaultModel || 'gpt-4-turbo'})`);
+            return result.rows ? result.rows[0] : { success: true };
+        } catch (error) {
+            console.error('❌ Erro ao salvar configurações ChatGPT:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar configurações ChatGPT de um tenant
+     */
+    async getChatGPTSettings(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM chatgpt_settings WHERE api_key = $1 AND is_active = true`
+            : `SELECT * FROM chatgpt_settings WHERE api_key = ? AND is_active = 1`;
+
+        const result = await db.query(query, [apiKey]);
+        const settings = result.rows[0];
+
+        if (!settings) {
+            return null;
+        }
+
+        // Converter boolean para SQLite (0/1)
+        if (!USE_POSTGRES) {
+            settings.is_active = settings.is_active === 1;
+        }
+
+        return settings;
+    },
+
+    /**
+     * Deletar configurações ChatGPT de um tenant
+     */
+    async deleteChatGPTSettings(apiKey) {
+        const query = USE_POSTGRES
+            ? `DELETE FROM chatgpt_settings WHERE api_key = $1`
+            : `DELETE FROM chatgpt_settings WHERE api_key = ?`;
+
+        try {
+            await db.query(query, [apiKey]);
+            console.log(`✅ Configurações ChatGPT removidas para tenant ${apiKey}`);
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Erro ao deletar configurações ChatGPT:', error);
+            throw error;
+        }
     }
 };
 

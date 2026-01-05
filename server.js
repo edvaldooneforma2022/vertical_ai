@@ -5695,6 +5695,10 @@ setupRoutes(app);
     require('./whatsapp-routes')(app, logger);  // Carrega e registra rotas WhatsApp multi-tenant
     console.log('✅ Rotas Multi-Tenant WhatsApp integradas');
 
+    // ===== MULTI-TENANT CHATGPT ROUTES (NOVO) =====
+    require('./chatgpt-routes')(app, logger);  // Carrega e registra rotas ChatGPT multi-tenant
+    console.log('✅ Rotas Multi-Tenant ChatGPT integradas');
+
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 

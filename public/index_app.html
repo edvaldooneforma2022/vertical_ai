@@ -2194,24 +2194,58 @@
             <!-- Tab ChatGPT -->
             <div id="tab-chatgpt" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Integração ChatGPT</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Use GPT-4 para respostas de alta qualidade</p>
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Integração ChatGPT (Multi-Tenant)</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure sua própria chave OpenAI ou use a global
+                        do sistema</p>
 
-                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
-                        <div id="chatgpt-status" style="color:#94a3b8;">Carregando...</div>
+                    <div id="chatgpt-current-status"
+                        style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status Atual</h3>
+                        <div id="chatgpt-settings-status" style="color:#94a3b8;">Carregando configurações...</div>
                     </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Modelos Disponíveis</h3>
-                        <div id="chatgpt-models" style="color:#94a3b8;">Carregando...</div>
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">⚙️ Configurar ChatGPT</h3>
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Chave API
+                            OpenAI:</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Obtenha em: <a
+                                href="https://platform.openai.com/api-keys" target="_blank"
+                                style="color:#60a5fa;">platform.openai.com/api-keys</a></p>
+                        <input type="password" id="chatgpt-api-key" placeholder="sk-..."
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Modelo
+                            Padrão:</label>
+                        <select id="chatgpt-model"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                            <option value="gpt-4-turbo">GPT-4 Turbo (Recomendado - Melhor custo-benefício)</option>
+                            <option value="gpt-4">GPT-4 (Mais avançado)</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Mais econômico)</option>
+                        </select>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                            <button onclick="saveChatGPTSettings()"
+                                style="background:#3b82f6; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                                💾 Salvar Configuração
+                            </button>
+                            <button onclick="testChatGPTConnection()"
+                                style="background:#10a37f; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                                🧪 Testar Conexão
+                            </button>
+                        </div>
+
+                        <button onclick="deleteChatGPTSettings()"
+                            style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:0.75rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:1rem;">
+                            🗑️ Remover Minha Configuração (Voltar para Global)
+                        </button>
                     </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Geração</h3>
-                        <textarea id="test-prompt" placeholder="Digite uma pergunta..."
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">🧪 Testar Geração</h3>
+                        <textarea id="chatgpt-test-prompt" placeholder="Digite uma pergunta para testar..."
                             style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem; min-height:100px;"></textarea>
-                        <button onclick="testChatGPT()"
+                        <button onclick="testChatGPTGeneration()"
                             style="background:#10a37f; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
                             Gerar Resposta
                         </button>
@@ -2825,37 +2859,136 @@
         }
 
         async function loadChatGPTStatus() {
+            // Manter compatibilidade - chamar a nova função
+            await loadChatGPTSettings();
+        }
+
+        async function loadChatGPTSettings() {
             try {
-                const response = await fetch('/api/chatgpt/status');
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/chatgpt/settings', {
+                    headers: { 'X-API-Key': apiKey }
+                });
                 const data = await response.json();
-                const statusEl = document.getElementById('chatgpt-status');
+                const statusEl = document.getElementById('chatgpt-settings-status');
 
                 if (data.configured) {
-                    statusEl.innerHTML = '<div style="color:#10b981;">✅ ChatGPT configurado e pronto</div>';
-                } else {
-                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ ChatGPT não configurado. Configure CHATGPT_API_KEY no .env</div>';
-                }
-
-                // Carregar modelos
-                const modelsResponse = await fetch('/api/chatgpt/models');
-                const modelsData = await modelsResponse.json();
-                const modelsEl = document.getElementById('chatgpt-models');
-
-                if (modelsData.length > 0) {
-                    modelsEl.innerHTML = modelsData.map(m => `
-                        <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
-                            <div style="color:#cbd5e1; font-weight:600;">${m.name}</div>
-                            <div style="color:#94a3b8; font-size:0.9rem;">${m.description}</div>
+                    statusEl.innerHTML = `
+                        <div style="color:#10b981; margin-bottom:0.5rem;">✅ ChatGPT configurado com sua própria chave</div>
+                        <div style="color:#94a3b8; font-size:0.9rem;">
+                            • Chave: ${data.settings.openaiKeyHint || 'sk-****'}<br>
+                            • Modelo: ${data.settings.defaultModel || 'gpt-4-turbo'}<br>
+                            • Configurado em: ${new Date(data.settings.createdAt).toLocaleDateString('pt-BR')}
                         </div>
-                    `).join('');
+                    `;
+                    // Preencher o select com o modelo salvo
+                    document.getElementById('chatgpt-model').value = data.settings.defaultModel || 'gpt-4-turbo';
+                } else {
+                    if (data.usingGlobal) {
+                        statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ Usando configuração global do sistema. Configure sua própria chave para maior controle.</div>';
+                    } else {
+                        statusEl.innerHTML = '<div style="color:#ef4444;">❌ ChatGPT não configurado. Adicione sua chave OpenAI abaixo.</div>';
+                    }
                 }
             } catch (error) {
-                console.error('Erro ao carregar status ChatGPT:', error);
+                console.error('Erro ao carregar configurações ChatGPT:', error);
+                document.getElementById('chatgpt-settings-status').innerHTML =
+                    '<div style="color:#ef4444;">❌ Erro ao carregar configurações</div>';
             }
         }
 
-        async function testChatGPT() {
-            const prompt = document.getElementById('test-prompt').value;
+        async function saveChatGPTSettings() {
+            const openaiApiKey = document.getElementById('chatgpt-api-key').value;
+            const defaultModel = document.getElementById('chatgpt-model').value;
+
+            if (!openaiApiKey) {
+                alert('⚠️ Informe sua chave API da OpenAI');
+                return;
+            }
+
+            if (!openaiApiKey.startsWith('sk-')) {
+                alert('❌ Chave OpenAI inválida. Deve começar com "sk-"');
+                return;
+            }
+
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/chatgpt/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ openaiApiKey, defaultModel })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Configurações ChatGPT salvas com sucesso!');
+                    document.getElementById('chatgpt-api-key').value = ''; // Limpar por segurança
+                    loadChatGPTSettings();
+                } else {
+                    alert('❌ Erro: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao salvar: ' + error.message);
+            }
+        }
+
+        async function testChatGPTConnection() {
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/chatgpt/settings/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('❌ ' + (data.error || data.message));
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao testar conexão: ' + error.message);
+            }
+        }
+
+        async function deleteChatGPTSettings() {
+            if (!confirm('🗑️ Tem certeza que deseja remover sua configuração ChatGPT?\n\nO sistema voltará a usar a configuração global (se disponível).')) {
+                return;
+            }
+
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/chatgpt/settings', {
+                    method: 'DELETE',
+                    headers: { 'X-API-Key': apiKey }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    loadChatGPTSettings();
+                } else {
+                    alert('❌ Erro: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao remover: ' + error.message);
+            }
+        }
+
+        async function testChatGPTGeneration() {
+            const prompt = document.getElementById('chatgpt-test-prompt').value;
             if (!prompt) {
                 alert('Digite uma pergunta!');
                 return;
@@ -2863,28 +2996,36 @@
 
             const responseEl = document.getElementById('chatgpt-response');
             responseEl.style.display = 'block';
-            responseEl.innerHTML = '<div style="color:#94a3b8;">Gerando resposta...</div>';
+            responseEl.innerHTML = '<div style="color:#94a3b8;">🤖 Gerando resposta...</div>';
 
             try {
-                const response = await fetch('/api/chatgpt/generate', {
+                const apiKey = window.currentApiKey;
+                const model = document.getElementById('chatgpt-model').value;
+
+                const response = await fetch('/api/chatgpt/generate-tenant', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        model: 'gpt-4-turbo'
-                    })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ prompt, model })
                 });
 
                 const data = await response.json();
-                if (data.success) {
+                if (data.success && data.result && data.result.response) {
                     responseEl.innerHTML = `<div style="color:#cbd5e1;">${data.result.response}</div>`;
                 } else {
-                    responseEl.innerHTML = `<div style="color:#ef4444;">Erro: ${data.error}</div>`;
+                    responseEl.innerHTML = `<div style="color:#ef4444;">Erro: ${data.error || 'Resposta vazia'}</div>`;
                 }
             } catch (error) {
                 console.error('Erro:', error);
                 responseEl.innerHTML = '<div style="color:#ef4444;">Erro ao gerar resposta</div>';
             }
+        }
+
+        // Manter compatibilidade com função antiga
+        async function testChatGPT() {
+            await testChatGPTGeneration();
         }
 
         async function saveWhitelabel() {
