@@ -20,7 +20,7 @@ class WhatsAppIntegration {
 ⏰ {{timestamp}}
 
 Acesse o painel para mais detalhes!`,
-            
+
             highIntent: `🔥 *Lead com Alta Intenção!*
 
 Um cliente demonstrou muito interesse!
@@ -31,7 +31,7 @@ Um cliente demonstrou muito interesse!
 • Chatbot: {{chatbotName}}
 
 💡 *Sugestão:* Entre em contato AGORA!`,
-            
+
             dailySummary: `📊 *Resumo Diário - {{date}}*
 
 Seu chatbot {{chatbotName}} teve:
@@ -116,17 +116,17 @@ Continue assim! 🚀`
     formatPhoneNumber(phone) {
         // Remove caracteres não numéricos
         let cleaned = phone.replace(/\D/g, '');
-        
+
         // Se não tem código do país, adiciona +55 (Brasil)
         if (!cleaned.startsWith('55') && cleaned.length <= 11) {
             cleaned = '55' + cleaned;
         }
-        
+
         // Adiciona + no início
         if (!cleaned.startsWith('+')) {
             cleaned = '+' + cleaned;
         }
-        
+
         return cleaned;
     }
 
@@ -134,19 +134,19 @@ Continue assim! 🚀`
     async sendViaTwilio(to, message) {
         try {
             const { accountSid, authToken, fromNumber } = this.config;
-            
+
             const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-            
+
             const formattedTo = this.formatPhoneNumber(to);
             const formattedFrom = `whatsapp:${fromNumber}`;
             const formattedToWhatsApp = `whatsapp:${formattedTo}`;
 
-            const response = await axios.post(url, 
+            const response = await axios.post(url,
                 new URLSearchParams({
                     To: formattedToWhatsApp,
                     From: formattedFrom,
                     Body: message
-                }), 
+                }),
                 {
                     auth: {
                         username: accountSid,
@@ -170,9 +170,9 @@ Continue assim! 🚀`
     async sendViaEvolution(to, message) {
         try {
             const { apiUrl, apiKey, instanceName } = this.config;
-            
+
             const url = `${apiUrl}/message/sendText/${instanceName}`;
-            
+
             const formattedTo = this.formatPhoneNumber(to);
 
             const response = await axios.post(url, {
@@ -223,6 +223,34 @@ Continue assim! 🚀`
             leadEmail: leadData.email || 'Não informado',
             leadPhone: leadData.phone || 'Não informado',
             chatbotName: chatbotData.name || 'Chatbot',
+            timestamp: new Date().toLocaleString('pt-BR')
+        };
+
+        const message = this.replaceVariables(template, variables);
+        return await this.sendMessage(ownerPhone, message);
+    }
+
+    /**
+     * Notificar novo lead (Versão Compatível com server.js)
+     * @param {Object} lead - Dados do lead do structuredLeadsManager
+     */
+    async sendLeadNotification(lead) {
+        if (!this.isReady()) return { success: false, error: 'WhatsApp não configurado' };
+
+        // Tenta obter o telefone do dono das variáveis de ambiente
+        const ownerPhone = process.env.NOTIFICATION_PHONE || process.env.ADMIN_PHONE || process.env.TWILIO_WHATSAPP_NUMBER;
+
+        if (!ownerPhone) {
+            console.log('⚠️ Telefone de notificação não configurado (NOTIFICATION_PHONE)');
+            return { success: false, error: 'Telefone de notificação ausente' };
+        }
+
+        const template = this.messageTemplates.newLead;
+        const variables = {
+            leadName: lead.name || 'Novo Lead',
+            leadEmail: lead.email || 'Não informado',
+            leadPhone: lead.phone || 'Não informado',
+            chatbotName: 'Seu Chatbot',
             timestamp: new Date().toLocaleString('pt-BR')
         };
 
@@ -295,7 +323,7 @@ Continue assim! 🚀`
         }
 
         const testMessage = `✅ Teste de conexão WhatsApp\n\nSua integração está funcionando corretamente!\n\nProvider: ${this.provider}`;
-        
+
         return await this.sendMessage(testPhone, testMessage);
     }
 
@@ -329,6 +357,7 @@ if (process.env.WHATSAPP_PROVIDER === 'twilio') {
 
 module.exports = {
     whatsappIntegration,
+    whatsappManager: whatsappIntegration, // Alias para compatibilidade com server.js
     WhatsAppIntegration
 };
 

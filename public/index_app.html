@@ -2725,9 +2725,18 @@
                 const statusEl = document.getElementById('whatsapp-status');
 
                 if (data.configured) {
-                    statusEl.innerHTML = `<div style="color:#10b981;">✅ WhatsApp configurado (${data.provider})</div>`;
+                    statusEl.innerHTML = `<div style="color:#10b981; font-weight:600;">✅ WhatsApp operacional via ${data.provider.toUpperCase()}</div>`;
                 } else {
-                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ WhatsApp não configurado. Configure WHATSAPP_PROVIDER no .env</div>';
+                    statusEl.innerHTML = `
+                        <div style="color:#f59e0b; background: rgba(245, 158, 11, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                            <div style="font-weight:600; margin-bottom: 5px;">⚠️ Integração Pendente</div>
+                            <p style="font-size: 0.85rem; margin: 0;">Para ativar, configure as variáveis de ambiente na Render.com:</p>
+                            <ul style="font-size: 0.8rem; margin-top: 8px; padding-left: 20px;">
+                                <li><code>WHATSAPP_PROVIDER</code> (twilio ou evolution)</li>
+                                <li><code>NOTIFICATION_PHONE</code> (seu número com DDI e DDD)</li>
+                                <li>Credenciais Twilio (SID, Token, From) OU Evolution (API URL, Key)</li>
+                            </ul>
+                        </div>`;
                 }
             } catch (error) {
                 console.error('Erro ao carregar status WhatsApp:', error);
