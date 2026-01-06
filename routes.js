@@ -629,8 +629,7 @@ function setupRoutes(app) {
                     analytics: true,
                     llmOptimization: true,
                     knowledgeBase: true
-                },
-                uptime: process.uptime()
+                }
             };
             
             res.json({
