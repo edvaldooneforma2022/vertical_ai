@@ -1400,23 +1400,7 @@
                 <iframe id="chatbotFrame" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
 
-            <div class="widget-generator">
-                <h3 class="widget-title"><i class="fas fa-code"></i> Gerador de Código do Widget</h3>
-                <p class="panel-subtitle">Copie e cole este código em qualquer página para integrar seu assistente.</p>
-                <div class="code-block">
-                    <button class="copy-btn" id="copyWidgetCodeBtn"><i class="fas fa-copy"></i> Copiar</button>
-                    <pre><code id="widgetCodeDisplay">&lt;!-- LinkMágico Chatbot Widget --&gt;
-&lt;script&gt;
-    window.LinkMagicoWidgetConfig = {
-        robotName: "Assistente IA",
-        salesUrl: "",
-        instructions: "",
-        primaryColor: "#3b82f6"
-    };
-&lt;/script&gt;
-&lt;script src="/public/widget.js"&gt;&lt;/script&gt;</code></pre>
-                </div>
-            </div>
+            <!-- O Gerador de código foi movido para a aba "Widget" nos Novos Sistemas -->
         </div>
     </main>
 
@@ -1627,6 +1611,11 @@
             };
         }
 
+        // Sincronizar API Key input com estado global
+        document.getElementById('apiKeyInput').addEventListener('input', (e) => {
+            window.currentApiKey = e.target.value.trim() || 'linkmagico-api-key-2024';
+        });
+
         activateChatbotBtn.addEventListener('click', async () => {
             const robotName = robotNameInput.value;
             const salesUrl = salesUrlInput.value;
@@ -1635,6 +1624,12 @@
 
             if (!robotName || !salesUrl) {
                 showToast('Por favor, preencha o nome do assistente e a URL da página.', 'error');
+                return;
+            }
+
+            if (!localStorage.getItem('lgpd_consent')) {
+                showToast('É necessário aceitar os termos da LGPD antes de continuar.', 'warning');
+                document.getElementById('consentModal').style.display = 'flex';
                 return;
             }
 
@@ -1766,13 +1761,21 @@
             });
         });
 
-        // Botões de funcionalidades adicionais
         document.getElementById('promptBtn').addEventListener('click', () => {
-            showToast('Funcionalidade Prompt em desenvolvimento', 'info');
+            showToast('Direcionando para o Gerenciador de Prompt...', 'info');
+            setTimeout(() => {
+                showNewTab('knowledge');
+                openNewSystems();
+            }, 500);
         });
 
         document.getElementById('analyticsBtn').addEventListener('click', () => {
-            showToast('Funcionalidade Analytics em desenvolvimento', 'info');
+            showToast('Abrindo Analytics Profissional...', 'info');
+            setTimeout(() => {
+                showNewTab('analytics');
+                openNewSystems();
+                loadAnalytics();
+            }, 500);
         });
 
         // ===== FUNÇÃO GERADORA DE SCRIPT INLINE MODERNO V2.0 =====
@@ -1793,7 +1796,6 @@
         instructions: "${instructions}",
         primaryColor: "${color}",
         apiKey: "${key}",
-        apikey: "${key}",
         greetingMessage: "${greetingMessage}",
         welcomeMessage: "${welcomeMessage}",
         secondMessage: "${secondMessage}"
@@ -1956,12 +1958,28 @@
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📝 Leads
                 </button>
+                <button class="new-tab" onclick="showNewTab('widget')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                    <i class="fas fa-code"></i> Widget
+                </button>
             </div>
 
             <!-- Tab Contents -->
             <div id="tab-analytics" class="new-tab-content" style="display:block;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px; margin-bottom:1rem;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📊 Analytics Profissional</h2>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h2 style="color:#60a5fa; margin:0;">📊 Analytics Profissional</h2>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button onclick="loadAnalytics('today')"
+                                style="background:#334155; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">Hoje</button>
+                            <button onclick="loadAnalytics(7)"
+                                style="background:#334155; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">7
+                                dias</button>
+                            <button onclick="loadAnalytics(30)"
+                                style="background:#334155; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">30
+                                dias</button>
+                        </div>
+                    </div>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Visualize métricas detalhadas do seu assistente</p>
 
                     <div
@@ -2421,6 +2439,34 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Tab Widget Generator -->
+                <div id="tab-widget" class="new-tab-content" style="display:none;">
+                    <div style="background:#1e293b; padding:2rem; border-radius:16px;">
+                        <h2 style="color:#60a5fa; margin-bottom:1rem;"><i class="fas fa-code"></i> Gerador de Código do
+                            Widget</h2>
+                        <p style="color:#cbd5e1; margin-bottom:1.5rem;">Copie e cole este código em qualquer página para
+                            integrar seu assistente.</p>
+                        <div
+                            style="background:#334155; padding:1.5rem; border-radius:12px; position:relative; border:1px solid #475569;">
+                            <button class="copy-btn" id="copyWidgetCodeBtn"
+                                style="position:absolute; top:20px; right:20px; background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                                <i class="fas fa-copy"></i> Copiar
+                            </button>
+                            <pre
+                                style="background:#1e293b; padding:1rem; border-radius:8px; overflow-x:auto; margin-top:1rem;"><code id="widgetCodeDisplay" style="color:#10b981; font-family: 'Courier New', Courier, monospace;">&lt;!-- LinkMágico Chatbot Widget --&gt;
+&lt;script&gt;
+    window.LinkMagicoWidgetConfig = {
+        robotName: "Assistente IA",
+        salesUrl: "",
+        instructions: "",
+        primaryColor: "#3b82f6"
+    };
+&lt;/script&gt;
+&lt;script src="/public/widget.js"&gt;&lt;/script&gt;</code></pre>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2454,6 +2500,9 @@
     </style>
 
     <script>
+        // Global State
+        window.currentApiKey = 'linkmagico-api-key-2024';
+
         // Funções para os novos sistemas
         function openNewSystems() {
             document.getElementById('newSystemsPanel').style.display = 'block';
@@ -2488,24 +2537,40 @@
             if (tabName === 'chatgpt') loadChatGPTStatus();
             if (tabName === 'knowledge') loadFAQs();
             if (tabName === 'whitelabel') loadWhitelabelConfig();
+            if (tabName === 'widget') {
+                // Widget code remains as is, but could be updated here if needed
+            }
             if (tabName === 'leads') {
                 loadLeadsStats();
                 loadBackups();
             }
         }
 
-        async function loadAnalytics() {
+        async function loadAnalytics(days = 'all') {
             try {
                 // Buscar dados de leads
                 const leadsResponse = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
                     }
                 });
                 const leadsData = await leadsResponse.json();
 
                 if (leadsData.success && leadsData.leads) {
-                    const leads = leadsData.leads;
+                    let leads = leadsData.leads;
+
+                    // Filtrar por data
+                    if (days !== 'all') {
+                        const now = new Date();
+                        const cutoff = new Date();
+                        if (days === 'today') {
+                            cutoff.setHours(0, 0, 0, 0);
+                        } else {
+                            cutoff.setDate(now.getDate() - parseInt(days));
+                        }
+                        leads = leads.filter(l => new Date(l.timestamp) >= cutoff);
+                    }
+
                     const totalLeads = leads.length;
 
                     // Calcular total de mensagens (soma de todas as conversas)
@@ -2514,12 +2579,10 @@
 
                     leads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
-                            totalConversations += lead.conversations.length;
-                            lead.conversations.forEach(conv => {
-                                if (conv.messages && Array.isArray(conv.messages)) {
-                                    totalMessages += conv.messages.length;
-                                }
-                            });
+                            totalMessages += lead.conversations.length;
+                            if (lead.conversations.length > 0) {
+                                totalConversations++;
+                            }
                         }
                     });
 
@@ -2683,9 +2746,9 @@
                                 ${plan.price === 0 ? 'Grátis' : 'R$ ' + plan.price.toFixed(2)}
                             </div>
                             <ul style="color:#94a3b8; font-size:0.9rem; list-style:none; padding:0;">
-                                <li style="margin-bottom:0.5rem;">✓ ${plan.features.maxChatbots} assistentes</li>
-                                <li style="margin-bottom:0.5rem;">✓ ${plan.features.requestsPerMinute} req/min</li>
-                                <li style="margin-bottom:0.5rem;">✓ ${plan.features.requestsPerHour} req/hora</li>
+                                <li style="margin-bottom:0.5rem;">✓ ${plan.limits.maxChatbots} assistentes</li>
+                                <li style="margin-bottom:0.5rem;">✓ ${plan.limits.requestsPerMinute} req/min</li>
+                                <li style="margin-bottom:0.5rem;">✓ ${plan.limits.requestsPerHour} req/hora</li>
                             </ul>
                         </div>
                     `).join('');
@@ -2712,11 +2775,21 @@
 
         async function loadSystemStatus() {
             try {
+                const container = document.getElementById('system-status');
+                container.innerHTML = '<p style="color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Carregando status...</p>';
+
                 const response = await fetch('/api/system/status');
                 const data = await response.json();
 
-                const container = document.getElementById('system-status');
-                if (data.success) {
+                if (data.success && data.status) {
+                    const uptime = data.status.uptime || 0;
+                    let uptimeStr = '';
+                    if (uptime > 3600) {
+                        uptimeStr = `${Math.floor(uptime / 3600)} horas e ${Math.floor((uptime % 3600) / 60)} min`;
+                    } else {
+                        uptimeStr = `${Math.floor(uptime / 60)} minutos`;
+                    }
+
                     container.innerHTML = `
                         <div style="display:grid; gap:1rem;">
                             <div style="background:#334155; padding:1rem; border-radius:12px;">
@@ -2733,14 +2806,16 @@
                             </div>
                             <div style="background:#334155; padding:1rem; border-radius:12px;">
                                 <div style="color:#94a3b8;">Uptime:</div>
-                                <div style="color:#60a5fa; font-weight:600;">${Math.floor(data.status.uptime / 60)} minutos</div>
+                                <div style="color:#60a5fa; font-weight:600;">${uptimeStr}</div>
                             </div>
                         </div>
                     `;
+                } else {
+                    throw new Error(data.error || 'Falha ao obter status');
                 }
             } catch (error) {
                 console.error('Erro ao carregar status:', error);
-                document.getElementById('system-status').innerHTML = '<p style="color:#ef4444;">Erro ao carregar status do sistema</p>';
+                document.getElementById('system-status').innerHTML = `<p style="color:#ef4444;">❌ Erro ao carregar status: ${error.message}</p>`;
             }
         }
 
@@ -3165,7 +3240,7 @@
                 // Usar endpoint real /admin/leads
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
                     }
                 });
                 const data = await response.json();
@@ -3262,7 +3337,7 @@
             try {
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
                     }
                 });
                 const data = await response.json();
@@ -3286,31 +3361,23 @@
 
                     leads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
-                            lead.conversations.forEach(conv => {
-                                totalConversations++;
+                            totalConversations++;
 
-                                // Verificar se a conversa é de hoje
-                                if (conv.timestamp) {
-                                    const convDate = new Date(conv.timestamp).toDateString();
-                                    if (convDate === today) {
-                                        conversationsToday++;
+                            // Verificar se a conversa é de hoje
+                            const convDate = new Date(lead.timestamp).toDateString();
+                            if (convDate === today) {
+                                conversationsToday++;
+                            }
+
+                            totalMessages += lead.conversations.length;
+
+                            // Mensagens de hoje
+                            lead.conversations.forEach(msg => {
+                                if (msg.timestamp) {
+                                    const msgDate = new Date(msg.timestamp).toDateString();
+                                    if (msgDate === today) {
+                                        messagesToday++;
                                     }
-                                }
-
-                                // Contar mensagens
-                                if (conv.messages && Array.isArray(conv.messages)) {
-                                    const msgCount = conv.messages.length;
-                                    totalMessages += msgCount;
-
-                                    // Contar mensagens de hoje
-                                    conv.messages.forEach(msg => {
-                                        if (msg.timestamp) {
-                                            const msgDate = new Date(msg.timestamp).toDateString();
-                                            if (msgDate === today) {
-                                                messagesToday++;
-                                            }
-                                        }
-                                    });
                                 }
                             });
                         }
@@ -3337,7 +3404,7 @@
                 // Buscar dados do lead
                 const leadsResponse = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
                     }
                 });
                 const leadsData = await leadsResponse.json();
@@ -3354,7 +3421,11 @@
                 // 📅 Buscar agendamentos do lead
                 let appointmentsHtml = '';
                 try {
-                    const appointmentsResponse = await fetch(`/api/appointments/${leadId}`);
+                    const appointmentsResponse = await fetch(`/api/appointments/${leadId}`, {
+                        headers: {
+                            'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
+                        }
+                    });
                     const appointmentsData = await appointmentsResponse.json();
 
                     if (appointmentsData.success && appointmentsData.appointments && appointmentsData.appointments.length > 0) {
@@ -3466,7 +3537,7 @@
                 // Buscar todos os leads
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
                     }
                 });
                 const data = await response.json();
@@ -3529,7 +3600,7 @@
                 const response = await fetch('/admin/leads/backup/create', {
                     method: 'POST',
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024',
+                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024',
                         'Content-Type': 'application/json'
                     }
                 });
@@ -3552,7 +3623,7 @@
             try {
                 const response = await fetch('/admin/leads/backup/list', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
                     }
                 });
 
@@ -3616,7 +3687,7 @@
                 const response = await fetch('/admin/leads/backup/restore', {
                     method: 'POST',
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024',
+                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024',
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ filename })

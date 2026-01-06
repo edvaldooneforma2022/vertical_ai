@@ -4405,7 +4405,7 @@ app.post("/api/capture-lead", async (req, res) => {
 
 // ===== 📅 ENDPOINT: Buscar agendamentos de um lead =====
 app.get("/api/appointments/:leadId", async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.query.apiKey ||
+    const apiKey = req.headers['x-api-key'] || req.session.validatedApiKey || req.query.apiKey ||
         (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
