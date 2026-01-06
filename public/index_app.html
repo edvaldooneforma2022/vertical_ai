@@ -1758,15 +1758,7 @@
             }
         });
 
-        copyWidgetCodeBtn.addEventListener('click', () => {
-            const codeToCopy = widgetCodeDisplay.textContent;
-            navigator.clipboard.writeText(codeToCopy).then(() => {
-                showToast('Código do widget copiado!', 'success');
-            }).catch(err => {
-                console.error('Erro ao copiar código:', err);
-                showToast('Erro ao copiar código.', 'error');
-            });
-        });
+        // O listener do copyWidgetCodeBtn foi movido para o final do arquivo para garantir que o DOM esteja pronto
 
         document.getElementById('promptBtn').addEventListener('click', () => {
             showToast('Direcionando para o Gerenciador de Prompt...', 'info');
@@ -2504,6 +2496,16 @@
         .new-tab:hover {
             opacity: 0.8;
         }
+
+        /* Garantir que o código no pre/code seja visível e formatado */
+        #widgetCodeDisplay {
+            display: block;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #10b981 !important;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
     </style>
 
     <script>
@@ -2528,10 +2530,19 @@
             document.querySelectorAll('.new-tab').forEach(el => el.classList.remove('active'));
 
             // Mostrar conteúdo selecionado
-            document.getElementById('tab-' + tabName).style.display = 'block';
+            const targetContent = document.getElementById('tab-' + tabName);
+            if (targetContent) targetContent.style.display = 'block';
 
-            // Ativar tab
-            event.target.classList.add('active');
+            // Ativar tab correspondente
+            document.querySelectorAll('.new-tab').forEach(btn => {
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tabName}'`)) {
+                    btn.classList.add('active');
+                    btn.style.background = '#3b82f6'; // Forçar cor de destaque
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.background = '#334155'; // Cor padrão
+                }
+            });
 
             // Carregar dados da tab
             if (tabName === 'analytics') loadAnalytics();
@@ -2545,7 +2556,7 @@
             if (tabName === 'knowledge') loadFAQs();
             if (tabName === 'whitelabel') loadWhitelabelConfig();
             if (tabName === 'widget') {
-                // Widget code remains as is, but could be updated here if needed
+                loadWidgetCode();
             }
             if (tabName === 'leads') {
                 loadLeadsStats();
@@ -3935,6 +3946,39 @@
         async function testWhatsApp() {
             await testWhatsAppConnection();
         }
+
+        function loadWidgetCode() {
+            const robotName = document.getElementById('robotName').value || "Assistente IA";
+            const salesUrl = document.getElementById('salesUrl').value || "";
+            const customInstructions = document.getElementById('customInstructions').value || "";
+            const apiKeyValue = document.getElementById('apiKeyInput').value.trim() || window.currentApiKey;
+            const wlPrimaryColor = document.getElementById('wl-primary') ? document.getElementById('wl-primary').value : '#3b82f6';
+
+            const widgetDisplay = document.getElementById('widgetCodeDisplay');
+            if (widgetDisplay) {
+                if (typeof generateModernWidgetScript === 'function') {
+                    widgetDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, wlPrimaryColor);
+                } else {
+                    console.error('generateModernWidgetScript function not found');
+                }
+            }
+        }
+
+        // Initialize widget copy button listener
+        document.addEventListener('DOMContentLoaded', () => {
+            const copyBtn = document.getElementById('copyWidgetCodeBtn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    const code = document.getElementById('widgetCodeDisplay').textContent;
+                    navigator.clipboard.writeText(code).then(() => {
+                        showToast('Código do widget copiado!', 'success');
+                    }).catch(err => {
+                        console.error('Erro ao copiar código:', err);
+                        showToast('Erro ao copiar código.', 'error');
+                    });
+                });
+            }
+        });
 
     </script>
 </body>
