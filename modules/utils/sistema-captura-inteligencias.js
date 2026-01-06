@@ -36,15 +36,15 @@ class SistemaCapturaInteligencias {
         }
 
         // Detectar solicitação de link do site
-        if (mensagemLower.includes('link') ||
-            mensagemLower.includes('site') ||
-            mensagemLower.includes('endereço') ||
-            mensagemLower.includes('endereco') ||
-            mensagemLower.includes('url') ||
-            mensagemLower.includes('página') ||
-            mensagemLower.includes('pagina') ||
-            mensagemLower.includes('web')) {
+        const linksKeywords = ['site', 'endereço', 'endereco', 'url', 'página', 'pagina', 'web'];
+        if (linksKeywords.some(key => mensagemLower.includes(key))) {
             inteligencias.linkSite = true;
+        } else {
+            // Só marcar 'link' se não for seguido por 'mágico' ou se for 'link de'
+            if (mensagemLower.includes('link de') ||
+                (mensagemLower.includes('link') && !mensagemLower.includes('link mágico') && !mensagemLower.includes('link magico'))) {
+                inteligencias.linkSite = true;
+            }
         }
 
         // Detectar perguntas sobre bônus
