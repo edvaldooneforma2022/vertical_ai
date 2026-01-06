@@ -18,10 +18,10 @@ class KnowledgeBaseManager {
     constructor() {
         this.knowledgeBases = new Map();
         this.dataPath = path.join(__dirname, 'data', 'knowledge');
-
+        
         this.ensureDataDirectory();
         this.loadKnowledgeBases();
-
+        
         console.log('📚 Sistema de Gestão de Conhecimento inicializado');
     }
 
@@ -40,7 +40,7 @@ class KnowledgeBaseManager {
     loadKnowledgeBases() {
         try {
             const files = fs.readdirSync(this.dataPath);
-
+            
             for (const file of files) {
                 if (file.endsWith('.json')) {
                     const filepath = path.join(this.dataPath, file);
@@ -49,28 +49,11 @@ class KnowledgeBaseManager {
                     this.knowledgeBases.set(chatbotId, data);
                 }
             }
-
+            
             console.log(`📥 ${this.knowledgeBases.size} base(s) de conhecimento carregadas`);
         } catch (error) {
             console.error('❌ Erro ao carregar bases de conhecimento:', error);
         }
-    }
-
-    /**
-     * Recarregar base de conhecimento do disco (para garantir dados atualizados)
-     */
-    reloadKnowledgeBase(chatbotId) {
-        try {
-            const filepath = path.join(this.dataPath, `${chatbotId}.json`);
-            if (fs.existsSync(filepath)) {
-                const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
-                this.knowledgeBases.set(chatbotId, data);
-                return data;
-            }
-        } catch (error) {
-            console.error(`❌ Erro ao recarregar base de conhecimento ${chatbotId}:`, error);
-        }
-        return this.knowledgeBases.get(chatbotId);
     }
 
     /**
@@ -79,12 +62,12 @@ class KnowledgeBaseManager {
     saveKnowledgeBase(chatbotId) {
         try {
             const kb = this.knowledgeBases.get(chatbotId);
-
+            
             if (!kb) return;
 
             const filepath = path.join(this.dataPath, `${chatbotId}.json`);
             fs.writeFileSync(filepath, JSON.stringify(kb, null, 2));
-
+            
             console.log(`💾 Base de conhecimento salva: ${chatbotId}`);
         } catch (error) {
             console.error('❌ Erro ao salvar base de conhecimento:', error);
@@ -121,14 +104,14 @@ class KnowledgeBaseManager {
      */
     addUrlSource(chatbotId, url, extractedData) {
         const kb = this.knowledgeBases.get(chatbotId);
-
+        
         if (!kb) {
             this.initializeKnowledgeBase(chatbotId);
             return this.addUrlSource(chatbotId, url, extractedData);
         }
 
         const sourceId = crypto.randomBytes(8).toString('hex');
-
+        
         const source = {
             id: sourceId,
             type: 'url',
@@ -144,9 +127,9 @@ class KnowledgeBaseManager {
         kb.lastUpdated = new Date().toISOString();
 
         this.saveKnowledgeBase(chatbotId);
-
+        
         console.log(`✅ URL adicionada à base de conhecimento: ${url}`);
-
+        
         return source;
     }
 
@@ -155,14 +138,14 @@ class KnowledgeBaseManager {
      */
     addFAQ(chatbotId, question, answer, category = 'geral') {
         const kb = this.knowledgeBases.get(chatbotId);
-
+        
         if (!kb) {
             this.initializeKnowledgeBase(chatbotId);
             return this.addFAQ(chatbotId, question, answer, category);
         }
 
         const faqId = crypto.randomBytes(8).toString('hex');
-
+        
         const faq = {
             id: faqId,
             question,
@@ -178,9 +161,9 @@ class KnowledgeBaseManager {
         kb.lastUpdated = new Date().toISOString();
 
         this.saveKnowledgeBase(chatbotId);
-
+        
         console.log(`✅ FAQ adicionada: ${question.substring(0, 50)}...`);
-
+        
         return faq;
     }
 
@@ -189,7 +172,7 @@ class KnowledgeBaseManager {
      */
     addMultipleFAQs(chatbotId, faqs) {
         const addedFaqs = [];
-
+        
         for (const faq of faqs) {
             const added = this.addFAQ(
                 chatbotId,
@@ -201,7 +184,7 @@ class KnowledgeBaseManager {
         }
 
         console.log(`✅ ${addedFaqs.length} FAQs adicionadas`);
-
+        
         return addedFaqs;
     }
 
@@ -210,14 +193,14 @@ class KnowledgeBaseManager {
      */
     addDocument(chatbotId, title, content, metadata = {}) {
         const kb = this.knowledgeBases.get(chatbotId);
-
+        
         if (!kb) {
             this.initializeKnowledgeBase(chatbotId);
             return this.addDocument(chatbotId, title, content, metadata);
         }
 
         const docId = crypto.randomBytes(8).toString('hex');
-
+        
         const document = {
             id: docId,
             type: metadata.type || 'text',
@@ -233,9 +216,9 @@ class KnowledgeBaseManager {
         kb.lastUpdated = new Date().toISOString();
 
         this.saveKnowledgeBase(chatbotId);
-
+        
         console.log(`✅ Documento adicionado: ${title}`);
-
+        
         return document;
     }
 
@@ -244,14 +227,14 @@ class KnowledgeBaseManager {
      */
     addManualEntry(chatbotId, title, content, tags = []) {
         const kb = this.knowledgeBases.get(chatbotId);
-
+        
         if (!kb) {
             this.initializeKnowledgeBase(chatbotId);
             return this.addManualEntry(chatbotId, title, content, tags);
         }
 
         const entryId = crypto.randomBytes(8).toString('hex');
-
+        
         const entry = {
             id: entryId,
             title,
@@ -266,9 +249,9 @@ class KnowledgeBaseManager {
         kb.lastUpdated = new Date().toISOString();
 
         this.saveKnowledgeBase(chatbotId);
-
+        
         console.log(`✅ Entrada manual adicionada: ${title}`);
-
+        
         return entry;
     }
 
@@ -282,12 +265,12 @@ class KnowledgeBaseManager {
         // Pular cabeçalho
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
-
+            
             if (!line) continue;
 
             // Parse CSV simples (assumindo formato: pergunta,resposta,categoria)
             const parts = line.split(',');
-
+            
             if (parts.length >= 2) {
                 faqs.push({
                     question: parts[0].trim().replace(/^"|"$/g, ''),
@@ -306,13 +289,13 @@ class KnowledgeBaseManager {
     parseFAQsFromJSON(jsonContent) {
         try {
             const data = JSON.parse(jsonContent);
-
+            
             if (Array.isArray(data)) {
                 return data;
             } else if (data.faqs && Array.isArray(data.faqs)) {
                 return data.faqs;
             }
-
+            
             return [];
         } catch (error) {
             console.error('❌ Erro ao parsear JSON:', error);
@@ -325,7 +308,7 @@ class KnowledgeBaseManager {
      */
     search(chatbotId, query, limit = 5) {
         const kb = this.knowledgeBases.get(chatbotId);
-
+        
         if (!kb) {
             return [];
         }
@@ -383,7 +366,7 @@ class KnowledgeBaseManager {
 
         // Ordenar por relevância e limitar resultados
         results.sort((a, b) => b.score - a.score);
-
+        
         return results.slice(0, limit);
     }
 
@@ -399,7 +382,7 @@ class KnowledgeBaseManager {
 
             const regex = new RegExp(word, 'gi');
             const matches = text.match(regex);
-
+            
             if (matches) {
                 score += matches.length;
             }
@@ -412,16 +395,15 @@ class KnowledgeBaseManager {
      * Obter toda a base de conhecimento
      */
     getKnowledgeBase(chatbotId) {
-        return this.reloadKnowledgeBase(chatbotId) || null;
+        return this.knowledgeBases.get(chatbotId) || null;
     }
 
     /**
      * Compilar contexto para o chatbot
      */
     compileContext(chatbotId, maxLength = 4000) {
-        // Recarregar do disco para garantir que pegamos as FAQs mais recentes
-        const kb = this.reloadKnowledgeBase(chatbotId);
-
+        const kb = this.knowledgeBases.get(chatbotId);
+        
         if (!kb) {
             return '';
         }
@@ -431,12 +413,12 @@ class KnowledgeBaseManager {
         // Adicionar FAQs
         if (kb.faqs.length > 0) {
             context += '📋 PERGUNTAS FREQUENTES:\n\n';
-
+            
             for (const faq of kb.faqs.filter(f => f.active)) {
                 const entry = `P: ${faq.question}\nR: ${faq.answer}\n\n`;
-
+                
                 if (context.length + entry.length > maxLength) break;
-
+                
                 context += entry;
             }
         }
@@ -444,12 +426,12 @@ class KnowledgeBaseManager {
         // Adicionar documentos
         if (kb.documents.length > 0 && context.length < maxLength) {
             context += '\n📄 DOCUMENTOS:\n\n';
-
+            
             for (const doc of kb.documents.filter(d => d.active)) {
                 const entry = `${doc.title}:\n${doc.content}\n\n`;
-
+                
                 if (context.length + entry.length > maxLength) break;
-
+                
                 context += entry;
             }
         }
@@ -457,12 +439,12 @@ class KnowledgeBaseManager {
         // Adicionar entradas manuais
         if (kb.manualEntries.length > 0 && context.length < maxLength) {
             context += '\n📝 INFORMAÇÕES ADICIONAIS:\n\n';
-
+            
             for (const entry of kb.manualEntries.filter(e => e.active)) {
                 const entryText = `${entry.title}:\n${entry.content}\n\n`;
-
+                
                 if (context.length + entryText.length > maxLength) break;
-
+                
                 context += entryText;
             }
         }
@@ -470,13 +452,13 @@ class KnowledgeBaseManager {
         // Adicionar dados de URLs
         if (kb.sources.length > 0 && context.length < maxLength) {
             context += '\n🌐 INFORMAÇÕES DO SITE:\n\n';
-
+            
             for (const source of kb.sources.filter(s => s.active && s.type === 'url')) {
                 if (source.data && source.data.textos) {
                     const textos = source.data.textos.slice(0, 10).join('\n');
-
+                    
                     if (context.length + textos.length > maxLength) break;
-
+                    
                     context += textos + '\n\n';
                 }
             }
@@ -490,7 +472,7 @@ class KnowledgeBaseManager {
      */
     removeEntry(chatbotId, entryId, entryType) {
         const kb = this.knowledgeBases.get(chatbotId);
-
+        
         if (!kb) return false;
 
         let removed = false;
@@ -544,7 +526,7 @@ class KnowledgeBaseManager {
      */
     getStats(chatbotId) {
         const kb = this.knowledgeBases.get(chatbotId);
-
+        
         if (!kb) {
             return {
                 totalEntries: 0,
