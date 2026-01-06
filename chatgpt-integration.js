@@ -29,6 +29,8 @@ class ChatGPTIntegration {
             }
         };
         this.defaultModel = 'gpt-4-turbo';
+        // NOVO: Cache de instâncias por tenant para multi-tenancy
+        this.tenantInstances = new Map();
     }
 
     // Configurar API Key
@@ -103,7 +105,7 @@ class ChatGPTIntegration {
             };
         } catch (error) {
             console.error('❌ Erro ao chamar ChatGPT:', error.response?.data || error.message);
-            
+
             return {
                 success: false,
                 error: error.response?.data?.error?.message || error.message,
@@ -148,7 +150,7 @@ Mantenha a conversa natural e amigável. Responda com base no contexto fornecido
 
         const costPer1k = modelInfo.costPer1kTokens;
         const cost = (tokens / 1000) * costPer1k;
-        
+
         return parseFloat(cost.toFixed(6));
     }
 
@@ -188,8 +190,8 @@ Mantenha a conversa natural e amigável. Responda com base no contexto fornecido
 
             if (result.success) {
                 console.log('✅ Conexão ChatGPT testada com sucesso');
-                return { 
-                    success: true, 
+                return {
+                    success: true,
                     message: 'Conexão OK',
                     model: result.model,
                     response: result.response
@@ -216,7 +218,7 @@ Mantenha a conversa natural e amigável. Responda com base no contexto fornecido
     // Comparar custo entre modelos
     compareCosts(tokens) {
         const comparison = {};
-        
+
         for (const [modelName, modelInfo] of Object.entries(this.models)) {
             comparison[modelName] = {
                 name: modelInfo.name,
@@ -263,6 +265,59 @@ Mantenha a conversa natural e amigável. Responda com base no contexto fornecido
             reason: 'Melhor custo-benefício'
         };
     }
+
+    // ===== MULTI-TENANT METHODS (NOVO) =====
+
+    /**
+     * NOVO: Obter ou criar instância ChatGPT para um tenant específico
+     * @param {string} apiKey - API key do tenant
+     * @returns {ChatGPTIntegration} Instância configurada para o tenant ou global (fallback)
+     */
+    async getTenantInstance(apiKey) {
+        // Verificar cache
+        if (this.tenantInstances.has(apiKey)) {
+            console.log(`📦 Usando instância ChatGPT em cache para tenant ${apiKey}`);
+            return this.tenantInstances.get(apiKey);
+        }
+
+        // Buscar configurações do banco
+        try {
+            const { DatabaseHelpers } = require('./database');
+            const settings = await DatabaseHelpers.getChatGPTSettings(apiKey);
+
+            if (!settings) {
+                // FALLBACK: Usar configuração global (admin)
+                console.log(`⚠️ Tenant ${apiKey} sem ChatGPT próprio, usando configuração global`);
+                return this; // Retorna instância global
+            }
+
+            // Criar instância isolada para o tenant
+            const tenantInstance = new ChatGPTIntegration();
+            tenantInstance.configure(settings.openai_api_key);
+            tenantInstance.defaultModel = settings.default_model || 'gpt-4-turbo';
+
+            // Armazenar em cache
+            this.tenantInstances.set(apiKey, tenantInstance);
+            console.log(`✅ Instância ChatGPT criada para tenant ${apiKey} (${settings.default_model})`);
+
+            return tenantInstance;
+        } catch (error) {
+            console.error(`❌ Erro ao obter instância ChatGPT para tenant ${apiKey}:`, error);
+            // Em caso de erro, usar global como fallback
+            return this;
+        }
+    }
+
+    /**
+     * NOVO: Invalidar cache de um tenant (útil após atualizar configurações)
+     * @param {string} apiKey - API key do tenant
+     */
+    clearTenantCache(apiKey) {
+        if (this.tenantInstances.has(apiKey)) {
+            this.tenantInstances.delete(apiKey);
+            console.log(`🗑️ Cache ChatGPT invalidado para tenant ${apiKey}`);
+        }
+    }
 }
 
 // Singleton instance
@@ -275,6 +330,10 @@ if (process.env.CHATGPT_API_KEY) {
 
 module.exports = {
     chatgptIntegration,
-    ChatGPTIntegration
+    chatgptManager: chatgptIntegration, // Alias para compatibilidade com server.js
+    ChatGPTIntegration,
+    // NOVO: Exportar métodos multi-tenant
+    getTenantInstance: (apiKey) => chatgptIntegration.getTenantInstance(apiKey),
+    clearTenantCache: (apiKey) => chatgptIntegration.clearTenantCache(apiKey)
 };
 

@@ -3977,6 +3977,21 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             pageContentSummary = cleanTextLimited;
         }
 
+        // 🎯 NOVO: CONTEÚDO DA BASE DE CONHECIMENTO (FAQ e Documentos)
+        let kbContext = "";
+        try {
+            if (apiKey) {
+                console.log(`🔍 [KB DEBUG] Buscando contexto para apiKey: ${apiKey}`);
+                // Tenta compilar até 4000 caracteres de contexto da base de conhecimento
+                kbContext = knowledgeBaseManager.compileContext(apiKey, 4000);
+                console.log(`🔍 [KB DEBUG] Contexto retornado (${kbContext.length} chars): ${kbContext ? 'Sim' : 'Vazio'}`);
+            } else {
+                console.log(`⚠️ [KB DEBUG] Nenhuma apiKey disponível para busca na Knowledge Base`);
+            }
+        } catch (kbErr) {
+            console.error("⚠️ Erro ao compilar contexto da Knowledge Base:", kbErr);
+        }
+
         // 🎯 NOVO: Texto extraído de imagens (OCR)
         let ocrInfo = "";
         if (pageData && pageData.imagesText && pageData.imagesText.length > 0) {
@@ -4024,6 +4039,9 @@ URL: ${pageData.url || 'Não disponível'}
 
 📄 CONTEÚDO COMPLETO DO PRODUTO/SERVIÇO:
 ${pageContentSummary || 'Conteúdo não disponível'}
+
+📚 CONHECIMENTO ESPECÍFICO (BASE DE CONHECIMENTO):
+${kbContext || 'Nenhum dado específico cadastrado na base de conhecimento.'}
 
 🧩 INTENÇÕES IDENTIFICADAS: ${estadoEmocional.intencoesMultiplas.join(', ') || 'Nenhuma específica'}
 
@@ -4527,8 +4545,37 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);
 
+        // 🎯 NOVO: BUSCAR NA BASE DE CONHECIMENTO PRIMEIRO (Prioridade absoluta)
+        let kbMatch = null;
+        if (apiKey) {
+            try {
+                const results = knowledgeBaseManager.search(apiKey, message, 1);
+                if (results && results.length > 0 && results[0].score >= 1) {
+                    kbMatch = results[0];
+                    console.log(`📚 [KB MATCH] Score: ${kbMatch.score} para "${kbMatch.data?.question || kbMatch.data?.title}"`);
+                }
+            } catch (searchErr) {
+                console.error("⚠️ Erro na busca KB:", searchErr);
+            }
+        }
+
         // 🎯 CAPTURA DE INTENÇÕES DO CLIENTE
-        const inteligencias = sistemaInteligencias.capturarInteligencias(message);
+        let inteligencias = sistemaInteligencias.capturarInteligencias(message);
+
+        // Se encontramos uma dúvida na KB, vamos desativar "inteligências" genéricas 
+        // para permitir que a IA responda usando o conhecimento específico.
+        if (kbMatch && !inteligencias.contatoDireto) {
+            console.log("📚 KB Match encontrado. Priorizando conhecimento específico sobre regras genéricas.");
+            // Desativa inteligências genéricas para não dar resposta duplicada ou genérica
+            inteligencias = {
+                contatoDireto: false,
+                linkSite: false,
+                bonus: false,
+                detalhesBonus: false,
+                experiencia: false,
+                suporte: false
+            };
+        }
 
         // 🎯 ANÁLISE DE JORNADA
         const journeyStage = journeyAnalyzer.analyzeJourneyStage(message);
@@ -5643,6 +5690,14 @@ setupRoutes(app);
 
     console.log('✅ Rotas V3.0 configuradas');
     console.log('🔗 Short URLs habilitadas: GET /l/:code, POST /api/create-short-url');
+
+    // ===== MULTI-TENANT WHATSAPP ROUTES (NOVO) =====
+    require('./whatsapp-routes')(app, logger);  // Carrega e registra rotas WhatsApp multi-tenant
+    console.log('✅ Rotas Multi-Tenant WhatsApp integradas');
+
+    // ===== MULTI-TENANT CHATGPT ROUTES (NOVO) =====
+    require('./chatgpt-routes')(app, logger);  // Carrega e registra rotas ChatGPT multi-tenant
+    console.log('✅ Rotas Multi-Tenant ChatGPT integradas');
 
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
