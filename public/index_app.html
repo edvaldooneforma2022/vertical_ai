@@ -1511,15 +1511,14 @@
         const activateChatbotBtn = document.getElementById('activateChatbotBtn');
         const chatbotFrame = document.getElementById('chatbotFrame');
         const successAlert = document.getElementById('successAlert');
-        const widgetCodeDisplay = document.getElementById('widgetCodeDisplay');
-        const copyWidgetCodeBtn = document.getElementById('copyWidgetCodeBtn');
+        // widgetCodeDisplay e copyWidgetCodeBtn serão buscados dentro do activateChatbotBtn
 
-        // Novos elementos
-        const chatbotLinkSection = document.getElementById('chatbotLinkSection');
-        const chatbotLinkUrl = document.getElementById('chatbotLinkUrl');
-        const copyChatbotLinkBtn = document.getElementById('copyChatbotLinkBtn');
-        const extractedDataContent = document.getElementById('extractedDataContent');
-        const extractedSummary = document.getElementById('extractedSummary');
+        // Novos elementos (serão buscados dinamicamente para evitar erros de inicialização)
+        let chatbotLinkSection = null;
+        let chatbotLinkUrl = null;
+        let copyChatbotLinkBtn = null;
+        let extractedDataContent = null;
+        let extractedSummary = null;
 
         // Botões de compartilhamento social
         const shareWhatsApp = document.getElementById('shareWhatsApp');
@@ -1622,6 +1621,11 @@
             const customInstructions = customInstructionsInput.value;
             const apiKeyValue = document.getElementById('apiKeyInput').value.trim();
 
+            // Buscar elementos dinamicamente para evitar erro de inicialização se o DOM não estiver totalmente pronto
+            if (!chatbotLinkSection) chatbotLinkSection = document.getElementById('chatbotLinkSection');
+            if (!chatbotLinkUrl) chatbotLinkUrl = document.getElementById('chatbotLinkUrl');
+            if (!extractedSummary) extractedSummary = document.getElementById('extractedSummary');
+
             if (!robotName || !salesUrl) {
                 showToast('Por favor, preencha o nome do assistente e a URL da página.', 'error');
                 return;
@@ -1711,7 +1715,10 @@
 
                 // Atualiza o código do widget com as cores do Whitelabel
                 const wlPrimaryColor = document.getElementById('wl-primary') ? document.getElementById('wl-primary').value : '#3b82f6';
-                widgetCodeDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, wlPrimaryColor);
+                const widgetDisplay = document.getElementById('widgetCodeDisplay');
+                if (widgetDisplay) {
+                    widgetDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, wlPrimaryColor);
+                }
 
                 successAlert.style.display = 'block';
 
@@ -3389,12 +3396,17 @@
                     document.getElementById('conversationsToday').textContent = conversationsToday;
                     document.getElementById('messagesSent').textContent = messagesToday;
 
+                    // Atualizar Assistentes Ativos (se houver pelo menos um lead, consideramos o assistente ativo)
+                    if (totalLeads > 0) {
+                        document.getElementById('activeChatbots').textContent = '1';
+                        document.getElementById('createdToday').textContent = '1';
+                    }
+
                     console.log(`📊 Dashboard atualizado: ${totalLeads} leads (${leadsToday} hoje), ${conversationsToday} conversas hoje, ${messagesToday} mensagens hoje`);
                 }
             } catch (error) {
                 console.error('Erro ao carregar leads do dashboard:', error);
-                document.getElementById('totalLeads').textContent = '0';
-                document.getElementById('leadsToday').textContent = '0';
+                // Não zerar para manter cache visual se possível
             }
         }
 
