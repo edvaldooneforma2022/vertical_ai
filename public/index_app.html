@@ -1400,7 +1400,23 @@
                 <iframe id="chatbotFrame" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
 
-            <!-- O Gerador de código foi movido para a aba "Widget" nos Novos Sistemas -->
+            <div class="widget-generator">
+                <h3 class="widget-title"><i class="fas fa-code"></i> Gerador de Código do Widget</h3>
+                <p class="panel-subtitle">Copie e cole este código em qualquer página para integrar seu assistente.</p>
+                <div class="code-block">
+                    <button class="copy-btn" id="copyWidgetCodeBtn"><i class="fas fa-copy"></i> Copiar</button>
+                    <pre><code id="widgetCodeDisplay">&lt;!-- LinkMágico Chatbot Widget --&gt;
+&lt;script&gt;
+    window.LinkMagicoWidgetConfig = {
+        robotName: "Assistente IA",
+        salesUrl: "",
+        instructions: "",
+        primaryColor: "#3b82f6"
+    };
+&lt;/script&gt;
+&lt;script src="/public/widget.js"&gt;&lt;/script&gt;</code></pre>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -1511,14 +1527,15 @@
         const activateChatbotBtn = document.getElementById('activateChatbotBtn');
         const chatbotFrame = document.getElementById('chatbotFrame');
         const successAlert = document.getElementById('successAlert');
-        // widgetCodeDisplay e copyWidgetCodeBtn serão buscados dentro do activateChatbotBtn
+        const widgetCodeDisplay = document.getElementById('widgetCodeDisplay');
+        const copyWidgetCodeBtn = document.getElementById('copyWidgetCodeBtn');
 
-        // Novos elementos (serão buscados dinamicamente para evitar erros de inicialização)
-        let chatbotLinkSection = null;
-        let chatbotLinkUrl = null;
-        let copyChatbotLinkBtn = null;
-        let extractedDataContent = null;
-        let extractedSummary = null;
+        // Novos elementos
+        const chatbotLinkSection = document.getElementById('chatbotLinkSection');
+        const chatbotLinkUrl = document.getElementById('chatbotLinkUrl');
+        const copyChatbotLinkBtn = document.getElementById('copyChatbotLinkBtn');
+        const extractedDataContent = document.getElementById('extractedDataContent');
+        const extractedSummary = document.getElementById('extractedSummary');
 
         // Botões de compartilhamento social
         const shareWhatsApp = document.getElementById('shareWhatsApp');
@@ -1610,30 +1627,14 @@
             };
         }
 
-        // Sincronizar API Key input com estado global
-        document.getElementById('apiKeyInput').addEventListener('input', (e) => {
-            window.currentApiKey = e.target.value.trim() || 'linkmagico-api-key-2024';
-        });
-
         activateChatbotBtn.addEventListener('click', async () => {
             const robotName = robotNameInput.value;
             const salesUrl = salesUrlInput.value;
             const customInstructions = customInstructionsInput.value;
             const apiKeyValue = document.getElementById('apiKeyInput').value.trim();
 
-            // Buscar elementos dinamicamente para evitar erro de inicialização se o DOM não estiver totalmente pronto
-            if (!chatbotLinkSection) chatbotLinkSection = document.getElementById('chatbotLinkSection');
-            if (!chatbotLinkUrl) chatbotLinkUrl = document.getElementById('chatbotLinkUrl');
-            if (!extractedSummary) extractedSummary = document.getElementById('extractedSummary');
-
             if (!robotName || !salesUrl) {
                 showToast('Por favor, preencha o nome do assistente e a URL da página.', 'error');
-                return;
-            }
-
-            if (!localStorage.getItem('lgpd_consent')) {
-                showToast('É necessário aceitar os termos da LGPD antes de continuar.', 'warning');
-                document.getElementById('consentModal').style.display = 'flex';
                 return;
             }
 
@@ -1715,10 +1716,7 @@
 
                 // Atualiza o código do widget com as cores do Whitelabel
                 const wlPrimaryColor = document.getElementById('wl-primary') ? document.getElementById('wl-primary').value : '#3b82f6';
-                const widgetDisplay = document.getElementById('widgetCodeDisplay');
-                if (widgetDisplay) {
-                    widgetDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, wlPrimaryColor);
-                }
+                widgetCodeDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, wlPrimaryColor);
 
                 successAlert.style.display = 'block';
 
@@ -1758,23 +1756,23 @@
             }
         });
 
-        // O listener do copyWidgetCodeBtn foi movido para o final do arquivo para garantir que o DOM esteja pronto
+        copyWidgetCodeBtn.addEventListener('click', () => {
+            const codeToCopy = widgetCodeDisplay.textContent;
+            navigator.clipboard.writeText(codeToCopy).then(() => {
+                showToast('Código do widget copiado!', 'success');
+            }).catch(err => {
+                console.error('Erro ao copiar código:', err);
+                showToast('Erro ao copiar código.', 'error');
+            });
+        });
 
+        // Botões de funcionalidades adicionais
         document.getElementById('promptBtn').addEventListener('click', () => {
-            showToast('Direcionando para o Gerenciador de Prompt...', 'info');
-            setTimeout(() => {
-                showNewTab('knowledge');
-                openNewSystems();
-            }, 500);
+            showToast('Funcionalidade Prompt em desenvolvimento', 'info');
         });
 
         document.getElementById('analyticsBtn').addEventListener('click', () => {
-            showToast('Abrindo Analytics Profissional...', 'info');
-            setTimeout(() => {
-                showNewTab('analytics');
-                openNewSystems();
-                loadAnalytics();
-            }, 500);
+            showToast('Funcionalidade Analytics em desenvolvimento', 'info');
         });
 
         // ===== FUNÇÃO GERADORA DE SCRIPT INLINE MODERNO V2.0 =====
@@ -1795,6 +1793,7 @@
         instructions: "${instructions}",
         primaryColor: "${color}",
         apiKey: "${key}",
+        apikey: "${key}",
         greetingMessage: "${greetingMessage}",
         welcomeMessage: "${welcomeMessage}",
         secondMessage: "${secondMessage}"
@@ -1957,28 +1956,12 @@
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📝 Leads
                 </button>
-                <button class="new-tab" onclick="showNewTab('widget')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                    <i class="fas fa-code"></i> Widget
-                </button>
             </div>
 
             <!-- Tab Contents -->
             <div id="tab-analytics" class="new-tab-content" style="display:block;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px; margin-bottom:1rem;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                        <h2 style="color:#60a5fa; margin:0;">📊 Analytics Profissional</h2>
-                        <div style="display:flex; gap:0.5rem;">
-                            <button onclick="loadAnalytics('today')"
-                                style="background:#334155; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">Hoje</button>
-                            <button onclick="loadAnalytics(7)"
-                                style="background:#334155; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">7
-                                dias</button>
-                            <button onclick="loadAnalytics(30)"
-                                style="background:#334155; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">30
-                                dias</button>
-                        </div>
-                    </div>
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📊 Analytics Profissional</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Visualize métricas detalhadas do seu assistente</p>
 
                     <div
@@ -2136,133 +2119,47 @@
             <!-- Tab WhatsApp -->
             <div id="tab-whatsapp" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📱 Integração WhatsApp (Multi-Tenant)</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure suas próprias credenciais ou use a global
-                        do sistema</p>
-
-                    <div id="whatsapp-current-status"
-                        style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status Atual</h3>
-                        <div id="whatsapp-settings-status" style="color:#94a3b8;">Carregando configurações...</div>
-                    </div>
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📱 Integração WhatsApp</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure notificações via WhatsApp</p>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Escolha o Provedor</h3>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                            <button id="btn-twilio" onclick="selectProvider('twilio')"
-                                style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
-                                <strong>Twilio</strong>
-                            </button>
-                            <button id="btn-evolution" onclick="selectProvider('evolution')"
-                                style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
-                                <strong>Evolution API</strong>
-                            </button>
-                        </div>
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
+                        <div id="whatsapp-status" style="color:#94a3b8;">Carregando...</div>
                     </div>
 
-                    <!-- Config Twilio -->
-                    <div id="form-twilio"
-                        style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Twilio</h3>
-                        <input type="text" id="twilio-sid" placeholder="Account SID"
+                    <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Envio</h3>
+                        <input type="tel" id="test-phone" placeholder="+5511999999999"
                             style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="password" id="twilio-token" placeholder="Auth Token"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="text" id="twilio-number" placeholder="Twilio Number (ex: +1234567890)"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="text" id="twilio-notification-phone"
-                            placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
-                    </div>
-
-                    <!-- Config Evolution -->
-                    <div id="form-evolution"
-                        style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Evolution API</h3>
-                        <input type="text" id="evolution-url" placeholder="API URL (ex: https://api.suadominio.com)"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="password" id="evolution-key" placeholder="API Key"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="text" id="evolution-instance" placeholder="Instance Name"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="text" id="evolution-notification-phone"
-                            placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
-                    </div>
-
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                        <button onclick="saveWhatsAppSettings()"
-                            style="background:#3b82f6; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                            💾 Salvar Configuração
-                        </button>
-                        <button onclick="testWhatsAppConnection()"
-                            style="background:#25d366; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                            🧪 Testar Conexão
+                        <button onclick="testWhatsApp()"
+                            style="background:#25d366; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            Enviar Mensagem de Teste
                         </button>
                     </div>
-
-                    <button onclick="deleteWhatsAppSettings()"
-                        style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:0.75rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:1rem;">
-                        🗑️ Remover Minha Configuração (Voltar para Global)
-                    </button>
                 </div>
             </div>
 
             <!-- Tab ChatGPT -->
             <div id="tab-chatgpt" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Integração ChatGPT (Multi-Tenant)</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure sua própria chave OpenAI ou use a global
-                        do sistema</p>
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Integração ChatGPT</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Use GPT-4 para respostas de alta qualidade</p>
 
-                    <div id="chatgpt-current-status"
-                        style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status Atual</h3>
-                        <div id="chatgpt-settings-status" style="color:#94a3b8;">Carregando configurações...</div>
+                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
+                        <div id="chatgpt-status" style="color:#94a3b8;">Carregando...</div>
                     </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">⚙️ Configurar ChatGPT</h3>
-
-                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Chave API
-                            OpenAI:</label>
-                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Obtenha em: <a
-                                href="https://platform.openai.com/api-keys" target="_blank"
-                                style="color:#60a5fa;">platform.openai.com/api-keys</a></p>
-                        <input type="password" id="chatgpt-api-key" placeholder="sk-..."
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-
-                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Modelo
-                            Padrão:</label>
-                        <select id="chatgpt-model"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                            <option value="gpt-4-turbo">GPT-4 Turbo (Recomendado - Melhor custo-benefício)</option>
-                            <option value="gpt-4">GPT-4 (Mais avançado)</option>
-                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Mais econômico)</option>
-                        </select>
-
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                            <button onclick="saveChatGPTSettings()"
-                                style="background:#3b82f6; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                                💾 Salvar Configuração
-                            </button>
-                            <button onclick="testChatGPTConnection()"
-                                style="background:#10a37f; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                                🧪 Testar Conexão
-                            </button>
-                        </div>
-
-                        <button onclick="deleteChatGPTSettings()"
-                            style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:0.75rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:1rem;">
-                            🗑️ Remover Minha Configuração (Voltar para Global)
-                        </button>
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Modelos Disponíveis</h3>
+                        <div id="chatgpt-models" style="color:#94a3b8;">Carregando...</div>
                     </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">🧪 Testar Geração</h3>
-                        <textarea id="chatgpt-test-prompt" placeholder="Digite uma pergunta para testar..."
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Geração</h3>
+                        <textarea id="test-prompt" placeholder="Digite uma pergunta..."
                             style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem; min-height:100px;"></textarea>
-                        <button onclick="testChatGPTGeneration()"
+                        <button onclick="testChatGPT()"
                             style="background:#10a37f; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
                             Gerar Resposta
                         </button>
@@ -2438,34 +2335,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Tab Widget Generator -->
-                <div id="tab-widget" class="new-tab-content" style="display:none;">
-                    <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                        <h2 style="color:#60a5fa; margin-bottom:1rem;"><i class="fas fa-code"></i> Gerador de Código do
-                            Widget</h2>
-                        <p style="color:#cbd5e1; margin-bottom:1.5rem;">Copie e cole este código em qualquer página para
-                            integrar seu assistente.</p>
-                        <div
-                            style="background:#334155; padding:1.5rem; border-radius:12px; position:relative; border:1px solid #475569;">
-                            <button class="copy-btn" id="copyWidgetCodeBtn"
-                                style="position:absolute; top:20px; right:20px; background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
-                                <i class="fas fa-copy"></i> Copiar
-                            </button>
-                            <pre
-                                style="background:#1e293b; padding:1rem; border-radius:8px; overflow-x:auto; margin-top:1rem;"><code id="widgetCodeDisplay" style="color:#10b981; font-family: 'Courier New', Courier, monospace;">&lt;!-- LinkMágico Chatbot Widget --&gt;
-&lt;script&gt;
-    window.LinkMagicoWidgetConfig = {
-        robotName: "Assistente IA",
-        salesUrl: "",
-        instructions: "",
-        primaryColor: "#3b82f6"
-    };
-&lt;/script&gt;
-&lt;script src="/public/widget.js"&gt;&lt;/script&gt;</code></pre>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -2496,22 +2365,9 @@
         .new-tab:hover {
             opacity: 0.8;
         }
-
-        /* Garantir que o código no pre/code seja visível e formatado */
-        #widgetCodeDisplay {
-            display: block;
-            white-space: pre-wrap;
-            word-break: break-all;
-            color: #10b981 !important;
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
     </style>
 
     <script>
-        // Global State
-        window.currentApiKey = 'linkmagico-api-key-2024';
-
         // Funções para os novos sistemas
         function openNewSystems() {
             document.getElementById('newSystemsPanel').style.display = 'block';
@@ -2530,19 +2386,10 @@
             document.querySelectorAll('.new-tab').forEach(el => el.classList.remove('active'));
 
             // Mostrar conteúdo selecionado
-            const targetContent = document.getElementById('tab-' + tabName);
-            if (targetContent) targetContent.style.display = 'block';
+            document.getElementById('tab-' + tabName).style.display = 'block';
 
-            // Ativar tab correspondente
-            document.querySelectorAll('.new-tab').forEach(btn => {
-                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tabName}'`)) {
-                    btn.classList.add('active');
-                    btn.style.background = '#3b82f6'; // Forçar cor de destaque
-                } else {
-                    btn.classList.remove('active');
-                    btn.style.background = '#334155'; // Cor padrão
-                }
-            });
+            // Ativar tab
+            event.target.classList.add('active');
 
             // Carregar dados da tab
             if (tabName === 'analytics') loadAnalytics();
@@ -2553,42 +2400,25 @@
             if (tabName === 'gmail') loadGmailStatus();
             if (tabName === 'whatsapp') loadWhatsAppStatus();
             if (tabName === 'chatgpt') loadChatGPTStatus();
-            if (tabName === 'knowledge') loadFAQs();
             if (tabName === 'whitelabel') loadWhitelabelConfig();
-            if (tabName === 'widget') {
-                loadWidgetCode();
-            }
             if (tabName === 'leads') {
                 loadLeadsStats();
-                loadBackups();
+                loadBackups(); // Carregar backups também
             }
         }
 
-        async function loadAnalytics(days = 'all') {
+        async function loadAnalytics() {
             try {
                 // Buscar dados de leads
                 const leadsResponse = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
+                        'X-API-Key': 'linkmagico-api-key-2024'
                     }
                 });
                 const leadsData = await leadsResponse.json();
 
                 if (leadsData.success && leadsData.leads) {
-                    let leads = leadsData.leads;
-
-                    // Filtrar por data
-                    if (days !== 'all') {
-                        const now = new Date();
-                        const cutoff = new Date();
-                        if (days === 'today') {
-                            cutoff.setHours(0, 0, 0, 0);
-                        } else {
-                            cutoff.setDate(now.getDate() - parseInt(days));
-                        }
-                        leads = leads.filter(l => new Date(l.timestamp) >= cutoff);
-                    }
-
+                    const leads = leadsData.leads;
                     const totalLeads = leads.length;
 
                     // Calcular total de mensagens (soma de todas as conversas)
@@ -2597,10 +2427,12 @@
 
                     leads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
-                            totalMessages += lead.conversations.length;
-                            if (lead.conversations.length > 0) {
-                                totalConversations++;
-                            }
+                            totalConversations += lead.conversations.length;
+                            lead.conversations.forEach(conv => {
+                                if (conv.messages && Array.isArray(conv.messages)) {
+                                    totalMessages += conv.messages.length;
+                                }
+                            });
                         }
                     });
 
@@ -2667,19 +2499,7 @@
             }
 
             try {
-                // Obter apiKey da sessão para garantir tenancy correta
-                const sessionRes = await fetch('/api/session/me');
-                const sessionData = await sessionRes.json();
-
-                // Corrigir a leitura da API Key (o endpoint retorna apiKey diretamente)
-                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
-
-                if (!sessionData.success || !chatbotId) {
-                    alert('Erro de autenticação. Por favor, recarregue a página.');
-                    return;
-                }
-
-                const response = await fetch(`/api/knowledge/${chatbotId}/faq`, {
+                const response = await fetch('/api/knowledge/default/faq', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question, answer })
@@ -2700,23 +2520,15 @@
 
         async function loadFAQs() {
             try {
-                // Obter apiKey da sessão
-                const sessionRes = await fetch('/api/session/me');
-                const sessionData = await sessionRes.json();
-
-                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
-                if (!sessionData.success || !chatbotId) return;
-
-                const response = await fetch(`/api/knowledge/${chatbotId}`);
+                const response = await fetch('/api/knowledge/default');
                 const data = await response.json();
 
                 const container = document.getElementById('faqs-container');
-                if (data.success && data.knowledgeBase && data.knowledgeBase.faqs && data.knowledgeBase.faqs.length > 0) {
-                    container.innerHTML = data.knowledgeBase.faqs.map(faq => `
-                        <div style="background:#334155; padding:1rem; border-radius:12px; margin-bottom:1rem; position:relative;">
+                if (data.success && data.knowledge.faqs && data.knowledge.faqs.length > 0) {
+                    container.innerHTML = data.knowledge.faqs.map(faq => `
+                        <div style="background:#334155; padding:1rem; border-radius:12px; margin-bottom:1rem;">
                             <div style="color:#cbd5e1; font-weight:600; margin-bottom:0.5rem;">❓ ${faq.question}</div>
                             <div style="color:#94a3b8; font-size:0.9rem;">💬 ${faq.answer}</div>
-                            <button onclick="deleteFAQ('${faq.id}')" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ef4444; cursor:pointer;" title="Remover">🗑️</button>
                         </div>
                     `).join('');
                 } else {
@@ -2724,29 +2536,6 @@
                 }
             } catch (error) {
                 console.error('Erro ao carregar FAQs:', error);
-            }
-        }
-
-        async function deleteFAQ(faqId) {
-            if (!confirm('Deseja realmente remover esta FAQ?')) return;
-
-            try {
-                const sessionRes = await fetch('/api/session/me');
-                const sessionData = await sessionRes.json();
-                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
-
-                if (!chatbotId) return;
-
-                const response = await fetch(`/api/knowledge/${chatbotId}/faq/${faqId}`, {
-                    method: 'DELETE'
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    loadFAQs();
-                }
-            } catch (error) {
-                console.error('Erro ao deletar FAQ:', error);
             }
         }
 
@@ -2764,9 +2553,9 @@
                                 ${plan.price === 0 ? 'Grátis' : 'R$ ' + plan.price.toFixed(2)}
                             </div>
                             <ul style="color:#94a3b8; font-size:0.9rem; list-style:none; padding:0;">
-                                <li style="margin-bottom:0.5rem;">✓ ${plan.limits.maxChatbots} assistentes</li>
-                                <li style="margin-bottom:0.5rem;">✓ ${plan.limits.requestsPerMinute} req/min</li>
-                                <li style="margin-bottom:0.5rem;">✓ ${plan.limits.requestsPerHour} req/hora</li>
+                                <li style="margin-bottom:0.5rem;">✓ ${plan.features.maxChatbots} assistentes</li>
+                                <li style="margin-bottom:0.5rem;">✓ ${plan.features.requestsPerMinute} req/min</li>
+                                <li style="margin-bottom:0.5rem;">✓ ${plan.features.requestsPerHour} req/hora</li>
                             </ul>
                         </div>
                     `).join('');
@@ -2793,21 +2582,11 @@
 
         async function loadSystemStatus() {
             try {
-                const container = document.getElementById('system-status');
-                container.innerHTML = '<p style="color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Carregando status...</p>';
-
                 const response = await fetch('/api/system/status');
                 const data = await response.json();
 
-                if (data.success && data.status) {
-                    const uptime = data.status.uptime || 0;
-                    let uptimeStr = '';
-                    if (uptime > 3600) {
-                        uptimeStr = `${Math.floor(uptime / 3600)} horas e ${Math.floor((uptime % 3600) / 60)} min`;
-                    } else {
-                        uptimeStr = `${Math.floor(uptime / 60)} minutos`;
-                    }
-
+                const container = document.getElementById('system-status');
+                if (data.success) {
                     container.innerHTML = `
                         <div style="display:grid; gap:1rem;">
                             <div style="background:#334155; padding:1rem; border-radius:12px;">
@@ -2824,16 +2603,14 @@
                             </div>
                             <div style="background:#334155; padding:1rem; border-radius:12px;">
                                 <div style="color:#94a3b8;">Uptime:</div>
-                                <div style="color:#60a5fa; font-weight:600;">${uptimeStr}</div>
+                                <div style="color:#60a5fa; font-weight:600;">${Math.floor(data.status.uptime / 60)} minutos</div>
                             </div>
                         </div>
                     `;
-                } else {
-                    throw new Error(data.error || 'Falha ao obter status');
                 }
             } catch (error) {
                 console.error('Erro ao carregar status:', error);
-                document.getElementById('system-status').innerHTML = `<p style="color:#ef4444;">❌ Erro ao carregar status: ${error.message}</p>`;
+                document.getElementById('system-status').innerHTML = '<p style="color:#ef4444;">Erro ao carregar status do sistema</p>';
             }
         }
 
@@ -2904,18 +2681,9 @@
                 const statusEl = document.getElementById('whatsapp-status');
 
                 if (data.configured) {
-                    statusEl.innerHTML = `<div style="color:#10b981; font-weight:600;">✅ WhatsApp operacional via ${data.provider.toUpperCase()}</div>`;
+                    statusEl.innerHTML = `<div style="color:#10b981;">✅ WhatsApp configurado (${data.provider})</div>`;
                 } else {
-                    statusEl.innerHTML = `
-                        <div style="color:#f59e0b; background: rgba(245, 158, 11, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
-                            <div style="font-weight:600; margin-bottom: 5px;">⚠️ Integração Pendente</div>
-                            <p style="font-size: 0.85rem; margin: 0;">Para ativar, configure as variáveis de ambiente na Render.com:</p>
-                            <ul style="font-size: 0.8rem; margin-top: 8px; padding-left: 20px;">
-                                <li><code>WHATSAPP_PROVIDER</code> (twilio ou evolution)</li>
-                                <li><code>NOTIFICATION_PHONE</code> (seu número com DDI e DDD)</li>
-                                <li>Credenciais Twilio (SID, Token, From) OU Evolution (API URL, Key)</li>
-                            </ul>
-                        </div>`;
+                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ WhatsApp não configurado. Configure WHATSAPP_PROVIDER no .env</div>';
                 }
             } catch (error) {
                 console.error('Erro ao carregar status WhatsApp:', error);
@@ -2952,136 +2720,37 @@
         }
 
         async function loadChatGPTStatus() {
-            // Manter compatibilidade - chamar a nova função
-            await loadChatGPTSettings();
-        }
-
-        async function loadChatGPTSettings() {
             try {
-                const apiKey = window.currentApiKey;
-                const response = await fetch('/api/chatgpt/settings', {
-                    headers: { 'X-API-Key': apiKey }
-                });
+                const response = await fetch('/api/chatgpt/status');
                 const data = await response.json();
-                const statusEl = document.getElementById('chatgpt-settings-status');
+                const statusEl = document.getElementById('chatgpt-status');
 
                 if (data.configured) {
-                    statusEl.innerHTML = `
-                        <div style="color:#10b981; margin-bottom:0.5rem;">✅ ChatGPT configurado com sua própria chave</div>
-                        <div style="color:#94a3b8; font-size:0.9rem;">
-                            • Chave: ${data.settings.openaiKeyHint || 'sk-****'}<br>
-                            • Modelo: ${data.settings.defaultModel || 'gpt-4-turbo'}<br>
-                            • Configurado em: ${new Date(data.settings.createdAt).toLocaleDateString('pt-BR')}
+                    statusEl.innerHTML = '<div style="color:#10b981;">✅ ChatGPT configurado e pronto</div>';
+                } else {
+                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ ChatGPT não configurado. Configure CHATGPT_API_KEY no .env</div>';
+                }
+
+                // Carregar modelos
+                const modelsResponse = await fetch('/api/chatgpt/models');
+                const modelsData = await modelsResponse.json();
+                const modelsEl = document.getElementById('chatgpt-models');
+
+                if (modelsData.length > 0) {
+                    modelsEl.innerHTML = modelsData.map(m => `
+                        <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
+                            <div style="color:#cbd5e1; font-weight:600;">${m.name}</div>
+                            <div style="color:#94a3b8; font-size:0.9rem;">${m.description}</div>
                         </div>
-                    `;
-                    // Preencher o select com o modelo salvo
-                    document.getElementById('chatgpt-model').value = data.settings.defaultModel || 'gpt-4-turbo';
-                } else {
-                    if (data.usingGlobal) {
-                        statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ Usando configuração global do sistema. Configure sua própria chave para maior controle.</div>';
-                    } else {
-                        statusEl.innerHTML = '<div style="color:#ef4444;">❌ ChatGPT não configurado. Adicione sua chave OpenAI abaixo.</div>';
-                    }
+                    `).join('');
                 }
             } catch (error) {
-                console.error('Erro ao carregar configurações ChatGPT:', error);
-                document.getElementById('chatgpt-settings-status').innerHTML =
-                    '<div style="color:#ef4444;">❌ Erro ao carregar configurações</div>';
+                console.error('Erro ao carregar status ChatGPT:', error);
             }
         }
 
-        async function saveChatGPTSettings() {
-            const openaiApiKey = document.getElementById('chatgpt-api-key').value;
-            const defaultModel = document.getElementById('chatgpt-model').value;
-
-            if (!openaiApiKey) {
-                alert('⚠️ Informe sua chave API da OpenAI');
-                return;
-            }
-
-            if (!openaiApiKey.startsWith('sk-')) {
-                alert('❌ Chave OpenAI inválida. Deve começar com "sk-"');
-                return;
-            }
-
-            try {
-                const apiKey = window.currentApiKey;
-                const response = await fetch('/api/chatgpt/settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': apiKey
-                    },
-                    body: JSON.stringify({ openaiApiKey, defaultModel })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('✅ Configurações ChatGPT salvas com sucesso!');
-                    document.getElementById('chatgpt-api-key').value = ''; // Limpar por segurança
-                    loadChatGPTSettings();
-                } else {
-                    alert('❌ Erro: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('❌ Erro ao salvar: ' + error.message);
-            }
-        }
-
-        async function testChatGPTConnection() {
-            try {
-                const apiKey = window.currentApiKey;
-                const response = await fetch('/api/chatgpt/settings/test', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': apiKey
-                    }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                } else {
-                    alert('❌ ' + (data.error || data.message));
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('❌ Erro ao testar conexão: ' + error.message);
-            }
-        }
-
-        async function deleteChatGPTSettings() {
-            if (!confirm('🗑️ Tem certeza que deseja remover sua configuração ChatGPT?\n\nO sistema voltará a usar a configuração global (se disponível).')) {
-                return;
-            }
-
-            try {
-                const apiKey = window.currentApiKey;
-                const response = await fetch('/api/chatgpt/settings', {
-                    method: 'DELETE',
-                    headers: { 'X-API-Key': apiKey }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    loadChatGPTSettings();
-                } else {
-                    alert('❌ Erro: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('❌ Erro ao remover: ' + error.message);
-            }
-        }
-
-        async function testChatGPTGeneration() {
-            const prompt = document.getElementById('chatgpt-test-prompt').value;
+        async function testChatGPT() {
+            const prompt = document.getElementById('test-prompt').value;
             if (!prompt) {
                 alert('Digite uma pergunta!');
                 return;
@@ -3089,36 +2758,28 @@
 
             const responseEl = document.getElementById('chatgpt-response');
             responseEl.style.display = 'block';
-            responseEl.innerHTML = '<div style="color:#94a3b8;">🤖 Gerando resposta...</div>';
+            responseEl.innerHTML = '<div style="color:#94a3b8;">Gerando resposta...</div>';
 
             try {
-                const apiKey = window.currentApiKey;
-                const model = document.getElementById('chatgpt-model').value;
-
-                const response = await fetch('/api/chatgpt/generate-tenant', {
+                const response = await fetch('/api/chatgpt/generate', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': apiKey
-                    },
-                    body: JSON.stringify({ prompt, model })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        model: 'gpt-4-turbo'
+                    })
                 });
 
                 const data = await response.json();
-                if (data.success && data.result && data.result.response) {
+                if (data.success) {
                     responseEl.innerHTML = `<div style="color:#cbd5e1;">${data.result.response}</div>`;
                 } else {
-                    responseEl.innerHTML = `<div style="color:#ef4444;">Erro: ${data.error || 'Resposta vazia'}</div>`;
+                    responseEl.innerHTML = `<div style="color:#ef4444;">Erro: ${data.error}</div>`;
                 }
             } catch (error) {
                 console.error('Erro:', error);
                 responseEl.innerHTML = '<div style="color:#ef4444;">Erro ao gerar resposta</div>';
             }
-        }
-
-        // Manter compatibilidade com função antiga
-        async function testChatGPT() {
-            await testChatGPTGeneration();
         }
 
         async function saveWhitelabel() {
@@ -3258,7 +2919,7 @@
                 // Usar endpoint real /admin/leads
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
+                        'X-API-Key': 'linkmagico-api-key-2024'
                     }
                 });
                 const data = await response.json();
@@ -3355,7 +3016,7 @@
             try {
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
+                        'X-API-Key': 'linkmagico-api-key-2024'
                     }
                 });
                 const data = await response.json();
@@ -3379,23 +3040,31 @@
 
                     leads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
-                            totalConversations++;
+                            lead.conversations.forEach(conv => {
+                                totalConversations++;
 
-                            // Verificar se a conversa é de hoje
-                            const convDate = new Date(lead.timestamp).toDateString();
-                            if (convDate === today) {
-                                conversationsToday++;
-                            }
-
-                            totalMessages += lead.conversations.length;
-
-                            // Mensagens de hoje
-                            lead.conversations.forEach(msg => {
-                                if (msg.timestamp) {
-                                    const msgDate = new Date(msg.timestamp).toDateString();
-                                    if (msgDate === today) {
-                                        messagesToday++;
+                                // Verificar se a conversa é de hoje
+                                if (conv.timestamp) {
+                                    const convDate = new Date(conv.timestamp).toDateString();
+                                    if (convDate === today) {
+                                        conversationsToday++;
                                     }
+                                }
+
+                                // Contar mensagens
+                                if (conv.messages && Array.isArray(conv.messages)) {
+                                    const msgCount = conv.messages.length;
+                                    totalMessages += msgCount;
+
+                                    // Contar mensagens de hoje
+                                    conv.messages.forEach(msg => {
+                                        if (msg.timestamp) {
+                                            const msgDate = new Date(msg.timestamp).toDateString();
+                                            if (msgDate === today) {
+                                                messagesToday++;
+                                            }
+                                        }
+                                    });
                                 }
                             });
                         }
@@ -3407,17 +3076,12 @@
                     document.getElementById('conversationsToday').textContent = conversationsToday;
                     document.getElementById('messagesSent').textContent = messagesToday;
 
-                    // Atualizar Assistentes Ativos (se houver pelo menos um lead, consideramos o assistente ativo)
-                    if (totalLeads > 0) {
-                        document.getElementById('activeChatbots').textContent = '1';
-                        document.getElementById('createdToday').textContent = '1';
-                    }
-
                     console.log(`📊 Dashboard atualizado: ${totalLeads} leads (${leadsToday} hoje), ${conversationsToday} conversas hoje, ${messagesToday} mensagens hoje`);
                 }
             } catch (error) {
                 console.error('Erro ao carregar leads do dashboard:', error);
-                // Não zerar para manter cache visual se possível
+                document.getElementById('totalLeads').textContent = '0';
+                document.getElementById('leadsToday').textContent = '0';
             }
         }
 
@@ -3427,7 +3091,7 @@
                 // Buscar dados do lead
                 const leadsResponse = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
+                        'X-API-Key': 'linkmagico-api-key-2024'
                     }
                 });
                 const leadsData = await leadsResponse.json();
@@ -3444,11 +3108,7 @@
                 // 📅 Buscar agendamentos do lead
                 let appointmentsHtml = '';
                 try {
-                    const appointmentsResponse = await fetch(`/api/appointments/${leadId}`, {
-                        headers: {
-                            'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
-                        }
-                    });
+                    const appointmentsResponse = await fetch(`/api/appointments/${leadId}`);
                     const appointmentsData = await appointmentsResponse.json();
 
                     if (appointmentsData.success && appointmentsData.appointments && appointmentsData.appointments.length > 0) {
@@ -3560,7 +3220,7 @@
                 // Buscar todos os leads
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
+                        'X-API-Key': 'linkmagico-api-key-2024'
                     }
                 });
                 const data = await response.json();
@@ -3623,7 +3283,7 @@
                 const response = await fetch('/admin/leads/backup/create', {
                     method: 'POST',
                     headers: {
-                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024',
+                        'X-API-Key': 'linkmagico-api-key-2024',
                         'Content-Type': 'application/json'
                     }
                 });
@@ -3646,7 +3306,7 @@
             try {
                 const response = await fetch('/admin/leads/backup/list', {
                     headers: {
-                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024'
+                        'X-API-Key': 'linkmagico-api-key-2024'
                     }
                 });
 
@@ -3710,7 +3370,7 @@
                 const response = await fetch('/admin/leads/backup/restore', {
                     method: 'POST',
                     headers: {
-                        'X-API-Key': window.currentApiKey || 'linkmagico-api-key-2024',
+                        'X-API-Key': 'linkmagico-api-key-2024',
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ filename })
@@ -3740,246 +3400,6 @@
             // Atualizar a cada 30 segundos
             setInterval(loadDashboardLeads, 30000);
         });
-
-
-        // ===== WHATSAPP MULTI-TENANT (NOVO) =====
-
-        let currentProvider = null;
-
-        async function loadWhatsAppSettings() {
-            try {
-                const apiKey = window.currentApiKey;
-                if (!apiKey) {
-                    console.error('API Key não disponível');
-                    return;
-                }
-
-                const response = await fetch('/api/whatsapp/settings', {
-                    headers: { 'X-API-Key': apiKey }
-                });
-                const data = await response.json();
-
-                const statusEl = document.getElementById('whatsapp-current-status');
-
-                if (data.configured) {
-                    let html = '<div style="color:#10b981; margin-bottom:0.5rem;">';
-                    html += '✅ <strong>WhatsApp Configurado</strong>';
-                    html += '</div>';
-                    html += '<div style="color:#94a3b8; font-size:0.9rem;">';
-                    html += 'Provider: <strong>' + data.settings.provider.toUpperCase() + '</strong><br>';
-                    html += 'Telefone: ' + (data.settings.notificationPhone || 'Não informado') + '<br>';
-                    html += 'Status: ' + (data.settings.isActive ? '🟢 Ativo' : '🔴 Inativo');
-                    html += '</div>';
-                    statusEl.innerHTML = html;
-
-                    // Preencher formulário com dados existentes
-                    selectProvider(data.settings.provider);
-                    if (data.settings.provider === 'twilio' && data.settings.hasTwilioConfig) {
-                        document.getElementById('twilio-notification-phone').value = data.settings.notificationPhone || '';
-                    } else if (data.settings.provider === 'evolution' && data.settings.hasEvolutionConfig) {
-                        document.getElementById('evolution-notification-phone').value = data.settings.notificationPhone || '';
-                    }
-                } else {
-                    const fallbackMessage = data.usingGlobal
-                        ? '🔄 Usando configuração global do administrador'
-                        : 'Configure suas próprias credenciais';
-
-                    let html = '<div style="color:#f59e0b; margin-bottom:0.5rem;">';
-                    html += '⚠️ <strong>Sem Configuração Própria</strong>';
-                    html += '</div>';
-                    html += '<div style="color:#94a3b8; font-size:0.9rem;">';
-                    html += fallbackMessage;
-                    html += '</div>';
-                    statusEl.innerHTML = html;
-                }
-            } catch (error) {
-                console.error('Erro ao carregar configurações WhatsApp:', error);
-                document.getElementById('whatsapp-current-status').innerHTML =
-                    '<div style="color:#ef4444;">❌ Erro ao carregar status</div>';
-            }
-        }
-
-        function selectProvider(provider) {
-            currentProvider = provider;
-
-            // Atualizar botões
-            document.getElementById('btn-twilio').style.borderColor = provider === 'twilio' ? '#10b981' : '#334155';
-            document.getElementById('btn-twilio').style.background = provider === 'twilio' ? '#065f46' : '#1e293b';
-
-            document.getElementById('btn-evolution').style.borderColor = provider === 'evolution' ? '#10b981' : '#334155';
-            document.getElementById('btn-evolution').style.background = provider === 'evolution' ? '#065f46' : '#1e293b';
-
-            // Mostrar formulário apropriado
-            document.getElementById('form-twilio').style.display = provider === 'twilio' ? 'block' : 'none';
-            document.getElementById('form-evolution').style.display = provider === 'evolution' ? 'block' : 'none';
-        }
-
-        async function saveWhatsAppSettings() {
-            if (!currentProvider) {
-                alert('⚠️ Selecione um provider primeiro (Twilio ou Evolution)');
-                return;
-            }
-
-            const settings = { provider: currentProvider };
-
-            if (currentProvider === 'twilio') {
-                settings.twilioAccountSid = document.getElementById('twilio-sid').value;
-                settings.twilioAuthToken = document.getElementById('twilio-token').value;
-                settings.twilioFromNumber = document.getElementById('twilio-number').value;
-                settings.notificationPhone = document.getElementById('twilio-notification-phone').value;
-
-                if (!settings.twilioAccountSid || !settings.twilioAuthToken || !settings.twilioFromNumber) {
-                    alert('❌ Preencha todos os campos obrigatórios do Twilio');
-                    return;
-                }
-            } else if (currentProvider === 'evolution') {
-                settings.evolutionApiUrl = document.getElementById('evolution-url').value;
-                settings.evolutionApiKey = document.getElementById('evolution-key').value;
-                settings.evolutionInstanceName = document.getElementById('evolution-instance').value;
-                settings.notificationPhone = document.getElementById('evolution-notification-phone').value;
-
-                if (!settings.evolutionApiUrl || !settings.evolutionApiKey || !settings.evolutionInstanceName) {
-                    alert('❌ Preencha todos os campos obrigatórios da Evolution API');
-                    return;
-                }
-            }
-
-            try {
-                const apiKey = window.currentApiKey;
-                const response = await fetch('/api/whatsapp/settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': apiKey
-                    },
-                    body: JSON.stringify(settings)
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('✅ Configurações salvas com sucesso!');
-                    loadWhatsAppSettings();
-                } else {
-                    alert('❌ Erro: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('❌ Erro ao salvar: ' + error.message);
-            }
-        }
-
-        async function testWhatsAppConnection() {
-            const phone = currentProvider === 'twilio'
-                ? document.getElementById('twilio-notification-phone').value
-                : document.getElementById('evolution-notification-phone').value;
-
-            if (!phone) {
-                alert('⚠️ Informe o telefone para teste');
-                return;
-            }
-
-            if (!confirm('📱 Enviar mensagem de teste para ' + phone + '?')) {
-                return;
-            }
-
-            try {
-                const apiKey = window.currentApiKey;
-                const response = await fetch('/api/whatsapp/settings/test', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': apiKey
-                    },
-                    body: JSON.stringify({ phoneNumber: phone })
-                });
-
-                const data = await response.json();
-                alert(data.message);
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('❌ Erro ao testar: ' + error.message);
-            }
-        }
-
-        async function deleteWhatsAppSettings() {
-            if (!confirm('🗑️ Tem certeza? Você voltará a usar a configuração global do admin.')) {
-                return;
-            }
-
-            try {
-                const apiKey = window.currentApiKey;
-                const response = await fetch('/api/whatsapp/settings', {
-                    method: 'DELETE',
-                    headers: { 'X-API-Key': apiKey }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('✅ Configurações removidas com sucesso!');
-                    // Limpar formulários
-                    document.getElementById('form-twilio').querySelectorAll('input').forEach(input => input.value = '');
-                    document.getElementById('form-evolution').querySelectorAll('input').forEach(input => input.value = '');
-                    currentProvider = null;
-                    document.getElementById('btn-twilio').style.borderColor = '#334155';
-                    document.getElementById('btn-twilio').style.background = '#1e293b';
-                    document.getElementById('btn-evolution').style.borderColor = '#334155';
-                    document.getElementById('btn-evolution').style.background = '#1e293b';
-                    document.getElementById('form-twilio').style.display = 'none';
-                    document.getElementById('form-evolution').style.display = 'none';
-                    loadWhatsAppSettings();
-                } else {
-                    alert('❌ Erro: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('❌ Erro ao deletar: ' + error.message);
-            }
-        }
-
-        // Manter função antiga para compatibilidade (ainda é usada pela aba antiga se existir)
-        async function loadWhatsAppStatus() {
-            await loadWhatsAppSettings();
-        }
-
-        async function testWhatsApp() {
-            await testWhatsAppConnection();
-        }
-
-        function loadWidgetCode() {
-            const robotName = document.getElementById('robotName').value || "Assistente IA";
-            const salesUrl = document.getElementById('salesUrl').value || "";
-            const customInstructions = document.getElementById('customInstructions').value || "";
-            const apiKeyValue = document.getElementById('apiKeyInput').value.trim() || window.currentApiKey;
-            const wlPrimaryColor = document.getElementById('wl-primary') ? document.getElementById('wl-primary').value : '#3b82f6';
-
-            const widgetDisplay = document.getElementById('widgetCodeDisplay');
-            if (widgetDisplay) {
-                if (typeof generateModernWidgetScript === 'function') {
-                    widgetDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, wlPrimaryColor);
-                } else {
-                    console.error('generateModernWidgetScript function not found');
-                }
-            }
-        }
-
-        // Initialize widget copy button listener
-        document.addEventListener('DOMContentLoaded', () => {
-            const copyBtn = document.getElementById('copyWidgetCodeBtn');
-            if (copyBtn) {
-                copyBtn.addEventListener('click', () => {
-                    const code = document.getElementById('widgetCodeDisplay').textContent;
-                    navigator.clipboard.writeText(code).then(() => {
-                        showToast('Código do widget copiado!', 'success');
-                    }).catch(err => {
-                        console.error('Erro ao copiar código:', err);
-                        showToast('Erro ao copiar código.', 'error');
-                    });
-                });
-            }
-        });
-
     </script>
 </body>
 

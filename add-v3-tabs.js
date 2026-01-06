@@ -56,89 +56,22 @@ const newTabContents = `
                 </div>
             </div>
             
-            <!-- Tab WhatsApp - MULTI-TENANT -->
+            <!-- Tab WhatsApp -->
             <div id="tab-whatsapp" class="new-tab-content" style="display:none;">
-                <div style="padding:2rem;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📱 Configurar WhatsApp</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">
-                        Configure suas próprias credenciais para receber notificações no seu WhatsApp
-                    </p>
-
-                    <!-- Status -->
-                    <div id="whatsapp-status-card" style="padding:1.5rem; background:#1e293b; border-radius:12px; margin-bottom:2rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Configuração</h3>
-                        <div id="whatsapp-current-status" style="color:#94a3b8;">Carregando...</div>
+                <div style="background:#1e293b; padding:2rem; border-radius:16px;">
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📱 Integração WhatsApp</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure notificações via WhatsApp</p>
+                    
+                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
+                        <div id="whatsapp-status" style="color:#94a3b8;">Carregando...</div>
                     </div>
-
-                    <!-- Escolha de Provider -->
-                    <div style="margin-bottom:2rem;">
-                        <label style="color:#cbd5e1; display:block; margin-bottom:0.75rem; font-weight:600;">Escolha o Provider:</label>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                            <button onclick="selectProvider('twilio')" id="btn-twilio" class="provider-btn" style="padding:1.5rem; background:#1e293b; border:2px solid #334155; border-radius:12px; color:#cbd5e1; cursor:pointer; font-weight:600; transition:all 0.3s;">
-                                📱 Twilio<br><small style="font-weight:400; color:#94a3b8;">Pago e Confiável</small>
-                            </button>
-                            <button onclick="selectProvider('evolution')" id="btn-evolution" class="provider-btn" style="padding:1.5rem; background:#1e293b; border:2px solid #334155; border-radius:12px; color:#cbd5e1; cursor:pointer; font-weight:600; transition:all 0.3s;">
-                                🆓 Evolution API<br><small style="font-weight:400; color:#94a3b8;">Grátis (self-hosted)</small>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Formulário Twilio -->
-                    <div id="form-twilio" style="display:none; background:#1e293b; padding:1.5rem; border-radius:12px; margin-bottom:2rem;">
-                        <h3 style="color:#60a5fa; margin-bottom:1rem;">⚙️ Configurar Twilio</h3>
-                        <div style="display:flex; flex-direction:column; gap:1rem;">
-                            <div>
-                                <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem;">Account SID:</label>
-                                <input type="text" id="twilio-sid" placeholder="ACxxxxxxxxx" style="width:100%; padding:0.75rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:white;">
-                            </div>
-                            <div>
-                                <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem;">Auth Token:</label>
-                                <input type="password" id="twilio-token" placeholder="Seu token secreto" style="width:100%; padding:0.75rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:white;">
-                            </div>
-                            <div>
-                                <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem;">WhatsApp Number (From):</label>
-                                <input type="text" id="twilio-number" placeholder="+14155238886" style="width:100%; padding:0.75rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:white;">
-                            </div>
-                            <div>
-                                <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem;">Seu Telefone (Receber Notificações):</label>
-                                <input type="text" id="twilio-notification-phone" placeholder="+55 11 99999-9999" style="width:100%; padding:0.75rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:white;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Formulário Evolution -->
-                    <div id="form-evolution" style="display:none; background:#1e293b; padding:1.5rem; border-radius:12px; margin-bottom:2rem;">
-                        <h3 style="color:#60a5fa; margin-bottom:1rem;">⚙️ Configurar Evolution API</h3>
-                        <div style="display:flex; flex-direction:column; gap:1rem;">
-                            <div>
-                                <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem;">API URL:</label>
-                                <input type="url" id="evolution-url" placeholder="https://sua-evolution-api.com" style="width:100%; padding:0.75rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:white;">
-                            </div>
-                            <div>
-                                <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem;">API Key:</label>
-                                <input type="password" id="evolution-key" placeholder="Sua chave API" style="width:100%; padding:0.75rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:white;">
-                            </div>
-                            <div>
-                                <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem;">Instance Name:</label>
-                                <input type="text" id="evolution-instance" placeholder="minha_instancia" style="width:100%; padding:0.75rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:white;">
-                            </div>
-                            <div>
-                                <label style="color:#cbd5e1; display:block; margin-bottom:0.5rem;">Seu Telefone (Receber Notificações):</label>
-                                <input type="text" id="evolution-notification-phone" placeholder="+55 11 99999-9999" style="width:100%; padding:0.75rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:white;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Ações -->
-                    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                        <button onclick="saveWhatsAppSettings()" style="flex:1; min-width:200px; background:#10b981; color:white; border:none; padding:1rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; transition:all 0.3s;">
-                            💾 Salvar Configurações
-                        </button>
-                        <button onclick="testWhatsAppConnection()" style="flex:1; min-width:200px; background:#3b82f6; color:white; border:none; padding:1rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; transition:all 0.3s;">
-                            ✅ Testar Conexão
-                        </button>
-                        <button onclick="deleteWhatsAppSettings()" style="flex:1; min-width:200px; background:#ef4444; color:white; border:none; padding:1rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; transition:all 0.3s;">
-                            🗑️ Remover Config
+                    
+                    <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Envio</h3>
+                        <input type="tel" id="test-phone" placeholder="+5511999999999" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        <button onclick="testWhatsApp()" style="background:#25d366; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            Enviar Mensagem de Teste
                         </button>
                     </div>
                 </div>
@@ -306,358 +239,197 @@ const newFunctions = `
             }
         }
         
-        
-        // ===== WHATSAPP MULTI-TENANT (NOVO) =====
-        
-        let currentProvider = null;
-
-        async function loadWhatsAppSettings() {
+        async function loadWhatsAppStatus() {
             try {
-                const apiKey = window.currentApiKey;
-                if (!apiKey) {
-                    console.error('API Key não disponível');
-                    return;
-                }
-
-                const response = await fetch('/api/whatsapp/settings', {
-                    headers: { 'X-API-Key': apiKey }
-                });
+                const response = await fetch('/api/whatsapp/status');
                 const data = await response.json();
-                
-                const statusEl = document.getElementById('whatsapp-current-status');
+                const statusEl = document.getElementById('whatsapp-status');
                 
                 if (data.configured) {
-                    let html = '<div style="color:#10b981; margin-bottom:0.5rem;">';
-                    html += '✅ <strong>WhatsApp Configurado</strong>';
-                    html += '</div>';
-                    html += '<div style="color:#94a3b8; font-size:0.9rem;">';
-                    html += 'Provider: <strong>' + data.settings.provider.toUpperCase() + '</strong><br>';
-                    html += 'Telefone: ' + (data.settings.notificationPhone || 'Não informado') + '<br>';
-                    html += 'Status: ' + (data.settings.isActive ? '🟢 Ativo' : '🔴 Inativo');
-                    html += '</div>';
-                    statusEl.innerHTML = html;
-                    
-                    // Preencher formulário com dados existentes
-                    selectProvider(data.settings.provider);
-                    if (data.settings.provider === 'twilio' && data.settings.hasTwilioConfig) {
-                        document.getElementById('twilio-notification-phone').value = data.settings.notificationPhone || '';
-                    } else if (data.settings.provider === 'evolution' && data.settings.hasEvolutionConfig) {
-                        document.getElementById('evolution-notification-phone').value = data.settings.notificationPhone || '';
-                    }
+                    statusEl.innerHTML = \`<div style="color:#10b981;">✅ WhatsApp configurado (\${data.provider})</div>\`;
                 } else {
-                    const fallbackMessage = data.usingGlobal 
-                        ? '🔄 Usando configuração global do administrador' 
-                        : 'Configure suas próprias credenciais';
-                    
-                    let html = '<div style="color:#f59e0b; margin-bottom:0.5rem;">';
-                    html += '⚠️ <strong>Sem Configuração Própria</strong>';
-                    html += '</div>';
-                    html += '<div style="color:#94a3b8; font-size:0.9rem;">';
-                    html += fallbackMessage;
-                    html += '</div>';
-                    statusEl.innerHTML = html;
+                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ WhatsApp não configurado. Configure WHATSAPP_PROVIDER no .env</div>';
                 }
             } catch (error) {
-                console.error('Erro ao carregar configurações WhatsApp:', error);
-                document.getElementById('whatsapp-current-status').innerHTML = 
-                    '<div style="color:#ef4444;">❌ Erro ao carregar status</div>';
+                console.error('Erro ao carregar status WhatsApp:', error);
             }
         }
-
-            function selectProvider(provider) {
-                currentProvider = provider;
-
-            // Atualizar botões
-            document.getElementById('btn-twilio').style.borderColor = provider === 'twilio' ? '#10b981' : '#334155';
-            document.getElementById('btn-twilio').style.background = provider === 'twilio' ? '#065f46' : '#1e293b';
-
-            document.getElementById('btn-evolution').style.borderColor = provider === 'evolution' ? '#10b981' : '#334155';
-            document.getElementById('btn-evolution').style.background = provider === 'evolution' ? '#065f46' : '#1e293b';
-
-            // Mostrar formulário apropriado
-            document.getElementById('form-twilio').style.display = provider === 'twilio' ? 'block' : 'none';
-            document.getElementById('form-evolution').style.display = provider === 'evolution' ? 'block' : 'none';
-        }
-
-            async function saveWhatsAppSettings() {
-            if (!currentProvider) {
-                alert('⚠️ Selecione um provider primeiro (Twilio ou Evolution)');
-            return;
-            }
-
-            const settings = {provider: currentProvider };
-
-            if (currentProvider === 'twilio') {
-                settings.twilioAccountSid = document.getElementById('twilio-sid').value;
-            settings.twilioAuthToken = document.getElementById('twilio-token').value;
-            settings.twilioFromNumber = document.getElementById('twilio-number').value;
-            settings.notificationPhone = document.getElementById('twilio-notification-phone').value;
-
-            if (!settings.twilioAccountSid || !settings.twilioAuthToken || !settings.twilioFromNumber) {
-                alert('❌ Preencha todos os campos obrigatórios do Twilio');
-            return;
-                }
-            } else if (currentProvider === 'evolution') {
-                settings.evolutionApiUrl = document.getElementById('evolution-url').value;
-            settings.evolutionApiKey = document.getElementById('evolution-key').value;
-            settings.evolutionInstanceName = document.getElementById('evolution-instance').value;
-            settings.notificationPhone = document.getElementById('evolution-notification-phone').value;
-
-            if (!settings.evolutionApiUrl || !settings.evolutionApiKey || !settings.evolutionInstanceName) {
-                alert('❌ Preencha todos os campos obrigatórios da Evolution API');
-            return;
-                }
-            }
-
-            try {
-                const apiKey = window.currentApiKey;
-            const response = await fetch('/api/whatsapp/settings', {
-                method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            'X-API-Key': apiKey
-                    },
-            body: JSON.stringify(settings)
-                });
-
-            const data = await response.json();
-
-            if (data.success) {
-                alert('✅ Configurações salvas com sucesso!');
-            loadWhatsAppSettings();
-                } else {
-                alert('❌ Erro: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-            alert('❌ Erro ao salvar: ' + error.message);
-            }
-        }
-
-            async function testWhatsAppConnection() {
-            const phone = currentProvider === 'twilio'
-            ? document.getElementById('twilio-notification-phone').value
-            : document.getElementById('evolution-notification-phone').value;
-
+        
+        async function testWhatsApp() {
+            const phone = document.getElementById('test-phone').value;
             if (!phone) {
-                alert('⚠️ Informe o telefone para teste');
-            return;
-            }
-
-            if (!confirm('📱 Enviar mensagem de teste para ' + phone + '?')) {
+                alert('Digite um número de telefone!');
                 return;
             }
-
+            
             try {
-                const apiKey = window.currentApiKey;
-            const response = await fetch('/api/whatsapp/settings/test', {
-                method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            'X-API-Key': apiKey
-                    },
-            body: JSON.stringify({phoneNumber: phone })
+                const response = await fetch('/api/whatsapp/send', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        to: phone,
+                        message: '🎉 Teste Link Mágico V3! Se você recebeu esta mensagem, a integração WhatsApp está funcionando!'
+                    })
                 });
-
-            const data = await response.json();
-            alert(data.message);
-            } catch (error) {
-                console.error('Erro:', error);
-            alert('❌ Erro ao testar: ' + error.message);
-            }
-        }
-
-            async function deleteWhatsAppSettings() {
-            if (!confirm('🗑️ Tem certeza? Você voltará a usar a configuração global do admin.')) {
-                return;
-            }
-
-            try {
-                const apiKey = window.currentApiKey;
-            const response = await fetch('/api/whatsapp/settings', {
-                method: 'DELETE',
-            headers: {'X-API-Key': apiKey }
-                });
-
-            const data = await response.json();
-
-            if (data.success) {
-                alert('✅ Configurações removidas com sucesso!');
-                    // Limpar formulários
-                    document.getElementById('form-twilio').querySelectorAll('input').forEach(input => input.value = '');
-                    document.getElementById('form-evolution').querySelectorAll('input').forEach(input => input.value = '');
-            currentProvider = null;
-            document.getElementById('btn-twilio').style.borderColor = '#334155';
-            document.getElementById('btn-twilio').style.background = '#1e293b';
-            document.getElementById('btn-evolution').style.borderColor = '#334155';
-            document.getElementById('btn-evolution').style.background = '#1e293b';
-            document.getElementById('form-twilio').style.display = 'none';
-            document.getElementById('form-evolution').style.display = 'none';
-            loadWhatsAppSettings();
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('Mensagem enviada com sucesso!');
                 } else {
-                alert('❌ Erro: ' + data.error);
+                    alert('Erro ao enviar mensagem: ' + (data.error || 'Desconhecido'));
                 }
             } catch (error) {
                 console.error('Erro:', error);
-            alert('❌ Erro ao deletar: ' + error.message);
+                alert('Erro ao enviar mensagem');
             }
         }
-
-            // Manter função antiga para compatibilidade (ainda é usada pela aba antiga se existir)
-            async function loadWhatsAppStatus() {
-                await loadWhatsAppSettings();
-        }
-
-            async function testWhatsApp() {
-                await testWhatsAppConnection();
-        }
-
-            async function loadChatGPTStatus() {
+        
+        async function loadChatGPTStatus() {
             try {
                 const response = await fetch('/api/chatgpt/status');
-            const data = await response.json();
-            const statusEl = document.getElementById('chatgpt-status');
-
-            if (data.configured) {
-                statusEl.innerHTML = '<div style="color:#10b981;">✅ ChatGPT configurado e pronto</div>';
+                const data = await response.json();
+                const statusEl = document.getElementById('chatgpt-status');
+                
+                if (data.configured) {
+                    statusEl.innerHTML = '<div style="color:#10b981;">✅ ChatGPT configurado e pronto</div>';
                 } else {
-                statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ ChatGPT não configurado. Configure CHATGPT_API_KEY no .env</div>';
+                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ ChatGPT não configurado. Configure CHATGPT_API_KEY no .env</div>';
                 }
-
-            // Carregar modelos
-            const modelsResponse = await fetch('/api/chatgpt/models');
-            const modelsData = await modelsResponse.json();
-            const modelsEl = document.getElementById('chatgpt-models');
+                
+                // Carregar modelos
+                const modelsResponse = await fetch('/api/chatgpt/models');
+                const modelsData = await modelsResponse.json();
+                const modelsEl = document.getElementById('chatgpt-models');
                 
                 if (modelsData.length > 0) {
-                modelsEl.innerHTML = modelsData.map(m => \`
-            <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
-                <div style="color:#cbd5e1; font-weight:600;">\${m.name}</div>
-                <div style="color:#94a3b8; font-size:0.9rem;">\${m.description}</div>
-            </div>
-            \`).join('');
+                    modelsEl.innerHTML = modelsData.map(m => \`
+                        <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
+                            <div style="color:#cbd5e1; font-weight:600;">\${m.name}</div>
+                            <div style="color:#94a3b8; font-size:0.9rem;">\${m.description}</div>
+                        </div>
+                    \`).join('');
                 }
             } catch (error) {
                 console.error('Erro ao carregar status ChatGPT:', error);
             }
         }
-
-            async function testChatGPT() {
+        
+        async function testChatGPT() {
             const prompt = document.getElementById('test-prompt').value;
             if (!prompt) {
                 alert('Digite uma pergunta!');
-            return;
+                return;
             }
-
+            
             const responseEl = document.getElementById('chatgpt-response');
             responseEl.style.display = 'block';
             responseEl.innerHTML = '<div style="color:#94a3b8;">Gerando resposta...</div>';
-
+            
             try {
                 const response = await fetch('/api/chatgpt/generate', {
-                method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                prompt: prompt,
-            model: 'gpt-4-turbo'
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        model: 'gpt-4-turbo'
                     })
                 });
-
-            const data = await response.json();
-            if (data.success) {
-                responseEl.innerHTML = \`<div style="color:#cbd5e1;">\${data.result.response}</div>\`;
+                
+                const data = await response.json();
+                if (data.success) {
+                    responseEl.innerHTML = \`<div style="color:#cbd5e1;">\${data.result.response}</div>\`;
                 } else {
-                responseEl.innerHTML = \`<div style="color:#ef4444;">Erro: \${data.error}</div>\`;
+                    responseEl.innerHTML = \`<div style="color:#ef4444;">Erro: \${data.error}</div>\`;
                 }
             } catch (error) {
                 console.error('Erro:', error);
-            responseEl.innerHTML = '<div style="color:#ef4444;">Erro ao gerar resposta</div>';
+                responseEl.innerHTML = '<div style="color:#ef4444;">Erro ao gerar resposta</div>';
             }
         }
-
-            async function saveWhitelabel() {
+        
+        async function saveWhitelabel() {
             const config = {
                 companyName: document.getElementById('wl-company').value,
-            logoUrl: document.getElementById('wl-logo').value,
-            primaryColor: document.getElementById('wl-primary').value,
-            secondaryColor: document.getElementById('wl-secondary').value
+                logoUrl: document.getElementById('wl-logo').value,
+                primaryColor: document.getElementById('wl-primary').value,
+                secondaryColor: document.getElementById('wl-secondary').value
             };
-
+            
             try {
                 const response = await fetch('/api/whitelabel/default', {
-                method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(config)
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
                 });
-
-            const data = await response.json();
-            if (data.success) {
-                alert('Configuração salva com sucesso!');
-            updateWhitelabelPreview(config);
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('Configuração salva com sucesso!');
+                    updateWhitelabelPreview(config);
                 } else {
-                alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
+                    alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
                 }
             } catch (error) {
                 console.error('Erro:', error);
-            alert('Erro ao salvar configuração');
+                alert('Erro ao salvar configuração');
             }
         }
-
-            function updateWhitelabelPreview(config) {
+        
+        function updateWhitelabelPreview(config) {
             const preview = document.getElementById('wl-preview');
             preview.innerHTML = \`
-            <div style="background:linear-gradient(135deg, \${config.primaryColor}, \${config.secondaryColor}); padding:2rem; border-radius:12px;">
-                \${config.logoUrl ?\`<img src="\${config.logoUrl}" style="max-width:200px; margin-bottom:1rem;">\` : ''}
+                <div style="background:linear-gradient(135deg, \${config.primaryColor}, \${config.secondaryColor}); padding:2rem; border-radius:12px;">
+                    \${config.logoUrl ? \`<img src="\${config.logoUrl}" style="max-width:200px; margin-bottom:1rem;">\` : ''}
                     <h3 style="color:white; margin:0;">\${config.companyName || 'Sua Empresa'}</h3>
-            </div>
+                </div>
             \`;
         }
-
-            async function loadLeadsStats() {
+        
+        async function loadLeadsStats() {
             try {
                 const response = await fetch('/api/leads/stats/default');
-            const data = await response.json();
-
-            if (data.success) {
-                document.getElementById('leads-total').textContent = data.stats.total || 0;
-            document.getElementById('leads-hot').textContent = data.stats.hot || 0;
-            document.getElementById('leads-warm').textContent = data.stats.warm || 0;
-            document.getElementById('leads-cold').textContent = data.stats.cold || 0;
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('leads-total').textContent = data.stats.total || 0;
+                    document.getElementById('leads-hot').textContent = data.stats.hot || 0;
+                    document.getElementById('leads-warm').textContent = data.stats.warm || 0;
+                    document.getElementById('leads-cold').textContent = data.stats.cold || 0;
                 }
-
-            // Carregar lista
-            const leadsResponse = await fetch('/api/leads/structured/default?limit=10');
-            const leadsData = await leadsResponse.json();
-
-            const listEl = document.getElementById('leads-list');
+                
+                // Carregar lista
+                const leadsResponse = await fetch('/api/leads/structured/default?limit=10');
+                const leadsData = await leadsResponse.json();
+                
+                const listEl = document.getElementById('leads-list');
                 if (leadsData.success && leadsData.leads.length > 0) {
-                listEl.innerHTML = leadsData.leads.map(lead => \`
-            <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="color:#cbd5e1; font-weight:600;">\${lead.name || 'Sem nome'}</div>
-                        <div style="color:#94a3b8; font-size:0.9rem;">\${lead.email || ''} | \${lead.phone || ''}</div>
-                    </div>
-                    <div style="background:\${lead.classification === 'hot' ? '#ef4444' : lead.classification === 'warm' ? '#f59e0b' : '#3b82f6'}; color:white; padding:0.25rem 0.75rem; border-radius:6px; font-size:0.8rem;">
-                        \${lead.classification?.toUpperCase() || 'N/A'}
-                    </div>
-                </div>
-            </div>
-            \`).join('');
+                    listEl.innerHTML = leadsData.leads.map(lead => \`
+                        <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="color:#cbd5e1; font-weight:600;">\${lead.name || 'Sem nome'}</div>
+                                    <div style="color:#94a3b8; font-size:0.9rem;">\${lead.email || ''} | \${lead.phone || ''}</div>
+                                </div>
+                                <div style="background:\${lead.classification === 'hot' ? '#ef4444' : lead.classification === 'warm' ? '#f59e0b' : '#3b82f6'}; color:white; padding:0.25rem 0.75rem; border-radius:6px; font-size:0.8rem;">
+                                    \${lead.classification?.toUpperCase() || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    \`).join('');
                 } else {
-                listEl.innerHTML = '<p style="color:#94a3b8;">Nenhum lead capturado ainda.</p>';
+                    listEl.innerHTML = '<p style="color:#94a3b8;">Nenhum lead capturado ainda.</p>';
                 }
             } catch (error) {
                 console.error('Erro ao carregar leads:', error);
             }
         }
-
-            async function exportLeads() {
+        
+        async function exportLeads() {
             try {
                 window.open('/api/leads/export/default', '_blank');
             } catch (error) {
                 console.error('Erro ao exportar leads:', error);
-            alert('Erro ao exportar leads');
+                alert('Erro ao exportar leads');
             }
         }`;
 
