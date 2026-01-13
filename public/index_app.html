@@ -1551,6 +1551,28 @@
 
         let currentChatbotUrl = '';
 
+        // SAFE PATCH - BUG-004: Inicializar handlers defensivos para todos botões sociais
+        // Evita erro de API Key ao clicar em compartilhar sem chatbot ativado
+        function initSocialButtonsDefensiveHandlers() {
+            const showActivationError = () => {
+                showToast('⚠️ Ative o assistente primeiro antes de compartilhar!', 'error');
+            };
+
+            if (shareWhatsApp) shareWhatsApp.onclick = showActivationError;
+            if (shareInstagram) shareInstagram.onclick = showActivationError;
+            if (shareFacebook) shareFacebook.onclick = showActivationError;
+            if (shareYouTube) shareYouTube.onclick = showActivationError;
+            if (shareTikTok) shareTikTok.onclick = showActivationError;
+            if (shareTwitter) shareTwitter.onclick = showActivationError;
+            if (shareKwai) shareKwai.onclick = showActivationError;
+            if (shareLinkedIn) shareLinkedIn.onclick = showActivationError;
+            if (shareTelegram) shareTelegram.onclick = showActivationError;
+            if (shareMessenger) shareMessenger.onclick = showActivationError;
+        }
+
+        // Inicializar handlers defensivos imediatamente
+        initSocialButtonsDefensiveHandlers();
+
         function showLoading() {
             activateChatbotBtn.disabled = true;
             activateChatbotBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ativando...';
