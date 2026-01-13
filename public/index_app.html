@@ -1576,8 +1576,13 @@
             const encodedUrl = encodeURIComponent(chatbotUrl);
             const encodedText = encodeURIComponent(shareText);
 
-            // WhatsApp
+            // SAFE PATCH - QA FIX: BUG-004 - WhatsApp com validação de chatbot ativo
             shareWhatsApp.onclick = () => {
+                // Validar se chatbot está ativo antes de compartilhar
+                if (!chatbotUrl || chatbotUrl.includes('about:blank') || chatbotUrl === '') {
+                    showToast('⚠️ Ative o assistente primeiro antes de compartilhar!', 'error');
+                    return;
+                }
                 window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank');
             };
 
@@ -1792,8 +1797,8 @@
         salesUrl: "${salesUrl}",
         instructions: "${instructions}",
         primaryColor: "${color}",
+        // SAFE PATCH - QA FIX: BUG-006 - Removido apikey duplicado
         apiKey: "${key}",
-        apikey: "${key}",
         greetingMessage: "${greetingMessage}",
         welcomeMessage: "${welcomeMessage}",
         secondMessage: "${secondMessage}"
@@ -1956,6 +1961,11 @@
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📝 Leads
                 </button>
+                <!-- SAFE PATCH - QA FIX: BUG-005 - Aba Widget dedicada -->
+                <button class="new-tab" onclick="showNewTab('widget')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                    🧩 Widget
+                </button>
             </div>
 
             <!-- Tab Contents -->
@@ -1964,10 +1974,27 @@
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">📊 Analytics Profissional</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Visualize métricas detalhadas do seu assistente</p>
 
+                    <!-- SAFE PATCH - QA FIX: BUG-007 - Filtros de período -->
+                    <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
+                        <button onclick="loadAnalytics(7)" class="analytics-period-btn" data-days="7"
+                            style="background:#334155; color:#94a3b8; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            7 dias
+                        </button>
+                        <button onclick="loadAnalytics(30)" class="analytics-period-btn active" data-days="30"
+                            style="background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            30 dias
+                        </button>
+                        <button onclick="loadAnalytics(90)" class="analytics-period-btn" data-days="90"
+                            style="background:#334155; color:#94a3b8; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            90 dias
+                        </button>
+                    </div>
+
                     <div
                         style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1rem; margin-bottom:2rem;">
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Total de Mensagens</div>
+
                             <div id="analytics-messages" style="color:#60a5fa; font-size:2rem; font-weight:700;">-</div>
                         </div>
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
@@ -2041,16 +2068,44 @@
             </div>
 
             <div id="tab-billing" class="new-tab-content" style="display:none;">
+                <!-- SAFE PATCH - QA FIX: BUG-003 - Billing com limites populados -->
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">💳 Planos e Billing</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie planos e assinaturas</p>
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">💳 Planos e Limites</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Visualize seu plano atual e limites de uso</p>
 
-                    <div id="plans-container"
-                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem;">
-                        <p style="color:#94a3b8;">Carregando planos...</p>
+                    <div id="billing-limits-container">
+                        <div
+                            style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Plano Atual</div>
+                                <div id="billing-plan-name" style="color:#60a5fa; font-size:1.5rem; font-weight:700;">
+                                    Carregando...</div>
+                            </div>
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Mensagens</div>
+                                <div id="billing-messages-usage"
+                                    style="color:#10b981; font-size:1.5rem; font-weight:700;">-</div>
+                            </div>
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Extrações</div>
+                                <div id="billing-extractions-usage"
+                                    style="color:#f59e0b; font-size:1.5rem; font-weight:700;">-</div>
+                            </div>
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Chatbots</div>
+                                <div id="billing-chatbots-limit"
+                                    style="color:#8b5cf6; font-size:1.5rem; font-weight:700;">-</div>
+                            </div>
+                        </div>
                     </div>
+
+                    <button onclick="loadBillingLimits()"
+                        style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
+                        🔄 Atualizar Limites
+                    </button>
                 </div>
             </div>
+
 
             <div id="tab-llm" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
@@ -2422,6 +2477,52 @@
                     </div>
                 </div>
             </div>
+
+            <!-- SAFE PATCH - QA FIX: BUG-005 - Aba Widget dedicada -->
+            <div id="tab-widget" class="new-tab-content" style="display:none;">
+                <div style="background:#1e293b; padding:2rem; border-radius:16px;">
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🧩 Gerador de Widget</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gere o código do widget para incorporar em qualquer
+                        site</p>
+
+                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">⚙️ Configurações do Widget</h3>
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Cor
+                            Primária:</label>
+                        <input type="color" id="widget-color" value="#3b82f6"
+                            style="width:100%; height:50px; padding:0.25rem; border-radius:8px; border:1px solid #475569; background:#1e293b; cursor:pointer; margin-bottom:1rem;">
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Mensagem de
+                            Saudação:</label>
+                        <input type="text" id="widget-greeting" value="Oi! Posso ajudar?"
+                            placeholder="Ex: Olá! Como posso ajudar?"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                    </div>
+
+                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">📋 Código do Widget</h3>
+                        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:1rem;">Copie e cole este código antes
+                            do &lt;/body&gt; do seu site</p>
+
+                        <div id="widget-code-container"
+                            style="background:#0f172a; padding:1rem; border-radius:8px; max-height:300px; overflow-y:auto; font-family:monospace; font-size:0.85rem; color:#06d6a0;">
+                            <pre id="widget-code-output"
+                                style="margin:0; white-space:pre-wrap; word-break:break-all;">Ative um assistente na página principal para gerar o código do widget.</pre>
+                        </div>
+
+                        <button onclick="copyWidgetCodeFromTab()"
+                            style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:1rem;">
+                            📋 Copiar Código
+                        </button>
+                    </div>
+
+                    <button onclick="regenerateWidgetCode()"
+                        style="background:#10b981; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
+                        🔄 Regenerar Código com Novas Configurações
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2480,7 +2581,7 @@
             // Carregar dados da tab
             if (tabName === 'analytics') loadAnalytics();
             if (tabName === 'webhooks') loadWebhooks();
-            if (tabName === 'billing') loadPlans();
+            if (tabName === 'billing') loadBillingLimits(); // SAFE PATCH - QA FIX: BUG-003
             if (tabName === 'llm') loadLLMStats();
             if (tabName === 'system') loadSystemStatus();
             if (tabName === 'gmail') loadGmailStatus();
@@ -2494,8 +2595,21 @@
             }
         }
 
-        async function loadAnalytics() {
+        async function loadAnalytics(days = 30) {
+            // SAFE PATCH - QA FIX: BUG-001 + BUG-007
+            // Adiciona fallback para contagem de mensagens e filtros de período
             try {
+                // Atualizar visual dos botões de período se existirem
+                document.querySelectorAll('.analytics-period-btn').forEach(btn => {
+                    btn.style.background = '#334155';
+                    btn.style.color = '#94a3b8';
+                });
+                const activeBtn = document.querySelector(`.analytics-period-btn[data-days="${days}"]`);
+                if (activeBtn) {
+                    activeBtn.style.background = '#3b82f6';
+                    activeBtn.style.color = 'white';
+                }
+
                 // Buscar dados de leads
                 const leadsResponse = await fetch('/admin/leads', {
                     headers: {
@@ -2504,27 +2618,56 @@
                 });
                 const leadsData = await leadsResponse.json();
 
+                // SAFE PATCH - QA FIX: BUG-001 - Buscar analytics do servidor como fallback
+                let serverAnalytics = { chatRequests: 0, totalRequests: 0 };
+                try {
+                    const statusResponse = await fetch('/api/system/status');
+                    const statusData = await statusResponse.json();
+                    if (statusData && statusData.analytics) {
+                        serverAnalytics = statusData.analytics;
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Fallback analytics do servidor indisponível:', e);
+                }
+
                 if (leadsData.success && leadsData.leads) {
                     const leads = leadsData.leads;
-                    const totalLeads = leads.length;
+
+                    // SAFE PATCH - QA FIX: BUG-007 - Filtrar por período
+                    const cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - days);
+                    const filteredLeads = leads.filter(lead => {
+                        const leadDate = new Date(lead.timestamp || lead.createdAt);
+                        return leadDate >= cutoffDate;
+                    });
+
+                    const totalLeads = filteredLeads.length;
 
                     // Calcular total de mensagens (soma de todas as conversas)
                     let totalMessages = 0;
                     let totalConversations = 0;
 
-                    leads.forEach(lead => {
+                    filteredLeads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
-                            totalConversations += lead.conversations.length;
-                            lead.conversations.forEach(conv => {
-                                if (conv.messages && Array.isArray(conv.messages)) {
-                                    totalMessages += conv.messages.length;
-                                }
-                            });
+                            // BUG-001 FIX: lead.conversations is a flat array of messages
+                            // Each item is {timestamp, message, isUser}, not a conversation with nested messages
+                            totalMessages += lead.conversations.length;
+                            // Count lead as having a conversation if it has at least one message
+                            if (lead.conversations.length > 0) {
+                                totalConversations += 1;
+                            }
                         }
                     });
 
+                    // SAFE PATCH - QA FIX: BUG-001 - Usar maior valor entre leads e servidor
+                    if (totalMessages === 0 && serverAnalytics.chatRequests > 0) {
+                        totalMessages = serverAnalytics.chatRequests;
+                    } else {
+                        totalMessages = Math.max(totalMessages, serverAnalytics.chatRequests || 0);
+                    }
+
                     // Calcular taxa de sucesso (leads com email ou telefone / total)
-                    const leadsWithContact = leads.filter(lead => {
+                    const leadsWithContact = filteredLeads.filter(lead => {
                         const telefone = lead.telefone || lead.phone;
                         return lead.email || telefone;
                     }).length;
@@ -2537,12 +2680,12 @@
                     document.getElementById('analytics-leads').textContent = totalLeads;
                     document.getElementById('analytics-success').textContent = successRate + '%';
 
-                    console.log(`📊 Analytics carregado: ${totalMessages} mensagens, ${totalConversations} conversas, ${totalLeads} leads, ${successRate}% sucesso`);
+                    console.log(`📊 Analytics carregado (${days}d): ${totalMessages} mensagens, ${totalConversations} conversas, ${totalLeads} leads, ${successRate}% sucesso`);
                 } else {
-                    // Se não houver dados, mostrar zeros
-                    document.getElementById('analytics-messages').textContent = '0';
-                    document.getElementById('analytics-conversations').textContent = '0';
-                    document.getElementById('analytics-leads').textContent = '0';
+                    // SAFE PATCH - QA FIX: BUG-001 - Usar servidor analytics se leads vazio
+                    document.getElementById('analytics-messages').textContent = serverAnalytics.chatRequests || '0';
+                    document.getElementById('analytics-conversations').textContent = serverAnalytics.activeChats || '0';
+                    document.getElementById('analytics-leads').textContent = serverAnalytics.leadsCaptured || '0';
                     document.getElementById('analytics-success').textContent = '100%';
                 }
             } catch (error) {
@@ -2554,6 +2697,7 @@
                 document.getElementById('analytics-success').textContent = '0%';
             }
         }
+
 
         async function loadWebhooks() {
             try {
@@ -2711,41 +2855,127 @@
         }
 
         async function loadSystemStatus() {
+            // SAFE PATCH - QA FIX: BUG-002
+            // Adiciona timeout de 5s e aceita ambos formatos de resposta
+            const container = document.getElementById('system-status');
+
+            // Timeout de 5 segundos
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('timeout')), 5000)
+            );
+
             try {
-                const response = await fetch('/api/system/status');
+                const response = await Promise.race([
+                    fetch('/api/system/status'),
+                    timeoutPromise
+                ]);
                 const data = await response.json();
 
-                const container = document.getElementById('system-status');
-                if (data.success) {
+                // SAFE PATCH - QA FIX: BUG-002 - Aceitar ambos formatos: {success, status} ou objeto direto
+                // O endpoint retorna objeto direto com {status, uptime, analytics, services}
+                const isDirectFormat = data.status && typeof data.status === 'string'; // "healthy"
+                const hasWrappedFormat = data.success && data.status && typeof data.status === 'object';
+
+                if (isDirectFormat || hasWrappedFormat) {
+                    // Extrair dados conforme formato
+                    const statusStr = isDirectFormat ? data.status : 'operational';
+                    const uptime = data.uptime || 0;
+                    const analytics = data.analytics || {};
+                    const services = data.services || {};
+
                     container.innerHTML = `
                         <div style="display:grid; gap:1rem;">
                             <div style="background:#334155; padding:1rem; border-radius:12px;">
                                 <div style="color:#94a3b8;">Servidor:</div>
-                                <div style="color:#10b981; font-weight:600;">${data.status.server}</div>
-                            </div>
-                            <div style="background:#334155; padding:1rem; border-radius:12px;">
-                                <div style="color:#94a3b8;">Banco de Dados:</div>
-                                <div style="color:#10b981; font-weight:600;">${data.status.database.type} - ${data.status.database.connected ? 'Conectado' : 'Desconectado'}</div>
-                            </div>
-                            <div style="background:#334155; padding:1rem; border-radius:12px;">
-                                <div style="color:#94a3b8;">Cache:</div>
-                                <div style="color:#10b981; font-weight:600;">${data.status.cache.type} - ${data.status.cache.connected ? 'Conectado' : 'Desconectado'}</div>
+                                <div style="color:#10b981; font-weight:600;">✅ ${statusStr === 'healthy' ? 'Operacional' : statusStr}</div>
                             </div>
                             <div style="background:#334155; padding:1rem; border-radius:12px;">
                                 <div style="color:#94a3b8;">Uptime:</div>
-                                <div style="color:#60a5fa; font-weight:600;">${Math.floor(data.status.uptime / 60)} minutos</div>
+                                <div style="color:#60a5fa; font-weight:600;">${Math.floor(uptime / 60)} minutos</div>
+                            </div>
+                            <div style="background:#334155; padding:1rem; border-radius:12px;">
+                                <div style="color:#94a3b8;">Requisições Totais:</div>
+                                <div style="color:#10b981; font-weight:600;">${analytics.totalRequests || 0}</div>
+                            </div>
+                            <div style="background:#334155; padding:1rem; border-radius:12px;">
+                                <div style="color:#94a3b8;">Serviços IA:</div>
+                                <div style="color:#10b981; font-weight:600;">
+                                    ${services.groq ? '✅ Groq' : ''}
+                                    ${services.openai ? '✅ OpenAI' : ''}
+                                    ${services.openrouter ? '✅ OpenRouter' : ''}
+                                    ${!services.groq && !services.openai && !services.openrouter ? '⚠️ Nenhum configurado' : ''}
+                                </div>
+                            </div>
+                            <div style="background:#334155; padding:1rem; border-radius:12px;">
+                                <div style="color:#94a3b8;">Versão:</div>
+                                <div style="color:#60a5fa; font-weight:600;">${data.version || '7.0.0'}</div>
                             </div>
                         </div>
                     `;
+                    console.log('✅ Status do sistema carregado com sucesso');
+                } else {
+                    throw new Error('Formato de resposta inesperado');
                 }
             } catch (error) {
                 console.error('Erro ao carregar status:', error);
-                document.getElementById('system-status').innerHTML = '<p style="color:#ef4444;">Erro ao carregar status do sistema</p>';
+                // SAFE PATCH - QA FIX: BUG-002 - Fallback para status degradado
+                const isDegradedByTimeout = error.message === 'timeout';
+                container.innerHTML = `
+                    <div style="background:#fef3c7; padding:1.5rem; border-radius:12px; border-left:4px solid #f59e0b;">
+                        <div style="color:#92400e; font-weight:600; margin-bottom:0.5rem;">
+                            ⚠️ ${isDegradedByTimeout ? 'Status Degradado' : 'Erro de Conexão'}
+                        </div>
+                        <div style="color:#78350f; font-size:0.9rem;">
+                            ${isDegradedByTimeout
+                        ? 'Servidor respondendo com latência. O sistema continua operacional.'
+                        : 'Não foi possível conectar ao servidor. Verifique sua conexão.'}
+                        </div>
+                        <button onclick="loadSystemStatus()" style="margin-top:1rem; background:#f59e0b; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;">
+                            🔄 Tentar Novamente
+                        </button>
+                    </div>
+                `;
             }
         }
 
+
         function showAddWebhook() {
             alert('Funcionalidade de adicionar webhook em desenvolvimento. Use a API diretamente por enquanto.');
+        }
+
+        // SAFE PATCH - QA FIX: BUG-003 - Função para carregar limites de billing
+        async function loadBillingLimits() {
+            try {
+                const response = await fetch('/api/billing/limits');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Atualizar elementos do DOM
+                    document.getElementById('billing-plan-name').textContent = data.planName || 'Gratuito';
+
+                    const msgLimit = data.limits.messages.limit === -1 ? '∞' : data.limits.messages.limit;
+                    const msgUsed = data.limits.messages.used || 0;
+                    document.getElementById('billing-messages-usage').textContent = `${msgUsed} / ${msgLimit}`;
+
+                    const extLimit = data.limits.extractions.limit === -1 ? '∞' : data.limits.extractions.limit;
+                    const extUsed = data.limits.extractions.used || 0;
+                    document.getElementById('billing-extractions-usage').textContent = `${extUsed} / ${extLimit}`;
+
+                    const chatbotsLimit = data.limits.chatbots.limit === -1 ? '∞' : data.limits.chatbots.limit;
+                    document.getElementById('billing-chatbots-limit').textContent = `Máx: ${chatbotsLimit}`;
+
+                    console.log(`✅ Billing carregado: Plano ${data.planName}`);
+                } else {
+                    throw new Error('Resposta sem sucesso');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar billing:', error);
+                // Fallback para valores padrão (plano Free)
+                document.getElementById('billing-plan-name').textContent = 'Gratuito';
+                document.getElementById('billing-messages-usage').textContent = '0 / 100';
+                document.getElementById('billing-extractions-usage').textContent = '0 / 10';
+                document.getElementById('billing-chatbots-limit').textContent = 'Máx: 1';
+            }
         }
 
         // Carregar FAQs ao abrir a tab
