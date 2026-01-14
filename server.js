@@ -4769,7 +4769,7 @@ app.post("/api/extract-enhanced", async (req, res) => {
 app.post("/api/extract", async (req, res) => {
     analytics.extractRequests++;
     try {
-        const { url, instructions, robotName } = req.body || {};
+        const { url, instructions, robotName, forceRefresh } = req.body || {};
 
         console.log("📥 Recebendo requisição para extrair:", url);
 
@@ -4789,7 +4789,13 @@ app.post("/api/extract", async (req, res) => {
             });
         }
 
-        logger.info(`Starting extraction for URL: ${url}`);
+        // SAFE PATCH - BUG-EXT-001: Permitir bypass do cache se forceRefresh=true
+        if (forceRefresh) {
+            dataCache.delete(url);
+            console.log(`🔄 [FORCE REFRESH] Cache limpo para: ${url}`);
+        }
+
+        logger.info(`Starting extraction for URL: ${url} (forceRefresh: ${!!forceRefresh})`);
 
         const extractedData = await extractPageData(url);
 

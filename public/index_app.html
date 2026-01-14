@@ -1668,12 +1668,18 @@
             showLoading();
 
             try {
+                // SAFE PATCH - BUG-EXT-001: Sempre forçar nova extração ao ativar assistente
                 const response = await fetch('/api/extract', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ url: salesUrl, instructions: customInstructions, robotName: robotName })
+                    body: JSON.stringify({
+                        url: salesUrl,
+                        instructions: customInstructions,
+                        robotName: robotName,
+                        forceRefresh: true  // Sempre fazer extração completa
+                    })
                 });
 
                 const data = await response.json();
@@ -1760,6 +1766,11 @@
 
                 // Carregar dados de leads
                 loadDashboardLeads();
+
+                // SAFE PATCH - BUG-WIDGET-001: Sincronizar código na aba Widget
+                if (typeof updateWidgetTabCode === 'function') {
+                    updateWidgetTabCode();
+                }
 
             } catch (error) {
                 console.error('Erro ao ativar chatbot:', error);
@@ -2615,7 +2626,67 @@
                 loadLeadsStats();
                 loadBackups();
             }
+            // SAFE PATCH - BUG-WIDGET-001: Sincronizar código quando abrir aba Widget
+            if (tabName === 'widget') {
+                updateWidgetTabCode();
+            }
         }
+
+        // SAFE PATCH - BUG-WIDGET-001: Funções da aba Widget
+        function copyWidgetCodeFromTab() {
+            const codeOutput = document.getElementById('widget-code-output');
+            if (!codeOutput || codeOutput.textContent.includes('Ative um assistente')) {
+                showToast('⚠️ Ative um assistente primeiro na página principal!', 'error');
+                return;
+            }
+            navigator.clipboard.writeText(codeOutput.textContent).then(() => {
+                showToast('✅ Código do widget copiado!', 'success');
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+                showToast('❌ Erro ao copiar código', 'error');
+            });
+        }
+
+        function regenerateWidgetCode() {
+            const color = document.getElementById('widget-color').value || '#3b82f6';
+            const greeting = document.getElementById('widget-greeting').value || 'Oi! Posso ajudar?';
+
+            // Recuperar dados do assistente ativo
+            const robotName = document.getElementById('robotName').value;
+            const salesUrl = document.getElementById('salesUrl').value;
+            const instructions = document.getElementById('customInstructions').value;
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+
+            if (!robotName || !salesUrl) {
+                showToast('⚠️ Configure e ative um assistente primeiro!', 'error');
+                return;
+            }
+
+            // Gerar novo código com configurações personalizadas
+            const widgetCode = generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, color);
+            document.getElementById('widget-code-output').textContent = widgetCode;
+
+            // Atualizar também o código principal na página inicial
+            const mainWidgetDisplay = document.getElementById('widgetCodeDisplay');
+            if (mainWidgetDisplay) {
+                mainWidgetDisplay.textContent = widgetCode;
+            }
+
+            showToast('✅ Código regenerado com novas configurações!', 'success');
+        }
+
+        // Sincronizar código do widget entre página principal e aba Widget
+        function updateWidgetTabCode() {
+            const mainWidgetCode = document.getElementById('widgetCodeDisplay');
+            const tabWidgetCode = document.getElementById('widget-code-output');
+            if (mainWidgetCode && tabWidgetCode && mainWidgetCode.textContent && !mainWidgetCode.textContent.includes('LinkMagicoWidgetConfig')) {
+                // Só sincronizar se há código gerado na página principal
+                if (mainWidgetCode.textContent.includes('LinkMágico Chatbot Widget')) {
+                    tabWidgetCode.textContent = mainWidgetCode.textContent;
+                }
+            }
+        }
+
 
         async function loadAnalytics(days = 30) {
             // SAFE PATCH - QA FIX: BUG-001 + BUG-007
