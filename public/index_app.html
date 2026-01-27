@@ -1814,6 +1814,17 @@
         });
 
         // ===== FUNÇÃO GERADORA DE SCRIPT INLINE MODERNO V2.0 =====
+        // SAFE PATCH - BUG-WIDGET-002: Função para escapar strings para código JavaScript
+        function escapeForJS(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/\\/g, '\\\\')    // Escapa backslashes primeiro
+                .replace(/"/g, '\\"')      // Escapa aspas duplas
+                .replace(/\n/g, '\\n')     // Escapa quebras de linha
+                .replace(/\r/g, '\\r')     // Escapa retorno de carro
+                .replace(/\t/g, '\\t');    // Escapa tabs
+        }
+
         function generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, primaryColor) {
             const greetingMessage = 'Oi! Posso ajudar?';
             const welcomeMessage = 'Olá 👋 Muito bom ter você aqui!';
@@ -1822,20 +1833,29 @@
             const key = apiKey || 'SUA_API_KEY';
             const apiBase = window.location.origin;
 
+            // SAFE PATCH - BUG-WIDGET-002: Escapar todas as strings para evitar quebra de sintaxe JS
+            const safeRobotName = escapeForJS(robotName);
+            const safeSalesUrl = escapeForJS(salesUrl);
+            const safeInstructions = escapeForJS(instructions);
+            const safeGreeting = escapeForJS(greetingMessage);
+            const safeWelcome = escapeForJS(welcomeMessage);
+            const safeSecond = escapeForJS(secondMessage);
+
             return `<!-- LinkMágico Chatbot Widget v2.0 - Design Moderno -->
 <script>
 (function() {
     var config = {
-        robotName: "${robotName}",
-        salesUrl: "${salesUrl}",
-        instructions: "${instructions}",
+        robotName: "${safeRobotName}",
+        salesUrl: "${safeSalesUrl}",
+        instructions: "${safeInstructions}",
         primaryColor: "${color}",
         // SAFE PATCH - QA FIX: BUG-006 - Removido apikey duplicado
         apiKey: "${key}",
-        greetingMessage: "${greetingMessage}",
-        welcomeMessage: "${welcomeMessage}",
-        secondMessage: "${secondMessage}"
+        greetingMessage: "${safeGreeting}",
+        welcomeMessage: "${safeWelcome}",
+        secondMessage: "${safeSecond}"
     };
+
     var apiBase = "${apiBase}";
     if (!config.apiKey || config.apiKey === "SUA_API_KEY") { 
         console.error("❌ LinkMágico Widget: API Key não configurada!"); 
