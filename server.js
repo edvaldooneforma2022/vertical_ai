@@ -37,6 +37,7 @@ const { chatgptManager } = require('./chatgpt-integration');
 const { crmIntegrations } = require('./crm-integrations');
 const { whitelabelManager } = require('./whitelabel');
 const { structuredLeadsManager } = require('./structured-leads');
+const { ShortUrlGenerator } = require('./short-url-generator');
 console.log('✅ Módulos V3.0 carregados');
 
 const crypto = require("crypto");

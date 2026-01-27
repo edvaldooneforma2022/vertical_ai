@@ -1189,6 +1189,79 @@ const DatabaseHelpers = {
             console.error('❌ Erro ao deletar configurações ChatGPT:', error);
             throw error;
         }
+    },
+
+    // ===== SHORT URL MANAGEMENT =====
+
+    /**
+     * Verificar se código curto já existe
+     */
+    async shortCodeExists(code) {
+        const query = USE_POSTGRES
+            ? `SELECT COUNT(*) as count FROM short_urls WHERE short_code = $1 AND status = 'active'`
+            : `SELECT COUNT(*) as count FROM short_urls WHERE short_code = ? AND status = 'active'`;
+
+        const result = await db.query(query, [code]);
+        const count = USE_POSTGRES ? parseInt(result.rows[0].count) : result.rows[0].count;
+        return count > 0;
+    },
+
+    /**
+     * Criar novo short URL
+     */
+    async createShortUrl(apiKey, data) {
+        const { shortCode, longUrl, robotName, salesUrl, instructions, metadata } = data;
+
+        const query = USE_POSTGRES
+            ? `INSERT INTO short_urls (short_code, api_key, long_url, robot_name, sales_url, instructions, metadata, status)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
+               RETURNING *`
+            : `INSERT INTO short_urls (short_code, api_key, long_url, robot_name, sales_url, instructions, metadata, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`;
+
+        const params = [
+            shortCode,
+            apiKey,
+            longUrl,
+            robotName || null,
+            salesUrl || null,
+            instructions || null,
+            JSON.stringify(metadata || {})
+        ];
+
+        const result = await db.query(query, params);
+        return result.rows[0];
+    },
+
+    /**
+     * Buscar short URL por código
+     */
+    async getShortUrlByCode(code) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM short_urls WHERE short_code = $1 AND status = 'active'`
+            : `SELECT * FROM short_urls WHERE short_code = ? AND status = 'active'`;
+
+        const result = await db.query(query, [code]);
+        const shortUrl = result.rows[0];
+
+        if (shortUrl && !USE_POSTGRES) {
+            shortUrl.metadata = JSON.parse(shortUrl.metadata || '{}');
+        }
+
+        // Incrementar contador de acessos
+        if (shortUrl) {
+            const updateQuery = USE_POSTGRES
+                ? `UPDATE short_urls 
+                   SET access_count = access_count + 1, last_accessed = CURRENT_TIMESTAMP 
+                   WHERE short_code = $1`
+                : `UPDATE short_urls 
+                   SET access_count = access_count + 1, last_accessed = datetime('now') 
+                   WHERE short_code = ?`;
+
+            await db.query(updateQuery, [code]);
+        }
+
+        return shortUrl;
     }
 };
 
