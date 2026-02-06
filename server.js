@@ -109,6 +109,32 @@ try {
 
 console.log('✅ Módulos V8.0 carregados (com fallbacks)');
 
+// ===== MÓDULOS V8.0 REFATORADOS (Feature Flag: FEATURE_MODULAR_AI) =====
+let aiSystemsModular = null;
+let leadsModular = null;
+let extractionModular = null;
+
+try {
+    aiSystemsModular = require('./lib/ai-systems');
+    console.log('✅ [V8.0] AI Systems Modular carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] AI Systems Modular não disponível:', e.message);
+}
+
+try {
+    leadsModular = require('./lib/leads');
+    console.log('✅ [V8.0] Leads Modular carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Leads Modular não disponível:', e.message);
+}
+
+try {
+    extractionModular = require('./lib/extraction');
+    console.log('✅ [V8.0] Extraction Modular carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Extraction Modular não disponível:', e.message);
+}
+
 const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
