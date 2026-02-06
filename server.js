@@ -4437,7 +4437,7 @@ app.get("/api/system/status", (req, res) => {
         status: "healthy",
         uptime: Math.floor(uptime),
         timestamp: new Date().toISOString(),
-        version: "7.0.0",
+        version: "8.0.0",
         analytics: {
             totalRequests: analytics.totalRequests,
             chatRequests: analytics.chatRequests,
@@ -4456,7 +4456,8 @@ app.get("/api/system/status", (req, res) => {
             openrouter: !!process.env.OPENROUTER_API_KEY,
             puppeteer: !!puppeteer,
             superinteligencia: true
-        }
+        },
+        v8_features: featureFlags ? featureFlags.getEnabledFlags() : []
     });
 });
 
@@ -4469,7 +4470,7 @@ app.get("/health", (req, res) => {
         status: "healthy",
         uptime: Math.floor(uptime),
         timestamp: new Date().toISOString(),
-        version: "7.0.0",
+        version: "8.0.0",
         analytics: {
             totalRequests: analytics.totalRequests,
             chatRequests: analytics.chatRequests,
@@ -4488,7 +4489,8 @@ app.get("/health", (req, res) => {
             openrouter: !!process.env.OPENROUTER_API_KEY,
             puppeteer: !!puppeteer,
             superinteligencia: true
-        }
+        },
+        v8_features: featureFlags ? featureFlags.getEnabledFlags() : []
     });
 });
 
