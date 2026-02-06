@@ -1,0 +1,15 @@
+{
+  "flags": {
+    "FEATURE_PERSISTENT_MEMORY": true,
+    "FEATURE_ENHANCED_SENTIMENT": true,
+    "FEATURE_AUDIT_LOGGING": true,
+    "FEATURE_ADVANCED_RATE_LIMIT": true,
+    "FEATURE_ENCRYPT_SENSITIVE": false,
+    "FEATURE_MODULAR_AI": false,
+    "FEATURE_SMART_ESCALATION": true,
+    "FEATURE_CONVERSATION_CONTEXT": true
+  },
+  "tenantOverrides": {},
+  "updatedAt": "2026-02-06T07:06:00Z",
+  "_comment": "Feature flags V8.0 ativadas - Criado automaticamente"
+}
