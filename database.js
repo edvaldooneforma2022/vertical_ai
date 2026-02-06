@@ -250,6 +250,66 @@ function getPostgresTables() {
             FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
         )`,
 
+        // ========================================
+        // TABELAS V8.0 - NOVAS FUNCIONALIDADES
+        // ========================================
+
+        // Tabela de Memória Conversacional Persistente (V8.0)
+        `CREATE TABLE IF NOT EXISTS conversation_memory (
+            id VARCHAR(255) PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            tenant_id VARCHAR(255),
+            memory_type VARCHAR(50) DEFAULT 'conversation',
+            
+            -- Dados da memória
+            preferences JSONB DEFAULT '{}',
+            interaction_history JSONB DEFAULT '[]',
+            emotional_profile JSONB DEFAULT '{}',
+            topics_discussed JSONB DEFAULT '[]',
+            
+            -- Estatísticas
+            total_interactions INTEGER DEFAULT 0,
+            avg_sentiment REAL DEFAULT 0,
+            last_emotion VARCHAR(50),
+            
+            -- Metadados
+            session_data JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP,
+            
+            UNIQUE(user_id, tenant_id)
+        )`,
+
+        // Tabela de Logs de Auditoria (V8.0)
+        `CREATE TABLE IF NOT EXISTS audit_logs (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255),
+            action VARCHAR(100) NOT NULL,
+            actor_type VARCHAR(50),
+            actor_id VARCHAR(255),
+            target_type VARCHAR(50),
+            target_id VARCHAR(255),
+            details JSONB,
+            severity VARCHAR(20) DEFAULT 'info',
+            ip_address VARCHAR(45),
+            user_agent TEXT,
+            session_id VARCHAR(255),
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Feature Flags (V8.0)
+        `CREATE TABLE IF NOT EXISTS feature_flags (
+            id SERIAL PRIMARY KEY,
+            flag_name VARCHAR(100) UNIQUE NOT NULL,
+            enabled BOOLEAN DEFAULT false,
+            description TEXT,
+            tenant_overrides JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
         // Índices para performance
         `CREATE INDEX IF NOT EXISTS idx_conversations_chatbot ON conversations(chatbot_id)`,
         `CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp)`,
@@ -261,7 +321,15 @@ function getPostgresTables() {
         `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`,
         `CREATE INDEX IF NOT EXISTS idx_short_urls_code ON short_urls(short_code)`,
         `CREATE INDEX IF NOT EXISTS idx_short_urls_api_key ON short_urls(api_key)`,
-        `CREATE INDEX IF NOT EXISTS idx_whatsapp_settings_api_key ON whatsapp_settings(api_key)`
+        `CREATE INDEX IF NOT EXISTS idx_whatsapp_settings_api_key ON whatsapp_settings(api_key)`,
+
+        // Índices para tabelas V8.0
+        `CREATE INDEX IF NOT EXISTS idx_memory_user ON conversation_memory(user_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_memory_tenant ON conversation_memory(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_memory_expires ON conversation_memory(expires_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`
     ];
 }
 
@@ -435,7 +503,74 @@ function getSQLiteTables() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
-        )`
+        )`,
+
+        // ========================================
+        // TABELAS V8.0 - NOVAS FUNCIONALIDADES (SQLite)
+        // ========================================
+
+        // Tabela de Memória Conversacional Persistente (V8.0)
+        `CREATE TABLE IF NOT EXISTS conversation_memory (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            tenant_id TEXT,
+            memory_type TEXT DEFAULT 'conversation',
+            
+            -- Dados da memória
+            preferences TEXT DEFAULT '{}',
+            interaction_history TEXT DEFAULT '[]',
+            emotional_profile TEXT DEFAULT '{}',
+            topics_discussed TEXT DEFAULT '[]',
+            
+            -- Estatísticas
+            total_interactions INTEGER DEFAULT 0,
+            avg_sentiment REAL DEFAULT 0,
+            last_emotion TEXT,
+            
+            -- Metadados
+            session_data TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME,
+            
+            UNIQUE(user_id, tenant_id)
+        )`,
+
+        // Tabela de Logs de Auditoria (V8.0)
+        `CREATE TABLE IF NOT EXISTS audit_logs (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT,
+            action TEXT NOT NULL,
+            actor_type TEXT,
+            actor_id TEXT,
+            target_type TEXT,
+            target_id TEXT,
+            details TEXT,
+            severity TEXT DEFAULT 'info',
+            ip_address TEXT,
+            user_agent TEXT,
+            session_id TEXT,
+            metadata TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Feature Flags (V8.0)
+        `CREATE TABLE IF NOT EXISTS feature_flags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            flag_name TEXT UNIQUE NOT NULL,
+            enabled INTEGER DEFAULT 0,
+            description TEXT,
+            tenant_overrides TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Índices para tabelas V8.0
+        `CREATE INDEX IF NOT EXISTS idx_memory_user ON conversation_memory(user_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_memory_tenant ON conversation_memory(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`
     ];
 }
 

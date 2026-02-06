@@ -40,6 +40,75 @@ const { structuredLeadsManager } = require('./structured-leads');
 const { ShortUrlGenerator } = require('./short-url-generator');
 console.log('✅ Módulos V3.0 carregados');
 
+// ===== MÓDULOS V8.0 - MELHORIAS AVANÇADAS =====
+let featureFlags = null;
+let auditLogger = null;
+let persistentMemory = null;
+let enhancedSentiment = null;
+
+try {
+    const ffModule = require('./lib/feature-flags');
+    featureFlags = ffModule.featureFlags;
+    console.log('✅ [V8.0] Feature Flags carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Feature Flags não disponível:', e.message);
+}
+
+try {
+    const alModule = require('./lib/audit-logger');
+    auditLogger = alModule.auditLogger;
+    console.log('✅ [V8.0] Audit Logger carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Audit Logger não disponível:', e.message);
+}
+
+try {
+    const pmModule = require('./lib/persistent-memory');
+    persistentMemory = pmModule.persistentMemory;
+    console.log('✅ [V8.0] Persistent Memory carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Persistent Memory não disponível:', e.message);
+}
+
+try {
+    const esModule = require('./lib/enhanced-sentiment');
+    enhancedSentiment = esModule.enhancedSentiment;
+    console.log('✅ [V8.0] Enhanced Sentiment carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Enhanced Sentiment não disponível:', e.message);
+}
+
+// ===== MÓDULOS V8.0 - COMPLIANCE =====
+let rateLimiterAdvanced = null;
+let lgpdConsentManager = null;
+let encryptionManager = null;
+
+try {
+    const rlModule = require('./lib/rate-limiter-advanced');
+    rateLimiterAdvanced = rlModule.rateLimiterAdvanced;
+    console.log('✅ [V8.0] Rate Limiter Avançado carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Rate Limiter Avançado não disponível:', e.message);
+}
+
+try {
+    const lgpdModule = require('./lib/lgpd-consent');
+    lgpdConsentManager = lgpdModule.lgpdConsentManager;
+    console.log('✅ [V8.0] LGPD Consent Manager carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] LGPD Consent Manager não disponível:', e.message);
+}
+
+try {
+    const encModule = require('./lib/encryption');
+    encryptionManager = encModule.encryptionManager;
+    console.log('✅ [V8.0] Encryption Manager carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Encryption Manager não disponível:', e.message);
+}
+
+console.log('✅ Módulos V8.0 carregados (com fallbacks)');
+
 const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
@@ -260,7 +329,7 @@ class SuperInteligenciaConversacional {
     }
 
     // ===== SISTEMA DE MEMÓRIA CONVERSACIONAL AVANÇADA =====
-    atualizarMemoriaUsuario(userId, interacao) {
+    atualizarMemoriaUsuario(userId, interacao, tenantId = null) {
         if (!this.memoriaConversacional.has(userId)) {
             this.memoriaConversacional.set(userId, {
                 historico: [],
@@ -292,6 +361,28 @@ class SuperInteligenciaConversacional {
         this.atualizarPreferenciasUsuario(memoria, interacao);
 
         memoria.ultimaInteracao = new Date();
+
+        // ===== V8.0: PERSISTÊNCIA NO BANCO COM FEATURE FLAG =====
+        if (featureFlags && featureFlags.isEnabled('FEATURE_PERSISTENT_MEMORY')) {
+            try {
+                if (persistentMemory) {
+                    // Fire-and-forget para não bloquear
+                    persistentMemory.update(userId, {
+                        mensagem: interacao.mensagem,
+                        emocao: interacao.emocao,
+                        intencoes: interacao.intencoes,
+                        preferencias: memoria.preferencias,
+                        topicos: interacao.topicos || []
+                    }, tenantId).catch(err => {
+                        console.warn('⚠️ [V8.0] Erro ao persistir memória:', err.message);
+                    });
+                    console.log(`🧠 [V8.0] Memória persistida para usuário ${userId.substring(0, 8)}...`);
+                }
+            } catch (err) {
+                console.warn('⚠️ [V8.0] Erro ao salvar memória persistente:', err.message);
+                // Não propaga erro - Map local já tem os dados
+            }
+        }
     }
 
     atualizarPreferenciasUsuario(memoria, interacao) {
@@ -1863,6 +1954,34 @@ class SuperInteligenciaEmocional {
     }
 
     analisarEmocao(mensagem) {
+        // ===== V8.0: ENHANCED SENTIMENT COM FEATURE FLAG =====
+        if (featureFlags && featureFlags.isEnabled('FEATURE_ENHANCED_SENTIMENT')) {
+            try {
+                if (enhancedSentiment && enhancedSentiment.enabled) {
+                    const enhanced = enhancedSentiment.analyze(mensagem);
+                    // Usar resultado aprimorado se confiança > 0.5
+                    if (enhanced.confianca > 0.5) {
+                        console.log(`🎭 [V8.0] Análise Emocional Aprimorada: ${enhanced.emocao} (confiança: ${enhanced.confianca}) ${enhanced.urgencia ? '🚨 URGENTE' : ''}`);
+                        return {
+                            emocao: enhanced.emocao,
+                            intensidade: enhanced.intensidade,
+                            urgencia: enhanced.urgencia,
+                            // Dados extras do V8.0
+                            intencoes: enhanced.intencoes,
+                            scores: enhanced.scores,
+                            confianca: enhanced.confianca,
+                            v8Enhanced: true
+                        };
+                    }
+                    // Se confiança baixa, continua para análise básica
+                    console.log(`🎭 [V8.0] Confiança baixa (${enhanced.confianca}), usando análise básica`);
+                }
+            } catch (err) {
+                console.warn('⚠️ [V8.0] Erro no enhanced sentiment, usando fallback:', err.message);
+            }
+        }
+
+        // ===== FALLBACK: ANÁLISE V7.0 ORIGINAL =====
         const mensagemLower = mensagem.toLowerCase();
         let emocao = "neutro";
         let intensidade = 1;
@@ -5320,9 +5439,68 @@ function validateChatbotOwnership(req, res, next) {
 
 setupRoutes(app);
 
+// ===== ROTAS ADMIN V8.0 =====
+try {
+    const adminRoutesV8 = require('./lib/admin-routes-v8');
+    app.use('/admin/v8', adminRoutesV8);
+    console.log('✅ [V8.0] Rotas Admin montadas em /admin/v8');
+} catch (e) {
+    console.log('⚠️ [V8.0] Rotas Admin não disponíveis:', e.message);
+}
+
 // ===== INICIALIZAR SISTEMAS =====
 (async () => {
     await initialize();
+
+    // ===== INICIALIZAR MÓDULOS V8.0 =====
+    try {
+        // Inicializar Audit Logger com banco de dados
+        if (auditLogger && DatabaseHelpers) {
+            await auditLogger.initialize({ database: DatabaseHelpers });
+            console.log('✅ [V8.0] Audit Logger inicializado');
+        }
+
+        // Inicializar Persistent Memory com banco de dados
+        if (persistentMemory && DatabaseHelpers) {
+            await persistentMemory.initialize(DatabaseHelpers);
+            console.log('✅ [V8.0] Persistent Memory inicializado');
+        }
+
+        // Inicializar LGPD Consent Manager
+        if (lgpdConsentManager && DatabaseHelpers) {
+            await lgpdConsentManager.initialize(DatabaseHelpers);
+            console.log('✅ [V8.0] LGPD Consent Manager inicializado');
+        }
+
+        // Inicializar Rate Limiter Avançado
+        if (rateLimiterAdvanced && featureFlags && featureFlags.isEnabled('FEATURE_ADVANCED_RATE_LIMIT')) {
+            // Registrar middleware de rate limiting
+            app.use(rateLimiterAdvanced.middleware());
+            console.log('✅ [V8.0] Rate Limiter Avançado ativado como middleware');
+        }
+
+        // Log de inicialização V8.0
+        if (auditLogger && auditLogger.enabled) {
+            await auditLogger.log('system.startup', {
+                actorType: 'system',
+                details: {
+                    version: '8.0.0',
+                    modules: {
+                        featureFlags: !!featureFlags,
+                        auditLogger: true,
+                        persistentMemory: !!persistentMemory,
+                        enhancedSentiment: !!enhancedSentiment,
+                        rateLimiter: !!rateLimiterAdvanced,
+                        lgpdConsent: !!lgpdConsentManager,
+                        encryption: !!encryptionManager
+                    }
+                },
+                severity: 'info'
+            });
+        }
+    } catch (e) {
+        console.warn('⚠️ [V8.0] Erro ao inicializar módulos V8.0:', e.message);
+    }
 
     // Iniciar servidor
     const PORT = process.env.PORT || 3000;
@@ -5707,6 +5885,45 @@ setupRoutes(app);
     require('./chatgpt-routes')(app, logger);  // Carrega e registra rotas ChatGPT multi-tenant
     console.log('✅ Rotas Multi-Tenant ChatGPT integradas');
 
+    // ===== V8.0 ADMIN ROUTES - COMPLIANCE =====
+    try {
+        const adminRoutesV8 = require('./lib/admin-routes-v8');
+        app.use('/admin/v8', adminRoutesV8);
+        console.log('✅ [V8.0] Rotas Admin montadas em /admin/v8');
+    } catch (e) {
+        console.log('⚠️ [V8.0] Rotas Admin não disponíveis:', e.message);
+    }
+
+    // ===== V8.0 RATE LIMITER MIDDLEWARE (OPCIONAL - CONTROLADO POR FEATURE FLAG) =====
+    if (rateLimiterAdvanced && featureFlags && featureFlags.isEnabled('FEATURE_ADVANCED_RATE_LIMIT')) {
+        try {
+            app.use(rateLimiterAdvanced.middleware());
+            console.log('✅ [V8.0] Rate Limiter Avançado ATIVADO');
+        } catch (e) {
+            console.log('⚠️ [V8.0] Rate Limiter Avançado falhou:', e.message);
+        }
+    }
+
+    // ===== V8.0 LGPD CONSENT INITIALIZATION =====
+    if (lgpdConsentManager) {
+        try {
+            lgpdConsentManager.initialize(db);
+            console.log('✅ [V8.0] LGPD Consent Manager inicializado');
+        } catch (e) {
+            console.log('⚠️ [V8.0] LGPD Consent Manager falhou:', e.message);
+        }
+    }
+
+    // ===== V8.0 ENCRYPTION MANAGER INITIALIZATION =====
+    if (encryptionManager) {
+        try {
+            encryptionManager.initialize();
+            console.log('✅ [V8.0] Encryption Manager inicializado');
+        } catch (e) {
+            console.log('⚠️ [V8.0] Encryption Manager falhou:', e.message);
+        }
+    }
+
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 
@@ -5730,5 +5947,24 @@ setupRoutes(app);
         console.log(`👥 Jornada do cliente: Análise inteligente ATIVADA`);
         console.log(`🧠 Endpoint superinteligente: /api/process-chat-inteligente`);
         console.log(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
+
+        // ===== INFORMAÇÕES V8.0 =====
+        console.log('');
+        console.log('═══════════════════════════════════════════');
+        console.log('  📦 LINK MÁGICO V8.0 - MELHORIAS ATIVADAS');
+        console.log('═══════════════════════════════════════════');
+        console.log(`  🎛️ Feature Flags: ${featureFlags ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  📋 Audit Logger: ${auditLogger ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  🧠 Persistent Memory: ${persistentMemory ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  🎭 Enhanced Sentiment: ${enhancedSentiment ? 'CARREGADO' : 'OFF'}`);
+        console.log('───────────────────────────────────────────');
+        console.log('  🔒 COMPLIANCE V8.0');
+        console.log('───────────────────────────────────────────');
+        console.log(`  🚦 Rate Limiter: ${rateLimiterAdvanced ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  📋 LGPD Consent: ${lgpdConsentManager ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  🔐 Encryption: ${encryptionManager ? 'CARREGADO' : 'OFF'}`);
+        console.log('───────────────────────────────────────────');
+        console.log(`  🛠️ Admin V8.0: /admin/v8/status`);
+        console.log('═══════════════════════════════════════════');
     });
 })();
