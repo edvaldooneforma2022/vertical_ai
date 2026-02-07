@@ -82,6 +82,91 @@ function setupRoutes(app) {
         }
     });
 
+    // ===== ROTA: Estatísticas do Tenant para Dashboard =====
+    // SAFE PATCH - BUG-DASH-001: Corrige contador de assistentes ativos
+
+    /**
+     * GET /api/tenant-stats
+     * Retorna estatísticas do tenant para o dashboard
+     */
+    app.get('/api/tenant-stats', async (req, res) => {
+        const FEATURE_TENANT_STATS_API = true;
+        
+        // Feature flag: se desativado, retorna zeros (comportamento original)
+        if (!FEATURE_TENANT_STATS_API) {
+            return res.json({ 
+                success: true, 
+                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+            });
+        }
+        
+        try {
+            const { apiKey } = req.query;
+            
+            // Sem API Key, retornar zeros (comportamento original mantido)
+            if (!apiKey) {
+                return res.json({ 
+                    success: true, 
+                    stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+                });
+            }
+            
+            // Buscar short URLs (assistentes) do tenant
+            let activeAssistants = 0;
+            let createdToday = 0;
+            let totalLeads = 0;
+            let leadsToday = 0;
+            
+            try {
+                const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
+                activeAssistants = shortUrls.length;
+                
+                // Contar criados hoje
+                const today = new Date().toISOString().split('T')[0];
+                createdToday = shortUrls.filter(s => 
+                    s.created_at && s.created_at.toString().startsWith(today)
+                ).length;
+            } catch (err) {
+                console.warn('⚠️ Erro ao buscar assistentes:', err.message);
+                // Fallback: manter zeros
+            }
+            
+            try {
+                // Buscar leads do tenant
+                const leads = await DatabaseHelpers.getLeads(apiKey);
+                totalLeads = leads.length;
+                
+                const today = new Date().toISOString().split('T')[0];
+                leadsToday = leads.filter(l => 
+                    l.created_at && l.created_at.toString().startsWith(today)
+                ).length;
+            } catch (err) {
+                console.warn('⚠️ Erro ao buscar leads:', err.message);
+                // Fallback: manter zeros
+            }
+            
+            console.log(`📊 Stats for tenant ${apiKey.substring(0, 8)}...: ${activeAssistants} assistants, ${totalLeads} leads`);
+            
+            res.json({
+                success: true,
+                stats: {
+                    activeAssistants,
+                    createdToday,
+                    totalLeads,
+                    leadsToday
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Erro ao buscar tenant stats:', error);
+            // Fallback seguro: retornar zeros (comportamento original)
+            res.json({ 
+                success: true, 
+                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+            });
+        }
+    });
+
     // ===== ROTAS DE WEBHOOKS =====
 
     /**

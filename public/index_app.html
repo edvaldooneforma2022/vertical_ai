@@ -1518,7 +1518,63 @@
             if (!localStorage.getItem('lgpd_consent')) {
                 consentModal.style.display = 'flex';
             }
+
+            // SAFE PATCH - BUG-DASH-001: Carregar estatísticas reais do backend
+            setTimeout(() => loadDashboardStats(), 500);
         });
+
+        // ===== SAFE PATCH - BUG-DASH-001: Carregar estatísticas reais do backend =====
+        async function loadDashboardStats() {
+            const FEATURE_LOAD_STATS = true;
+
+            if (!FEATURE_LOAD_STATS) {
+                console.log('⚠️ Feature loadDashboardStats desativada');
+                return;
+            }
+
+            try {
+                // Obter API Key do input ou localStorage
+                const apiKeyInput = document.getElementById('apiKeyInput');
+                const apiKey = apiKeyInput?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
+
+                if (!apiKey) {
+                    console.log('⚠️ Nenhuma API Key para carregar stats');
+                    return;
+                }
+
+                const response = await fetch(`/api/tenant-stats?apiKey=${encodeURIComponent(apiKey)}`);
+                const data = await response.json();
+
+                if (data.success && data.stats) {
+                    // Atualizar contadores do dashboard
+                    const activeChatbotsEl = document.getElementById('activeChatbots');
+                    const createdTodayEl = document.getElementById('createdToday');
+                    const totalLeadsEl = document.getElementById('totalLeads');
+                    const leadsTodayEl = document.getElementById('leadsToday');
+
+                    if (activeChatbotsEl) activeChatbotsEl.textContent = data.stats.activeAssistants || 0;
+                    if (createdTodayEl) createdTodayEl.textContent = data.stats.createdToday || 0;
+                    if (totalLeadsEl) totalLeadsEl.textContent = data.stats.totalLeads || 0;
+                    if (leadsTodayEl) leadsTodayEl.textContent = data.stats.leadsToday || 0;
+
+                    console.log('✅ Dashboard stats carregados:', data.stats);
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar dashboard stats:', error);
+                // Fallback: manter valores atuais (0) - comportamento original
+            }
+        }
+
+        // Recarregar stats quando API Key mudar
+        document.getElementById('apiKeyInput')?.addEventListener('change', () => {
+            const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
+            if (apiKey) {
+                localStorage.setItem('linkmagico_api_key', apiKey);
+                loadDashboardStats();
+            }
+        });
+
 
         // ===== NOVA LÓGICA: GERAÇÃO DO LINK DO CHATBOT =====
         const robotNameInput = document.getElementById('robotName');
@@ -1760,9 +1816,9 @@
                     showToast('Assistente ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
                 }
 
-                // Atualizar analytics
-                document.getElementById('activeChatbots').textContent = '1';
-                document.getElementById('createdToday').textContent = '1';
+                // Atualizar analytics - SAFE PATCH: Carregar stats reais do backend
+                // (Delay para permitir que o backend processe o novo assistente)
+                setTimeout(() => loadDashboardStats(), 1000);
 
                 // Carregar dados de leads
                 loadDashboardLeads();
