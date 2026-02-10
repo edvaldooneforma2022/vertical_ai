@@ -206,6 +206,110 @@ function getPostgresTables() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 
+        // Tabela de Short URLs
+        `CREATE TABLE IF NOT EXISTS short_urls (
+            id SERIAL PRIMARY KEY,
+            short_code VARCHAR(10) UNIQUE NOT NULL,
+            api_key VARCHAR(255) NOT NULL,
+            long_url TEXT NOT NULL,
+            robot_name VARCHAR(255),
+            sales_url TEXT,
+            instructions TEXT,
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            access_count INTEGER DEFAULT 0,
+            status VARCHAR(20) DEFAULT 'active'
+        )`,
+
+        // Tabela de Configurações WhatsApp por Tenant (NOVO - Multi-Tenant)
+        `CREATE TABLE IF NOT EXISTS whatsapp_settings (
+            id SERIAL PRIMARY KEY,
+            api_key VARCHAR(255) UNIQUE NOT NULL,
+            provider VARCHAR(20) NOT NULL,
+            
+            -- Configurações Twilio
+            twilio_account_sid VARCHAR(255),
+            twilio_auth_token VARCHAR(255),
+            twilio_from_number VARCHAR(50),
+            
+            -- Configurações Evolution API
+            evolution_api_url TEXT,
+            evolution_api_key VARCHAR(255),
+            evolution_instance_name VARCHAR(100),
+            
+            -- Configurações gerais
+            notification_phone VARCHAR(50),
+            is_active BOOLEAN DEFAULT true,
+            test_mode BOOLEAN DEFAULT false,
+            
+            -- Metadados
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            
+            FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
+        )`,
+
+        // ========================================
+        // TABELAS V8.0 - NOVAS FUNCIONALIDADES
+        // ========================================
+
+        // Tabela de Memória Conversacional Persistente (V8.0)
+        `CREATE TABLE IF NOT EXISTS conversation_memory (
+            id VARCHAR(255) PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            tenant_id VARCHAR(255),
+            memory_type VARCHAR(50) DEFAULT 'conversation',
+            
+            -- Dados da memória
+            preferences JSONB DEFAULT '{}',
+            interaction_history JSONB DEFAULT '[]',
+            emotional_profile JSONB DEFAULT '{}',
+            topics_discussed JSONB DEFAULT '[]',
+            
+            -- Estatísticas
+            total_interactions INTEGER DEFAULT 0,
+            avg_sentiment REAL DEFAULT 0,
+            last_emotion VARCHAR(50),
+            
+            -- Metadados
+            session_data JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP,
+            
+            UNIQUE(user_id, tenant_id)
+        )`,
+
+        // Tabela de Logs de Auditoria (V8.0)
+        `CREATE TABLE IF NOT EXISTS audit_logs (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255),
+            action VARCHAR(100) NOT NULL,
+            actor_type VARCHAR(50),
+            actor_id VARCHAR(255),
+            target_type VARCHAR(50),
+            target_id VARCHAR(255),
+            details JSONB,
+            severity VARCHAR(20) DEFAULT 'info',
+            ip_address VARCHAR(45),
+            user_agent TEXT,
+            session_id VARCHAR(255),
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Feature Flags (V8.0)
+        `CREATE TABLE IF NOT EXISTS feature_flags (
+            id SERIAL PRIMARY KEY,
+            flag_name VARCHAR(100) UNIQUE NOT NULL,
+            enabled BOOLEAN DEFAULT false,
+            description TEXT,
+            tenant_overrides JSONB DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
         // Índices para performance
         `CREATE INDEX IF NOT EXISTS idx_conversations_chatbot ON conversations(chatbot_id)`,
         `CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp)`,
@@ -214,7 +318,18 @@ function getPostgresTables() {
         `CREATE INDEX IF NOT EXISTS idx_extraction_cache_expires ON extraction_cache(expires_at)`,
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_api_key ON tenant_leads(api_key)`,
         `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_api_key ON tenant_appointments(api_key)`,
-        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`
+        `CREATE INDEX IF NOT EXISTS idx_tenant_appointments_lead_id ON tenant_appointments(lead_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_short_urls_code ON short_urls(short_code)`,
+        `CREATE INDEX IF NOT EXISTS idx_short_urls_api_key ON short_urls(api_key)`,
+        `CREATE INDEX IF NOT EXISTS idx_whatsapp_settings_api_key ON whatsapp_settings(api_key)`,
+
+        // Índices para tabelas V8.0
+        `CREATE INDEX IF NOT EXISTS idx_memory_user ON conversation_memory(user_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_memory_tenant ON conversation_memory(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_memory_expires ON conversation_memory(expires_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`
     ];
 }
 
@@ -330,7 +445,132 @@ function getSQLiteTables() {
             metadata TEXT DEFAULT '{}',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`
+        )`,
+
+        // Tabela de Short URLs
+        `CREATE TABLE IF NOT EXISTS short_urls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            short_code TEXT UNIQUE NOT NULL,
+            api_key TEXT NOT NULL,
+            long_url TEXT NOT NULL,
+            robot_name TEXT,
+            sales_url TEXT,
+            instructions TEXT,
+            metadata TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
+            access_count INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'active'
+        )`,
+
+        // Tabela de Configurações WhatsApp por Tenant (NOVO - Multi-Tenant)
+        `CREATE TABLE IF NOT EXISTS whatsapp_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            api_key TEXT UNIQUE NOT NULL,
+            provider TEXT NOT NULL,
+            
+            -- Configurações Twilio
+            twilio_account_sid TEXT,
+            twilio_auth_token TEXT,
+            twilio_from_number TEXT,
+            
+            -- Configurações Evolution API
+            evolution_api_url TEXT,
+            evolution_api_key TEXT,
+            evolution_instance_name TEXT,
+            
+            -- Configurações gerais
+            notification_phone TEXT,
+            is_active INTEGER DEFAULT 1,
+            test_mode INTEGER DEFAULT 0,
+            
+            -- Metadados
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            
+            FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
+        )`,
+
+        // Tabela de Configurações ChatGPT por Tenant (Multi-Tenant)
+        `CREATE TABLE IF NOT EXISTS chatgpt_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            api_key TEXT UNIQUE NOT NULL,
+            openai_api_key TEXT NOT NULL,
+            default_model TEXT DEFAULT 'gpt-4-turbo',
+            temperature REAL DEFAULT 0.7,
+            max_tokens INTEGER DEFAULT 1000,
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
+        )`,
+
+        // ========================================
+        // TABELAS V8.0 - NOVAS FUNCIONALIDADES (SQLite)
+        // ========================================
+
+        // Tabela de Memória Conversacional Persistente (V8.0)
+        `CREATE TABLE IF NOT EXISTS conversation_memory (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            tenant_id TEXT,
+            memory_type TEXT DEFAULT 'conversation',
+            
+            -- Dados da memória
+            preferences TEXT DEFAULT '{}',
+            interaction_history TEXT DEFAULT '[]',
+            emotional_profile TEXT DEFAULT '{}',
+            topics_discussed TEXT DEFAULT '[]',
+            
+            -- Estatísticas
+            total_interactions INTEGER DEFAULT 0,
+            avg_sentiment REAL DEFAULT 0,
+            last_emotion TEXT,
+            
+            -- Metadados
+            session_data TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME,
+            
+            UNIQUE(user_id, tenant_id)
+        )`,
+
+        // Tabela de Logs de Auditoria (V8.0)
+        `CREATE TABLE IF NOT EXISTS audit_logs (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT,
+            action TEXT NOT NULL,
+            actor_type TEXT,
+            actor_id TEXT,
+            target_type TEXT,
+            target_id TEXT,
+            details TEXT,
+            severity TEXT DEFAULT 'info',
+            ip_address TEXT,
+            user_agent TEXT,
+            session_id TEXT,
+            metadata TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de Feature Flags (V8.0)
+        `CREATE TABLE IF NOT EXISTS feature_flags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            flag_name TEXT UNIQUE NOT NULL,
+            enabled INTEGER DEFAULT 0,
+            description TEXT,
+            tenant_overrides TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Índices para tabelas V8.0
+        `CREATE INDEX IF NOT EXISTS idx_memory_user ON conversation_memory(user_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_memory_tenant ON conversation_memory(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)`,
+        `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`
     ];
 }
 
@@ -799,6 +1039,364 @@ const DatabaseHelpers = {
 
         const result = await db.query(query, params);
         return result.rows[0];
+    },
+
+    // ===== CRUD para short_urls =====
+
+    /**
+     * Criar short URL
+     */
+    async createShortUrl(apiKey, shortUrlData) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO short_urls (short_code, api_key, long_url, robot_name, sales_url, instructions, metadata)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               RETURNING *`
+            : `INSERT INTO short_urls (short_code, api_key, long_url, robot_name, sales_url, instructions, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+        const params = [
+            shortUrlData.shortCode,
+            apiKey,
+            shortUrlData.longUrl,
+            shortUrlData.robotName || null,
+            shortUrlData.salesUrl || null,
+            shortUrlData.instructions || null,
+            JSON.stringify(shortUrlData.metadata || {})
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`✅ Short URL criada: ${shortUrlData.shortCode} para tenant ${apiKey}`);
+            return result.rows[0];
+        } catch (error) {
+            console.error('❌ Erro ao criar short URL:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar short URL por código
+     */
+    async getShortUrl(shortCode) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM short_urls WHERE short_code = $1 AND status = 'active'`
+            : `SELECT * FROM short_urls WHERE short_code = ? AND status = 'active'`;
+
+        const result = await db.query(query, [shortCode]);
+        const shortUrl = result.rows[0];
+
+        if (shortUrl && !USE_POSTGRES) {
+            shortUrl.metadata = JSON.parse(shortUrl.metadata || '{}');
+        }
+
+        return shortUrl;
+    },
+
+    /**
+     * Atualizar contador de acessos de short URL
+     */
+    async updateShortUrlAccess(shortCode) {
+        const query = USE_POSTGRES
+            ? `UPDATE short_urls 
+               SET access_count = access_count + 1, 
+                   last_accessed = CURRENT_TIMESTAMP 
+               WHERE short_code = $1`
+            : `UPDATE short_urls 
+               SET access_count = access_count + 1, 
+                   last_accessed = datetime('now') 
+               WHERE short_code = ?`;
+
+        await db.query(query, [shortCode]);
+    },
+
+    /**
+     * Listar short URLs de um tenant
+     */
+    async getShortUrlsByApiKey(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM short_urls WHERE api_key = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM short_urls WHERE api_key = ? ORDER BY created_at DESC`;
+
+        const result = await db.query(query, [apiKey]);
+        return result.rows.map(shortUrl => {
+            if (!USE_POSTGRES) {
+                shortUrl.metadata = JSON.parse(shortUrl.metadata || '{}');
+            }
+            return shortUrl;
+        });
+    },
+
+    /**
+     * Verificar se short code já existe
+     */
+    async shortCodeExists(shortCode) {
+        const query = USE_POSTGRES
+            ? `SELECT COUNT(*) as count FROM short_urls WHERE short_code = $1`
+            : `SELECT COUNT(*) as count FROM short_urls WHERE short_code = ?`;
+
+        const result = await db.query(query, [shortCode]);
+        const count = USE_POSTGRES ? parseInt(result.rows[0].count) : result.rows[0].count;
+        return count > 0;
+    },
+
+    // ===== CRUD para whatsapp_settings (NOVO - Multi-Tenant) =====
+
+    /**
+     * Salvar configurações WhatsApp de um tenant
+     */
+    async saveWhatsAppSettings(apiKey, settings) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO whatsapp_settings (
+                   api_key, provider, twilio_account_sid, twilio_auth_token, 
+                   twilio_from_number, evolution_api_url, evolution_api_key,
+                   evolution_instance_name, notification_phone, is_active
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+               ON CONFLICT (api_key) DO UPDATE SET
+                   provider = $2, twilio_account_sid = $3, twilio_auth_token = $4,
+                   twilio_from_number = $5, evolution_api_url = $6, 
+                   evolution_api_key = $7, evolution_instance_name = $8,
+                   notification_phone = $9, is_active = $10,
+                   updated_at = CURRENT_TIMESTAMP
+               RETURNING *`
+            : `INSERT OR REPLACE INTO whatsapp_settings (
+                   api_key, provider, twilio_account_sid, twilio_auth_token,
+                   twilio_from_number, evolution_api_url, evolution_api_key,
+                   evolution_instance_name, notification_phone, is_active,
+                   updated_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
+
+        const params = [
+            apiKey,
+            settings.provider,
+            settings.twilioAccountSid || null,
+            settings.twilioAuthToken || null,
+            settings.twilioFromNumber || null,
+            settings.evolutionApiUrl || null,
+            settings.evolutionApiKey || null,
+            settings.evolutionInstanceName || null,
+            settings.notificationPhone || null,
+            settings.isActive !== undefined ? settings.isActive : true
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`✅ WhatsApp configurado para tenant ${apiKey} (${settings.provider})`);
+            return result.rows[0];
+        } catch (error) {
+            console.error('❌ Erro ao salvar configurações WhatsApp:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar configurações WhatsApp de um tenant
+     */
+    async getWhatsAppSettings(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM whatsapp_settings WHERE api_key = $1 AND is_active = true`
+            : `SELECT * FROM whatsapp_settings WHERE api_key = ? AND is_active = 1`;
+
+        const result = await db.query(query, [apiKey]);
+        const settings = result.rows[0];
+
+        if (!settings) {
+            return null;
+        }
+
+        // Converter boolean para SQLite (0/1)
+        if (!USE_POSTGRES) {
+            settings.is_active = settings.is_active === 1;
+            settings.test_mode = settings.test_mode === 1;
+        }
+
+        return settings;
+    },
+
+    /**
+     * Deletar configurações WhatsApp de um tenant
+     */
+    async deleteWhatsAppSettings(apiKey) {
+        const query = USE_POSTGRES
+            ? `DELETE FROM whatsapp_settings WHERE api_key = $1`
+            : `DELETE FROM whatsapp_settings WHERE api_key = ?`;
+
+        try {
+            await db.query(query, [apiKey]);
+            console.log(`✅ Configurações WhatsApp removidas para tenant ${apiKey}`);
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Erro ao deletar configurações WhatsApp:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Listar todos os tenants com WhatsApp configurado
+     */
+    async listWhatsAppSettings() {
+        const query = USE_POSTGRES
+            ? `SELECT api_key, provider, notification_phone, is_active, created_at 
+               FROM whatsapp_settings 
+               WHERE is_active = true
+               ORDER BY created_at DESC`
+            : `SELECT api_key, provider, notification_phone, is_active, created_at 
+               FROM whatsapp_settings 
+               WHERE is_active = 1
+               ORDER BY created_at DESC`;
+
+        const result = await db.query(query);
+        return result.rows || [];
+    },
+
+    // ===== CRUD para chatgpt_settings (Multi-Tenant) =====
+
+    /**
+     * Salvar configurações ChatGPT de um tenant
+     */
+    async saveChatGPTSettings(apiKey, settings) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO chatgpt_settings (
+                   api_key, openai_api_key, default_model, temperature, max_tokens, is_active
+               ) VALUES ($1, $2, $3, $4, $5, $6)
+               ON CONFLICT (api_key) DO UPDATE SET
+                   openai_api_key = $2, default_model = $3, temperature = $4,
+                   max_tokens = $5, is_active = $6, updated_at = CURRENT_TIMESTAMP
+               RETURNING *`
+            : `INSERT OR REPLACE INTO chatgpt_settings (
+                   api_key, openai_api_key, default_model, temperature, max_tokens, is_active, updated_at
+               ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`;
+
+        const params = [
+            apiKey,
+            settings.openaiApiKey,
+            settings.defaultModel || 'gpt-4-turbo',
+            settings.temperature !== undefined ? settings.temperature : 0.7,
+            settings.maxTokens || 1000,
+            settings.isActive !== undefined ? settings.isActive : true
+        ];
+
+        try {
+            const result = await db.query(query, params);
+            console.log(`✅ ChatGPT configurado para tenant ${apiKey} (${settings.defaultModel || 'gpt-4-turbo'})`);
+            return result.rows ? result.rows[0] : { success: true };
+        } catch (error) {
+            console.error('❌ Erro ao salvar configurações ChatGPT:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Buscar configurações ChatGPT de um tenant
+     */
+    async getChatGPTSettings(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM chatgpt_settings WHERE api_key = $1 AND is_active = true`
+            : `SELECT * FROM chatgpt_settings WHERE api_key = ? AND is_active = 1`;
+
+        const result = await db.query(query, [apiKey]);
+        const settings = result.rows[0];
+
+        if (!settings) {
+            return null;
+        }
+
+        // Converter boolean para SQLite (0/1)
+        if (!USE_POSTGRES) {
+            settings.is_active = settings.is_active === 1;
+        }
+
+        return settings;
+    },
+
+    /**
+     * Deletar configurações ChatGPT de um tenant
+     */
+    async deleteChatGPTSettings(apiKey) {
+        const query = USE_POSTGRES
+            ? `DELETE FROM chatgpt_settings WHERE api_key = $1`
+            : `DELETE FROM chatgpt_settings WHERE api_key = ?`;
+
+        try {
+            await db.query(query, [apiKey]);
+            console.log(`✅ Configurações ChatGPT removidas para tenant ${apiKey}`);
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Erro ao deletar configurações ChatGPT:', error);
+            throw error;
+        }
+    },
+
+    // ===== SHORT URL MANAGEMENT =====
+
+    /**
+     * Verificar se código curto já existe
+     */
+    async shortCodeExists(code) {
+        const query = USE_POSTGRES
+            ? `SELECT COUNT(*) as count FROM short_urls WHERE short_code = $1 AND status = 'active'`
+            : `SELECT COUNT(*) as count FROM short_urls WHERE short_code = ? AND status = 'active'`;
+
+        const result = await db.query(query, [code]);
+        const count = USE_POSTGRES ? parseInt(result.rows[0].count) : result.rows[0].count;
+        return count > 0;
+    },
+
+    /**
+     * Criar novo short URL
+     */
+    async createShortUrl(apiKey, data) {
+        const { shortCode, longUrl, robotName, salesUrl, instructions, metadata } = data;
+
+        const query = USE_POSTGRES
+            ? `INSERT INTO short_urls (short_code, api_key, long_url, robot_name, sales_url, instructions, metadata, status)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
+               RETURNING *`
+            : `INSERT INTO short_urls (short_code, api_key, long_url, robot_name, sales_url, instructions, metadata, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`;
+
+        const params = [
+            shortCode,
+            apiKey,
+            longUrl,
+            robotName || null,
+            salesUrl || null,
+            instructions || null,
+            JSON.stringify(metadata || {})
+        ];
+
+        const result = await db.query(query, params);
+        return result.rows[0];
+    },
+
+    /**
+     * Buscar short URL por código
+     */
+    async getShortUrlByCode(code) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM short_urls WHERE short_code = $1 AND status = 'active'`
+            : `SELECT * FROM short_urls WHERE short_code = ? AND status = 'active'`;
+
+        const result = await db.query(query, [code]);
+        const shortUrl = result.rows[0];
+
+        if (shortUrl && !USE_POSTGRES) {
+            shortUrl.metadata = JSON.parse(shortUrl.metadata || '{}');
+        }
+
+        // Incrementar contador de acessos
+        if (shortUrl) {
+            const updateQuery = USE_POSTGRES
+                ? `UPDATE short_urls 
+                   SET access_count = access_count + 1, last_accessed = CURRENT_TIMESTAMP 
+                   WHERE short_code = $1`
+                : `UPDATE short_urls 
+                   SET access_count = access_count + 1, last_accessed = datetime('now') 
+                   WHERE short_code = ?`;
+
+            await db.query(updateQuery, [code]);
+        }
+
+        return shortUrl;
     }
 };
 

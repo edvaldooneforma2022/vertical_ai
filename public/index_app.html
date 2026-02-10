@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkMágico v7.0 - IA Conversacional Inteligente para Vendas Online</title>
     <meta name="description"
-        content="Nova geração de chatbot com IA avançada, extração universal de dados e deep linking multiplataforma. Transforme suas páginas de vendas em conversas inteligentes.">
+        content="Nova geração de Assistente com IA avançada, extração universal de dados e deep linking multiplataforma. Transforme suas páginas de vendas em conversas inteligentes.">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
@@ -844,6 +844,21 @@
             position: relative;
             margin-top: 0.75rem;
             border: 1px solid var(--dark-border);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .code-block code {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .copy-btn {
@@ -1254,7 +1269,7 @@
     <main class="main-container">
         <div class="control-panel">
             <div class="panel-header">
-                <h2 class="panel-title">Criar Chatbot</h2>
+                <h2 class="panel-title">Criar Assistente</h2>
                 <p class="panel-subtitle">Configure seu assistente de vendas inteligente</p>
             </div>
 
@@ -1290,17 +1305,17 @@
                         Keys.</p>
                 </div>
                 <button class="btn btn-primary" id="activateChatbotBtn">
-                    <i class="fas fa-play-circle"></i> Ativar Chatbot Inteligente
+                    <i class="fas fa-play-circle"></i> Ativar Assistente IA
                 </button>
             </div>
 
             <!-- ===== NOVA SEÇÃO: LINK DO CHATBOT ===== -->
             <div class="chatbot-link-section" id="chatbotLinkSection">
                 <div class="chatbot-link-title">
-                    <i class="fas fa-link"></i> Link do Chatbot:
+                    <i class="fas fa-link"></i> Link do Assistente:
                 </div>
                 <div class="chatbot-link-url">
-                    <a href="#" id="chatbotLinkUrl" target="_blank">Clique aqui para acessar seu chatbot</a>
+                    <a href="#" id="chatbotLinkUrl" target="_blank">Clique aqui para acessar seu assistente</a>
                     <button class="copy-link-btn" id="copyChatbotLinkBtn">
                         <i class="fas fa-copy"></i> Copiar
                     </button>
@@ -1338,13 +1353,13 @@
         <div class="dashboard">
             <div class="dashboard-header">
                 <h2 class="dashboard-title">Dashboard Analytics</h2>
-                <p class="dashboard-subtitle">Acompanhe o desempenho do seu chatbot em tempo real</p>
+                <p class="dashboard-subtitle">Acompanhe o desempenho do seu assistente em tempo real</p>
             </div>
 
             <div class="analytics-grid">
                 <div class="analytics-card">
                     <div class="card-header">
-                        <span class="card-title">Chatbots Ativos</span>
+                        <span class="card-title">Assistentes Ativos</span>
                         <div class="card-icon"><i class="fas fa-robot"></i></div>
                     </div>
                     <div class="card-value" id="activeChatbots">0</div>
@@ -1380,14 +1395,14 @@
 
             <div class="chat-preview">
                 <div class="chat-header">
-                    <span class="chat-title">Preview do Chatbot</span>
+                    <span class="chat-title">Preview do Assistente</span>
                 </div>
                 <iframe id="chatbotFrame" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
 
             <div class="widget-generator">
                 <h3 class="widget-title"><i class="fas fa-code"></i> Gerador de Código do Widget</h3>
-                <p class="panel-subtitle">Copie e cole este código em qualquer página para integrar seu chatbot.</p>
+                <p class="panel-subtitle">Copie e cole este código em qualquer página para integrar seu assistente.</p>
                 <div class="code-block">
                     <button class="copy-btn" id="copyWidgetCodeBtn"><i class="fas fa-copy"></i> Copiar</button>
                     <pre><code id="widgetCodeDisplay">&lt;!-- LinkMágico Chatbot Widget --&gt;
@@ -1421,7 +1436,7 @@
                 <div class="consent-details">
                     <p>Usamos informações para:</p>
                     <ul>
-                        <li>Personalizar respostas do chatbot</li>
+                        <li>Personalizar respostas do assistente</li>
                         <li>Melhorar métricas e analytics</li>
                         <li>Garantir segurança e prevenir fraudes</li>
                     </ul>
@@ -1503,7 +1518,63 @@
             if (!localStorage.getItem('lgpd_consent')) {
                 consentModal.style.display = 'flex';
             }
+
+            // SAFE PATCH - BUG-DASH-001: Carregar estatísticas reais do backend
+            setTimeout(() => loadDashboardStats(), 500);
         });
+
+        // ===== SAFE PATCH - BUG-DASH-001: Carregar estatísticas reais do backend =====
+        async function loadDashboardStats() {
+            const FEATURE_LOAD_STATS = true;
+
+            if (!FEATURE_LOAD_STATS) {
+                console.log('⚠️ Feature loadDashboardStats desativada');
+                return;
+            }
+
+            try {
+                // Obter API Key do input ou localStorage
+                const apiKeyInput = document.getElementById('apiKeyInput');
+                const apiKey = apiKeyInput?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
+
+                if (!apiKey) {
+                    console.log('⚠️ Nenhuma API Key para carregar stats');
+                    return;
+                }
+
+                const response = await fetch(`/api/tenant-stats?apiKey=${encodeURIComponent(apiKey)}`);
+                const data = await response.json();
+
+                if (data.success && data.stats) {
+                    // Atualizar contadores do dashboard
+                    const activeChatbotsEl = document.getElementById('activeChatbots');
+                    const createdTodayEl = document.getElementById('createdToday');
+                    const totalLeadsEl = document.getElementById('totalLeads');
+                    const leadsTodayEl = document.getElementById('leadsToday');
+
+                    if (activeChatbotsEl) activeChatbotsEl.textContent = data.stats.activeAssistants || 0;
+                    if (createdTodayEl) createdTodayEl.textContent = data.stats.createdToday || 0;
+                    if (totalLeadsEl) totalLeadsEl.textContent = data.stats.totalLeads || 0;
+                    if (leadsTodayEl) leadsTodayEl.textContent = data.stats.leadsToday || 0;
+
+                    console.log('✅ Dashboard stats carregados:', data.stats);
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar dashboard stats:', error);
+                // Fallback: manter valores atuais (0) - comportamento original
+            }
+        }
+
+        // Recarregar stats quando API Key mudar
+        document.getElementById('apiKeyInput')?.addEventListener('change', () => {
+            const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
+            if (apiKey) {
+                localStorage.setItem('linkmagico_api_key', apiKey);
+                loadDashboardStats();
+            }
+        });
+
 
         // ===== NOVA LÓGICA: GERAÇÃO DO LINK DO CHATBOT =====
         const robotNameInput = document.getElementById('robotName');
@@ -1536,6 +1607,28 @@
 
         let currentChatbotUrl = '';
 
+        // SAFE PATCH - BUG-004: Inicializar handlers defensivos para todos botões sociais
+        // Evita erro de API Key ao clicar em compartilhar sem chatbot ativado
+        function initSocialButtonsDefensiveHandlers() {
+            const showActivationError = () => {
+                showToast('⚠️ Ative o assistente primeiro antes de compartilhar!', 'error');
+            };
+
+            if (shareWhatsApp) shareWhatsApp.onclick = showActivationError;
+            if (shareInstagram) shareInstagram.onclick = showActivationError;
+            if (shareFacebook) shareFacebook.onclick = showActivationError;
+            if (shareYouTube) shareYouTube.onclick = showActivationError;
+            if (shareTikTok) shareTikTok.onclick = showActivationError;
+            if (shareTwitter) shareTwitter.onclick = showActivationError;
+            if (shareKwai) shareKwai.onclick = showActivationError;
+            if (shareLinkedIn) shareLinkedIn.onclick = showActivationError;
+            if (shareTelegram) shareTelegram.onclick = showActivationError;
+            if (shareMessenger) shareMessenger.onclick = showActivationError;
+        }
+
+        // Inicializar handlers defensivos imediatamente
+        initSocialButtonsDefensiveHandlers();
+
         function showLoading() {
             activateChatbotBtn.disabled = true;
             activateChatbotBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ativando...';
@@ -1543,7 +1636,7 @@
 
         function hideLoading() {
             activateChatbotBtn.disabled = false;
-            activateChatbotBtn.innerHTML = '<i class="fas fa-play-circle"></i> Ativar Chatbot Inteligente';
+            activateChatbotBtn.innerHTML = '<i class="fas fa-play-circle"></i> Ativar Assistente IA';
         }
 
         function generateChatbotUrl(robotName, salesUrl, instructions, apiKey) {
@@ -1561,8 +1654,13 @@
             const encodedUrl = encodeURIComponent(chatbotUrl);
             const encodedText = encodeURIComponent(shareText);
 
-            // WhatsApp
+            // SAFE PATCH - QA FIX: BUG-004 - WhatsApp com validação de chatbot ativo
             shareWhatsApp.onclick = () => {
+                // Validar se chatbot está ativo antes de compartilhar
+                if (!chatbotUrl || chatbotUrl.includes('about:blank') || chatbotUrl === '') {
+                    showToast('⚠️ Ative o assistente primeiro antes de compartilhar!', 'error');
+                    return;
+                }
                 window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank');
             };
 
@@ -1626,12 +1724,18 @@
             showLoading();
 
             try {
+                // SAFE PATCH - BUG-EXT-001: Sempre forçar nova extração ao ativar assistente
                 const response = await fetch('/api/extract', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ url: salesUrl, instructions: customInstructions, robotName: robotName })
+                    body: JSON.stringify({
+                        url: salesUrl,
+                        instructions: customInstructions,
+                        robotName: robotName,
+                        forceRefresh: true  // Sempre fazer extração completa
+                    })
                 });
 
                 const data = await response.json();
@@ -1640,8 +1744,39 @@
                     throw new Error(data.error || 'Erro desconhecido na extração.');
                 }
 
-                // Gerar URL do chatbot (inclui apiKey para agendamentos)
-                currentChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
+                // Gerar URL do chatbot longo (mantém compatibilidade)
+                const longChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
+
+                // Criar Short URL via API
+                let shortUrlData = null;
+                try {
+                    const shortUrlResponse = await fetch('/api/create-short-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            robotName,
+                            salesUrl,
+                            instructions: customInstructions,
+                            apiKey: apiKeyValue
+                        })
+                    });
+
+                    shortUrlData = await shortUrlResponse.json();
+
+                    if (shortUrlData.success) {
+                        // Usar short URL como link principal
+                        currentChatbotUrl = shortUrlData.shortUrl;
+                        console.log('✅ Short URL gerada:', currentChatbotUrl);
+                    } else {
+                        // Fallback para link longo se short URL falhar
+                        currentChatbotUrl = longChatbotUrl;
+                        console.warn('⚠️ Short URL failed, using long URL:', shortUrlData.error);
+                    }
+                } catch (shortUrlError) {
+                    // Fallback silencioso para link longo
+                    currentChatbotUrl = longChatbotUrl;
+                    console.warn('⚠️ Short URL creation failed, using long URL:', shortUrlError);
+                }
 
                 // Atualizar seção do link do chatbot
                 chatbotLinkUrl.href = currentChatbotUrl;
@@ -1657,7 +1792,7 @@
                 // Mostrar seção do link do chatbot
                 chatbotLinkSection.classList.add('active');
 
-                // Atualizar links de compartilhamento social
+                // Atualizar links de compartilhamento social (usar short URL)
                 updateSocialShareLinks(currentChatbotUrl, robotName);
 
                 // Atualiza o iframe do chatbot preview
@@ -1668,22 +1803,34 @@
                 });
                 chatbotFrame.src = `/chat.html?${chatbotParams.toString()}`;
 
-                // Atualiza o código do widget
-                widgetCodeDisplay.innerHTML = `&lt;!-- LinkMágico Chatbot Widget --&gt;\n&lt;script&gt;\n    window.LinkMagicoWidgetConfig = {\n        robotName: "${robotName}",\n        salesUrl: "${salesUrl}",\n        instructions: "${customInstructions}",\n        primaryColor: "#3b82f6"\n    };\n&lt;/script&gt;\n&lt;script src="/public/widget.js"&gt;&lt;/script&gt;`;
+                // Atualiza o código do widget com as cores do Whitelabel
+                const wlPrimaryColor = document.getElementById('wl-primary') ? document.getElementById('wl-primary').value : '#3b82f6';
+                widgetCodeDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, wlPrimaryColor);
 
                 successAlert.style.display = 'block';
-                showToast('Chatbot ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
 
-                // Atualizar analytics
-                document.getElementById('activeChatbots').textContent = '1';
-                document.getElementById('createdToday').textContent = '1';
+                // Mensagem customizada baseada no sucesso da short URL
+                if (shortUrlData && shortUrlData.success) {
+                    showToast('✅ Assistente ativado! Link curto gerado para redes sociais.', 'success');
+                } else {
+                    showToast('Assistente ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
+                }
+
+                // Atualizar analytics - SAFE PATCH: Carregar stats reais do backend
+                // (Delay para permitir que o backend processe o novo assistente)
+                setTimeout(() => loadDashboardStats(), 1000);
 
                 // Carregar dados de leads
                 loadDashboardLeads();
 
+                // SAFE PATCH - BUG-WIDGET-001: Sincronizar código na aba Widget
+                if (typeof updateWidgetTabCode === 'function') {
+                    updateWidgetTabCode();
+                }
+
             } catch (error) {
                 console.error('Erro ao ativar chatbot:', error);
-                showToast(`Erro ao ativar chatbot: ${error.message || 'Servidor indisponível. Tente novamente em alguns minutos.'}`, 'error');
+                showToast(`Erro ao ativar assistente: ${error.message || 'Servidor indisponível. Tente novamente em alguns minutos.'}`, 'error');
             } finally {
                 hideLoading();
             }
@@ -1693,13 +1840,13 @@
         copyChatbotLinkBtn.addEventListener('click', () => {
             if (currentChatbotUrl) {
                 navigator.clipboard.writeText(currentChatbotUrl).then(() => {
-                    showToast('Link do chatbot copiado!', 'success');
+                    showToast('Link do assistente copiado!', 'success');
                 }).catch(err => {
                     console.error('Erro ao copiar link:', err);
                     showToast('Erro ao copiar link.', 'error');
                 });
             } else {
-                showToast('Nenhum link de chatbot disponível para copiar.', 'error');
+                showToast('Nenhum link de assistente disponível para copiar.', 'error');
             }
         });
 
@@ -1721,6 +1868,144 @@
         document.getElementById('analyticsBtn').addEventListener('click', () => {
             showToast('Funcionalidade Analytics em desenvolvimento', 'info');
         });
+
+        // ===== FUNÇÃO GERADORA DE SCRIPT INLINE MODERNO V2.0 =====
+        // SAFE PATCH - BUG-WIDGET-002: Função para escapar strings para código JavaScript
+        function escapeForJS(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/\\/g, '\\\\')    // Escapa backslashes primeiro
+                .replace(/"/g, '\\"')      // Escapa aspas duplas
+                .replace(/\n/g, '\\n')     // Escapa quebras de linha
+                .replace(/\r/g, '\\r')     // Escapa retorno de carro
+                .replace(/\t/g, '\\t');    // Escapa tabs
+        }
+
+        function generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, primaryColor) {
+            const greetingMessage = 'Oi! Posso ajudar?';
+            const welcomeMessage = 'Olá 👋 Muito bom ter você aqui!';
+            const secondMessage = 'Como posso ajudar você hoje?';
+            const color = primaryColor || '#3b82f6';
+            const key = apiKey || 'SUA_API_KEY';
+            const apiBase = window.location.origin;
+
+            // SAFE PATCH - BUG-WIDGET-002: Escapar todas as strings para evitar quebra de sintaxe JS
+            const safeRobotName = escapeForJS(robotName);
+            const safeSalesUrl = escapeForJS(salesUrl);
+            const safeInstructions = escapeForJS(instructions);
+            const safeGreeting = escapeForJS(greetingMessage);
+            const safeWelcome = escapeForJS(welcomeMessage);
+            const safeSecond = escapeForJS(secondMessage);
+
+            return `<!-- LinkMágico Chatbot Widget v2.0 - Design Moderno -->
+<script>
+(function() {
+    var config = {
+        robotName: "${safeRobotName}",
+        salesUrl: "${safeSalesUrl}",
+        instructions: "${safeInstructions}",
+        primaryColor: "${color}",
+        // SAFE PATCH - QA FIX: BUG-006 - Removido apikey duplicado
+        apiKey: "${key}",
+        greetingMessage: "${safeGreeting}",
+        welcomeMessage: "${safeWelcome}",
+        secondMessage: "${safeSecond}"
+    };
+
+    var apiBase = "${apiBase}";
+    if (!config.apiKey || config.apiKey === "SUA_API_KEY") { 
+        console.error("❌ LinkMágico Widget: API Key não configurada!"); 
+        alert("⚠️ LinkMágico Widget: API Key não configurada! Verifique o script."); 
+        return; 
+    }
+    var isOpen = false, leadId = null, leadCaptured = false, conversationId = 'lm_' + Date.now();
+    var styles = document.createElement('style');
+    styles.textContent = '.lm-widget-container *{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Inter,-apple-system,BlinkMacSystemFont,sans-serif}.lm-widget-container{position:fixed;bottom:20px;right:20px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;gap:12px}.lm-greeting-tooltip{background:#1f2937;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;font-weight:500;box-shadow:0 4px 15px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:lm-slideIn .3s ease;cursor:pointer;transition:all .2s ease}.lm-greeting-tooltip:hover{transform:scale(1.02);box-shadow:0 6px 20px rgba(0,0,0,.2)}.lm-greeting-tooltip .lm-online-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:lm-pulse 2s infinite}.lm-greeting-tooltip.lm-hidden{display:none}.lm-bubble{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(59,130,246,.4);transition:all .3s ease}.lm-bubble:hover{transform:scale(1.1);box-shadow:0 6px 25px rgba(59,130,246,.5)}.lm-bubble svg{width:28px;height:28px;fill:#fff}.lm-bubble.lm-hidden{display:none}.lm-chat-window{position:fixed;bottom:90px;right:20px;width:380px;height:520px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.15);display:none;flex-direction:column;overflow:hidden;animation:lm-scaleIn .3s ease;z-index:999998}.lm-chat-window.lm-open{display:flex}.lm-chat-header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px;display:flex;align-items:center;justify-content:space-between}.lm-chat-header-left{display:flex;align-items:center;gap:12px}.lm-chat-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#8b5cf6 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px}.lm-chat-header-info{display:flex;flex-direction:column}.lm-chat-header-subtitle{font-size:12px;color:#6b7280}.lm-chat-header-title{font-size:15px;font-weight:600;color:#1f2937}.lm-header-btn{width:36px;height:36px;border-radius:50%;border:none;background:#f3f4f6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease;color:#6b7280}.lm-header-btn:hover{background:#e5e7eb;color:#1f2937}.lm-chat-messages{flex:1;padding:16px;overflow-y:auto;background:#f9fafb;display:flex;flex-direction:column;gap:12px}.lm-message{max-width:80%;padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.5;animation:lm-fadeIn .3s ease}.lm-message.lm-bot{background:#fff;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb;border-bottom-left-radius:4px}.lm-message.lm-user{background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}.lm-typing{display:none;align-items:center;gap:4px;padding:12px 16px;background:#fff;border-radius:18px;border:1px solid #e5e7eb;align-self:flex-start;max-width:80px}.lm-typing.lm-active{display:flex}.lm-typing-dot{width:8px;height:8px;background:#9ca3af;border-radius:50%;animation:lm-typingBounce 1.4s infinite}.lm-typing-dot:nth-child(2){animation-delay:.2s}.lm-typing-dot:nth-child(3){animation-delay:.4s}.lm-chat-input-area{padding:16px;background:#fff;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:12px}.lm-chat-input{flex:1;border:1px solid #e5e7eb;border-radius:24px;padding:12px 20px;font-size:14px;outline:none;transition:all .2s ease;background:#f9fafb}.lm-chat-input:focus{border-color:'+config.primaryColor+';background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1)}.lm-chat-input::placeholder{color:#9ca3af}.lm-send-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease}.lm-send-btn:hover{transform:scale(1.05);box-shadow:0 4px 15px rgba(59,130,246,.4)}.lm-send-btn:disabled{opacity:.5;cursor:not-allowed}.lm-send-btn svg{width:20px;height:20px}.lm-lead-prompt{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:8px 0;align-self:flex-start;max-width:90%}.lm-lead-prompt input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:10px;outline:none;transition:all .2s ease}.lm-lead-prompt input:focus{border-color:'+config.primaryColor+'}.lm-lead-prompt button{width:100%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s ease}.lm-lead-prompt button:hover{opacity:.9}@keyframes lm-slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes lm-scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}@keyframes lm-fadeIn{from{opacity:0}to{opacity:1}}@keyframes lm-pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes lm-typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}@media (max-width:480px){.lm-chat-window{width:calc(100% - 20px);height:calc(100% - 100px);right:10px;bottom:80px;border-radius:20px}.lm-widget-container{right:10px;bottom:10px}.lm-bubble{width:55px;height:55px}.lm-greeting-tooltip{display:none}}';
+    document.head.appendChild(styles);
+    var container = document.createElement('div');
+    container.className = 'lm-widget-container';
+    container.id = 'lmWidgetContainer';
+    container.innerHTML = '<div class="lm-greeting-tooltip" id="lmGreeting"><span class="lm-online-dot"></span><span>'+config.greetingMessage+'</span></div><div class="lm-bubble" id="lmBubble"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/><path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg></div><div class="lm-chat-window" id="lmChatWindow"><div class="lm-chat-header"><div class="lm-chat-header-left"><div class="lm-chat-avatar">'+config.robotName.charAt(0).toUpperCase()+'</div><div class="lm-chat-header-info"><span class="lm-chat-header-subtitle">Assistente Virtual</span><span class="lm-chat-header-title">'+config.robotName+'</span></div></div><button class="lm-header-btn" id="lmCloseBtn" title="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="lm-chat-messages" id="lmMessages"></div><div class="lm-typing" id="lmTyping"><span class="lm-typing-dot"></span><span class="lm-typing-dot"></span><span class="lm-typing-dot"></span></div><div class="lm-chat-input-area"><input type="text" class="lm-chat-input" id="lmInput" placeholder="Escreva sua mensagem..." autocomplete="off"><button class="lm-send-btn" id="lmSendBtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div></div>';
+    document.body.appendChild(container);
+    var chatWindow = document.getElementById('lmChatWindow');
+    var bubble = document.getElementById('lmBubble');
+    var greeting = document.getElementById('lmGreeting');
+    var messages = document.getElementById('lmMessages');
+    var input = document.getElementById('lmInput');
+    var sendBtn = document.getElementById('lmSendBtn');
+    var typing = document.getElementById('lmTyping');
+    var closeBtn = document.getElementById('lmCloseBtn');
+    function addMessage(text, isUser) {
+        var msgDiv = document.createElement('div');
+        msgDiv.className = 'lm-message ' + (isUser ? 'lm-user' : 'lm-bot');
+        msgDiv.textContent = text;
+        messages.appendChild(msgDiv);
+        messages.scrollTop = messages.scrollHeight;
+    }
+    function showLeadForm() {
+        var formDiv = document.createElement('div');
+        formDiv.className = 'lm-lead-prompt';
+        formDiv.id = 'lmLeadForm';
+        formDiv.innerHTML = '<input type="text" id="lmLeadName" placeholder="Qual o seu nome?" required><input type="email" id="lmLeadEmail" placeholder="Seu melhor email"><input type="tel" id="lmLeadPhone" placeholder="WhatsApp (opcional)"><button id="lmLeadSubmit">Continuar conversa</button>';
+        messages.appendChild(formDiv);
+        messages.scrollTop = messages.scrollHeight;
+        document.getElementById('lmLeadName').focus();
+        document.getElementById('lmLeadSubmit').addEventListener('click', captureLead);
+    }
+    function captureLead() {
+        var name = document.getElementById('lmLeadName').value.trim();
+        var email = document.getElementById('lmLeadEmail').value.trim();
+        var phone = document.getElementById('lmLeadPhone').value.trim();
+        if (!name) { document.getElementById('lmLeadName').focus(); return; }
+        var form = document.getElementById('lmLeadForm');
+        if (form) form.remove();
+        fetch(apiBase + '/api/capture-lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome: name, email: email || '', telefone: phone || '', url_origem: config.salesUrl, robotName: config.robotName, apiKey: config.apiKey })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data.success) { leadId = data.lead.id; leadCaptured = true; addMessage('Olá ' + name + '! Prazer em te conhecer. Como posso ajudar?', false); }
+        }).catch(function (e) { console.error('Erro:', e); leadCaptured = true; });
+    }
+    function sendMessage() {
+        var message = input.value.trim();
+        if (!message) return;
+        if (!leadCaptured) { showLeadForm(); return; }
+        addMessage(message, true);
+        input.value = '';
+        sendBtn.disabled = true;
+        typing.classList.add('lm-active');
+        fetch(apiBase + '/api/process-chat-inteligente', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message, pageData: { url: config.salesUrl }, robotName: config.robotName, instructions: config.instructions, conversationId: conversationId, leadId: leadId, apiKey: config.apiKey })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            typing.classList.remove('lm-active');
+            if (data.success && data.response) { addMessage(data.response, false); }
+            else { addMessage('Desculpe, tive um problema. Pode repetir?', false); }
+        }).catch(function (e) { typing.classList.remove('lm-active'); addMessage('Ops! Erro de conexão. Tente novamente.', false); console.error('Erro:', e); });
+        sendBtn.disabled = false;
+        input.focus();
+    }
+    function openChat() {
+        isOpen = true;
+        chatWindow.classList.add('lm-open');
+        greeting.classList.add('lm-hidden');
+        input.focus();
+        if (messages.children.length === 0) { addMessage(config.welcomeMessage, false); setTimeout(function () { addMessage(config.secondMessage, false); }, 800); }
+    }
+    function closeChat() { isOpen = false; chatWindow.classList.remove('lm-open'); }
+    function toggleChat() { if (isOpen) { closeChat(); } else { openChat(); } }
+    bubble.addEventListener('click', toggleChat);
+    greeting.addEventListener('click', openChat);
+    closeBtn.addEventListener('click', closeChat);
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', function (e) { if (e.key === 'Enter') sendMessage(); });
+    console.log('✅ LinkMágico Widget v2.0 carregado!');
+}) ();
+<\/script>`;
+        }
+
 
     </script>
 
@@ -1785,18 +2070,40 @@
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📝 Leads
                 </button>
+                <!-- SAFE PATCH - QA FIX: BUG-005 - Aba Widget dedicada -->
+                <button class="new-tab" onclick="showNewTab('widget')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                    🧩 Widget
+                </button>
             </div>
 
             <!-- Tab Contents -->
             <div id="tab-analytics" class="new-tab-content" style="display:block;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px; margin-bottom:1rem;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">📊 Analytics Profissional</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Visualize métricas detalhadas do seu chatbot</p>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Visualize métricas detalhadas do seu assistente</p>
+
+                    <!-- SAFE PATCH - QA FIX: BUG-007 - Filtros de período -->
+                    <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
+                        <button onclick="loadAnalytics(7)" class="analytics-period-btn" data-days="7"
+                            style="background:#334155; color:#94a3b8; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            7 dias
+                        </button>
+                        <button onclick="loadAnalytics(30)" class="analytics-period-btn active" data-days="30"
+                            style="background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            30 dias
+                        </button>
+                        <button onclick="loadAnalytics(90)" class="analytics-period-btn" data-days="90"
+                            style="background:#334155; color:#94a3b8; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                            90 dias
+                        </button>
+                    </div>
 
                     <div
                         style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1rem; margin-bottom:2rem;">
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Total de Mensagens</div>
+
                             <div id="analytics-messages" style="color:#60a5fa; font-size:2rem; font-weight:700;">-</div>
                         </div>
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
@@ -1841,7 +2148,7 @@
             <div id="tab-knowledge" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">📚 Knowledge Base</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie FAQs e documentos do seu chatbot</p>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie FAQs e documentos do seu assistente</p>
 
                     <div style="margin-bottom:2rem;">
                         <label
@@ -1870,16 +2177,44 @@
             </div>
 
             <div id="tab-billing" class="new-tab-content" style="display:none;">
+                <!-- SAFE PATCH - QA FIX: BUG-003 - Billing com limites populados -->
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">💳 Planos e Billing</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie planos e assinaturas</p>
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">💳 Planos e Limites</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Visualize seu plano atual e limites de uso</p>
 
-                    <div id="plans-container"
-                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem;">
-                        <p style="color:#94a3b8;">Carregando planos...</p>
+                    <div id="billing-limits-container">
+                        <div
+                            style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Plano Atual</div>
+                                <div id="billing-plan-name" style="color:#60a5fa; font-size:1.5rem; font-weight:700;">
+                                    Carregando...</div>
+                            </div>
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Mensagens</div>
+                                <div id="billing-messages-usage"
+                                    style="color:#10b981; font-size:1.5rem; font-weight:700;">-</div>
+                            </div>
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Extrações</div>
+                                <div id="billing-extractions-usage"
+                                    style="color:#f59e0b; font-size:1.5rem; font-weight:700;">-</div>
+                            </div>
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Chatbots</div>
+                                <div id="billing-chatbots-limit"
+                                    style="color:#8b5cf6; font-size:1.5rem; font-weight:700;">-</div>
+                            </div>
+                        </div>
                     </div>
+
+                    <button onclick="loadBillingLimits()"
+                        style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
+                        🔄 Atualizar Limites
+                    </button>
                 </div>
             </div>
+
 
             <div id="tab-llm" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
@@ -1948,47 +2283,133 @@
             <!-- Tab WhatsApp -->
             <div id="tab-whatsapp" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📱 Integração WhatsApp</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure notificações via WhatsApp</p>
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📱 Integração WhatsApp (Multi-Tenant)</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure suas próprias credenciais ou use a global
+                        do sistema</p>
+
+                    <div id="whatsapp-current-status"
+                        style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status Atual</h3>
+                        <div id="whatsapp-settings-status" style="color:#94a3b8;">Carregando configurações...</div>
+                    </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
-                        <div id="whatsapp-status" style="color:#94a3b8;">Carregando...</div>
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Escolha o Provedor</h3>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                            <button id="btn-twilio" onclick="selectProvider('twilio')"
+                                style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
+                                <strong>Twilio</strong>
+                            </button>
+                            <button id="btn-evolution" onclick="selectProvider('evolution')"
+                                style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
+                                <strong>Evolution API</strong>
+                            </button>
+                        </div>
                     </div>
 
-                    <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Envio</h3>
-                        <input type="tel" id="test-phone" placeholder="+5511999999999"
+                    <!-- Config Twilio -->
+                    <div id="form-twilio"
+                        style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Twilio</h3>
+                        <input type="text" id="twilio-sid" placeholder="Account SID"
                             style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <button onclick="testWhatsApp()"
-                            style="background:#25d366; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
-                            Enviar Mensagem de Teste
+                        <input type="password" id="twilio-token" placeholder="Auth Token"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        <input type="text" id="twilio-number" placeholder="Twilio Number (ex: +1234567890)"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        <input type="text" id="twilio-notification-phone"
+                            placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
+                    </div>
+
+                    <!-- Config Evolution -->
+                    <div id="form-evolution"
+                        style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Evolution API</h3>
+                        <input type="text" id="evolution-url" placeholder="API URL (ex: https://api.suadominio.com)"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        <input type="password" id="evolution-key" placeholder="API Key"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        <input type="text" id="evolution-instance" placeholder="Instance Name"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                        <input type="text" id="evolution-notification-phone"
+                            placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                        <button onclick="saveWhatsAppSettings()"
+                            style="background:#3b82f6; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                            💾 Salvar Configuração
+                        </button>
+                        <button onclick="testWhatsAppConnection()"
+                            style="background:#25d366; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                            🧪 Testar Conexão
                         </button>
                     </div>
+
+                    <button onclick="deleteWhatsAppSettings()"
+                        style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:0.75rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:1rem;">
+                        🗑️ Remover Minha Configuração (Voltar para Global)
+                    </button>
                 </div>
             </div>
 
             <!-- Tab ChatGPT -->
             <div id="tab-chatgpt" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Integração ChatGPT</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Use GPT-4 para respostas de alta qualidade</p>
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Integração ChatGPT (Multi-Tenant)</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure sua própria chave OpenAI ou use a global
+                        do sistema</p>
 
-                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
-                        <div id="chatgpt-status" style="color:#94a3b8;">Carregando...</div>
+                    <div id="chatgpt-current-status"
+                        style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status Atual</h3>
+                        <div id="chatgpt-settings-status" style="color:#94a3b8;">Carregando configurações...</div>
                     </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Modelos Disponíveis</h3>
-                        <div id="chatgpt-models" style="color:#94a3b8;">Carregando...</div>
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">⚙️ Configurar ChatGPT</h3>
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Chave API
+                            OpenAI:</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Obtenha em: <a
+                                href="https://platform.openai.com/api-keys" target="_blank"
+                                style="color:#60a5fa;">platform.openai.com/api-keys</a></p>
+                        <input type="password" id="chatgpt-api-key" placeholder="sk-..."
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Modelo
+                            Padrão:</label>
+                        <select id="chatgpt-model"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                            <option value="gpt-4-turbo">GPT-4 Turbo (Recomendado - Melhor custo-benefício)</option>
+                            <option value="gpt-4">GPT-4 (Mais avançado)</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Mais econômico)</option>
+                        </select>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                            <button onclick="saveChatGPTSettings()"
+                                style="background:#3b82f6; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                                💾 Salvar Configuração
+                            </button>
+                            <button onclick="testChatGPTConnection()"
+                                style="background:#10a37f; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                                🧪 Testar Conexão
+                            </button>
+                        </div>
+
+                        <button onclick="deleteChatGPTSettings()"
+                            style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:0.75rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:1rem;">
+                            🗑️ Remover Minha Configuração (Voltar para Global)
+                        </button>
                     </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Geração</h3>
-                        <textarea id="test-prompt" placeholder="Digite uma pergunta..."
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">🧪 Testar Geração</h3>
+                        <textarea id="chatgpt-test-prompt" placeholder="Digite uma pergunta para testar..."
                             style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem; min-height:100px;"></textarea>
-                        <button onclick="testChatGPT()"
+                        <button onclick="testChatGPTGeneration()"
                             style="background:#10a37f; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
                             Gerar Resposta
                         </button>
@@ -2003,42 +2424,104 @@
             <div id="tab-whitelabel" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">🎨 Whitelabel</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Personalize a marca do seu chatbot</p>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Personalize a marca do seu assistente</p>
+
+                    <!-- Seção Explicativa -->
+                    <div
+                        style="background:#334155; padding:1rem 1.5rem; border-radius:12px; margin-bottom:1.5rem; border-left:4px solid #60a5fa;">
+                        <h4 style="color:#60a5fa; margin-bottom:0.5rem; font-size:1rem;">💡 O que é o Whitelabel?</h4>
+                        <p style="color:#94a3b8; font-size:0.9rem; line-height:1.6; margin-bottom:0.75rem;">
+                            O <strong style="color:#cbd5e1;">Whitelabel</strong> permite que você aplique a identidade
+                            visual da sua empresa ao chatbot.
+                            As personalizações serão exibidas em:
+                        </p>
+                        <ul style="color:#94a3b8; font-size:0.85rem; margin-left:1rem; line-height:1.8;">
+                            <li>🔵 <strong style="color:#cbd5e1;">Botão flutuante</strong> - O balão de chat no site do
+                                cliente</li>
+                            <li>🔵 <strong style="color:#cbd5e1;">Header do chat</strong> - O topo da janela de conversa
+                            </li>
+                            <li>🔵 <strong style="color:#cbd5e1;">Cores da interface</strong> - Botões, bordas e
+                                destaques</li>
+                        </ul>
+                    </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração</h3>
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">⚙️ Configuração da Marca</h3>
 
-                        <label style="color:#94a3b8; display:block; margin-bottom:0.5rem;">Nome da Empresa:</label>
-                        <input type="text" id="wl-company" placeholder="Minha Empresa"
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Nome da
+                            Empresa:</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Aparece no header do chat e
+                            nas saudações do assistente</p>
+                        <input type="text" id="wl-company" placeholder="Ex: Minha Empresa LTDA"
                             style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
 
-                        <label style="color:#94a3b8; display:block; margin-bottom:0.5rem;">URL do Logo:</label>
-                        <input type="url" id="wl-logo" placeholder="https://exemplo.com/logo.png"
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">URL do
+                            Logo:</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Imagem PNG/JPG (recomendado:
+                            200x60px, fundo transparente)</p>
+                        <input type="url" id="wl-logo" placeholder="https://seusite.com/logo.png"
                             style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
 
-                        <label style="color:#94a3b8; display:block; margin-bottom:0.5rem;">Cor Primária:</label>
-                        <input type="color" id="wl-primary" value="#3b82f6"
-                            style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid #475569; background:#1e293b; margin-bottom:1rem;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Cor
+                                    Primária:</label>
+                                <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Header, botões e
+                                    destaques</p>
+                                <input type="color" id="wl-primary" value="#3b82f6"
+                                    style="width:100%; height:50px; padding:0.25rem; border-radius:8px; border:1px solid #475569; background:#1e293b; cursor:pointer;">
+                            </div>
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Cor
+                                    Secundária:</label>
+                                <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Gradientes e efeitos
+                                </p>
+                                <input type="color" id="wl-secondary" value="#8b5cf6"
+                                    style="width:100%; height:50px; padding:0.25rem; border-radius:8px; border:1px solid #475569; background:#1e293b; cursor:pointer;">
+                            </div>
+                        </div>
 
-                        <label style="color:#94a3b8; display:block; margin-bottom:0.5rem;">Cor Secundária:</label>
-                        <input type="color" id="wl-secondary" value="#8b5cf6"
-                            style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid #475569; background:#1e293b; margin-bottom:1.5rem;">
-
-                        <button onclick="saveWhitelabel()"
-                            style="background:#3b82f6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; width:100%;">
-                            Salvar Configuração
+                        <button onclick="saveWhitelabel()" id="wl-save-btn"
+                            style="background:#3b82f6; color:white; border:none; padding:1rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; width:100%; font-size:1rem;">
+                            💾 Salvar Configuração
                         </button>
+                        <div id="wl-status" style="text-align:center; margin-top:0.75rem; font-size:0.9rem;"></div>
                     </div>
 
                     <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Preview</h3>
-                        <div id="wl-preview"
-                            style="padding:2rem; background:#1e293b; border-radius:8px; text-align:center;">
-                            <div style="color:#94a3b8;">Configure os campos acima para ver o preview</div>
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">👁️ Preview - Como Ficará Seu Chatbot</h3>
+                        <div id="wl-preview" style="padding:1.5rem; background:#1e293b; border-radius:8px;">
+                            <!-- Preview do Botão Flutuante -->
+                            <div style="margin-bottom:1.5rem;">
+                                <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.5rem;">Botão flutuante no
+                                    site:</p>
+                                <div id="wl-preview-bubble"
+                                    style="display:inline-flex; align-items:center; gap:0.5rem; padding:0.75rem 1.25rem; border-radius:25px; background:linear-gradient(135deg, #3b82f6, #8b5cf6); color:white; font-weight:600; box-shadow:0 4px 15px rgba(59,130,246,0.4);">
+                                    💬 <span id="wl-preview-bubble-text">Fale Conosco</span>
+                                </div>
+                            </div>
+                            <!-- Preview do Header do Chat -->
+                            <div>
+                                <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.5rem;">Header da janela de
+                                    chat:</p>
+                                <div id="wl-preview-header"
+                                    style="background:linear-gradient(135deg, #3b82f6, #1e40af); padding:1rem 1.5rem; border-radius:12px; text-align:center;">
+                                    <img id="wl-preview-logo" src="" alt=""
+                                        style="max-width:120px; max-height:50px; margin-bottom:0.5rem; display:none;">
+                                    <div id="wl-preview-name" style="color:white; font-weight:700; font-size:1.1rem;">
+                                        Sua Empresa</div>
+                                    <div style="color:rgba(255,255,255,0.8); font-size:0.85rem;">Assistente Virtual
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        <p style="color:#64748b; font-size:0.8rem; margin-top:1rem; text-align:center;">
+                            ⬆️ Preencha os campos acima e veja o preview atualizar em tempo real
+                        </p>
                     </div>
                 </div>
             </div>
+
 
             <!-- Tab Leads -->
             <div id="tab-leads" class="new-tab-content" style="display:none;">
@@ -2076,7 +2559,8 @@
                                 📥 Exportar CSV
                             </button>
                         </div>
-                        <div id="leads-list" style="color:#94a3b8;">Carregando...</div>
+                        <div id="leads-list" style="color:#94a3b8; max-height:500px; overflow-y:auto;">Carregando...
+                        </div>
                     </div>
 
                     <!-- Seção de Backup -->
@@ -2100,6 +2584,52 @@
                             <p style="color:#94a3b8;">Carregando backups...</p>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- SAFE PATCH - QA FIX: BUG-005 - Aba Widget dedicada -->
+            <div id="tab-widget" class="new-tab-content" style="display:none;">
+                <div style="background:#1e293b; padding:2rem; border-radius:16px;">
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🧩 Gerador de Widget</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gere o código do widget para incorporar em qualquer
+                        site</p>
+
+                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">⚙️ Configurações do Widget</h3>
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Cor
+                            Primária:</label>
+                        <input type="color" id="widget-color" value="#3b82f6"
+                            style="width:100%; height:50px; padding:0.25rem; border-radius:8px; border:1px solid #475569; background:#1e293b; cursor:pointer; margin-bottom:1rem;">
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Mensagem de
+                            Saudação:</label>
+                        <input type="text" id="widget-greeting" value="Oi! Posso ajudar?"
+                            placeholder="Ex: Olá! Como posso ajudar?"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                    </div>
+
+                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">📋 Código do Widget</h3>
+                        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:1rem;">Copie e cole este código antes
+                            do &lt;/body&gt; do seu site</p>
+
+                        <div id="widget-code-container"
+                            style="background:#0f172a; padding:1rem; border-radius:8px; max-height:300px; overflow-y:auto; font-family:monospace; font-size:0.85rem; color:#06d6a0;">
+                            <pre id="widget-code-output"
+                                style="margin:0; white-space:pre-wrap; word-break:break-all;">Ative um assistente na página principal para gerar o código do widget.</pre>
+                        </div>
+
+                        <button onclick="copyWidgetCodeFromTab()"
+                            style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:1rem;">
+                            📋 Copiar Código
+                        </button>
+                    </div>
+
+                    <button onclick="regenerateWidgetCode()"
+                        style="background:#10b981; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
+                        🔄 Regenerar Código com Novas Configurações
+                    </button>
                 </div>
             </div>
         </div>
@@ -2160,20 +2690,95 @@
             // Carregar dados da tab
             if (tabName === 'analytics') loadAnalytics();
             if (tabName === 'webhooks') loadWebhooks();
-            if (tabName === 'billing') loadPlans();
+            if (tabName === 'billing') loadBillingLimits(); // SAFE PATCH - QA FIX: BUG-003
             if (tabName === 'llm') loadLLMStats();
             if (tabName === 'system') loadSystemStatus();
             if (tabName === 'gmail') loadGmailStatus();
             if (tabName === 'whatsapp') loadWhatsAppStatus();
             if (tabName === 'chatgpt') loadChatGPTStatus();
+            if (tabName === 'knowledge') loadFAQs();
+            if (tabName === 'whitelabel') loadWhitelabelConfig();
             if (tabName === 'leads') {
                 loadLeadsStats();
-                loadBackups(); // Carregar backups também
+                loadBackups();
+            }
+            // SAFE PATCH - BUG-WIDGET-001: Sincronizar código quando abrir aba Widget
+            if (tabName === 'widget') {
+                updateWidgetTabCode();
             }
         }
 
-        async function loadAnalytics() {
+        // SAFE PATCH - BUG-WIDGET-001: Funções da aba Widget
+        function copyWidgetCodeFromTab() {
+            const codeOutput = document.getElementById('widget-code-output');
+            if (!codeOutput || codeOutput.textContent.includes('Ative um assistente')) {
+                showToast('⚠️ Ative um assistente primeiro na página principal!', 'error');
+                return;
+            }
+            navigator.clipboard.writeText(codeOutput.textContent).then(() => {
+                showToast('✅ Código do widget copiado!', 'success');
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+                showToast('❌ Erro ao copiar código', 'error');
+            });
+        }
+
+        function regenerateWidgetCode() {
+            const color = document.getElementById('widget-color').value || '#3b82f6';
+            const greeting = document.getElementById('widget-greeting').value || 'Oi! Posso ajudar?';
+
+            // Recuperar dados do assistente ativo
+            const robotName = document.getElementById('robotName').value;
+            const salesUrl = document.getElementById('salesUrl').value;
+            const instructions = document.getElementById('customInstructions').value;
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+
+            if (!robotName || !salesUrl) {
+                showToast('⚠️ Configure e ative um assistente primeiro!', 'error');
+                return;
+            }
+
+            // Gerar novo código com configurações personalizadas
+            const widgetCode = generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, color);
+            document.getElementById('widget-code-output').textContent = widgetCode;
+
+            // Atualizar também o código principal na página inicial
+            const mainWidgetDisplay = document.getElementById('widgetCodeDisplay');
+            if (mainWidgetDisplay) {
+                mainWidgetDisplay.textContent = widgetCode;
+            }
+
+            showToast('✅ Código regenerado com novas configurações!', 'success');
+        }
+
+        // Sincronizar código do widget entre página principal e aba Widget
+        function updateWidgetTabCode() {
+            const mainWidgetCode = document.getElementById('widgetCodeDisplay');
+            const tabWidgetCode = document.getElementById('widget-code-output');
+            if (mainWidgetCode && tabWidgetCode && mainWidgetCode.textContent && !mainWidgetCode.textContent.includes('LinkMagicoWidgetConfig')) {
+                // Só sincronizar se há código gerado na página principal
+                if (mainWidgetCode.textContent.includes('LinkMágico Chatbot Widget')) {
+                    tabWidgetCode.textContent = mainWidgetCode.textContent;
+                }
+            }
+        }
+
+
+        async function loadAnalytics(days = 30) {
+            // SAFE PATCH - QA FIX: BUG-001 + BUG-007
+            // Adiciona fallback para contagem de mensagens e filtros de período
             try {
+                // Atualizar visual dos botões de período se existirem
+                document.querySelectorAll('.analytics-period-btn').forEach(btn => {
+                    btn.style.background = '#334155';
+                    btn.style.color = '#94a3b8';
+                });
+                const activeBtn = document.querySelector(`.analytics-period-btn[data-days="${days}"]`);
+                if (activeBtn) {
+                    activeBtn.style.background = '#3b82f6';
+                    activeBtn.style.color = 'white';
+                }
+
                 // Buscar dados de leads
                 const leadsResponse = await fetch('/admin/leads', {
                     headers: {
@@ -2182,27 +2787,56 @@
                 });
                 const leadsData = await leadsResponse.json();
 
+                // SAFE PATCH - QA FIX: BUG-001 - Buscar analytics do servidor como fallback
+                let serverAnalytics = { chatRequests: 0, totalRequests: 0 };
+                try {
+                    const statusResponse = await fetch('/api/system/status');
+                    const statusData = await statusResponse.json();
+                    if (statusData && statusData.analytics) {
+                        serverAnalytics = statusData.analytics;
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Fallback analytics do servidor indisponível:', e);
+                }
+
                 if (leadsData.success && leadsData.leads) {
                     const leads = leadsData.leads;
-                    const totalLeads = leads.length;
+
+                    // SAFE PATCH - QA FIX: BUG-007 - Filtrar por período
+                    const cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - days);
+                    const filteredLeads = leads.filter(lead => {
+                        const leadDate = new Date(lead.timestamp || lead.createdAt);
+                        return leadDate >= cutoffDate;
+                    });
+
+                    const totalLeads = filteredLeads.length;
 
                     // Calcular total de mensagens (soma de todas as conversas)
                     let totalMessages = 0;
                     let totalConversations = 0;
 
-                    leads.forEach(lead => {
+                    filteredLeads.forEach(lead => {
                         if (lead.conversations && Array.isArray(lead.conversations)) {
-                            totalConversations += lead.conversations.length;
-                            lead.conversations.forEach(conv => {
-                                if (conv.messages && Array.isArray(conv.messages)) {
-                                    totalMessages += conv.messages.length;
-                                }
-                            });
+                            // BUG-001 FIX: lead.conversations is a flat array of messages
+                            // Each item is {timestamp, message, isUser}, not a conversation with nested messages
+                            totalMessages += lead.conversations.length;
+                            // Count lead as having a conversation if it has at least one message
+                            if (lead.conversations.length > 0) {
+                                totalConversations += 1;
+                            }
                         }
                     });
 
+                    // SAFE PATCH - QA FIX: BUG-001 - Usar maior valor entre leads e servidor
+                    if (totalMessages === 0 && serverAnalytics.chatRequests > 0) {
+                        totalMessages = serverAnalytics.chatRequests;
+                    } else {
+                        totalMessages = Math.max(totalMessages, serverAnalytics.chatRequests || 0);
+                    }
+
                     // Calcular taxa de sucesso (leads com email ou telefone / total)
-                    const leadsWithContact = leads.filter(lead => {
+                    const leadsWithContact = filteredLeads.filter(lead => {
                         const telefone = lead.telefone || lead.phone;
                         return lead.email || telefone;
                     }).length;
@@ -2215,12 +2849,12 @@
                     document.getElementById('analytics-leads').textContent = totalLeads;
                     document.getElementById('analytics-success').textContent = successRate + '%';
 
-                    console.log(`📊 Analytics carregado: ${totalMessages} mensagens, ${totalConversations} conversas, ${totalLeads} leads, ${successRate}% sucesso`);
+                    console.log(`📊 Analytics carregado (${days}d): ${totalMessages} mensagens, ${totalConversations} conversas, ${totalLeads} leads, ${successRate}% sucesso`);
                 } else {
-                    // Se não houver dados, mostrar zeros
-                    document.getElementById('analytics-messages').textContent = '0';
-                    document.getElementById('analytics-conversations').textContent = '0';
-                    document.getElementById('analytics-leads').textContent = '0';
+                    // SAFE PATCH - QA FIX: BUG-001 - Usar servidor analytics se leads vazio
+                    document.getElementById('analytics-messages').textContent = serverAnalytics.chatRequests || '0';
+                    document.getElementById('analytics-conversations').textContent = serverAnalytics.activeChats || '0';
+                    document.getElementById('analytics-leads').textContent = serverAnalytics.leadsCaptured || '0';
                     document.getElementById('analytics-success').textContent = '100%';
                 }
             } catch (error) {
@@ -2232,6 +2866,7 @@
                 document.getElementById('analytics-success').textContent = '0%';
             }
         }
+
 
         async function loadWebhooks() {
             try {
@@ -2264,7 +2899,19 @@
             }
 
             try {
-                const response = await fetch('/api/knowledge/default/faq', {
+                // Obter apiKey da sessão para garantir tenancy correta
+                const sessionRes = await fetch('/api/session/me');
+                const sessionData = await sessionRes.json();
+
+                // Corrigir a leitura da API Key (o endpoint retorna apiKey diretamente)
+                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
+
+                if (!sessionData.success || !chatbotId) {
+                    alert('Erro de autenticação. Por favor, recarregue a página.');
+                    return;
+                }
+
+                const response = await fetch(`/api/knowledge/${chatbotId}/faq`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question, answer })
@@ -2285,15 +2932,23 @@
 
         async function loadFAQs() {
             try {
-                const response = await fetch('/api/knowledge/default');
+                // Obter apiKey da sessão
+                const sessionRes = await fetch('/api/session/me');
+                const sessionData = await sessionRes.json();
+
+                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
+                if (!sessionData.success || !chatbotId) return;
+
+                const response = await fetch(`/api/knowledge/${chatbotId}`);
                 const data = await response.json();
 
                 const container = document.getElementById('faqs-container');
-                if (data.success && data.knowledge.faqs && data.knowledge.faqs.length > 0) {
-                    container.innerHTML = data.knowledge.faqs.map(faq => `
-                        <div style="background:#334155; padding:1rem; border-radius:12px; margin-bottom:1rem;">
+                if (data.success && data.knowledgeBase && data.knowledgeBase.faqs && data.knowledgeBase.faqs.length > 0) {
+                    container.innerHTML = data.knowledgeBase.faqs.map(faq => `
+                        <div style="background:#334155; padding:1rem; border-radius:12px; margin-bottom:1rem; position:relative;">
                             <div style="color:#cbd5e1; font-weight:600; margin-bottom:0.5rem;">❓ ${faq.question}</div>
                             <div style="color:#94a3b8; font-size:0.9rem;">💬 ${faq.answer}</div>
+                            <button onclick="deleteFAQ('${faq.id}')" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ef4444; cursor:pointer;" title="Remover">🗑️</button>
                         </div>
                     `).join('');
                 } else {
@@ -2301,6 +2956,29 @@
                 }
             } catch (error) {
                 console.error('Erro ao carregar FAQs:', error);
+            }
+        }
+
+        async function deleteFAQ(faqId) {
+            if (!confirm('Deseja realmente remover esta FAQ?')) return;
+
+            try {
+                const sessionRes = await fetch('/api/session/me');
+                const sessionData = await sessionRes.json();
+                const chatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey);
+
+                if (!chatbotId) return;
+
+                const response = await fetch(`/api/knowledge/${chatbotId}/faq/${faqId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    loadFAQs();
+                }
+            } catch (error) {
+                console.error('Erro ao deletar FAQ:', error);
             }
         }
 
@@ -2318,7 +2996,7 @@
                                 ${plan.price === 0 ? 'Grátis' : 'R$ ' + plan.price.toFixed(2)}
                             </div>
                             <ul style="color:#94a3b8; font-size:0.9rem; list-style:none; padding:0;">
-                                <li style="margin-bottom:0.5rem;">✓ ${plan.features.maxChatbots} chatbots</li>
+                                <li style="margin-bottom:0.5rem;">✓ ${plan.features.maxChatbots} assistentes</li>
                                 <li style="margin-bottom:0.5rem;">✓ ${plan.features.requestsPerMinute} req/min</li>
                                 <li style="margin-bottom:0.5rem;">✓ ${plan.features.requestsPerHour} req/hora</li>
                             </ul>
@@ -2346,41 +3024,127 @@
         }
 
         async function loadSystemStatus() {
+            // SAFE PATCH - QA FIX: BUG-002
+            // Adiciona timeout de 5s e aceita ambos formatos de resposta
+            const container = document.getElementById('system-status');
+
+            // Timeout de 5 segundos
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('timeout')), 5000)
+            );
+
             try {
-                const response = await fetch('/api/system/status');
+                const response = await Promise.race([
+                    fetch('/api/system/status'),
+                    timeoutPromise
+                ]);
                 const data = await response.json();
 
-                const container = document.getElementById('system-status');
-                if (data.success) {
+                // SAFE PATCH - QA FIX: BUG-002 - Aceitar ambos formatos: {success, status} ou objeto direto
+                // O endpoint retorna objeto direto com {status, uptime, analytics, services}
+                const isDirectFormat = data.status && typeof data.status === 'string'; // "healthy"
+                const hasWrappedFormat = data.success && data.status && typeof data.status === 'object';
+
+                if (isDirectFormat || hasWrappedFormat) {
+                    // Extrair dados conforme formato
+                    const statusStr = isDirectFormat ? data.status : 'operational';
+                    const uptime = data.uptime || 0;
+                    const analytics = data.analytics || {};
+                    const services = data.services || {};
+
                     container.innerHTML = `
                         <div style="display:grid; gap:1rem;">
                             <div style="background:#334155; padding:1rem; border-radius:12px;">
                                 <div style="color:#94a3b8;">Servidor:</div>
-                                <div style="color:#10b981; font-weight:600;">${data.status.server}</div>
-                            </div>
-                            <div style="background:#334155; padding:1rem; border-radius:12px;">
-                                <div style="color:#94a3b8;">Banco de Dados:</div>
-                                <div style="color:#10b981; font-weight:600;">${data.status.database.type} - ${data.status.database.connected ? 'Conectado' : 'Desconectado'}</div>
-                            </div>
-                            <div style="background:#334155; padding:1rem; border-radius:12px;">
-                                <div style="color:#94a3b8;">Cache:</div>
-                                <div style="color:#10b981; font-weight:600;">${data.status.cache.type} - ${data.status.cache.connected ? 'Conectado' : 'Desconectado'}</div>
+                                <div style="color:#10b981; font-weight:600;">✅ ${statusStr === 'healthy' ? 'Operacional' : statusStr}</div>
                             </div>
                             <div style="background:#334155; padding:1rem; border-radius:12px;">
                                 <div style="color:#94a3b8;">Uptime:</div>
-                                <div style="color:#60a5fa; font-weight:600;">${Math.floor(data.status.uptime / 60)} minutos</div>
+                                <div style="color:#60a5fa; font-weight:600;">${Math.floor(uptime / 60)} minutos</div>
+                            </div>
+                            <div style="background:#334155; padding:1rem; border-radius:12px;">
+                                <div style="color:#94a3b8;">Requisições Totais:</div>
+                                <div style="color:#10b981; font-weight:600;">${analytics.totalRequests || 0}</div>
+                            </div>
+                            <div style="background:#334155; padding:1rem; border-radius:12px;">
+                                <div style="color:#94a3b8;">Serviços IA:</div>
+                                <div style="color:#10b981; font-weight:600;">
+                                    ${services.groq ? '✅ Groq' : ''}
+                                    ${services.openai ? '✅ OpenAI' : ''}
+                                    ${services.openrouter ? '✅ OpenRouter' : ''}
+                                    ${!services.groq && !services.openai && !services.openrouter ? '⚠️ Nenhum configurado' : ''}
+                                </div>
+                            </div>
+                            <div style="background:#334155; padding:1rem; border-radius:12px;">
+                                <div style="color:#94a3b8;">Versão:</div>
+                                <div style="color:#60a5fa; font-weight:600;">${data.version || '7.0.0'}</div>
                             </div>
                         </div>
                     `;
+                    console.log('✅ Status do sistema carregado com sucesso');
+                } else {
+                    throw new Error('Formato de resposta inesperado');
                 }
             } catch (error) {
                 console.error('Erro ao carregar status:', error);
-                document.getElementById('system-status').innerHTML = '<p style="color:#ef4444;">Erro ao carregar status do sistema</p>';
+                // SAFE PATCH - QA FIX: BUG-002 - Fallback para status degradado
+                const isDegradedByTimeout = error.message === 'timeout';
+                container.innerHTML = `
+                    <div style="background:#fef3c7; padding:1.5rem; border-radius:12px; border-left:4px solid #f59e0b;">
+                        <div style="color:#92400e; font-weight:600; margin-bottom:0.5rem;">
+                            ⚠️ ${isDegradedByTimeout ? 'Status Degradado' : 'Erro de Conexão'}
+                        </div>
+                        <div style="color:#78350f; font-size:0.9rem;">
+                            ${isDegradedByTimeout
+                        ? 'Servidor respondendo com latência. O sistema continua operacional.'
+                        : 'Não foi possível conectar ao servidor. Verifique sua conexão.'}
+                        </div>
+                        <button onclick="loadSystemStatus()" style="margin-top:1rem; background:#f59e0b; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;">
+                            🔄 Tentar Novamente
+                        </button>
+                    </div>
+                `;
             }
         }
 
+
         function showAddWebhook() {
             alert('Funcionalidade de adicionar webhook em desenvolvimento. Use a API diretamente por enquanto.');
+        }
+
+        // SAFE PATCH - QA FIX: BUG-003 - Função para carregar limites de billing
+        async function loadBillingLimits() {
+            try {
+                const response = await fetch('/api/billing/limits');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Atualizar elementos do DOM
+                    document.getElementById('billing-plan-name').textContent = data.planName || 'Gratuito';
+
+                    const msgLimit = data.limits.messages.limit === -1 ? '∞' : data.limits.messages.limit;
+                    const msgUsed = data.limits.messages.used || 0;
+                    document.getElementById('billing-messages-usage').textContent = `${msgUsed} / ${msgLimit}`;
+
+                    const extLimit = data.limits.extractions.limit === -1 ? '∞' : data.limits.extractions.limit;
+                    const extUsed = data.limits.extractions.used || 0;
+                    document.getElementById('billing-extractions-usage').textContent = `${extUsed} / ${extLimit}`;
+
+                    const chatbotsLimit = data.limits.chatbots.limit === -1 ? '∞' : data.limits.chatbots.limit;
+                    document.getElementById('billing-chatbots-limit').textContent = `Máx: ${chatbotsLimit}`;
+
+                    console.log(`✅ Billing carregado: Plano ${data.planName}`);
+                } else {
+                    throw new Error('Resposta sem sucesso');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar billing:', error);
+                // Fallback para valores padrão (plano Free)
+                document.getElementById('billing-plan-name').textContent = 'Gratuito';
+                document.getElementById('billing-messages-usage').textContent = '0 / 100';
+                document.getElementById('billing-extractions-usage').textContent = '0 / 10';
+                document.getElementById('billing-chatbots-limit').textContent = 'Máx: 1';
+            }
         }
 
         // Carregar FAQs ao abrir a tab
@@ -2446,9 +3210,18 @@
                 const statusEl = document.getElementById('whatsapp-status');
 
                 if (data.configured) {
-                    statusEl.innerHTML = `<div style="color:#10b981;">✅ WhatsApp configurado (${data.provider})</div>`;
+                    statusEl.innerHTML = `<div style="color:#10b981; font-weight:600;">✅ WhatsApp operacional via ${data.provider.toUpperCase()}</div>`;
                 } else {
-                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ WhatsApp não configurado. Configure WHATSAPP_PROVIDER no .env</div>';
+                    statusEl.innerHTML = `
+                        <div style="color:#f59e0b; background: rgba(245, 158, 11, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                            <div style="font-weight:600; margin-bottom: 5px;">⚠️ Integração Pendente</div>
+                            <p style="font-size: 0.85rem; margin: 0;">Para ativar, configure as variáveis de ambiente na Render.com:</p>
+                            <ul style="font-size: 0.8rem; margin-top: 8px; padding-left: 20px;">
+                                <li><code>WHATSAPP_PROVIDER</code> (twilio ou evolution)</li>
+                                <li><code>NOTIFICATION_PHONE</code> (seu número com DDI e DDD)</li>
+                                <li>Credenciais Twilio (SID, Token, From) OU Evolution (API URL, Key)</li>
+                            </ul>
+                        </div>`;
                 }
             } catch (error) {
                 console.error('Erro ao carregar status WhatsApp:', error);
@@ -2485,37 +3258,136 @@
         }
 
         async function loadChatGPTStatus() {
+            // Manter compatibilidade - chamar a nova função
+            await loadChatGPTSettings();
+        }
+
+        async function loadChatGPTSettings() {
             try {
-                const response = await fetch('/api/chatgpt/status');
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/chatgpt/settings', {
+                    headers: { 'X-API-Key': apiKey }
+                });
                 const data = await response.json();
-                const statusEl = document.getElementById('chatgpt-status');
+                const statusEl = document.getElementById('chatgpt-settings-status');
 
                 if (data.configured) {
-                    statusEl.innerHTML = '<div style="color:#10b981;">✅ ChatGPT configurado e pronto</div>';
-                } else {
-                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ ChatGPT não configurado. Configure CHATGPT_API_KEY no .env</div>';
-                }
-
-                // Carregar modelos
-                const modelsResponse = await fetch('/api/chatgpt/models');
-                const modelsData = await modelsResponse.json();
-                const modelsEl = document.getElementById('chatgpt-models');
-
-                if (modelsData.length > 0) {
-                    modelsEl.innerHTML = modelsData.map(m => `
-                        <div style="background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:0.5rem;">
-                            <div style="color:#cbd5e1; font-weight:600;">${m.name}</div>
-                            <div style="color:#94a3b8; font-size:0.9rem;">${m.description}</div>
+                    statusEl.innerHTML = `
+                        <div style="color:#10b981; margin-bottom:0.5rem;">✅ ChatGPT configurado com sua própria chave</div>
+                        <div style="color:#94a3b8; font-size:0.9rem;">
+                            • Chave: ${data.settings.openaiKeyHint || 'sk-****'}<br>
+                            • Modelo: ${data.settings.defaultModel || 'gpt-4-turbo'}<br>
+                            • Configurado em: ${new Date(data.settings.createdAt).toLocaleDateString('pt-BR')}
                         </div>
-                    `).join('');
+                    `;
+                    // Preencher o select com o modelo salvo
+                    document.getElementById('chatgpt-model').value = data.settings.defaultModel || 'gpt-4-turbo';
+                } else {
+                    if (data.usingGlobal) {
+                        statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ Usando configuração global do sistema. Configure sua própria chave para maior controle.</div>';
+                    } else {
+                        statusEl.innerHTML = '<div style="color:#ef4444;">❌ ChatGPT não configurado. Adicione sua chave OpenAI abaixo.</div>';
+                    }
                 }
             } catch (error) {
-                console.error('Erro ao carregar status ChatGPT:', error);
+                console.error('Erro ao carregar configurações ChatGPT:', error);
+                document.getElementById('chatgpt-settings-status').innerHTML =
+                    '<div style="color:#ef4444;">❌ Erro ao carregar configurações</div>';
             }
         }
 
-        async function testChatGPT() {
-            const prompt = document.getElementById('test-prompt').value;
+        async function saveChatGPTSettings() {
+            const openaiApiKey = document.getElementById('chatgpt-api-key').value;
+            const defaultModel = document.getElementById('chatgpt-model').value;
+
+            if (!openaiApiKey) {
+                alert('⚠️ Informe sua chave API da OpenAI');
+                return;
+            }
+
+            if (!openaiApiKey.startsWith('sk-')) {
+                alert('❌ Chave OpenAI inválida. Deve começar com "sk-"');
+                return;
+            }
+
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/chatgpt/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ openaiApiKey, defaultModel })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Configurações ChatGPT salvas com sucesso!');
+                    document.getElementById('chatgpt-api-key').value = ''; // Limpar por segurança
+                    loadChatGPTSettings();
+                } else {
+                    alert('❌ Erro: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao salvar: ' + error.message);
+            }
+        }
+
+        async function testChatGPTConnection() {
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/chatgpt/settings/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('❌ ' + (data.error || data.message));
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao testar conexão: ' + error.message);
+            }
+        }
+
+        async function deleteChatGPTSettings() {
+            if (!confirm('🗑️ Tem certeza que deseja remover sua configuração ChatGPT?\n\nO sistema voltará a usar a configuração global (se disponível).')) {
+                return;
+            }
+
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/chatgpt/settings', {
+                    method: 'DELETE',
+                    headers: { 'X-API-Key': apiKey }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    loadChatGPTSettings();
+                } else {
+                    alert('❌ Erro: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao remover: ' + error.message);
+            }
+        }
+
+        async function testChatGPTGeneration() {
+            const prompt = document.getElementById('chatgpt-test-prompt').value;
             if (!prompt) {
                 alert('Digite uma pergunta!');
                 return;
@@ -2523,28 +3395,36 @@
 
             const responseEl = document.getElementById('chatgpt-response');
             responseEl.style.display = 'block';
-            responseEl.innerHTML = '<div style="color:#94a3b8;">Gerando resposta...</div>';
+            responseEl.innerHTML = '<div style="color:#94a3b8;">🤖 Gerando resposta...</div>';
 
             try {
-                const response = await fetch('/api/chatgpt/generate', {
+                const apiKey = window.currentApiKey;
+                const model = document.getElementById('chatgpt-model').value;
+
+                const response = await fetch('/api/chatgpt/generate-tenant', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        model: 'gpt-4-turbo'
-                    })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ prompt, model })
                 });
 
                 const data = await response.json();
-                if (data.success) {
+                if (data.success && data.result && data.result.response) {
                     responseEl.innerHTML = `<div style="color:#cbd5e1;">${data.result.response}</div>`;
                 } else {
-                    responseEl.innerHTML = `<div style="color:#ef4444;">Erro: ${data.error}</div>`;
+                    responseEl.innerHTML = `<div style="color:#ef4444;">Erro: ${data.error || 'Resposta vazia'}</div>`;
                 }
             } catch (error) {
                 console.error('Erro:', error);
                 responseEl.innerHTML = '<div style="color:#ef4444;">Erro ao gerar resposta</div>';
             }
+        }
+
+        // Manter compatibilidade com função antiga
+        async function testChatGPT() {
+            await testChatGPTGeneration();
         }
 
         async function saveWhitelabel() {
@@ -2555,8 +3435,21 @@
                 secondaryColor: document.getElementById('wl-secondary').value
             };
 
+            const statusEl = document.getElementById('wl-status');
+
             try {
-                const response = await fetch('/api/whitelabel/default', {
+                // Buscar API key do tenant da sessão
+                const sessionRes = await fetch('/api/session/me');
+                const sessionData = await sessionRes.json();
+
+                if (!sessionData.success || !sessionData.apiKey) {
+                    statusEl.innerHTML = '<span style="color:#ef4444;">❌ Sessão expirada. Faça login novamente.</span>';
+                    return;
+                }
+
+                const chatbotId = sessionData.apiKey; // Usar API key como chatbotId
+
+                const response = await fetch(`/api/whitelabel/${encodeURIComponent(chatbotId)}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
@@ -2564,26 +3457,107 @@
 
                 const data = await response.json();
                 if (data.success) {
-                    alert('Configuração salva com sucesso!');
-                    updateWhitelabelPreview(config);
+                    statusEl.innerHTML = '<span style="color:#10b981;">✅ Configuração salva com sucesso!</span>';
+                    setTimeout(() => { statusEl.innerHTML = ''; }, 3000);
                 } else {
-                    alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
+                    statusEl.innerHTML = '<span style="color:#ef4444;">❌ Erro ao salvar: ' + (data.error || 'Desconhecido') + '</span>';
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                alert('Erro ao salvar configuração');
+                statusEl.innerHTML = '<span style="color:#ef4444;">❌ Erro ao salvar configuração</span>';
             }
         }
 
         function updateWhitelabelPreview(config) {
-            const preview = document.getElementById('wl-preview');
-            preview.innerHTML = `
-                <div style="background:linear-gradient(135deg, ${config.primaryColor}, ${config.secondaryColor}); padding:2rem; border-radius:12px;">
-                    ${config.logoUrl ? `<img src="${config.logoUrl}" style="max-width:200px; margin-bottom:1rem;">` : ''}
-                    <h3 style="color:white; margin:0;">${config.companyName || 'Sua Empresa'}</h3>
-                </div>
-            `;
+            // Atualizar preview do botão flutuante
+            const bubbleEl = document.getElementById('wl-preview-bubble');
+            if (bubbleEl) {
+                bubbleEl.style.background = `linear-gradient(135deg, ${config.primaryColor || '#3b82f6'}, ${config.secondaryColor || '#8b5cf6'})`;
+            }
+
+            // Atualizar preview do header
+            const headerEl = document.getElementById('wl-preview-header');
+            if (headerEl) {
+                headerEl.style.background = `linear-gradient(135deg, ${config.primaryColor || '#3b82f6'}, ${config.secondaryColor || '#1e40af'})`;
+            }
+
+            // Atualizar nome da empresa
+            const nameEl = document.getElementById('wl-preview-name');
+            if (nameEl) {
+                nameEl.textContent = config.companyName || 'Sua Empresa';
+            }
+
+            // Atualizar logo
+            const logoEl = document.getElementById('wl-preview-logo');
+            if (logoEl) {
+                if (config.logoUrl) {
+                    logoEl.src = config.logoUrl;
+                    logoEl.style.display = 'block';
+                } else {
+                    logoEl.style.display = 'none';
+                }
+            }
         }
+
+        async function loadWhitelabelConfig() {
+            try {
+                // Buscar API key do tenant da sessão
+                const sessionRes = await fetch('/api/session/me');
+                const sessionData = await sessionRes.json();
+
+                if (!sessionData.success || !sessionData.apiKey) {
+                    console.warn('Sessão não encontrada para carregar whitelabel');
+                    return;
+                }
+
+                const chatbotId = sessionData.apiKey; // Usar API key como chatbotId
+
+                const response = await fetch(`/api/whitelabel/${encodeURIComponent(chatbotId)}`);
+                const data = await response.json();
+
+                if (data.success && data.config) {
+                    const config = data.config.settings || data.config;
+
+                    // Preencher campos com valores salvos
+                    if (config.companyName) document.getElementById('wl-company').value = config.companyName;
+                    if (config.logoUrl) document.getElementById('wl-logo').value = config.logoUrl;
+                    if (config.primaryColor) document.getElementById('wl-primary').value = config.primaryColor;
+                    if (config.secondaryColor) document.getElementById('wl-secondary').value = config.secondaryColor;
+
+                    // Atualizar preview com valores carregados
+                    updateWhitelabelPreview(config);
+                    console.log('📋 Configuração Whitelabel carregada para tenant:', chatbotId);
+                }
+            } catch (error) {
+                console.warn('Não foi possível carregar config whitelabel:', error);
+            }
+        }
+
+        // Event listeners para atualização do preview em tempo real
+        function setupWhitelabelPreviewListeners() {
+            const companyInput = document.getElementById('wl-company');
+            const logoInput = document.getElementById('wl-logo');
+            const primaryInput = document.getElementById('wl-primary');
+            const secondaryInput = document.getElementById('wl-secondary');
+
+            function updatePreviewFromInputs() {
+                updateWhitelabelPreview({
+                    companyName: companyInput.value,
+                    logoUrl: logoInput.value,
+                    primaryColor: primaryInput.value,
+                    secondaryColor: secondaryInput.value
+                });
+            }
+
+            companyInput.addEventListener('input', updatePreviewFromInputs);
+            logoInput.addEventListener('input', updatePreviewFromInputs);
+            primaryInput.addEventListener('input', updatePreviewFromInputs);
+            secondaryInput.addEventListener('input', updatePreviewFromInputs);
+        }
+
+        // Inicializar listeners quando DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', setupWhitelabelPreviewListeners);
+
 
         async function loadLeadsStats() {
             try {
@@ -2622,12 +3596,12 @@
                     document.getElementById('leads-warm').textContent = warm;
                     document.getElementById('leads-cold').textContent = cold;
 
-                    // Carregar lista (últimos 10 leads)
+                    // Carregar lista de TODOS os leads (ordenados do mais recente para o mais antigo)
                     const listEl = document.getElementById('leads-list');
-                    const recentLeads = leads.slice(-10).reverse(); // Últimos 10, mais recentes primeiro
+                    const sortedLeads = leads.slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                    if (recentLeads.length > 0) {
-                        listEl.innerHTML = recentLeads.map(lead => {
+                    if (sortedLeads.length > 0) {
+                        listEl.innerHTML = sortedLeads.map(lead => {
                             // Determinar classificação
                             let classification = 'cold';
                             let bgColor = '#3b82f6';
@@ -2819,6 +3793,59 @@
                     console.warn('Não foi possível carregar agendamentos:', aptError);
                 }
 
+                // 💬 SAFE PATCH - Renderizar histórico de conversas (try/catch com fallback)
+                let conversationsHtml = '';
+                try {
+                    if (lead.conversations && Array.isArray(lead.conversations) && lead.conversations.length > 0) {
+                        const conversationsList = lead.conversations.map(conv => {
+                            // Validação de dados com fallback
+                            const convTimestamp = conv.timestamp || new Date().toISOString();
+                            const convDate = new Date(convTimestamp);
+                            const convTime = convDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                            const convDateStr = convDate.toLocaleDateString('pt-BR');
+                            const isUser = Boolean(conv.isUser);
+                            const message = conv.message || '[mensagem vazia]';
+
+                            return `
+                                <div style="display:flex; flex-direction:${isUser ? 'row-reverse' : 'row'}; margin-bottom:0.75rem;">
+                                    <div style="max-width:80%; padding:0.75rem 1rem; border-radius:12px; ${isUser
+                                    ? 'background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border-bottom-right-radius:4px;'
+                                    : 'background:#1e293b; color:#cbd5e1; border-bottom-left-radius:4px;'}">
+                                        <div style="font-size:0.85rem; line-height:1.4;">${message}</div>
+                                        <div style="font-size:0.7rem; ${isUser ? 'color:rgba(255,255,255,0.7);' : 'color:#64748b;'} margin-top:0.25rem; text-align:${isUser ? 'right' : 'left'};">
+                                            ${convDateStr} ${convTime}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        conversationsHtml = `
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                                    <div style="color:#94a3b8; font-size:0.9rem;">💬 Histórico de Conversas</div>
+                                    <div style="color:#60a5fa; font-size:0.8rem; font-weight:600;">${lead.conversations.length} mensagens</div>
+                                </div>
+                                <div style="max-height:300px; overflow-y:auto; padding-right:0.5rem;">
+                                    ${conversationsList}
+                                </div>
+                            </div>
+                        `;
+                        console.log(`💬 [SAFE PATCH] Histórico de conversas renderizado: ${lead.conversations.length} mensagens para lead ${leadId}`);
+                    } else {
+                        conversationsHtml = `
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
+                                <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">💬 Histórico de Conversas</div>
+                                <div style="color:#64748b; font-size:0.85rem; font-style:italic;">Nenhuma conversa registrada ainda.</div>
+                            </div>
+                        `;
+                    }
+                } catch (convError) {
+                    // FALLBACK: Em caso de erro, não exibe a seção de conversas (não afeta o resto do modal)
+                    console.warn('💬 [SAFE PATCH] Erro ao renderizar histórico de conversas (fallback: seção omitida):', convError);
+                    conversationsHtml = ''; // Fallback seguro: não exibe a seção em caso de erro
+                }
+
                 const date = new Date(lead.timestamp);
                 const dateStr = date.toLocaleDateString('pt-BR', {
                     day: '2-digit',
@@ -2832,6 +3859,7 @@
                 const nome = lead.nome || lead.name || 'Não informado';
                 const telefone = lead.telefone || lead.phone || 'Não informado';
                 const url = lead.url_origem || lead.url || 'Não disponível';
+
 
                 const modalContent = `
                 <div style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; display:flex; align-items:center; justify-content:center;" onclick="this.remove()">
@@ -2866,10 +3894,13 @@
                         
                         ${appointmentsHtml}
                         
+                        ${conversationsHtml}
+                        
                         <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🕒 Data de Captura</div>
                             <div style="color:#cbd5e1; font-weight:600;">${dateStr}</div>
                         </div>
+
                         
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🔗 URL de Origem</div>
@@ -3071,6 +4102,213 @@
             // Atualizar a cada 30 segundos
             setInterval(loadDashboardLeads, 30000);
         });
+
+
+        // ===== WHATSAPP MULTI-TENANT (NOVO) =====
+
+        let currentProvider = null;
+
+        async function loadWhatsAppSettings() {
+            try {
+                const apiKey = window.currentApiKey;
+                if (!apiKey) {
+                    console.error('API Key não disponível');
+                    return;
+                }
+
+                const response = await fetch('/api/whatsapp/settings', {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const data = await response.json();
+
+                const statusEl = document.getElementById('whatsapp-current-status');
+
+                if (data.configured) {
+                    let html = '<div style="color:#10b981; margin-bottom:0.5rem;">';
+                    html += '✅ <strong>WhatsApp Configurado</strong>';
+                    html += '</div>';
+                    html += '<div style="color:#94a3b8; font-size:0.9rem;">';
+                    html += 'Provider: <strong>' + data.settings.provider.toUpperCase() + '</strong><br>';
+                    html += 'Telefone: ' + (data.settings.notificationPhone || 'Não informado') + '<br>';
+                    html += 'Status: ' + (data.settings.isActive ? '🟢 Ativo' : '🔴 Inativo');
+                    html += '</div>';
+                    statusEl.innerHTML = html;
+
+                    // Preencher formulário com dados existentes
+                    selectProvider(data.settings.provider);
+                    if (data.settings.provider === 'twilio' && data.settings.hasTwilioConfig) {
+                        document.getElementById('twilio-notification-phone').value = data.settings.notificationPhone || '';
+                    } else if (data.settings.provider === 'evolution' && data.settings.hasEvolutionConfig) {
+                        document.getElementById('evolution-notification-phone').value = data.settings.notificationPhone || '';
+                    }
+                } else {
+                    const fallbackMessage = data.usingGlobal
+                        ? '🔄 Usando configuração global do administrador'
+                        : 'Configure suas próprias credenciais';
+
+                    let html = '<div style="color:#f59e0b; margin-bottom:0.5rem;">';
+                    html += '⚠️ <strong>Sem Configuração Própria</strong>';
+                    html += '</div>';
+                    html += '<div style="color:#94a3b8; font-size:0.9rem;">';
+                    html += fallbackMessage;
+                    html += '</div>';
+                    statusEl.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar configurações WhatsApp:', error);
+                document.getElementById('whatsapp-current-status').innerHTML =
+                    '<div style="color:#ef4444;">❌ Erro ao carregar status</div>';
+            }
+        }
+
+        function selectProvider(provider) {
+            currentProvider = provider;
+
+            // Atualizar botões
+            document.getElementById('btn-twilio').style.borderColor = provider === 'twilio' ? '#10b981' : '#334155';
+            document.getElementById('btn-twilio').style.background = provider === 'twilio' ? '#065f46' : '#1e293b';
+
+            document.getElementById('btn-evolution').style.borderColor = provider === 'evolution' ? '#10b981' : '#334155';
+            document.getElementById('btn-evolution').style.background = provider === 'evolution' ? '#065f46' : '#1e293b';
+
+            // Mostrar formulário apropriado
+            document.getElementById('form-twilio').style.display = provider === 'twilio' ? 'block' : 'none';
+            document.getElementById('form-evolution').style.display = provider === 'evolution' ? 'block' : 'none';
+        }
+
+        async function saveWhatsAppSettings() {
+            if (!currentProvider) {
+                alert('⚠️ Selecione um provider primeiro (Twilio ou Evolution)');
+                return;
+            }
+
+            const settings = { provider: currentProvider };
+
+            if (currentProvider === 'twilio') {
+                settings.twilioAccountSid = document.getElementById('twilio-sid').value;
+                settings.twilioAuthToken = document.getElementById('twilio-token').value;
+                settings.twilioFromNumber = document.getElementById('twilio-number').value;
+                settings.notificationPhone = document.getElementById('twilio-notification-phone').value;
+
+                if (!settings.twilioAccountSid || !settings.twilioAuthToken || !settings.twilioFromNumber) {
+                    alert('❌ Preencha todos os campos obrigatórios do Twilio');
+                    return;
+                }
+            } else if (currentProvider === 'evolution') {
+                settings.evolutionApiUrl = document.getElementById('evolution-url').value;
+                settings.evolutionApiKey = document.getElementById('evolution-key').value;
+                settings.evolutionInstanceName = document.getElementById('evolution-instance').value;
+                settings.notificationPhone = document.getElementById('evolution-notification-phone').value;
+
+                if (!settings.evolutionApiUrl || !settings.evolutionApiKey || !settings.evolutionInstanceName) {
+                    alert('❌ Preencha todos os campos obrigatórios da Evolution API');
+                    return;
+                }
+            }
+
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/whatsapp/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify(settings)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Configurações salvas com sucesso!');
+                    loadWhatsAppSettings();
+                } else {
+                    alert('❌ Erro: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao salvar: ' + error.message);
+            }
+        }
+
+        async function testWhatsAppConnection() {
+            const phone = currentProvider === 'twilio'
+                ? document.getElementById('twilio-notification-phone').value
+                : document.getElementById('evolution-notification-phone').value;
+
+            if (!phone) {
+                alert('⚠️ Informe o telefone para teste');
+                return;
+            }
+
+            if (!confirm('📱 Enviar mensagem de teste para ' + phone + '?')) {
+                return;
+            }
+
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/whatsapp/settings/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ phoneNumber: phone })
+                });
+
+                const data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao testar: ' + error.message);
+            }
+        }
+
+        async function deleteWhatsAppSettings() {
+            if (!confirm('🗑️ Tem certeza? Você voltará a usar a configuração global do admin.')) {
+                return;
+            }
+
+            try {
+                const apiKey = window.currentApiKey;
+                const response = await fetch('/api/whatsapp/settings', {
+                    method: 'DELETE',
+                    headers: { 'X-API-Key': apiKey }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Configurações removidas com sucesso!');
+                    // Limpar formulários
+                    document.getElementById('form-twilio').querySelectorAll('input').forEach(input => input.value = '');
+                    document.getElementById('form-evolution').querySelectorAll('input').forEach(input => input.value = '');
+                    currentProvider = null;
+                    document.getElementById('btn-twilio').style.borderColor = '#334155';
+                    document.getElementById('btn-twilio').style.background = '#1e293b';
+                    document.getElementById('btn-evolution').style.borderColor = '#334155';
+                    document.getElementById('btn-evolution').style.background = '#1e293b';
+                    document.getElementById('form-twilio').style.display = 'none';
+                    document.getElementById('form-evolution').style.display = 'none';
+                    loadWhatsAppSettings();
+                } else {
+                    alert('❌ Erro: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao deletar: ' + error.message);
+            }
+        }
+
+        // Manter função antiga para compatibilidade (ainda é usada pela aba antiga se existir)
+        async function loadWhatsAppStatus() {
+            await loadWhatsAppSettings();
+        }
+
+        async function testWhatsApp() {
+            await testWhatsAppConnection();
+        }
+
     </script>
 </body>
 

@@ -37,7 +37,103 @@ const { chatgptManager } = require('./chatgpt-integration');
 const { crmIntegrations } = require('./crm-integrations');
 const { whitelabelManager } = require('./whitelabel');
 const { structuredLeadsManager } = require('./structured-leads');
+const { ShortUrlGenerator } = require('./short-url-generator');
 console.log('✅ Módulos V3.0 carregados');
+
+// ===== MÓDULOS V8.0 - MELHORIAS AVANÇADAS =====
+let featureFlags = null;
+let auditLogger = null;
+let persistentMemory = null;
+let enhancedSentiment = null;
+
+try {
+    const ffModule = require('./lib/feature-flags');
+    featureFlags = ffModule.featureFlags;
+    console.log('✅ [V8.0] Feature Flags carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Feature Flags não disponível:', e.message);
+}
+
+try {
+    const alModule = require('./lib/audit-logger');
+    auditLogger = alModule.auditLogger;
+    console.log('✅ [V8.0] Audit Logger carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Audit Logger não disponível:', e.message);
+}
+
+try {
+    const pmModule = require('./lib/persistent-memory');
+    persistentMemory = pmModule.persistentMemory;
+    console.log('✅ [V8.0] Persistent Memory carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Persistent Memory não disponível:', e.message);
+}
+
+try {
+    const esModule = require('./lib/enhanced-sentiment');
+    enhancedSentiment = esModule.enhancedSentiment;
+    console.log('✅ [V8.0] Enhanced Sentiment carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Enhanced Sentiment não disponível:', e.message);
+}
+
+// ===== MÓDULOS V8.0 - COMPLIANCE =====
+let rateLimiterAdvanced = null;
+let lgpdConsentManager = null;
+let encryptionManager = null;
+
+try {
+    const rlModule = require('./lib/rate-limiter-advanced');
+    rateLimiterAdvanced = rlModule.rateLimiterAdvanced;
+    console.log('✅ [V8.0] Rate Limiter Avançado carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Rate Limiter Avançado não disponível:', e.message);
+}
+
+try {
+    const lgpdModule = require('./lib/lgpd-consent');
+    lgpdConsentManager = lgpdModule.lgpdConsentManager;
+    console.log('✅ [V8.0] LGPD Consent Manager carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] LGPD Consent Manager não disponível:', e.message);
+}
+
+try {
+    const encModule = require('./lib/encryption');
+    encryptionManager = encModule.encryptionManager;
+    console.log('✅ [V8.0] Encryption Manager carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Encryption Manager não disponível:', e.message);
+}
+
+console.log('✅ Módulos V8.0 carregados (com fallbacks)');
+
+// ===== MÓDULOS V8.0 REFATORADOS (Feature Flag: FEATURE_MODULAR_AI) =====
+let aiSystemsModular = null;
+let leadsModular = null;
+let extractionModular = null;
+
+try {
+    aiSystemsModular = require('./lib/ai-systems');
+    console.log('✅ [V8.0] AI Systems Modular carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] AI Systems Modular não disponível:', e.message);
+}
+
+try {
+    leadsModular = require('./lib/leads');
+    console.log('✅ [V8.0] Leads Modular carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Leads Modular não disponível:', e.message);
+}
+
+try {
+    extractionModular = require('./lib/extraction');
+    console.log('✅ [V8.0] Extraction Modular carregado');
+} catch (e) {
+    console.log('⚠️ [V8.0] Extraction Modular não disponível:', e.message);
+}
 
 const crypto = require("crypto");
 const express = require("express");
@@ -48,6 +144,16 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const FirecrawlApp = require('./firecrawl-replacement');
 const path = require("path");
+
+// 🚀 ENHANCED CONTENT EXTRACTOR - OCR + Dynamic Content
+let enhancedExtractor = null;
+try {
+    const { getEnhancedExtractor } = require('./enhanced-content-extractor');
+    enhancedExtractor = getEnhancedExtractor({ verbose: false });
+    console.log('✅ Enhanced Content Extractor carregado (OCR + Dynamic)');
+} catch (e) {
+    console.log('⚠️ Enhanced Content Extractor não disponível:', e.message);
+}
 const fs = require("fs");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
@@ -62,7 +168,20 @@ try {
     console.log("⚠️ Puppeteer not installed - Using basic extraction only");
 }
 
+// ===== SWAGGER/OPENAPI DOCUMENTATION =====
+let setupSwagger;
+try {
+    setupSwagger = require('./swagger-config').setupSwagger;
+} catch (e) {
+    console.log('⚠️ Swagger não configurado - Instale: npm install swagger-ui-express yamljs');
+}
+
 const app = express();
+
+// ===== CONFIGURAR SWAGGER (Documentação da API) =====
+if (setupSwagger) {
+    setupSwagger(app);
+}
 
 // Declarando conversationHistories no escopo global ou adequado
 const conversationHistories = new Map();
@@ -236,7 +355,7 @@ class SuperInteligenciaConversacional {
     }
 
     // ===== SISTEMA DE MEMÓRIA CONVERSACIONAL AVANÇADA =====
-    atualizarMemoriaUsuario(userId, interacao) {
+    atualizarMemoriaUsuario(userId, interacao, tenantId = null) {
         if (!this.memoriaConversacional.has(userId)) {
             this.memoriaConversacional.set(userId, {
                 historico: [],
@@ -268,6 +387,28 @@ class SuperInteligenciaConversacional {
         this.atualizarPreferenciasUsuario(memoria, interacao);
 
         memoria.ultimaInteracao = new Date();
+
+        // ===== V8.0: PERSISTÊNCIA NO BANCO COM FEATURE FLAG =====
+        if (featureFlags && featureFlags.isEnabled('FEATURE_PERSISTENT_MEMORY')) {
+            try {
+                if (persistentMemory) {
+                    // Fire-and-forget para não bloquear
+                    persistentMemory.update(userId, {
+                        mensagem: interacao.mensagem,
+                        emocao: interacao.emocao,
+                        intencoes: interacao.intencoes,
+                        preferencias: memoria.preferencias,
+                        topicos: interacao.topicos || []
+                    }, tenantId).catch(err => {
+                        console.warn('⚠️ [V8.0] Erro ao persistir memória:', err.message);
+                    });
+                    console.log(`🧠 [V8.0] Memória persistida para usuário ${userId.substring(0, 8)}...`);
+                }
+            } catch (err) {
+                console.warn('⚠️ [V8.0] Erro ao salvar memória persistente:', err.message);
+                // Não propaga erro - Map local já tem os dados
+            }
+        }
     }
 
     atualizarPreferenciasUsuario(memoria, interacao) {
@@ -1839,6 +1980,34 @@ class SuperInteligenciaEmocional {
     }
 
     analisarEmocao(mensagem) {
+        // ===== V8.0: ENHANCED SENTIMENT COM FEATURE FLAG =====
+        if (featureFlags && featureFlags.isEnabled('FEATURE_ENHANCED_SENTIMENT')) {
+            try {
+                if (enhancedSentiment && enhancedSentiment.enabled) {
+                    const enhanced = enhancedSentiment.analyze(mensagem);
+                    // Usar resultado aprimorado se confiança > 0.5
+                    if (enhanced.confianca > 0.5) {
+                        console.log(`🎭 [V8.0] Análise Emocional Aprimorada: ${enhanced.emocao} (confiança: ${enhanced.confianca}) ${enhanced.urgencia ? '🚨 URGENTE' : ''}`);
+                        return {
+                            emocao: enhanced.emocao,
+                            intensidade: enhanced.intensidade,
+                            urgencia: enhanced.urgencia,
+                            // Dados extras do V8.0
+                            intencoes: enhanced.intencoes,
+                            scores: enhanced.scores,
+                            confianca: enhanced.confianca,
+                            v8Enhanced: true
+                        };
+                    }
+                    // Se confiança baixa, continua para análise básica
+                    console.log(`🎭 [V8.0] Confiança baixa (${enhanced.confianca}), usando análise básica`);
+                }
+            } catch (err) {
+                console.warn('⚠️ [V8.0] Erro no enhanced sentiment, usando fallback:', err.message);
+            }
+        }
+
+        // ===== FALLBACK: ANÁLISE V7.0 ORIGINAL =====
         const mensagemLower = mensagem.toLowerCase();
         let emocao = "neutro";
         let intensidade = 1;
@@ -2607,7 +2776,12 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: ["https://linkmagico-comercial.onrender.com", "https://link-m-gico-v6-0-hmpl.onrender.com", "http://localhost:3000", "http://localhost:8080"],
+    origin: function (origin, callback) {
+        // Permitir requests sem 'origin' (como mobile apps, curl ou same-origin/preview)
+        if (!origin) return callback(null, true);
+        // Permitir todas as origens (modo SaaS para widgets externos)
+        return callback(null, true);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"]
@@ -2664,11 +2838,12 @@ function requireApiKey(req, res, next) {
     logger.info(`[requireApiKey] Path: ${req.path}, Session Validated: ${!!(req.session && req.session.validatedApiKey)}`);
 
     // Permitir acesso a rotas públicas sem API Key
-    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot") {
+    // SAFE PATCH - QA FIX: BUG-002 - Adicionar /api/system/status e /health ao whitelist
+    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/l/") || req.path === "/api/system/status" || req.path === "/health") {
         return next();
     }
 
-    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+    let apiKey = req.headers['x-api-key'] || req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
 
     if (apiKey) {
         const validation = validateApiKey(apiKey);
@@ -2728,9 +2903,26 @@ app.post("/validate-api-key", (req, res) => {
     });
 });
 
+// ===== ENDPOINT PARA RETORNAR API KEY DA SESSÃO (para dashboard whitelabel) =====
+app.get("/api/session/me", requireApiKey, (req, res) => {
+    const apiKey = req.session.validatedApiKey;
+    if (!apiKey) {
+        return res.status(401).json({
+            success: false,
+            error: "Sessão não encontrada"
+        });
+    }
+    res.json({
+        success: true,
+        apiKey: apiKey,
+        clientData: req.session.clientData || null
+    });
+});
+
 app.get("/app", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index_app.html"));
 });
+
 
 app.get("/privacy.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "privacy.html"));
@@ -3175,10 +3367,30 @@ app.post("/admin/backup/test", requireApiKey, (req, res) => {
 // ROTA CHAT.HTML
 app.get("/chat.html", async (req, res) => {
     try {
-        const robotName = req.query.name || "Assistente IA";
+        const robotName = req.query.robotName || req.query.name || "Assistente IA";
         const url = req.query.url || "";
         const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
+
+        // 🎨 Buscar whitelabel do banco de dados se apiKey presente
+        let whitelabel = {};
+        if (apiKey) {
+            try {
+                const wlResult = await whitelabelManager.getConfig(apiKey);
+                if (wlResult.success && !wlResult.isDefault && wlResult.settings) {
+                    whitelabel = {
+                        companyName: wlResult.settings.companyName || null,
+                        logoUrl: wlResult.settings.logoUrl || null,
+                        primaryColor: wlResult.settings.primaryColor || null,
+                        secondaryColor: wlResult.settings.secondaryColor || null,
+                        showPoweredBy: wlResult.settings.showPoweredBy !== false
+                    };
+                    console.log(`🎨 Whitelabel carregado do banco para /chat.html (tenant: ${apiKey})`);
+                }
+            } catch (wlError) {
+                console.warn('Não foi possível carregar whitelabel para chat.html:', wlError.message);
+            }
+        }
 
         let pageData = {};
         if (url) {
@@ -3189,7 +3401,7 @@ app.get("/chat.html", async (req, res) => {
             }
         }
 
-        const chatbotHTML = generateFullChatbotHTML(pageData, robotName, instructions, apiKey);
+        const chatbotHTML = generateFullChatbotHTML(pageData, robotName, instructions, apiKey, whitelabel);
         res.send(chatbotHTML);
     } catch (error) {
         logger.error('Chat.html route error:', error.message || error);
@@ -3200,10 +3412,38 @@ app.get("/chat.html", async (req, res) => {
 // ROTA CHATBOT COMPLETA
 app.get("/chatbot", async (req, res) => {
     try {
-        const robotName = req.query.name || "Assistente IA";
+        const robotName = req.query.robotName || req.query.name || "Assistente IA";
         const url = req.query.url || "";
         const apiKey = req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
         const instructions = req.query.instructions || "";
+
+        // 🎨 Extrair parâmetros de whitelabel da URL
+        let whitelabel = {
+            companyName: req.query.wlCompany || null,
+            logoUrl: req.query.wlLogo || null,
+            primaryColor: req.query.wlPrimary || null,
+            secondaryColor: req.query.wlSecondary || null,
+            showPoweredBy: req.query.wlPoweredBy !== '0' // Default true
+        };
+
+        // 🎨 Se não tiver cores na URL e tiver apiKey, buscar do banco de dados
+        if (!whitelabel.primaryColor && apiKey) {
+            try {
+                const wlResult = await whitelabelManager.getConfig(apiKey);
+                if (wlResult.success && !wlResult.isDefault && wlResult.settings) {
+                    whitelabel = {
+                        companyName: wlResult.settings.companyName || whitelabel.companyName,
+                        logoUrl: wlResult.settings.logoUrl || whitelabel.logoUrl,
+                        primaryColor: wlResult.settings.primaryColor || null,
+                        secondaryColor: wlResult.settings.secondaryColor || null,
+                        showPoweredBy: wlResult.settings.showPoweredBy !== false
+                    };
+                    console.log(`🎨 Whitelabel carregado do banco para /chatbot (tenant: ${apiKey})`);
+                }
+            } catch (wlError) {
+                console.warn('Não foi possível carregar whitelabel do banco:', wlError.message);
+            }
+        }
 
         let pageData = {};
         if (url) {
@@ -3214,7 +3454,7 @@ app.get("/chatbot", async (req, res) => {
             }
         }
 
-        const html = generateFullChatbotHTML(pageData, robotName, instructions, apiKey);
+        const html = generateFullChatbotHTML(pageData, robotName, instructions, apiKey, whitelabel);
         res.set('Content-Type', 'text/html');
         res.send(html);
     } catch (error) {
@@ -3513,6 +3753,24 @@ async function extractPageData(url) {
 
                 extractedData.bonuses_detected = extractBonuses(bodyText);
 
+                // 🎯 NOVO: EXTRAIR PREÇOS DA PÁGINA
+                const pricePatterns = [
+                    /R\$\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?/gi,  // R$ 49,90 ou R$ 1.299,00
+                    /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?\s*reais/gi, // 49,90 reais
+                    /R\$\s*\d+(?:[.,]\d+)?(?:\/(?:mês|ano|mes|dia))?/gi // R$ 49/ano
+                ];
+                const detectedPrices = new Set();
+                pricePatterns.forEach(pattern => {
+                    const matches = bodyText.match(pattern);
+                    if (matches) {
+                        matches.forEach(price => detectedPrices.add(price.trim()));
+                    }
+                });
+                extractedData.price_detected = Array.from(detectedPrices).slice(0, 10);
+                if (extractedData.price_detected.length > 0) {
+                    logger.info(`💰 Preços detectados: ${extractedData.price_detected.join(', ')}`);
+                }
+
                 // 🎯 EXTRAIR CONTATOS
                 extractedData.contatos = sistemaContatosAprimorado.extrairContatosAprimorado($);
 
@@ -3601,6 +3859,65 @@ async function extractPageData(url) {
                 try { if (browser) await browser.close(); } catch (e) { }
             }
         }
+
+        // 🚀 ENHANCED EXTRACTION: OCR + Dynamic Content + Floating Elements
+        // ⏱️ Wrapped with timeout to prevent blocking
+        if (enhancedExtractor) {
+            try {
+                logger.info(`🚀 [ENHANCED] Starting enhanced extraction for ${url}`);
+
+                // Timeout de 30 segundos para evitar bloqueio
+                const enhancedPromise = enhancedExtractor.extractComplete(url, {
+                    enableOCR: true,
+                    maxOCRImages: 5, // Reduzido para performance
+                    enableFloating: true,
+                    enableDynamic: true
+                });
+
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Enhanced extraction timeout (30s)')), 30000)
+                );
+
+                const enhancedContent = await Promise.race([enhancedPromise, timeoutPromise]);
+
+                // Merge enhanced content with existing data
+                if (enhancedContent.ocrText && enhancedContent.ocrText.length > 20) {
+                    extractedData.cleanText += '\n\n[CONTEÚDO EXTRAÍDO DE IMAGENS]\n' + enhancedContent.ocrText;
+                    extractedData.imagesText = [enhancedContent.ocrText];
+                    logger.info(`✅ [ENHANCED] OCR: ${enhancedContent.processedImages} imagens processadas`);
+                }
+
+                if (enhancedContent.floatingContent && enhancedContent.floatingContent.length > 20) {
+                    extractedData.cleanText += '\n\n[ELEMENTOS DINÂMICOS/FLUTUANTES]\n' + enhancedContent.floatingContent;
+                    logger.info(`✅ [ENHANCED] Floating elements captured`);
+                }
+
+                if (enhancedContent.iframeContent && enhancedContent.iframeContent.length > 20) {
+                    extractedData.cleanText += '\n\n[CONTEÚDO DE IFRAMES]\n' + enhancedContent.iframeContent;
+                    logger.info(`✅ [ENHANCED] Iframe content captured`);
+                }
+
+                // Use dynamic text if it's more complete
+                if (enhancedContent.dynamicText && enhancedContent.dynamicText.length > extractedData.cleanText.length * 1.2) {
+                    extractedData.cleanText = enhancedContent.dynamicText;
+                    extractedData.method = 'enhanced-extraction';
+                    logger.info(`✅ [ENHANCED] Using enhanced dynamic text (${enhancedContent.dynamicText.length} chars)`);
+                }
+
+                extractedData.enhancedExtraction = {
+                    ocrTextLength: enhancedContent.ocrText?.length || 0,
+                    floatingContentLength: enhancedContent.floatingContent?.length || 0,
+                    iframeContentLength: enhancedContent.iframeContent?.length || 0,
+                    processedImages: enhancedContent.processedImages || 0,
+                    extractionTime: enhancedContent.extractionTime || 0
+                };
+
+            } catch (enhancedError) {
+                logger.warn(`⚠️ [ENHANCED] Enhanced extraction failed, continuing with basic: ${enhancedError.message}`);
+                // Não interrompe o fluxo - continua com extração básica
+            }
+        }
+
 
         // Final processing
         try {
@@ -3830,6 +4147,39 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             return faqDirectAnswer;
         }
 
+        // 🎯 NOVO: INFORMAÇÕES DE PREÇO EXTRAÍDAS
+        let priceInfo = "";
+        if (pageData && pageData.price_detected && pageData.price_detected.length > 0) {
+            priceInfo = `💰 PREÇOS DETECTADOS: ${pageData.price_detected.join(', ')}. `;
+        }
+
+        // 🎯 NOVO: CONTEÚDO COMPLETO DA PÁGINA (limite maior para informação completa)
+        let pageContentSummary = "";
+        if (pageData && pageData.cleanText) {
+            const cleanTextLimited = pageData.cleanText.substring(0, 6000);
+            pageContentSummary = cleanTextLimited;
+        }
+
+        // 🎯 NOVO: CONTEÚDO DA BASE DE CONHECIMENTO (FAQ e Documentos)
+        let kbContext = "";
+        try {
+            if (apiKey) {
+                console.log(`🔍 [KB DEBUG] Buscando contexto para apiKey: ${apiKey}`);
+                kbContext = knowledgeBaseManager.compileContext(apiKey, 4000);
+                console.log(`🔍 [KB DEBUG] Contexto retornado (${kbContext.length} chars): ${kbContext ? 'Sim' : 'Vazio'}`);
+            } else {
+                console.log(`⚠️ [KB DEBUG] Nenhuma apiKey disponível para busca na Knowledge Base`);
+            }
+        } catch (kbErr) {
+            console.error("⚠️ Erro ao compilar contexto da Knowledge Base:", kbErr);
+        }
+
+        // 🎯 NOVO: Texto extraído de imagens (OCR)
+        let ocrInfo = "";
+        if (pageData && pageData.imagesText && pageData.imagesText.length > 0) {
+            ocrInfo = `📸 TEXTO DE IMAGENS: ${pageData.imagesText.slice(0, 2).join(' | ')}`;
+        }
+
         // 🎯 PROMPT: Escolher entre limpo (V2) ou superinteligente (original)
         let systemPrompt;
 
@@ -3881,11 +4231,21 @@ Título: ${pageData.title || 'Não disponível'}
 
 Descrição: ${pageData.description || 'Não disponível'}
 
+${priceInfo}
+
 ${bonusInfo}
 
 ${contactInfo}
 
+${ocrInfo}
+
 URL: ${pageData.url || 'Não disponível'}
+
+📄 CONTEÚDO COMPLETO DO PRODUTO/SERVIÇO:
+${pageContentSummary || 'Conteúdo não disponível'}
+
+📚 CONHECIMENTO ESPECÍFICO (BASE DE CONHECIMENTO):
+${kbContext || 'Nenhum dado específico cadastrado na base de conhecimento.'}
 
 🧩 INTENÇÕES IDENTIFICADAS: ${estadoEmocional.intencoesMultiplas.join(', ') || 'Nenhuma específica'}
 
@@ -4136,7 +4496,7 @@ app.get("/api/system/status", (req, res) => {
         status: "healthy",
         uptime: Math.floor(uptime),
         timestamp: new Date().toISOString(),
-        version: "7.0.0",
+        version: "8.0.0",
         analytics: {
             totalRequests: analytics.totalRequests,
             chatRequests: analytics.chatRequests,
@@ -4155,7 +4515,8 @@ app.get("/api/system/status", (req, res) => {
             openrouter: !!process.env.OPENROUTER_API_KEY,
             puppeteer: !!puppeteer,
             superinteligencia: true
-        }
+        },
+        v8_features: featureFlags ? featureFlags.getEnabledFlags() : []
     });
 });
 
@@ -4168,7 +4529,7 @@ app.get("/health", (req, res) => {
         status: "healthy",
         uptime: Math.floor(uptime),
         timestamp: new Date().toISOString(),
-        version: "7.0.0",
+        version: "8.0.0",
         analytics: {
             totalRequests: analytics.totalRequests,
             chatRequests: analytics.chatRequests,
@@ -4187,13 +4548,14 @@ app.get("/health", (req, res) => {
             openrouter: !!process.env.OPENROUTER_API_KEY,
             puppeteer: !!puppeteer,
             superinteligencia: true
-        }
+        },
+        v8_features: featureFlags ? featureFlags.getEnabledFlags() : []
     });
 });
 
 // ===== ENDPOINT: Captura de Lead =====
 app.post("/api/capture-lead", async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey || req.query.apiKey;
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
@@ -4273,7 +4635,7 @@ app.get("/api/appointments/:leadId", async (req, res) => {
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 
 app.post("/api/chat-universal", requireApiKey, async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -4344,7 +4706,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
 app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
-    const apiKey = req.session.validatedApiKey || req.body.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+    const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
@@ -4369,15 +4731,60 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
         }
 
         let processedPageData = pageData;
-        if (!processedPageData && url) {
-            processedPageData = await extractPageData(url);
+
+        // 🚨 CORREÇÃO CRÍTICA: O widget envia pageData apenas com URL
+        // Precisamos verificar se tem conteúdo real, senão extrair
+        const hasContent = processedPageData && (processedPageData.cleanText || processedPageData.title);
+        const targetUrl = url || (processedPageData && processedPageData.url);
+
+        if (!hasContent && targetUrl) {
+            console.log(`🔄 [WIDGET FIX] PageData incompleto detectado. Iniciando extração para: ${targetUrl}`);
+            try {
+                const extractionResult = await extractPageData(targetUrl);
+                // Mesclar com o que já vein (ex: instructions, robotName)
+                processedPageData = { ...processedPageData, ...extractionResult };
+            } catch (extractErr) {
+                console.error("❌ Erro na extração automática do widget:", extractErr);
+                // Continua com o que tem para não quebrar
+            }
+        } else if (!processedPageData && targetUrl) {
+            processedPageData = await extractPageData(targetUrl);
         }
 
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);
 
+        // 🎯 NOVO: BUSCAR NA BASE DE CONHECIMENTO PRIMEIRO (Prioridade absoluta)
+        let kbMatch = null;
+        if (apiKey) {
+            try {
+                const results = knowledgeBaseManager.search(apiKey, message, 1);
+                if (results && results.length > 0 && results[0].score >= 1) {
+                    kbMatch = results[0];
+                    console.log(`📚 [KB MATCH] Score: ${kbMatch.score} para "${kbMatch.data?.question || kbMatch.data?.title}"`);
+                }
+            } catch (searchErr) {
+                console.error("⚠️ Erro na busca KB:", searchErr);
+            }
+        }
+
         // 🎯 CAPTURA DE INTENÇÕES DO CLIENTE
-        const inteligencias = sistemaInteligencias.capturarInteligencias(message);
+        let inteligencias = sistemaInteligencias.capturarInteligencias(message);
+
+        // Se encontramos uma dúvida na KB, vamos desativar "inteligências" genéricas 
+        // para permitir que a IA responda usando o conhecimento específico.
+        if (kbMatch && !inteligencias.contatoDireto) {
+            console.log("📚 KB Match encontrado. Priorizando conhecimento específico sobre regras genéricas.");
+            // Desativa inteligências genéricas para não dar resposta duplicada ou genérica
+            inteligencias = {
+                contatoDireto: false,
+                linkSite: false,
+                bonus: false,
+                detalhesBonus: false,
+                experiencia: false,
+                suporte: false
+            };
+        }
 
         // 🎯 ANÁLISE DE JORNADA
         const journeyStage = journeyAnalyzer.analyzeJourneyStage(message);
@@ -4576,7 +4983,7 @@ app.post("/api/extract-enhanced", async (req, res) => {
 app.post("/api/extract", async (req, res) => {
     analytics.extractRequests++;
     try {
-        const { url, instructions, robotName } = req.body || {};
+        const { url, instructions, robotName, forceRefresh } = req.body || {};
 
         console.log("📥 Recebendo requisição para extrair:", url);
 
@@ -4596,7 +5003,13 @@ app.post("/api/extract", async (req, res) => {
             });
         }
 
-        logger.info(`Starting extraction for URL: ${url}`);
+        // SAFE PATCH - BUG-EXT-001: Permitir bypass do cache se forceRefresh=true
+        if (forceRefresh) {
+            dataCache.delete(url);
+            console.log(`🔄 [FORCE REFRESH] Cache limpo para: ${url}`);
+        }
+
+        logger.info(`Starting extraction for URL: ${url} (forceRefresh: ${!!forceRefresh})`);
 
         const extractedData = await extractPageData(url);
 
@@ -4624,10 +5037,34 @@ app.post("/api/extract", async (req, res) => {
 });
 
 // ===== FUNÇÃO: Geração Completa do HTML do Chatbot =====
-function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '', apiKey = '') {
+// Helper para escapar strings para uso em contexto JavaScript inline
+function escapeForJS(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/\\/g, '\\\\')   // Escape barras invertidas primeiro
+        .replace(/"/g, '\\"')     // Escape aspas duplas
+        .replace(/'/g, "\\'")     // Escape aspas simples
+        .replace(/\n/g, '\\n')    // Escape quebras de linha
+        .replace(/\r/g, '\\r')    // Escape retorno de carro
+        .replace(/\t/g, '\\t')    // Escape tabs
+        .replace(/</g, '\\u003c') // Escape < para evitar </script>
+        .replace(/>/g, '\\u003e'); // Escape >
+}
+
+function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '', apiKey = '', whitelabel = {}) {
     const escapedPageData = JSON.stringify(pageData || {});
-    const safeRobotName = String(robotName || 'Assistente IA').replace(/"/g, '&quot;');
-    const safeInstructions = String(customInstructions || '').replace(/"/g, '&quot;');
+    const safeRobotName = escapeForJS(robotName || 'Assistente IA');
+    const safeInstructions = escapeForJS(customInstructions || '');
+
+    // 🎨 Cores do whitelabel (com fallback para cores padrão)
+    const primaryColor = whitelabel.primaryColor || '#3b82f6';
+    const secondaryColor = whitelabel.secondaryColor || '#1e40af';
+    const bgPrimary = whitelabel.primaryColor || '#667eea';
+    const bgSecondary = whitelabel.secondaryColor || '#764ba2';
+
+    // Título da página: usar nome da empresa do whitelabel se definido
+    const companyBrand = whitelabel.companyName || 'LinkMágico';
+    const pageTitle = `${companyBrand} - ${safeRobotName}`;
 
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
@@ -4645,25 +5082,25 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>LinkMágico Chatbot - ${safeRobotName}</title>
+    <title>${pageTitle}</title>
     <meta name="description" content="Chatbot IA - ${safeRobotName}"/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+        body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,${bgPrimary} 0%,${bgSecondary} 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
         .chat-container{width:100%;max-width:800px;height:90vh;background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.15);display:flex;flex-direction:column;overflow:hidden}
-        .chat-header{background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white;padding:20px;text-align:center;position:relative}
+        .chat-header{background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;padding:20px;text-align:center;position:relative}
         .chat-header h1{font-size:1.5rem;font-weight:600}
         .chat-header .subtitle{font-size:0.9rem;opacity:0.9;margin-top:5px}
         .chat-messages{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:15px;background:#f8fafc}
         .chat-message{max-width:70%;padding:15px;border-radius:15px;font-size:0.95rem;line-height:1.4}
-        .chat-message.user{background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white;align-self:flex-end;border-bottom-right-radius:5px}
+        .chat-message.user{background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;align-self:flex-end;border-bottom-right-radius:5px}
         .chat-message.bot{background:#f1f5f9;color:#334155;align-self:flex-start;border-bottom-left-radius:5px}
         .chat-input-container{padding:20px;background:white;border-top:1px solid #e2e8f0;display:flex;gap:10px}
         .chat-input{flex:1;border:1px solid #e2e8f0;border-radius:25px;padding:12px 20px;font-size:0.95rem;outline:none;transition:all 0.3s}
-        .chat-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
-        .send-button{background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);border:none;border-radius:50%;width:50px;height:50px;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s}
+        .chat-input:focus{border-color:${primaryColor};box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+        .send-button{background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);border:none;border-radius:50%;width:50px;height:50px;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s}
         .send-button:hover{transform:scale(1.05);box-shadow:0 5px 15px rgba(59,130,246,0.4)}
         .send-button:disabled{opacity:0.6;cursor:not-allowed;transform:none}
         .typing-indicator{display:none;align-items:center;gap:5px;color:#64748b;font-size:0.9rem;margin-top:10px}
@@ -4672,15 +5109,15 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         .typing-dot:nth-child(3){animation-delay:0.4s}
         @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
         .lead-form{background:white;padding:25px;margin:20px;border-radius:15px;box-shadow:0 8px 25px rgba(0,0,0,0.1);text-align:center}
-        .lead-form h3{color:#1e40af;margin-bottom:10px}
+        .lead-form h3{color:${secondaryColor};margin-bottom:10px}
         .lead-form p{color:#64748b;margin-bottom:20px}
         .lead-form input{width:100%;padding:15px;margin-bottom:15px;border:2px solid #e2e8f0;border-radius:10px;font-size:1rem;transition:all 0.3s}
-        .lead-form input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
-        .lead-form button{width:100%;background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white;border:none;padding:15px;border-radius:10px;cursor:pointer;font-size:1.1rem;font-weight:600;transition:all 0.3s}
+        .lead-form input:focus{border-color:${primaryColor};box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+        .lead-form button{width:100%;background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;border:none;padding:15px;border-radius:10px;cursor:pointer;font-size:1.1rem;font-weight:600;transition:all 0.3s}
         .lead-form button:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(59,130,246,0.3)}
         .contact-buttons{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap}
         .contact-button{flex:1;min-width:120px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:all 0.3s;text-decoration:none;color:#334155;font-size:0.9rem;display:flex;align-items:center;justify-content:center;gap:5px}
-        .contact-button:hover{background:#3b82f6;color:white;transform:translateY(-2px)}
+        .contact-button:hover{background:${primaryColor};color:white;transform:translateY(-2px)}
         .lm-botoes-fixos a, .lm-botoes-fixos button { font-size: 0.85rem; }
         @media (max-width:768px){.chat-container{height:100vh;border-radius:0}.chat-message{max-width:85%}.lead-form{margin:10px;padding:20px}.contact-button{min-width:100px;font-size:0.8rem}.lm-botoes-fixos{padding:10px !important}.lm-botoes-fixos a, .lm-botoes-fixos button{padding:10px 15px !important;font-size:0.8rem !important}}
     </style>
@@ -4829,9 +5266,10 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 }
 
 function generateChatbotHTML({ robotName, url, instructions }) {
-    const escapedRobotName = String(robotName).replace(/"/g, "&quot;");
-    const escapedUrl = String(url).replace(/"/g, "&quot;");
-    const escapedInstructions = String(instructions).replace(/"/g, "&quot;");
+    const escapedRobotName = escapeForJS(String(robotName || 'Assistente IA'));
+    const escapedUrl = escapeForJS(String(url || ''));
+    const escapedInstructions = escapeForJS(String(instructions || ''));
+
 
     return `<!doctype html>
 <html lang="pt-BR">
@@ -5095,9 +5533,68 @@ function validateChatbotOwnership(req, res, next) {
 
 setupRoutes(app);
 
+// ===== ROTAS ADMIN V8.0 =====
+try {
+    const adminRoutesV8 = require('./lib/admin-routes-v8');
+    app.use('/admin/v8', adminRoutesV8);
+    console.log('✅ [V8.0] Rotas Admin montadas em /admin/v8');
+} catch (e) {
+    console.log('⚠️ [V8.0] Rotas Admin não disponíveis:', e.message);
+}
+
 // ===== INICIALIZAR SISTEMAS =====
 (async () => {
     await initialize();
+
+    // ===== INICIALIZAR MÓDULOS V8.0 =====
+    try {
+        // Inicializar Audit Logger com banco de dados
+        if (auditLogger && DatabaseHelpers) {
+            await auditLogger.initialize({ database: DatabaseHelpers });
+            console.log('✅ [V8.0] Audit Logger inicializado');
+        }
+
+        // Inicializar Persistent Memory com banco de dados
+        if (persistentMemory && DatabaseHelpers) {
+            await persistentMemory.initialize(DatabaseHelpers);
+            console.log('✅ [V8.0] Persistent Memory inicializado');
+        }
+
+        // Inicializar LGPD Consent Manager
+        if (lgpdConsentManager && DatabaseHelpers) {
+            await lgpdConsentManager.initialize(DatabaseHelpers);
+            console.log('✅ [V8.0] LGPD Consent Manager inicializado');
+        }
+
+        // Inicializar Rate Limiter Avançado
+        if (rateLimiterAdvanced && featureFlags && featureFlags.isEnabled('FEATURE_ADVANCED_RATE_LIMIT')) {
+            // Registrar middleware de rate limiting
+            app.use(rateLimiterAdvanced.middleware());
+            console.log('✅ [V8.0] Rate Limiter Avançado ativado como middleware');
+        }
+
+        // Log de inicialização V8.0
+        if (auditLogger && auditLogger.enabled) {
+            await auditLogger.log('system.startup', {
+                actorType: 'system',
+                details: {
+                    version: '8.0.0',
+                    modules: {
+                        featureFlags: !!featureFlags,
+                        auditLogger: true,
+                        persistentMemory: !!persistentMemory,
+                        enhancedSentiment: !!enhancedSentiment,
+                        rateLimiter: !!rateLimiterAdvanced,
+                        lgpdConsent: !!lgpdConsentManager,
+                        encryption: !!encryptionManager
+                    }
+                },
+                severity: 'info'
+            });
+        }
+    } catch (e) {
+        console.warn('⚠️ [V8.0] Erro ao inicializar módulos V8.0:', e.message);
+    }
 
     // Iniciar servidor
     const PORT = process.env.PORT || 3000;
@@ -5184,7 +5681,34 @@ setupRoutes(app);
         }
     });
 
-    // Structured Leads
+    // 🎨 Endpoint PÚBLICO para widget externo buscar cores do whitelabel
+    // Não requer autenticação pois são apenas cores visuais (não expõe dados sensíveis)
+    app.get('/api/whitelabel-public/:chatbotId', async (req, res) => {
+        try {
+            const { chatbotId } = req.params;
+            const result = await whitelabelManager.getConfig(chatbotId);
+
+            // Retornar apenas as cores (sem dados sensíveis)
+            const publicConfig = {
+                primaryColor: result?.settings?.primaryColor || result?.primaryColor || '#3b82f6',
+                secondaryColor: result?.settings?.secondaryColor || result?.secondaryColor || '#8b5cf6',
+                companyName: result?.settings?.companyName || result?.companyName || null,
+                logoUrl: result?.settings?.logoUrl || result?.logoUrl || null
+            };
+
+            res.json({ success: true, config: publicConfig });
+        } catch (error) {
+            // Em caso de erro, retornar cores padrão (não quebrar o widget)
+            res.json({
+                success: true,
+                config: {
+                    primaryColor: '#3b82f6',
+                    secondaryColor: '#8b5cf6'
+                }
+            });
+        }
+    });
+
     app.post('/api/leads/structured', requireApiKeyV3, async (req, res) => {
         try {
             const { chatbotId, leadData, metadata } = req.body;
@@ -5257,7 +5781,242 @@ setupRoutes(app);
         }
     });
 
+    // ===== SHORT URLS - Sistema de Encurtamento de Links =====
+
+    // Importar gerador de short URLs
+    const { ShortUrlGenerator } = require('./short-url-generator');
+
+    /**
+     * 🔗 Redirecionamento de Short URL
+     * GET /l/:shortCode
+     * 
+     * Resolve código curto e redireciona para /chatbot com parâmetros completos
+     * Usa cache Redis para performance
+     */
+    app.get('/l/:shortCode', async (req, res) => {
+        try {
+            const { shortCode } = req.params;
+
+            // Validar formato do código
+            if (!ShortUrlGenerator.isValid(shortCode)) {
+                logger.warn(`Short code inválido: ${shortCode}`);
+                return res.status(404).send('Link não encontrado');
+            }
+
+            // Buscar no cache primeiro (Redis)
+            let shortUrl = await CacheManager.get(`short_url:${shortCode}`);
+
+            if (!shortUrl) {
+                // Cache miss - buscar no banco
+                shortUrl = await DatabaseHelpers.getShortUrl(shortCode);
+
+                if (!shortUrl) {
+                    logger.warn(`Short URL não encontrado: ${shortCode}`);
+                    return res.status(404).send('Link não encontrado ou expirado');
+                }
+
+                // Salvar no cache (1 hora)
+                await CacheManager.set(`short_url:${shortCode}`, JSON.stringify(shortUrl), 3600);
+                logger.info(`✅ Short URL ${shortCode} em cache`);
+            } else {
+                shortUrl = JSON.parse(shortUrl);
+            }
+
+            // Incrementar contador de acessos (async, não bloqueia)
+            DatabaseHelpers.updateShortUrlAccess(shortCode).catch(err => {
+                logger.error('Erro ao atualizar contador de acessos:', err);
+            });
+
+            // Analytics tracking
+            try {
+                analyticsManager.trackEvent(shortUrl.api_key, 'short_url_accessed', {
+                    shortCode,
+                    robotName: shortUrl.robot_name,
+                    timestamp: new Date()
+                });
+            } catch (analyticsError) {
+                logger.error('Erro no tracking de analytics:', analyticsError);
+            }
+
+            // 🎨 Buscar configuração de whitelabel para este tenant
+            let whitelabel = {};
+            try {
+                const wlResult = await whitelabelManager.getConfig(shortUrl.api_key);
+                if (wlResult.success && !wlResult.isDefault) {
+                    whitelabel = wlResult.settings || {};
+                    logger.info(`🎨 Whitelabel carregado para tenant ${shortUrl.api_key}`);
+                }
+            } catch (wlError) {
+                logger.warn('Não foi possível carregar whitelabel:', wlError);
+            }
+
+            // Redirecionar para a rota /chatbot existente COM parâmetros de whitelabel
+            const params = new URLSearchParams({
+                name: shortUrl.robot_name || 'Assistente IA',
+                url: shortUrl.sales_url || '',
+                instructions: shortUrl.instructions || '',
+                apiKey: shortUrl.api_key
+            });
+
+            // Adicionar parâmetros de whitelabel se existirem
+            if (whitelabel.companyName) params.set('wlCompany', whitelabel.companyName);
+            if (whitelabel.logoUrl) params.set('wlLogo', whitelabel.logoUrl);
+            if (whitelabel.primaryColor) params.set('wlPrimary', whitelabel.primaryColor);
+            if (whitelabel.secondaryColor) params.set('wlSecondary', whitelabel.secondaryColor);
+            if (whitelabel.showPoweredBy !== undefined) params.set('wlPoweredBy', whitelabel.showPoweredBy ? '1' : '0');
+
+            logger.info(`🔗 Redirecionando ${shortCode} para chatbot (tenant: ${shortUrl.api_key}, whitelabel: ${!!whitelabel.companyName})`);
+            res.redirect(`/chatbot?${params.toString()}`);
+
+        } catch (error) {
+            logger.error('❌ Erro no redirect de short URL:', error);
+            res.status(500).send('Erro ao processar link');
+        }
+    });
+
+    /**
+     * 📝 Criar Short URL
+     * POST /api/create-short-url
+     * 
+     * Cria um novo short URL para um tenant
+     * Body: { robotName, salesUrl, instructions, apiKey }
+     */
+    app.post('/api/create-short-url', async (req, res) => {
+        try {
+            const { robotName, salesUrl, instructions, apiKey } = req.body;
+
+            // Validações
+            if (!apiKey) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'API Key is required'
+                });
+            }
+
+            if (!robotName || !salesUrl) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Robot name and sales URL are required'
+                });
+            }
+
+            // Gerar código curto único
+            const shortCode = await ShortUrlGenerator.generateUnique(
+                (code) => DatabaseHelpers.shortCodeExists(code)
+            );
+
+            // Construir long URL (formato atual)
+            const params = new URLSearchParams({
+                name: robotName,
+                url: salesUrl,
+                instructions: instructions || '',
+                apiKey: apiKey
+            });
+            const longUrl = `/chatbot?${params.toString()}`;
+
+            // Salvar no banco
+            await DatabaseHelpers.createShortUrl(apiKey, {
+                shortCode,
+                longUrl,
+                robotName,
+                salesUrl,
+                instructions: instructions || '',
+                metadata: {
+                    createdVia: 'dashboard',
+                    userAgent: req.headers['user-agent']
+                }
+            });
+
+            // Salvar no cache Redis (1 hora)
+            const cacheData = {
+                short_code: shortCode,
+                api_key: apiKey,
+                long_url: longUrl,
+                robot_name: robotName,
+                sales_url: salesUrl,
+                instructions: instructions || ''
+            };
+            await CacheManager.set(`short_url:${shortCode}`, JSON.stringify(cacheData), 3600);
+
+            // Analytics
+            analyticsManager.trackEvent(apiKey, 'short_url_created', {
+                shortCode,
+                robotName
+            });
+
+            // Construir short URL completo
+            const protocol = req.protocol;
+            const host = req.get('host');
+            const shortUrl = `${protocol}://${host}/l/${shortCode}`;
+
+            logger.info(`✅ Short URL criado: ${shortUrl} para tenant ${apiKey}`);
+
+            res.json({
+                success: true,
+                shortCode,
+                shortUrl,
+                longUrl: `${protocol}://${host}${longUrl}`,
+                message: 'Short URL created successfully'
+            });
+
+        } catch (error) {
+            logger.error('❌ Erro ao criar short URL:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to create short URL: ' + error.message
+            });
+        }
+    });
+
     console.log('✅ Rotas V3.0 configuradas');
+    console.log('🔗 Short URLs habilitadas: GET /l/:code, POST /api/create-short-url');
+
+    // ===== MULTI-TENANT WHATSAPP ROUTES (NOVO) =====
+    require('./whatsapp-routes')(app, logger);  // Carrega e registra rotas WhatsApp multi-tenant
+    console.log('✅ Rotas Multi-Tenant WhatsApp integradas');
+
+    // ===== MULTI-TENANT CHATGPT ROUTES (NOVO) =====
+    require('./chatgpt-routes')(app, logger);  // Carrega e registra rotas ChatGPT multi-tenant
+    console.log('✅ Rotas Multi-Tenant ChatGPT integradas');
+
+    // ===== V8.0 ADMIN ROUTES - COMPLIANCE =====
+    try {
+        const adminRoutesV8 = require('./lib/admin-routes-v8');
+        app.use('/admin/v8', adminRoutesV8);
+        console.log('✅ [V8.0] Rotas Admin montadas em /admin/v8');
+    } catch (e) {
+        console.log('⚠️ [V8.0] Rotas Admin não disponíveis:', e.message);
+    }
+
+    // ===== V8.0 RATE LIMITER MIDDLEWARE (OPCIONAL - CONTROLADO POR FEATURE FLAG) =====
+    if (rateLimiterAdvanced && featureFlags && featureFlags.isEnabled('FEATURE_ADVANCED_RATE_LIMIT')) {
+        try {
+            app.use(rateLimiterAdvanced.middleware());
+            console.log('✅ [V8.0] Rate Limiter Avançado ATIVADO');
+        } catch (e) {
+            console.log('⚠️ [V8.0] Rate Limiter Avançado falhou:', e.message);
+        }
+    }
+
+    // ===== V8.0 LGPD CONSENT INITIALIZATION =====
+    if (lgpdConsentManager) {
+        try {
+            lgpdConsentManager.initialize(db);
+            console.log('✅ [V8.0] LGPD Consent Manager inicializado');
+        } catch (e) {
+            console.log('⚠️ [V8.0] LGPD Consent Manager falhou:', e.message);
+        }
+    }
+
+    // ===== V8.0 ENCRYPTION MANAGER INITIALIZATION =====
+    if (encryptionManager) {
+        try {
+            encryptionManager.initialize();
+            console.log('✅ [V8.0] Encryption Manager inicializado');
+        } catch (e) {
+            console.log('⚠️ [V8.0] Encryption Manager falhou:', e.message);
+        }
+    }
 
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
@@ -5282,5 +6041,24 @@ setupRoutes(app);
         console.log(`👥 Jornada do cliente: Análise inteligente ATIVADA`);
         console.log(`🧠 Endpoint superinteligente: /api/process-chat-inteligente`);
         console.log(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
+
+        // ===== INFORMAÇÕES V8.0 =====
+        console.log('');
+        console.log('═══════════════════════════════════════════');
+        console.log('  📦 LINK MÁGICO V8.0 - MELHORIAS ATIVADAS');
+        console.log('═══════════════════════════════════════════');
+        console.log(`  🎛️ Feature Flags: ${featureFlags ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  📋 Audit Logger: ${auditLogger ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  🧠 Persistent Memory: ${persistentMemory ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  🎭 Enhanced Sentiment: ${enhancedSentiment ? 'CARREGADO' : 'OFF'}`);
+        console.log('───────────────────────────────────────────');
+        console.log('  🔒 COMPLIANCE V8.0');
+        console.log('───────────────────────────────────────────');
+        console.log(`  🚦 Rate Limiter: ${rateLimiterAdvanced ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  📋 LGPD Consent: ${lgpdConsentManager ? 'CARREGADO' : 'OFF'}`);
+        console.log(`  🔐 Encryption: ${encryptionManager ? 'CARREGADO' : 'OFF'}`);
+        console.log('───────────────────────────────────────────');
+        console.log(`  🛠️ Admin V8.0: /admin/v8/status`);
+        console.log('═══════════════════════════════════════════');
     });
 })();

@@ -16,9 +16,9 @@ const { knowledgeBaseManager } = require('./knowledge-base');
  * Configurar todas as novas rotas
  */
 function setupRoutes(app) {
-    
+
     // ===== ROTAS DE ANALYTICS =====
-    
+
     /**
      * GET /api/analytics/:chatbotId
      * Obter analytics de um chatbot
@@ -27,9 +27,9 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const { days = 30 } = req.query;
-            
+
             const summary = await analyticsManager.getSummary(chatbotId, parseInt(days));
-            
+
             res.json({
                 success: true,
                 chatbotId,
@@ -53,23 +53,23 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const { startDate, endDate } = req.query;
-            
+
             if (!startDate || !endDate) {
                 return res.status(400).json({
                     success: false,
                     error: 'startDate e endDate são obrigatórios'
                 });
             }
-            
+
             const csv = await analyticsManager.exportToCSV(chatbotId, startDate, endDate);
-            
+
             if (!csv) {
                 return res.status(404).json({
                     success: false,
                     error: 'Nenhum dado encontrado para o período'
                 });
             }
-            
+
             res.setHeader('Content-Type', 'text/csv');
             res.setHeader('Content-Disposition', `attachment; filename=analytics-${chatbotId}.csv`);
             res.send(csv);
@@ -82,8 +82,93 @@ function setupRoutes(app) {
         }
     });
 
+    // ===== ROTA: Estatísticas do Tenant para Dashboard =====
+    // SAFE PATCH - BUG-DASH-001: Corrige contador de assistentes ativos
+
+    /**
+     * GET /api/tenant-stats
+     * Retorna estatísticas do tenant para o dashboard
+     */
+    app.get('/api/tenant-stats', async (req, res) => {
+        const FEATURE_TENANT_STATS_API = true;
+        
+        // Feature flag: se desativado, retorna zeros (comportamento original)
+        if (!FEATURE_TENANT_STATS_API) {
+            return res.json({ 
+                success: true, 
+                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+            });
+        }
+        
+        try {
+            const { apiKey } = req.query;
+            
+            // Sem API Key, retornar zeros (comportamento original mantido)
+            if (!apiKey) {
+                return res.json({ 
+                    success: true, 
+                    stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+                });
+            }
+            
+            // Buscar short URLs (assistentes) do tenant
+            let activeAssistants = 0;
+            let createdToday = 0;
+            let totalLeads = 0;
+            let leadsToday = 0;
+            
+            try {
+                const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
+                activeAssistants = shortUrls.length;
+                
+                // Contar criados hoje
+                const today = new Date().toISOString().split('T')[0];
+                createdToday = shortUrls.filter(s => 
+                    s.created_at && s.created_at.toString().startsWith(today)
+                ).length;
+            } catch (err) {
+                console.warn('⚠️ Erro ao buscar assistentes:', err.message);
+                // Fallback: manter zeros
+            }
+            
+            try {
+                // Buscar leads do tenant
+                const leads = await DatabaseHelpers.getLeads(apiKey);
+                totalLeads = leads.length;
+                
+                const today = new Date().toISOString().split('T')[0];
+                leadsToday = leads.filter(l => 
+                    l.created_at && l.created_at.toString().startsWith(today)
+                ).length;
+            } catch (err) {
+                console.warn('⚠️ Erro ao buscar leads:', err.message);
+                // Fallback: manter zeros
+            }
+            
+            console.log(`📊 Stats for tenant ${apiKey.substring(0, 8)}...: ${activeAssistants} assistants, ${totalLeads} leads`);
+            
+            res.json({
+                success: true,
+                stats: {
+                    activeAssistants,
+                    createdToday,
+                    totalLeads,
+                    leadsToday
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Erro ao buscar tenant stats:', error);
+            // Fallback seguro: retornar zeros (comportamento original)
+            res.json({ 
+                success: true, 
+                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+            });
+        }
+    });
+
     // ===== ROTAS DE WEBHOOKS =====
-    
+
     /**
      * POST /api/webhooks/:chatbotId
      * Registrar novo webhook
@@ -92,19 +177,19 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const { eventType, url, secret, headers } = req.body;
-            
+
             if (!eventType || !url) {
                 return res.status(400).json({
                     success: false,
                     error: 'eventType e url são obrigatórios'
                 });
             }
-            
+
             const webhook = webhookManager.registerWebhook(chatbotId, eventType, url, {
                 secret,
                 headers
             });
-            
+
             res.json({
                 success: true,
                 webhook
@@ -126,7 +211,7 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const webhooks = webhookManager.listWebhooks(chatbotId);
-            
+
             res.json({
                 success: true,
                 webhooks
@@ -148,7 +233,7 @@ function setupRoutes(app) {
         try {
             const { chatbotId, webhookId } = req.params;
             const removed = webhookManager.removeWebhook(chatbotId, webhookId);
-            
+
             if (removed) {
                 res.json({
                     success: true,
@@ -178,16 +263,16 @@ function setupRoutes(app) {
             const { chatbotId, webhookId } = req.params;
             const webhooks = webhookManager.listWebhooks(chatbotId);
             const webhook = webhooks.find(w => w.id === webhookId);
-            
+
             if (!webhook) {
                 return res.status(404).json({
                     success: false,
                     error: 'Webhook não encontrado'
                 });
             }
-            
+
             const result = await webhookManager.testWebhook(webhook);
-            
+
             res.json({
                 success: result.success,
                 result
@@ -202,7 +287,7 @@ function setupRoutes(app) {
     });
 
     // ===== ROTAS DE BILLING =====
-    
+
     /**
      * GET /api/plans
      * Listar todos os planos disponíveis
@@ -210,7 +295,7 @@ function setupRoutes(app) {
     app.get('/api/plans', (req, res) => {
         try {
             const plans = billingManager.listPlans();
-            
+
             res.json({
                 success: true,
                 plans
@@ -234,7 +319,7 @@ function setupRoutes(app) {
             const subscription = billingManager.getSubscription(userId);
             const usage = billingManager.getUsage(userId);
             const limits = billingManager.getRemainingLimits(userId);
-            
+
             res.json({
                 success: true,
                 subscription,
@@ -258,16 +343,16 @@ function setupRoutes(app) {
         try {
             const { userId } = req.params;
             const { planId } = req.body;
-            
+
             if (!planId) {
                 return res.status(400).json({
                     success: false,
                     error: 'planId é obrigatório'
                 });
             }
-            
+
             const subscription = await billingManager.upgradePlan(userId, planId);
-            
+
             res.json({
                 success: true,
                 subscription
@@ -289,21 +374,21 @@ function setupRoutes(app) {
         try {
             const { userId } = req.params;
             const { planId, successUrl, cancelUrl } = req.body;
-            
+
             if (!planId || !successUrl || !cancelUrl) {
                 return res.status(400).json({
                     success: false,
                     error: 'planId, successUrl e cancelUrl são obrigatórios'
                 });
             }
-            
+
             const session = await billingManager.createCheckoutSession(
                 userId,
                 planId,
                 successUrl,
                 cancelUrl
             );
-            
+
             res.json({
                 success: true,
                 sessionId: session.id,
@@ -326,17 +411,17 @@ function setupRoutes(app) {
         try {
             const sig = req.headers['stripe-signature'];
             const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-            
+
             if (!webhookSecret) {
                 console.error('❌ STRIPE_WEBHOOK_SECRET não configurado');
                 return res.status(500).send('Webhook secret not configured');
             }
-            
+
             const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
             const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-            
+
             await billingManager.handleStripeWebhook(event);
-            
+
             res.json({ received: true });
         } catch (error) {
             console.error('❌ Erro no webhook Stripe:', error);
@@ -344,8 +429,62 @@ function setupRoutes(app) {
         }
     });
 
+    /**
+     * GET /api/billing/limits
+     * Obter limites de billing do tenant autenticado
+     * SAFE PATCH - QA FIX: BUG-003
+     */
+    app.get('/api/billing/limits', (req, res) => {
+        try {
+            // Obter API Key da sessão para identificar o tenant
+            const apiKey = req.session?.validatedApiKey || req.headers['x-api-key'];
+
+            if (!apiKey) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Não autenticado'
+                });
+            }
+
+            // Usar API Key como userId para o billingManager
+            const userId = apiKey;
+
+            const subscription = billingManager.getSubscription(userId);
+            const usage = billingManager.getUsage(userId);
+            const limits = billingManager.getRemainingLimits(userId);
+
+            res.json({
+                success: true,
+                planName: subscription.plan?.name || 'Gratuito',
+                planId: subscription.planId || 'free',
+                limits: {
+                    messages: {
+                        limit: limits.messages?.limit ?? 100,
+                        used: limits.messages?.used ?? 0,
+                        remaining: limits.messages?.remaining ?? 100
+                    },
+                    extractions: {
+                        limit: limits.extractions?.limit ?? 10,
+                        used: limits.extractions?.used ?? 0,
+                        remaining: limits.extractions?.remaining ?? 10
+                    },
+                    chatbots: {
+                        limit: subscription.plan?.features?.maxChatbots ?? 1
+                    }
+                },
+                usage: usage
+            });
+        } catch (error) {
+            console.error('❌ Erro ao obter limites de billing:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao obter limites'
+            });
+        }
+    });
+
     // ===== ROTAS DE KNOWLEDGE BASE =====
-    
+
     /**
      * POST /api/knowledge/:chatbotId/faq
      * Adicionar FAQ
@@ -354,16 +493,16 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const { question, answer, category } = req.body;
-            
+
             if (!question || !answer) {
                 return res.status(400).json({
                     success: false,
                     error: 'question e answer são obrigatórios'
                 });
             }
-            
+
             const faq = knowledgeBaseManager.addFAQ(chatbotId, question, answer, category);
-            
+
             res.json({
                 success: true,
                 faq
@@ -385,16 +524,16 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const { faqs } = req.body;
-            
+
             if (!Array.isArray(faqs)) {
                 return res.status(400).json({
                     success: false,
                     error: 'faqs deve ser um array'
                 });
             }
-            
+
             const addedFaqs = knowledgeBaseManager.addMultipleFAQs(chatbotId, faqs);
-            
+
             res.json({
                 success: true,
                 count: addedFaqs.length,
@@ -417,16 +556,16 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const { title, content, metadata } = req.body;
-            
+
             if (!title || !content) {
                 return res.status(400).json({
                     success: false,
                     error: 'title e content são obrigatórios'
                 });
             }
-            
+
             const document = knowledgeBaseManager.addDocument(chatbotId, title, content, metadata);
-            
+
             res.json({
                 success: true,
                 document
@@ -448,14 +587,14 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const kb = knowledgeBaseManager.getKnowledgeBase(chatbotId);
-            
+
             if (!kb) {
                 return res.status(404).json({
                     success: false,
                     error: 'Base de conhecimento não encontrada'
                 });
             }
-            
+
             res.json({
                 success: true,
                 knowledgeBase: kb
@@ -477,7 +616,7 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const stats = knowledgeBaseManager.getStats(chatbotId);
-            
+
             res.json({
                 success: true,
                 stats
@@ -499,7 +638,7 @@ function setupRoutes(app) {
         try {
             const { chatbotId, entryType, entryId } = req.params;
             const removed = knowledgeBaseManager.removeEntry(chatbotId, entryId, entryType);
-            
+
             if (removed) {
                 res.json({
                     success: true,
@@ -521,7 +660,7 @@ function setupRoutes(app) {
     });
 
     // ===== ROTAS DE OTIMIZAÇÃO LLM =====
-    
+
     /**
      * GET /api/llm/stats/:chatbotId
      * Obter estatísticas de uso de LLM
@@ -530,11 +669,11 @@ function setupRoutes(app) {
         try {
             const { chatbotId } = req.params;
             const { days = 30 } = req.query;
-            
+
             const stats = llmOptimizer.getUsageStats(chatbotId, parseInt(days));
             const savings = llmOptimizer.getSavingsSummary(chatbotId);
             const cacheStats = llmOptimizer.getCacheStats();
-            
+
             res.json({
                 success: true,
                 usage: stats,
@@ -551,7 +690,7 @@ function setupRoutes(app) {
     });
 
     // ===== ROTAS DE CACHE =====
-    
+
     /**
      * GET /api/cache/stats
      * Obter estatísticas do cache
@@ -559,7 +698,7 @@ function setupRoutes(app) {
     app.get('/api/cache/stats', async (req, res) => {
         try {
             const stats = await CacheManager.getCacheStats();
-            
+
             res.json({
                 success: true,
                 stats
@@ -580,14 +719,14 @@ function setupRoutes(app) {
     app.post('/api/cache/clear', async (req, res) => {
         try {
             const { pattern } = req.body;
-            
+
             let cleared;
             if (pattern) {
                 cleared = await CacheManager.clearCacheByPattern(pattern);
             } else {
                 cleared = await CacheManager.clearAllCache();
             }
-            
+
             res.json({
                 success: true,
                 message: 'Cache limpo com sucesso',
@@ -603,7 +742,7 @@ function setupRoutes(app) {
     });
 
     // ===== ROTA DE STATUS DO SISTEMA =====
-    
+
     /**
      * GET /api/system/status
      * Obter status de todos os sistemas
@@ -631,7 +770,7 @@ function setupRoutes(app) {
                     knowledgeBase: true
                 }
             };
-            
+
             res.json({
                 success: true,
                 status
