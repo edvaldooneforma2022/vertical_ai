@@ -4114,7 +4114,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         // 🎯 FEATURE_CLEAN_CHAT_V2: Buscar FAQs da Knowledge Base
         let faqDirectAnswer = null;
         let faqContext = "";
-        const useCleanChat = process.env.FEATURE_CLEAN_CHAT_V2 === 'true';
+        const useCleanChat = process.env.FEATURE_CLEAN_CHAT_V2 === 'true' || (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_CLEAN_CHAT_V2'));
 
         if (useCleanChat && chatbotId) {
             try {
@@ -4868,7 +4868,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
 
             // 🎯 FEATURE_CLEAN_CHAT_V2: Pular pós-processamento emocional quando flag ativa
-            if (process.env.FEATURE_CLEAN_CHAT_V2 === 'true') {
+            if (process.env.FEATURE_CLEAN_CHAT_V2 === 'true' || (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_CLEAN_CHAT_V2'))) {
                 finalResponse = respostaIA;
                 console.log(`🧹 [CLEAN_CHAT_V2] Resposta IA sem pós-processamento emocional`);
             } else {
