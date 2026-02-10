@@ -3729,7 +3729,8 @@ function shouldActivateSalesMode(instructions) {
 }
 
 // ===== FUNÇÃO APRIMORADA DE RESPOSTA DA IA COM SUPERINTELIGÊNCIA =====
-async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null, apiKey = null) {
+// 🎯 FEATURE_CLEAN_CHAT_V2: chatbotId adicionado para buscar FAQs da Knowledge Base
+async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null, apiKey = null, chatbotId = null) {
     const startTime = Date.now();
     try {
         if (!userMessage || !String(userMessage).trim()) {
@@ -3793,8 +3794,66 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             }
         }
 
-        // 🎯 PROMPT SUPERINTELIGENTE
-        const systemPrompt = `Você é um assistente de vendas SUPERINTELIGENTE com capacidades humanas avançadas.
+        // 🎯 FEATURE_CLEAN_CHAT_V2: Buscar FAQs da Knowledge Base
+        let faqDirectAnswer = null;
+        let faqContext = "";
+        const useCleanChat = process.env.FEATURE_CLEAN_CHAT_V2 === 'true';
+
+        if (useCleanChat && chatbotId) {
+            try {
+                const kbResults = knowledgeBaseManager.search(chatbotId, cleanUserMessage, 3);
+                if (kbResults && kbResults.length > 0) {
+                    // Se FAQ com score alto → usar resposta direta
+                    const bestMatch = kbResults[0];
+                    if (bestMatch.type === 'faq' && bestMatch.score >= 3) {
+                        faqDirectAnswer = bestMatch.data.answer;
+                        console.log(`📚 [CLEAN_CHAT_V2] FAQ direta encontrada (score=${bestMatch.score}): ${bestMatch.data.question.substring(0, 50)}`);
+                    } else {
+                        // Score médio → incluir como contexto
+                        faqContext = kbResults
+                            .filter(r => r.type === 'faq')
+                            .map(r => `P: ${r.data.question}\nR: ${r.data.answer}`)
+                            .join('\n\n');
+                        console.log(`📚 [CLEAN_CHAT_V2] ${kbResults.length} FAQ(s) como contexto`);
+                    }
+                }
+            } catch (kbError) {
+                console.warn(`⚠️ [CLEAN_CHAT_V2] Erro ao buscar KB (fallback para LLM):`, kbError.message || kbError);
+            }
+        }
+
+        // Se encontrou FAQ com resposta direta, retornar sem chamar LLM
+        if (useCleanChat && faqDirectAnswer) {
+            const responseTime = Date.now() - startTime;
+            console.log(`📚 [CLEAN_CHAT_V2] Resposta via FAQ direta em ${responseTime}ms`);
+            logger.info(`AI response generated in ${responseTime}ms using faq-direct`);
+            return faqDirectAnswer;
+        }
+
+        // 🎯 PROMPT: Escolher entre limpo (V2) ou superinteligente (original)
+        let systemPrompt;
+
+        if (useCleanChat) {
+            // ===== PROMPT LIMPO V2 — Instruções Personalizadas no TOPO =====
+            systemPrompt = `${instructions ? instructions + '\n\n' : ''}CONTEXTO DA PÁGINA:
+Título: ${pageData.title || 'Não disponível'}
+Descrição: ${pageData.description || 'Não disponível'}
+${bonusInfo}
+${contactInfo}
+URL: ${pageData.url || 'Não disponível'}
+${faqContext ? '\nINFORMAÇÕES DA BASE DE CONHECIMENTO:\n' + faqContext + '\n' : ''}
+REGRAS OBRIGATÓRIAS:
+- Responda em português do Brasil
+- Máximo 4 linhas por resposta
+- Máximo 1 emoji por mensagem (zero é melhor)
+- NUNCA comece com "Entendi!", "Ótima pergunta!", "Hmm"
+- Vá direto ao ponto sem floreio
+- NUNCA repita informação já dada na conversa
+- NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
+            console.log(`🧹 [CLEAN_CHAT_V2] Prompt limpo ativado (${systemPrompt.length} chars)`);
+        } else {
+            // ===== PROMPT ORIGINAL SUPERINTELIGENTE (fallback) =====
+            systemPrompt = `Você é um assistente de vendas SUPERINTELIGENTE com capacidades humanas avançadas.
 
 🧠 CAPACIDADES COGNITIVAS AVANÇADAS:
 - Detecção de sarcasmo, ironia e nuances emocionais
@@ -3861,6 +3920,7 @@ Naturalidade conversacional
 Inteligência emocional
 
 NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
+        }
 
         const messages = [
             {
@@ -3908,7 +3968,8 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         }
 
         // 🎯 SUPERINTELIGÊNCIA: Aplicar processamento avançado se resposta da IA disponível
-        if (response && String(response).trim()) {
+        // 🎯 FEATURE_CLEAN_CHAT_V2: Pular combinarRespostas quando flag ativa
+        if (response && String(response).trim() && !useCleanChat) {
             const respostaSuperInteligente = superInteligenciaGlobal.gerarRespostaSuperInteligente(
                 cleanUserMessage,
                 estadoEmocional,
@@ -4248,7 +4309,8 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
             leadSystem.updateLeadConversation(effectiveLeadId, message, true);
         }
 
-        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey);
+        // 🎯 FEATURE_CLEAN_CHAT_V2: Passar robotName como chatbotId para busca de FAQs
+        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
         if (effectiveLeadId) {
@@ -4395,18 +4457,24 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             console.log(`🎭 Resposta emocional inteligente gerada`);
         } else {
             // 🎯 USAR SISTEMA ORIGINAL COM MELHORIAS EMOCIONAIS
-            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey);
+            // 🎯 FEATURE_CLEAN_CHAT_V2: Passar robotName como chatbotId para busca de FAQs
+            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
 
-            // Aplicar melhorias emocionais na resposta
-            if (analiseEmocional.emocao === "negativo" && analiseEmocional.intensidade >= 2) {
-                finalResponse = `🤗 **Entendo que isso é importante para você.** ` + respostaIA;
-            } else if (analiseEmocional.urgencia) {
-                finalResponse = `🚨 **Priorizando sua solicitação!** ` + respostaIA;
-            } else {
+            // 🎯 FEATURE_CLEAN_CHAT_V2: Pular pós-processamento emocional quando flag ativa
+            if (process.env.FEATURE_CLEAN_CHAT_V2 === 'true') {
                 finalResponse = respostaIA;
+                console.log(`🧹 [CLEAN_CHAT_V2] Resposta IA sem pós-processamento emocional`);
+            } else {
+                // Aplicar melhorias emocionais na resposta (comportamento original)
+                if (analiseEmocional.emocao === "negativo" && analiseEmocional.intensidade >= 2) {
+                    finalResponse = `🤗 **Entendo que isso é importante para você.** ` + respostaIA;
+                } else if (analiseEmocional.urgencia) {
+                    finalResponse = `🚨 **Priorizando sua solicitação!** ` + respostaIA;
+                } else {
+                    finalResponse = respostaIA;
+                }
+                console.log(`🤖 Resposta IA com melhorias emocionais`);
             }
-
-            console.log(`🤖 Resposta IA com melhorias emocionais`);
         }
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
@@ -4696,7 +4764,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                     leadForm.style.display = 'none';
                     chatMessages.style.display = 'flex';
                     chatInputContainer.style.display = 'flex';
-                    addMessage(\`Olá \${name || 'amigo'}! É um prazer ter você aqui. Como posso ajudar você hoje?\`, false);
+                    addMessage(\`${process.env.FEATURE_CLEAN_CHAT_V2 === 'true' ? "Oi" + "${name ? ', ' + name : ''}" + "! Como posso ajudar?" : "Olá ${name || 'amigo'}! É um prazer ter você aqui. Como posso ajudar você hoje?"}\`, false);
                     messageInput.focus();
                 }
             } catch (error) {
@@ -4824,7 +4892,7 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         </div>
         <div class="chat-messages" id="chatMessages" style="display:none">
             <div class="chat-message bot">
-                Olá! Sou ${escapedRobotName}, estou aqui para tirar todas as suas dúvidas. Como posso ajudar você hoje?
+                ${process.env.FEATURE_CLEAN_CHAT_V2 === 'true' ? `Oi! Sou ${escapedRobotName}. Como posso ajudar?` : `Olá! Sou ${escapedRobotName}, estou aqui para tirar todas as suas dúvidas. Como posso ajudar você hoje?`}
             </div>
         </div>
         <div class="typing-indicator" id="typingIndicator">
@@ -4886,7 +4954,7 @@ url_origem: window.location.href,
                     leadForm.style.display = 'none';
                     chatMessages.style.display = 'flex';
                     chatInputContainer.style.display = 'flex';
-                    addMessage(\`Olá \${name || 'amigo'}! É um prazer ter você aqui. Como posso ajudar você hoje?\`, false);
+                    addMessage(\`${process.env.FEATURE_CLEAN_CHAT_V2 === 'true' ? "Oi" + "${name ? ', ' + name : ''}" + "! Como posso ajudar?" : "Olá ${name || 'amigo'}! É um prazer ter você aqui. Como posso ajudar você hoje?"}\`, false);
                 }
             } catch (error) {
                 console.error('Erro ao capturar lead:', error);
