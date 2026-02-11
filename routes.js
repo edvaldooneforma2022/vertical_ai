@@ -834,7 +834,16 @@ function setupRoutes(app) {
                     status: s.status || 'active'
                 }));
 
-            res.json({ success: true, assistants, total: assistants.length });
+            // SAFE PATCH - BUG-LEADS-001: Incluir contagem de leads do tenant
+            let totalLeads = 0;
+            try {
+                const leads = await DatabaseHelpers.getLeads(apiKey);
+                totalLeads = leads ? leads.length : 0;
+            } catch (leadsErr) {
+                console.warn('⚠️ Erro ao buscar leads para assistentes:', leadsErr.message);
+            }
+
+            res.json({ success: true, assistants, total: assistants.length, totalLeads });
         } catch (error) {
             console.error('❌ Erro ao listar assistentes:', error);
             res.status(500).json({ success: false, error: 'Erro ao carregar assistentes' });

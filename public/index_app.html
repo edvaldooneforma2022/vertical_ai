@@ -2755,6 +2755,7 @@
                     return;
                 }
 
+                const totalLeads = data.totalLeads || 0;
                 const assistants = data.assistants || [];
                 const listEl = document.getElementById('assistants-list');
 
@@ -2794,7 +2795,7 @@
                             </div>
                             <div style="background:#1e293b; padding:0.6rem; border-radius:8px; text-align:center;">
                                 <div style="color:#94a3b8; font-size:0.72rem;">Leads</div>
-                                <div style="color:#e2e8f0; font-weight:700; font-size:1.1rem;">-</div>
+                                <div style="color:#e2e8f0; font-weight:700; font-size:1.1rem;">${totalLeads}</div>
                             </div>
                         </div>
 
