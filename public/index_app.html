@@ -2637,68 +2637,25 @@
                 </div>
             </div>
 
-            <!-- ===== TAB MEUS ASSISTENTES ===== -->
+            <!-- ===== TAB MEUS ASSISTENTES (REDESIGN — lê de short_urls) ===== -->
             <div id="tab-assistentes" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px; margin-bottom:1rem;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Meus Assistentes</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie seus assistentes IA de forma centralizada
-                    </p>
-
-                    <!-- Stats Cards -->
                     <div
-                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:2rem;">
-                        <div style="background:#334155; padding:1.5rem; border-radius:12px; text-align:center;">
-                            <div id="assistentes-total" style="font-size:2rem; font-weight:bold; color:#60a5fa;">0</div>
-                            <div style="color:#94a3b8; font-size:0.85rem;">Total</div>
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+                        <div>
+                            <h2 style="color:#60a5fa; margin:0;">🤖 Meus Assistentes</h2>
+                            <p style="color:#cbd5e1; margin:0.3rem 0 0 0; font-size:0.95rem;">Gerencie todos os seus
+                                chatbots ativos</p>
                         </div>
-                        <div style="background:#334155; padding:1.5rem; border-radius:12px; text-align:center;">
-                            <div id="assistentes-ativos" style="font-size:2rem; font-weight:bold; color:#10b981;">0
-                            </div>
-                            <div style="color:#94a3b8; font-size:0.85rem;">Ativos</div>
-                        </div>
-                        <div style="background:#334155; padding:1.5rem; border-radius:12px; text-align:center;">
-                            <div id="assistentes-ultimo" style="font-size:1rem; font-weight:bold; color:#f59e0b;">—
-                            </div>
-                            <div style="color:#94a3b8; font-size:0.85rem;">Último Criado</div>
-                        </div>
+                        <button onclick="loadAssistants()"
+                            style="background:#334155; color:#e2e8f0; border:1px solid #475569; padding:0.6rem 1.2rem; border-radius:10px; cursor:pointer; font-weight:600; font-size:0.9rem; display:flex; align-items:center; gap:0.4rem;">
+                            🔄 Atualizar
+                        </button>
                     </div>
 
-                    <!-- Create Form -->
-                    <div
-                        style="background:#0f172a; padding:1.5rem; border-radius:12px; margin-bottom:2rem; border:1px solid #334155;">
-                        <h3 style="color:#e2e8f0; margin-bottom:1rem; font-size:1.1rem;">➕ Criar Novo Assistente</h3>
-                        <div style="display:grid; gap:1rem;">
-                            <div>
-                                <label
-                                    style="color:#94a3b8; font-size:0.85rem; display:block; margin-bottom:0.3rem;">Nome
-                                    do Assistente *</label>
-                                <input type="text" id="asst-name" placeholder="Ex: @VendasBot"
-                                    style="width:100%; padding:0.75rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:8px; font-size:0.95rem; box-sizing:border-box;">
-                            </div>
-                            <div>
-                                <label
-                                    style="color:#94a3b8; font-size:0.85rem; display:block; margin-bottom:0.3rem;">URL
-                                    de Vendas *</label>
-                                <input type="url" id="asst-url" placeholder="https://seusite.com/produto"
-                                    style="width:100%; padding:0.75rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:8px; font-size:0.95rem; box-sizing:border-box;">
-                            </div>
-                            <div>
-                                <label
-                                    style="color:#94a3b8; font-size:0.85rem; display:block; margin-bottom:0.3rem;">Instruções
-                                    Personalizadas</label>
-                                <textarea id="asst-instructions" rows="3"
-                                    placeholder="Ex: Responda de forma amigável e objetiva..."
-                                    style="width:100%; padding:0.75rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:8px; font-size:0.95rem; resize:vertical; box-sizing:border-box;"></textarea>
-                            </div>
-                            <button onclick="createAssistant()" id="asst-create-btn"
-                                style="background:linear-gradient(135deg, #3b82f6, #8b5cf6); color:white; border:none; padding:0.85rem; border-radius:10px; cursor:pointer; font-weight:600; font-size:1rem;">
-                                🤖 Criar Assistente
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Assistants List -->
-                    <div id="assistants-list" style="display:grid; gap:1rem;">
+                    <!-- Assistants Grid (cards) -->
+                    <div id="assistants-list"
+                        style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.2rem;">
                         <div style="text-align:center; color:#64748b; padding:2rem;">Carregando assistentes...</div>
                     </div>
                 </div>
@@ -2783,8 +2740,7 @@
                 loadAssistants();
             }
         }
-        // ===== 🤖 MEUS ASSISTENTES - Funções JavaScript =====
-        let editingAssistantId = null;
+        // ===== 🤖 MEUS ASSISTENTES - Funções JavaScript (REDESIGN — short_urls) =====
 
         async function loadAssistants() {
             try {
@@ -2799,49 +2755,65 @@
                 }
 
                 const assistants = data.assistants || [];
-
-                // Update stats
-                document.getElementById('assistentes-total').textContent = assistants.length;
-                document.getElementById('assistentes-ativos').textContent = assistants.filter(a => a.status === 'active').length;
-                if (assistants.length > 0) {
-                    const ultimo = assistants[assistants.length - 1];
-                    document.getElementById('assistentes-ultimo').textContent = ultimo.name;
-                } else {
-                    document.getElementById('assistentes-ultimo').textContent = '—';
-                }
-
-                // Render list
                 const listEl = document.getElementById('assistants-list');
+
                 if (assistants.length === 0) {
-                    listEl.innerHTML = '<div style="text-align:center; color:#64748b; padding:2rem;">Nenhum assistente criado ainda. Use o formulário acima para criar o primeiro!</div>';
+                    listEl.innerHTML = '<div style="text-align:center; color:#64748b; padding:3rem; grid-column:1/-1;">Nenhum assistente criado ainda. Use o formulário principal "Criar Assistente" para criar o primeiro!</div>';
                     return;
                 }
 
-                listEl.innerHTML = assistants.map(a => `
-                    <div style="background:#334155; padding:1.25rem; border-radius:12px; border-left:4px solid ${a.status === 'active' ? '#10b981' : '#64748b'};">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
-                            <div style="flex:1; min-width:200px;">
-                                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
-                                    <span style="font-weight:700; color:#e2e8f0; font-size:1.05rem;">${a.name}</span>
-                                    <span style="background:${a.status === 'active' ? '#065f46' : '#374151'}; color:${a.status === 'active' ? '#6ee7b7' : '#9ca3af'}; padding:0.15rem 0.5rem; border-radius:6px; font-size:0.75rem;">${a.status === 'active' ? 'Ativo' : 'Inativo'}</span>
-                                </div>
-                                <div style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.3rem;">🔗 ${a.salesUrl}</div>
-                                ${a.instructions ? '<div style="color:#64748b; font-size:0.8rem; margin-top:0.3rem;">📝 ' + a.instructions.substring(0, 80) + (a.instructions.length > 80 ? '...' : '') + '</div>' : ''}
-                                <div style="color:#475569; font-size:0.75rem; margin-top:0.4rem;">Criado: ${new Date(a.createdAt).toLocaleDateString('pt-BR')}</div>
+                listEl.innerHTML = assistants.map(a => {
+                    const createdDate = a.createdAt ? new Date(a.createdAt).toLocaleDateString('pt-BR') : '—';
+                    const shortUrlDisplay = a.shortUrl || '';
+                    const safeName = (a.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    return `
+                    <div style="background:#334155; border-radius:14px; padding:1.3rem; display:flex; flex-direction:column; gap:0.8rem; border:1px solid #475569;">
+                        <!-- Header: Icon + Name + Badge -->
+                        <div style="display:flex; align-items:center; gap:0.7rem;">
+                            <div style="width:38px; height:38px; background:#1e293b; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="fas fa-robot" style="color:#60a5fa; font-size:1.1rem;"></i>
                             </div>
-                            <div style="display:flex; gap:0.5rem; flex-shrink:0;">
-                                <button onclick="editAssistant('${a.id}')"
-                                    style="background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">
-                                    ✏️ Editar
-                                </button>
-                                <button onclick="deleteAssistant('${a.id}', '${a.name.replace(/'/g, "\\'")}')"
-                                    style="background:#ef4444; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">
-                                    🗑️ Excluir
-                                </button>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:700; color:#e2e8f0; font-size:1.05rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.name}</div>
+                                <div style="color:#94a3b8; font-size:0.78rem;">Criado em ${createdDate}</div>
+                            </div>
+                            <span style="background:#065f46; color:#6ee7b7; padding:0.2rem 0.6rem; border-radius:6px; font-size:0.7rem; font-weight:700; flex-shrink:0;">ATIVO</span>
+                        </div>
+
+                        <!-- Short URL -->
+                        <div style="background:#1e293b; border:1px solid #475569; border-radius:8px; padding:0.5rem 0.7rem; font-size:0.78rem; color:#60a5fa; word-break:break-all; cursor:pointer;" onclick="copyAssistantLink('${shortUrlDisplay}')" title="Clique para copiar">
+                            ${shortUrlDisplay}
+                        </div>
+
+                        <!-- Stats -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem;">
+                            <div style="background:#1e293b; padding:0.6rem; border-radius:8px; text-align:center;">
+                                <div style="color:#94a3b8; font-size:0.72rem;">Acessos</div>
+                                <div style="color:#e2e8f0; font-weight:700; font-size:1.1rem;">${a.accessCount || 0}</div>
+                            </div>
+                            <div style="background:#1e293b; padding:0.6rem; border-radius:8px; text-align:center;">
+                                <div style="color:#94a3b8; font-size:0.72rem;">Leads</div>
+                                <div style="color:#e2e8f0; font-weight:700; font-size:1.1rem;">-</div>
                             </div>
                         </div>
-                    </div>
-                `).join('');
+
+                        <!-- Action Buttons -->
+                        <div style="display:flex; gap:0.5rem; margin-top:0.2rem;">
+                            <button onclick="editAssistantFromCard('${a.id}', '${safeName}', '${(a.salesUrl || '').replace(/'/g, "\\'")}', '${(a.instructions || '').replace(/'/g, "\\'").replace(/\n/g, ' ').substring(0, 100)}')"
+                                style="flex:1; background:#3b82f6; color:white; border:none; padding:0.55rem; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:600;">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="copyAssistantLink('${shortUrlDisplay}')"
+                                style="flex:1; background:#334155; color:#e2e8f0; border:1px solid #475569; padding:0.55rem; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:600;">
+                                🔗 Link
+                            </button>
+                            <button onclick="deleteAssistant('${a.id}', '${safeName}')"
+                                style="width:38px; background:#ef4444; color:white; border:none; padding:0.55rem; border-radius:8px; cursor:pointer; font-size:0.9rem; flex-shrink:0;">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
             } catch (error) {
                 console.error('🤖 Erro ao carregar assistentes:', error);
                 document.getElementById('assistants-list').innerHTML =
@@ -2849,73 +2821,33 @@
             }
         }
 
-        async function createAssistant() {
-            const name = document.getElementById('asst-name').value.trim();
-            const salesUrl = document.getElementById('asst-url').value.trim();
-            const instructions = document.getElementById('asst-instructions').value.trim();
-
-            if (!name) { showToast('⚠️ Nome do assistente é obrigatório', 'error'); return; }
-            if (!salesUrl) { showToast('⚠️ URL de vendas é obrigatória', 'error'); return; }
-
-            const btn = document.getElementById('asst-create-btn');
-            btn.disabled = true;
-            btn.textContent = '⏳ Salvando...';
-
-            try {
-                const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
-                const method = editingAssistantId ? 'PUT' : 'POST';
-                const url = editingAssistantId ? '/api/assistants/' + editingAssistantId : '/api/assistants';
-
-                const response = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, salesUrl, instructions, apiKey })
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    showToast(editingAssistantId ? '✅ Assistente atualizado!' : '✅ Assistente criado com sucesso!', 'success');
-                    document.getElementById('asst-name').value = '';
-                    document.getElementById('asst-url').value = '';
-                    document.getElementById('asst-instructions').value = '';
-                    editingAssistantId = null;
-                    btn.textContent = '🤖 Criar Assistente';
-                    loadAssistants();
-                } else {
-                    showToast('❌ ' + (data.error || 'Erro ao salvar'), 'error');
-                }
-            } catch (error) {
-                console.error('🤖 Erro ao salvar assistente:', error);
-                showToast('❌ Erro de conexão', 'error');
-            } finally {
-                btn.disabled = false;
-                if (!editingAssistantId) btn.textContent = '🤖 Criar Assistente';
-            }
+        function copyAssistantLink(url) {
+            if (!url) { showToast('⚠️ Link não disponível', 'error'); return; }
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('✅ Link copiado!', 'success');
+            }).catch(() => {
+                // Fallback para navegadores antigos
+                const temp = document.createElement('textarea');
+                temp.value = url;
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand('copy');
+                document.body.removeChild(temp);
+                showToast('✅ Link copiado!', 'success');
+            });
         }
 
-        async function editAssistant(id) {
+        function editAssistantFromCard(id, name, salesUrl, instructions) {
+            // Preenche o formulário principal "Criar Assistente" com os dados do assistente
             try {
-                const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
-                const response = await fetch('/api/assistants' + (apiKey ? '?apiKey=' + encodeURIComponent(apiKey) : ''));
-                const data = await response.json();
-
-                if (!data.success) return;
-                const assistant = data.assistants.find(a => a.id === id);
-                if (!assistant) { showToast('❌ Assistente não encontrado', 'error'); return; }
-
-                document.getElementById('asst-name').value = assistant.name;
-                document.getElementById('asst-url').value = assistant.salesUrl;
-                document.getElementById('asst-instructions').value = assistant.instructions || '';
-
-                editingAssistantId = id;
-                const btn = document.getElementById('asst-create-btn');
-                btn.textContent = '💾 Atualizar Assistente';
-
-                // Scroll to form
-                document.getElementById('asst-name').focus();
-                showToast('📝 Editando: ' + assistant.name, 'success');
-            } catch (error) {
-                console.error('🤖 Erro ao editar assistente:', error);
+                document.getElementById('robotName').value = name;
+                document.getElementById('salesUrl').value = salesUrl;
+                document.getElementById('customInstructions').value = instructions;
+                closeNewSystems();
+                document.getElementById('robotName').focus();
+                showToast('📝 Dados de "' + name + '" carregados no formulário principal. Clique em "Ativar Assistente IA" para atualizar.', 'success');
+            } catch (e) {
+                console.error('🤖 Erro ao editar assistente:', e);
                 showToast('❌ Erro ao carregar dados do assistente', 'error');
             }
         }

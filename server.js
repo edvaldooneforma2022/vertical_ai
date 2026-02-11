@@ -6192,14 +6192,36 @@ try {
     }
 
     // GET /api/assistants — List all assistants for the tenant
-    app.get('/api/assistants', (req, res) => {
+    // REDESIGN: Lê da tabela short_urls (mesma fonte do Dashboard Analytics)
+    // Fallback seguro: retorna [] se banco falhar — zero impacto em funcionalidades existentes
+    app.get('/api/assistants', async (req, res) => {
         try {
             const apiKey = (req.session && req.session.validatedApiKey) || req.query.apiKey;
             if (!apiKey) return res.status(401).json({ success: false, error: 'API Key não fornecida' });
             if (featureFlags && !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
                 return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
             }
-            const assistants = loadAssistantsData(apiKey);
+
+            let assistants = [];
+            try {
+                const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
+                const protocol = req.protocol;
+                const host = req.get('host');
+                assistants = shortUrls.map(s => ({
+                    id: s.short_code,
+                    name: s.robot_name || 'Assistente IA',
+                    salesUrl: s.sales_url || '',
+                    instructions: s.instructions || '',
+                    shortUrl: `${protocol}://${host}/l/${s.short_code}`,
+                    accessCount: s.access_count || 0,
+                    createdAt: s.created_at,
+                    status: s.status || 'active'
+                }));
+            } catch (dbErr) {
+                console.warn('🤖 [Assistentes] Fallback: erro ao ler short_urls:', dbErr.message);
+                // Fallback seguro: retorna array vazio (comportamento anterior)
+            }
+
             console.log(`🤖 [Assistentes] GET - Tenant ${apiKey.substring(0, 8)}... → ${assistants.length} assistentes`);
             res.json({ success: true, assistants, total: assistants.length });
         } catch (error) {
