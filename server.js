@@ -6014,8 +6014,17 @@ try {
                 // Fallback seguro: retorna array vazio (comportamento anterior)
             }
 
-            console.log(`🤖 [Assistentes] GET - Tenant ${apiKey.substring(0, 8)}... → ${assistants.length} assistentes`);
-            res.json({ success: true, assistants, total: assistants.length });
+            // SAFE PATCH - BUG-LEADS-002: Contagem de leads usando mesma fonte do Dashboard
+            let totalLeads = 0;
+            try {
+                const leadSys = getLeadSystem(apiKey);
+                totalLeads = leadSys.getLeads().length;
+            } catch (leadsErr) {
+                console.warn('⚠️ [Assistentes] Erro ao contar leads (fallback=0):', leadsErr.message);
+            }
+
+            console.log(`🤖 [Assistentes] GET - Tenant ${apiKey.substring(0, 8)}... → ${assistants.length} assistentes, ${totalLeads} leads`);
+            res.json({ success: true, assistants, total: assistants.length, totalLeads });
         } catch (error) {
             console.error('🤖 [Assistentes] Erro no GET:', error.message);
             res.status(500).json({ success: false, error: error.message });
