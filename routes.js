@@ -807,9 +807,13 @@ function setupRoutes(app) {
                 return res.status(401).json({ success: false, error: 'API Key não fornecida' });
             }
 
-            // Feature flag check
-            if (featureFlags && typeof featureFlags.isEnabled === 'function' && !featureFlags.isEnabled('meus_assistentes')) {
-                return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
+            // Feature flag check (fallback seguro: permite acesso se flag indisponível)
+            try {
+                if (featureFlags && typeof featureFlags.isEnabled === 'function' && featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES') === false) {
+                    return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
+                }
+            } catch (ffErr) {
+                console.warn('🤖 [Assistentes] Feature flag check falhou, permitindo acesso (fallback):', ffErr.message);
             }
 
             const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
@@ -846,8 +850,12 @@ function setupRoutes(app) {
                 return res.status(401).json({ success: false, error: 'API Key não fornecida' });
             }
 
-            if (featureFlags && typeof featureFlags.isEnabled === 'function' && !featureFlags.isEnabled('meus_assistentes')) {
-                return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
+            try {
+                if (featureFlags && typeof featureFlags.isEnabled === 'function' && featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES') === false) {
+                    return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
+                }
+            } catch (ffErr) {
+                console.warn('🤖 [Assistentes] Feature flag check falhou, permitindo acesso (fallback):', ffErr.message);
             }
 
             const { id } = req.params;

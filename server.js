@@ -5986,8 +5986,12 @@ try {
             // Priorizar req.query.apiKey para evitar conflito de sessão (TENANCY SAFE)
             const apiKey = req.query.apiKey || (req.session && req.session.validatedApiKey);
             if (!apiKey) return res.status(401).json({ success: false, error: 'API Key não fornecida' });
-            if (featureFlags && !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
-                return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
+            try {
+                if (featureFlags && featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES') === false) {
+                    return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
+                }
+            } catch (ffErr) {
+                console.warn('🤖 [Assistentes] Feature flag check falhou, permitindo acesso (fallback):', ffErr.message);
             }
 
             let assistants = [];
