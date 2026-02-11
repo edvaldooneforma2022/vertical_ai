@@ -5976,37 +5976,7 @@ try {
     console.log('✅ Rotas V3.0 configuradas');
 
     // ===== 🤖 MEUS ASSISTENTES - CRUD API (Isolado, Feature Flag Gated) =====
-    // Storage helpers — per-tenant JSON files, completely separate from leads/analytics
-    const assistantsDataDir = path.join(__dirname, 'data', 'tenants');
-
-    function getAssistantsFilePath(apiKey) {
-        const safeKey = String(apiKey).replace(/[^a-zA-Z0-9_-]/g, '_');
-        return path.join(assistantsDataDir, `assistants-${safeKey}.json`);
-    }
-
-    function loadAssistantsData(apiKey) {
-        try {
-            const filePath = getAssistantsFilePath(apiKey);
-            if (fs.existsSync(filePath)) {
-                return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            }
-        } catch (e) {
-            console.error('🤖 [Assistentes] Erro ao carregar dados:', e.message);
-        }
-        return [];
-    }
-
-    function saveAssistantsData(apiKey, assistants) {
-        try {
-            if (!fs.existsSync(assistantsDataDir)) {
-                fs.mkdirSync(assistantsDataDir, { recursive: true });
-            }
-            fs.writeFileSync(getAssistantsFilePath(apiKey), JSON.stringify(assistants, null, 2), 'utf8');
-        } catch (e) {
-            console.error('🤖 [Assistentes] Erro ao salvar dados:', e.message);
-            throw e;
-        }
-    }
+    // Leitura via short_urls (PostgreSQL) — mesma fonte do Dashboard Analytics
 
     // GET /api/assistants — List all assistants for the tenant
     // REDESIGN: Lê da tabela short_urls (mesma fonte do Dashboard Analytics)
@@ -6048,94 +6018,7 @@ try {
         }
     });
 
-    // POST /api/assistants — Create a new assistant
-    app.post('/api/assistants', (req, res) => {
-        try {
-            const apiKey = (req.session && req.session.validatedApiKey) || req.body.apiKey;
-            if (!apiKey) return res.status(401).json({ success: false, error: 'API Key não fornecida' });
-            if (featureFlags && !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
-                return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
-            }
-
-            const { name, salesUrl, instructions } = req.body;
-            if (!name || !name.trim()) return res.status(400).json({ success: false, error: 'Nome do assistente é obrigatório' });
-            if (!salesUrl || !salesUrl.trim()) return res.status(400).json({ success: false, error: 'URL de vendas é obrigatória' });
-
-            const assistants = loadAssistantsData(apiKey);
-            const newAssistant = {
-                id: `asst_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-                name: name.trim(),
-                salesUrl: salesUrl.trim(),
-                instructions: (instructions || '').trim(),
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                status: 'active'
-            };
-            assistants.push(newAssistant);
-            saveAssistantsData(apiKey, assistants);
-
-            console.log(`🤖 [Assistentes] POST - Criado "${newAssistant.name}" (${newAssistant.id}) para tenant ${apiKey.substring(0, 8)}...`);
-            res.json({ success: true, assistant: newAssistant, message: 'Assistente criado com sucesso' });
-        } catch (error) {
-            console.error('🤖 [Assistentes] Erro no POST:', error.message);
-            res.status(500).json({ success: false, error: error.message });
-        }
-    });
-
-    // PUT /api/assistants/:id — Update an existing assistant
-    app.put('/api/assistants/:id', (req, res) => {
-        try {
-            const apiKey = (req.session && req.session.validatedApiKey) || req.body.apiKey;
-            if (!apiKey) return res.status(401).json({ success: false, error: 'API Key não fornecida' });
-            if (featureFlags && !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
-                return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
-            }
-
-            const assistants = loadAssistantsData(apiKey);
-            const index = assistants.findIndex(a => a.id === req.params.id);
-            if (index === -1) return res.status(404).json({ success: false, error: 'Assistente não encontrado' });
-
-            const { name, salesUrl, instructions, status } = req.body;
-            if (name !== undefined) assistants[index].name = name.trim();
-            if (salesUrl !== undefined) assistants[index].salesUrl = salesUrl.trim();
-            if (instructions !== undefined) assistants[index].instructions = instructions.trim();
-            if (status !== undefined && ['active', 'inactive'].includes(status)) assistants[index].status = status;
-            assistants[index].updatedAt = new Date().toISOString();
-
-            saveAssistantsData(apiKey, assistants);
-            console.log(`🤖 [Assistentes] PUT - Atualizado "${assistants[index].name}" (${req.params.id}) para tenant ${apiKey.substring(0, 8)}...`);
-            res.json({ success: true, assistant: assistants[index], message: 'Assistente atualizado com sucesso' });
-        } catch (error) {
-            console.error('🤖 [Assistentes] Erro no PUT:', error.message);
-            res.status(500).json({ success: false, error: error.message });
-        }
-    });
-
-    // DELETE /api/assistants/:id — Delete an assistant
-    app.delete('/api/assistants/:id', (req, res) => {
-        try {
-            const apiKey = (req.session && req.session.validatedApiKey) || req.query.apiKey;
-            if (!apiKey) return res.status(401).json({ success: false, error: 'API Key não fornecida' });
-            if (featureFlags && !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
-                return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
-            }
-
-            const assistants = loadAssistantsData(apiKey);
-            const index = assistants.findIndex(a => a.id === req.params.id);
-            if (index === -1) return res.status(404).json({ success: false, error: 'Assistente não encontrado' });
-
-            const removed = assistants.splice(index, 1)[0];
-            saveAssistantsData(apiKey, assistants);
-
-            console.log(`🤖 [Assistentes] DELETE - Removido "${removed.name}" (${removed.id}) do tenant ${apiKey.substring(0, 8)}...`);
-            res.json({ success: true, message: 'Assistente removido com sucesso', removedId: removed.id });
-        } catch (error) {
-            console.error('🤖 [Assistentes] Erro no DELETE:', error.message);
-            res.status(500).json({ success: false, error: error.message });
-        }
-    });
-
-    console.log('✅ 🤖 Rotas Meus Assistentes configuradas (CRUD /api/assistants)');
+    console.log('✅ 🤖 Rota GET /api/assistants configurada (lê de short_urls)');
     console.log('🔗 Short URLs habilitadas: GET /l/:code, POST /api/create-short-url');
 
     // ===== MULTI-TENANT WHATSAPP ROUTES (NOVO) =====
