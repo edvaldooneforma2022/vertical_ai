@@ -6196,7 +6196,8 @@ try {
     // Fallback seguro: retorna [] se banco falhar — zero impacto em funcionalidades existentes
     app.get('/api/assistants', async (req, res) => {
         try {
-            const apiKey = (req.session && req.session.validatedApiKey) || req.query.apiKey;
+            // Priorizar req.query.apiKey para evitar conflito de sessão (TENANCY SAFE)
+            const apiKey = req.query.apiKey || (req.session && req.session.validatedApiKey);
             if (!apiKey) return res.status(401).json({ success: false, error: 'API Key não fornecida' });
             if (featureFlags && !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
                 return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });

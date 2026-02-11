@@ -2744,7 +2744,8 @@
 
         async function loadAssistants() {
             try {
-                const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
+                const apiKeyInput = document.getElementById('apiKeyInput');
+                const apiKey = apiKeyInput?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
                 const response = await fetch('/api/assistants' + (apiKey ? '?apiKey=' + encodeURIComponent(apiKey) : ''));
                 const data = await response.json();
 
