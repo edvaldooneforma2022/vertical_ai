@@ -804,10 +804,13 @@ function setupRoutes(app) {
      */
     app.get('/api/assistants', async (req, res) => {
         try {
-            const apiKey = req.session?.validatedApiKey || req.query.apiKey;
+            // SAFE PATCH - BUG-LEADS-003: Priorizar req.query.apiKey (consistente com /api/tenant-stats)
+            const apiKey = req.query.apiKey || req.session?.validatedApiKey;
             if (!apiKey) {
                 return res.status(401).json({ success: false, error: 'API Key não fornecida' });
             }
+
+            console.log(`🤖 [Assistentes] GET - apiKey source: ${req.query.apiKey ? 'query' : 'session'}, key: ${apiKey.substring(0, 8)}...`);
 
             // Feature flag check (fallback seguro: permite acesso se flag indisponível)
             try {
@@ -839,6 +842,7 @@ function setupRoutes(app) {
             try {
                 const leads = await DatabaseHelpers.getLeads(apiKey);
                 totalLeads = leads ? leads.length : 0;
+                console.log(`🤖 [Assistentes] Leads encontrados no DB: ${totalLeads} para apiKey ${apiKey.substring(0, 8)}...`);
             } catch (leadsErr) {
                 console.warn('⚠️ Erro ao buscar leads para assistentes:', leadsErr.message);
             }
