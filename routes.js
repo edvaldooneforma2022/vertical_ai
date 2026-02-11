@@ -794,8 +794,76 @@ function setupRoutes(app) {
         }
     });
 
-    // NOTA: Rotas de assistentes (/api/assistants) são gerenciadas em server.js
-    // usando DatabaseHelpers.getShortUrlsByApiKey() para leitura do PostgreSQL
+    // ===== ROTAS DE ASSISTENTES (Meus Assistentes) =====
+
+    /**
+     * GET /api/assistants
+     * Listar assistentes do tenant (lê de short_urls)
+     */
+    app.get('/api/assistants', async (req, res) => {
+        try {
+            const apiKey = req.session?.validatedApiKey || req.query.apiKey;
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
+
+            // Feature flag check
+            if (featureFlags && typeof featureFlags.isEnabled === 'function' && !featureFlags.isEnabled('meus_assistentes')) {
+                return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
+            }
+
+            const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
+
+            // Filter active only and map to frontend format
+            const assistants = shortUrls
+                .filter(s => s.status === 'active' || !s.status)
+                .map(s => ({
+                    id: s.id,
+                    name: s.robot_name || s.short_code,
+                    shortUrl: `${req.protocol}://${req.get('host')}/s/${s.short_code}`,
+                    salesUrl: s.sales_url || '',
+                    instructions: s.instructions || '',
+                    accessCount: s.access_count || 0,
+                    createdAt: s.created_at,
+                    status: s.status || 'active'
+                }));
+
+            res.json({ success: true, assistants, total: assistants.length });
+        } catch (error) {
+            console.error('❌ Erro ao listar assistentes:', error);
+            res.status(500).json({ success: false, error: 'Erro ao carregar assistentes' });
+        }
+    });
+
+    /**
+     * DELETE /api/assistants/:id
+     * Remover assistente (soft-delete no short_urls)
+     */
+    app.delete('/api/assistants/:id', async (req, res) => {
+        try {
+            const apiKey = req.session?.validatedApiKey || req.query.apiKey;
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
+
+            if (featureFlags && typeof featureFlags.isEnabled === 'function' && !featureFlags.isEnabled('meus_assistentes')) {
+                return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
+            }
+
+            const { id } = req.params;
+            const removed = await DatabaseHelpers.deleteShortUrl(apiKey, id);
+
+            if (!removed) {
+                return res.status(404).json({ success: false, error: 'Assistente não encontrado' });
+            }
+
+            console.log(`🗑️ Assistente removido: ${removed.robot_name || removed.short_code} (tenant ${apiKey.substring(0, 8)}...)`);
+            res.json({ success: true, message: 'Assistente removido com sucesso', removedId: id });
+        } catch (error) {
+            console.error('❌ Erro ao remover assistente:', error);
+            res.status(500).json({ success: false, error: 'Erro ao remover assistente' });
+        }
+    });
 
     console.log('✅ Novas rotas de API configuradas');
 }

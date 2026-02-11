@@ -1153,6 +1153,29 @@ const DatabaseHelpers = {
     },
 
     /**
+     * Soft-delete de short URL (assistente) por ID
+     */
+    async deleteShortUrl(apiKey, id) {
+        // First fetch the row to return its data
+        const selectQuery = USE_POSTGRES
+            ? `SELECT * FROM short_urls WHERE id = $1 AND api_key = $2 AND status = 'active'`
+            : `SELECT * FROM short_urls WHERE id = ? AND api_key = ? AND status = 'active'`;
+
+        const selectResult = await db.query(selectQuery, [id, apiKey]);
+        const row = selectResult.rows[0];
+        if (!row) return null;
+
+        // Soft-delete: set status to 'inactive'
+        const updateQuery = USE_POSTGRES
+            ? `UPDATE short_urls SET status = 'inactive' WHERE id = $1 AND api_key = $2`
+            : `UPDATE short_urls SET status = 'inactive' WHERE id = ? AND api_key = ?`;
+
+        await db.query(updateQuery, [id, apiKey]);
+        console.log(`✅ Short URL (assistente) removido: id=${id} para tenant ${apiKey}`);
+        return row;
+    },
+
+    /**
      * Verificar se short code já existe
      */
     async shortCodeExists(shortCode) {
