@@ -129,11 +129,13 @@ function setupRoutes(app) {
 
             try {
                 const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
-                activeAssistants = shortUrls.length;
+                // SAFE PATCH - BUG-DASH-002: Filtrar apenas assistentes ativos (excluir soft-deleted)
+                const activeUrls = shortUrls.filter(s => s.status === 'active' || !s.status);
+                activeAssistants = activeUrls.length;
 
-                // Contar criados hoje
+                // Contar criados hoje (apenas ativos)
                 const today = new Date().toISOString().split('T')[0];
-                createdToday = shortUrls.filter(s =>
+                createdToday = activeUrls.filter(s =>
                     s.created_at && s.created_at.toString().startsWith(today)
                 ).length;
             } catch (err) {
