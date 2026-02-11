@@ -323,13 +323,26 @@ function getPostgresTables() {
         `CREATE INDEX IF NOT EXISTS idx_short_urls_api_key ON short_urls(api_key)`,
         `CREATE INDEX IF NOT EXISTS idx_whatsapp_settings_api_key ON whatsapp_settings(api_key)`,
 
+        // Tabela de Assistentes IA por Tenant (Meus Assistentes)
+        `CREATE TABLE IF NOT EXISTS tenant_assistants (
+            id VARCHAR(255) PRIMARY KEY,
+            api_key VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            sales_url TEXT NOT NULL,
+            instructions TEXT DEFAULT '',
+            status VARCHAR(20) DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
         // Índices para tabelas V8.0
         `CREATE INDEX IF NOT EXISTS idx_memory_user ON conversation_memory(user_id)`,
         `CREATE INDEX IF NOT EXISTS idx_memory_tenant ON conversation_memory(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_memory_expires ON conversation_memory(expires_at)`,
         `CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)`,
-        `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`
+        `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_assistants_api_key ON tenant_assistants(api_key)`
     ];
 }
 
@@ -565,12 +578,25 @@ function getSQLiteTables() {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`,
 
+        // Tabela de Assistentes IA por Tenant (Meus Assistentes)
+        `CREATE TABLE IF NOT EXISTS tenant_assistants (
+            id TEXT PRIMARY KEY,
+            api_key TEXT NOT NULL,
+            name TEXT NOT NULL,
+            sales_url TEXT NOT NULL,
+            instructions TEXT DEFAULT '',
+            status TEXT DEFAULT 'active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
         // Índices para tabelas V8.0
         `CREATE INDEX IF NOT EXISTS idx_memory_user ON conversation_memory(user_id)`,
         `CREATE INDEX IF NOT EXISTS idx_memory_tenant ON conversation_memory(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)`,
-        `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`
+        `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_assistants_api_key ON tenant_assistants(api_key)`
     ];
 }
 
@@ -1397,6 +1423,132 @@ const DatabaseHelpers = {
         }
 
         return shortUrl;
+    },
+
+    // ===== CRUD para tenant_assistants (Meus Assistentes) =====
+
+    /**
+     * Salvar novo assistente
+     */
+    async saveAssistant(apiKey, assistantData) {
+        const query = USE_POSTGRES
+            ? `INSERT INTO tenant_assistants (id, api_key, name, sales_url, instructions, status)
+               VALUES ($1, $2, $3, $4, $5, $6)
+               RETURNING *`
+            : `INSERT INTO tenant_assistants (id, api_key, name, sales_url, instructions, status)
+               VALUES (?, ?, ?, ?, ?, ?)`;
+
+        const params = [
+            assistantData.id,
+            apiKey,
+            assistantData.name,
+            assistantData.salesUrl,
+            assistantData.instructions || '',
+            assistantData.status || 'active'
+        ];
+
+        const result = await db.query(query, params);
+        return result.rows[0] || assistantData;
+    },
+
+    /**
+     * Buscar todos os assistentes de um tenant
+     */
+    async getAssistants(apiKey) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_assistants WHERE api_key = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_assistants WHERE api_key = ? ORDER BY created_at DESC`;
+
+        const result = await db.query(query, [apiKey]);
+        return result.rows.map(a => ({
+            id: a.id,
+            name: a.name,
+            salesUrl: a.sales_url,
+            instructions: a.instructions || '',
+            status: a.status,
+            createdAt: a.created_at,
+            updatedAt: a.updated_at
+        }));
+    },
+
+    /**
+     * Atualizar assistente
+     */
+    async updateAssistant(apiKey, assistantId, data) {
+        const fields = [];
+        const params = [];
+        let paramIndex = 1;
+
+        if (data.name !== undefined) {
+            fields.push(USE_POSTGRES ? `name = $${paramIndex++}` : `name = ?`);
+            params.push(data.name);
+        }
+        if (data.salesUrl !== undefined) {
+            fields.push(USE_POSTGRES ? `sales_url = $${paramIndex++}` : `sales_url = ?`);
+            params.push(data.salesUrl);
+        }
+        if (data.instructions !== undefined) {
+            fields.push(USE_POSTGRES ? `instructions = $${paramIndex++}` : `instructions = ?`);
+            params.push(data.instructions);
+        }
+        if (data.status !== undefined) {
+            fields.push(USE_POSTGRES ? `status = $${paramIndex++}` : `status = ?`);
+            params.push(data.status);
+        }
+
+        if (fields.length === 0) return null;
+
+        fields.push(USE_POSTGRES ? `updated_at = CURRENT_TIMESTAMP` : `updated_at = datetime('now')`);
+
+        const whereClause = USE_POSTGRES
+            ? `WHERE id = $${paramIndex++} AND api_key = $${paramIndex++}`
+            : `WHERE id = ? AND api_key = ?`;
+        params.push(assistantId, apiKey);
+
+        const query = USE_POSTGRES
+            ? `UPDATE tenant_assistants SET ${fields.join(', ')} ${whereClause} RETURNING *`
+            : `UPDATE tenant_assistants SET ${fields.join(', ')} ${whereClause}`;
+
+        const result = await db.query(query, params);
+
+        if (USE_POSTGRES) {
+            const row = result.rows[0];
+            if (!row) return null;
+            return { id: row.id, name: row.name, salesUrl: row.sales_url, instructions: row.instructions, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at };
+        }
+
+        // For SQLite, fetch the updated row
+        return this.getAssistantById(apiKey, assistantId);
+    },
+
+    /**
+     * Buscar assistente por ID
+     */
+    async getAssistantById(apiKey, assistantId) {
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_assistants WHERE id = $1 AND api_key = $2`
+            : `SELECT * FROM tenant_assistants WHERE id = ? AND api_key = ?`;
+
+        const result = await db.query(query, [assistantId, apiKey]);
+        const a = result.rows[0];
+        if (!a) return null;
+        return { id: a.id, name: a.name, salesUrl: a.sales_url, instructions: a.instructions || '', status: a.status, createdAt: a.created_at, updatedAt: a.updated_at };
+    },
+
+    /**
+     * Deletar assistente
+     */
+    async deleteAssistant(apiKey, assistantId) {
+        // First get the assistant to return its data
+        const assistant = await this.getAssistantById(apiKey, assistantId);
+        if (!assistant) return null;
+
+        const query = USE_POSTGRES
+            ? `DELETE FROM tenant_assistants WHERE id = $1 AND api_key = $2`
+            : `DELETE FROM tenant_assistants WHERE id = ? AND api_key = ?`;
+
+        await db.query(query, [assistantId, apiKey]);
+        return assistant;
     }
 };
 

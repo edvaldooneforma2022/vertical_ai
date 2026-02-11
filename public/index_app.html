@@ -2075,6 +2075,10 @@
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     🧩 Widget
                 </button>
+                <button class="new-tab" onclick="showNewTab('assistentes')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                    🤖 Meus Assistentes
+                </button>
             </div>
 
             <!-- Tab Contents -->
@@ -2632,6 +2636,75 @@
                     </button>
                 </div>
             </div>
+
+            <!-- ===== TAB MEUS ASSISTENTES ===== -->
+            <div id="tab-assistentes" class="new-tab-content" style="display:none;">
+                <div style="background:#1e293b; padding:2rem; border-radius:16px; margin-bottom:1rem;">
+                    <h2 style="color:#60a5fa; margin-bottom:1rem;">🤖 Meus Assistentes</h2>
+                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Gerencie seus assistentes IA de forma centralizada
+                    </p>
+
+                    <!-- Stats Cards -->
+                    <div
+                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:2rem;">
+                        <div style="background:#334155; padding:1.5rem; border-radius:12px; text-align:center;">
+                            <div id="assistentes-total" style="font-size:2rem; font-weight:bold; color:#60a5fa;">0</div>
+                            <div style="color:#94a3b8; font-size:0.85rem;">Total</div>
+                        </div>
+                        <div style="background:#334155; padding:1.5rem; border-radius:12px; text-align:center;">
+                            <div id="assistentes-ativos" style="font-size:2rem; font-weight:bold; color:#10b981;">0
+                            </div>
+                            <div style="color:#94a3b8; font-size:0.85rem;">Ativos</div>
+                        </div>
+                        <div style="background:#334155; padding:1.5rem; border-radius:12px; text-align:center;">
+                            <div id="assistentes-ultimo" style="font-size:1rem; font-weight:bold; color:#f59e0b;">—
+                            </div>
+                            <div style="color:#94a3b8; font-size:0.85rem;">Último Criado</div>
+                        </div>
+                    </div>
+
+                    <!-- Create Form -->
+                    <div
+                        style="background:#0f172a; padding:1.5rem; border-radius:12px; margin-bottom:2rem; border:1px solid #334155;">
+                        <h3 style="color:#e2e8f0; margin-bottom:1rem; font-size:1.1rem;">➕ Criar Novo Assistente</h3>
+                        <div style="display:grid; gap:1rem;">
+                            <div>
+                                <label
+                                    style="color:#94a3b8; font-size:0.85rem; display:block; margin-bottom:0.3rem;">Nome
+                                    do Assistente *</label>
+                                <input type="text" id="asst-name" placeholder="Ex: @VendasBot"
+                                    style="width:100%; padding:0.75rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:8px; font-size:0.95rem; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label
+                                    style="color:#94a3b8; font-size:0.85rem; display:block; margin-bottom:0.3rem;">URL
+                                    de Vendas *</label>
+                                <input type="url" id="asst-url" placeholder="https://seusite.com/produto"
+                                    style="width:100%; padding:0.75rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:8px; font-size:0.95rem; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label
+                                    style="color:#94a3b8; font-size:0.85rem; display:block; margin-bottom:0.3rem;">Instruções
+                                    Personalizadas</label>
+                                <textarea id="asst-instructions" rows="3"
+                                    placeholder="Ex: Responda de forma amigável e objetiva..."
+                                    style="width:100%; padding:0.75rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:8px; font-size:0.95rem; resize:vertical; box-sizing:border-box;"></textarea>
+                            </div>
+                            <button onclick="createAssistant()" id="asst-create-btn"
+                                style="background:linear-gradient(135deg, #3b82f6, #8b5cf6); color:white; border:none; padding:0.85rem; border-radius:10px; cursor:pointer; font-weight:600; font-size:1rem;">
+                                🤖 Criar Assistente
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Assistants List -->
+                    <div id="assistants-list" style="display:grid; gap:1rem;">
+                        <div style="text-align:center; color:#64748b; padding:2rem;">Carregando assistentes...</div>
+                    </div>
+                </div>
+            </div>
+            <!-- ===== FIM TAB MEUS ASSISTENTES ===== -->
+
         </div>
     </div>
 
@@ -2706,7 +2779,169 @@
             if (tabName === 'widget') {
                 updateWidgetTabCode();
             }
+            if (tabName === 'assistentes') {
+                loadAssistants();
+            }
         }
+        // ===== 🤖 MEUS ASSISTENTES - Funções JavaScript =====
+        let editingAssistantId = null;
+
+        async function loadAssistants() {
+            try {
+                const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
+                const response = await fetch('/api/assistants' + (apiKey ? '?apiKey=' + encodeURIComponent(apiKey) : ''));
+                const data = await response.json();
+
+                if (!data.success) {
+                    document.getElementById('assistants-list').innerHTML =
+                        '<div style="text-align:center; color:#ef4444; padding:2rem;">Erro: ' + (data.error || 'Falha ao carregar') + '</div>';
+                    return;
+                }
+
+                const assistants = data.assistants || [];
+
+                // Update stats
+                document.getElementById('assistentes-total').textContent = assistants.length;
+                document.getElementById('assistentes-ativos').textContent = assistants.filter(a => a.status === 'active').length;
+                if (assistants.length > 0) {
+                    const ultimo = assistants[assistants.length - 1];
+                    document.getElementById('assistentes-ultimo').textContent = ultimo.name;
+                } else {
+                    document.getElementById('assistentes-ultimo').textContent = '—';
+                }
+
+                // Render list
+                const listEl = document.getElementById('assistants-list');
+                if (assistants.length === 0) {
+                    listEl.innerHTML = '<div style="text-align:center; color:#64748b; padding:2rem;">Nenhum assistente criado ainda. Use o formulário acima para criar o primeiro!</div>';
+                    return;
+                }
+
+                listEl.innerHTML = assistants.map(a => `
+                    <div style="background:#334155; padding:1.25rem; border-radius:12px; border-left:4px solid ${a.status === 'active' ? '#10b981' : '#64748b'};">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:200px;">
+                                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+                                    <span style="font-weight:700; color:#e2e8f0; font-size:1.05rem;">${a.name}</span>
+                                    <span style="background:${a.status === 'active' ? '#065f46' : '#374151'}; color:${a.status === 'active' ? '#6ee7b7' : '#9ca3af'}; padding:0.15rem 0.5rem; border-radius:6px; font-size:0.75rem;">${a.status === 'active' ? 'Ativo' : 'Inativo'}</span>
+                                </div>
+                                <div style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.3rem;">🔗 ${a.salesUrl}</div>
+                                ${a.instructions ? '<div style="color:#64748b; font-size:0.8rem; margin-top:0.3rem;">📝 ' + a.instructions.substring(0, 80) + (a.instructions.length > 80 ? '...' : '') + '</div>' : ''}
+                                <div style="color:#475569; font-size:0.75rem; margin-top:0.4rem;">Criado: ${new Date(a.createdAt).toLocaleDateString('pt-BR')}</div>
+                            </div>
+                            <div style="display:flex; gap:0.5rem; flex-shrink:0;">
+                                <button onclick="editAssistant('${a.id}')"
+                                    style="background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">
+                                    ✏️ Editar
+                                </button>
+                                <button onclick="deleteAssistant('${a.id}', '${a.name.replace(/'/g, "\\'")}')"
+                                    style="background:#ef4444; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">
+                                    🗑️ Excluir
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('🤖 Erro ao carregar assistentes:', error);
+                document.getElementById('assistants-list').innerHTML =
+                    '<div style="text-align:center; color:#ef4444; padding:2rem;">Erro de conexão ao carregar assistentes</div>';
+            }
+        }
+
+        async function createAssistant() {
+            const name = document.getElementById('asst-name').value.trim();
+            const salesUrl = document.getElementById('asst-url').value.trim();
+            const instructions = document.getElementById('asst-instructions').value.trim();
+
+            if (!name) { showToast('⚠️ Nome do assistente é obrigatório', 'error'); return; }
+            if (!salesUrl) { showToast('⚠️ URL de vendas é obrigatória', 'error'); return; }
+
+            const btn = document.getElementById('asst-create-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Salvando...';
+
+            try {
+                const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
+                const method = editingAssistantId ? 'PUT' : 'POST';
+                const url = editingAssistantId ? '/api/assistants/' + editingAssistantId : '/api/assistants';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, salesUrl, instructions, apiKey })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(editingAssistantId ? '✅ Assistente atualizado!' : '✅ Assistente criado com sucesso!', 'success');
+                    document.getElementById('asst-name').value = '';
+                    document.getElementById('asst-url').value = '';
+                    document.getElementById('asst-instructions').value = '';
+                    editingAssistantId = null;
+                    btn.textContent = '🤖 Criar Assistente';
+                    loadAssistants();
+                } else {
+                    showToast('❌ ' + (data.error || 'Erro ao salvar'), 'error');
+                }
+            } catch (error) {
+                console.error('🤖 Erro ao salvar assistente:', error);
+                showToast('❌ Erro de conexão', 'error');
+            } finally {
+                btn.disabled = false;
+                if (!editingAssistantId) btn.textContent = '🤖 Criar Assistente';
+            }
+        }
+
+        async function editAssistant(id) {
+            try {
+                const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
+                const response = await fetch('/api/assistants' + (apiKey ? '?apiKey=' + encodeURIComponent(apiKey) : ''));
+                const data = await response.json();
+
+                if (!data.success) return;
+                const assistant = data.assistants.find(a => a.id === id);
+                if (!assistant) { showToast('❌ Assistente não encontrado', 'error'); return; }
+
+                document.getElementById('asst-name').value = assistant.name;
+                document.getElementById('asst-url').value = assistant.salesUrl;
+                document.getElementById('asst-instructions').value = assistant.instructions || '';
+
+                editingAssistantId = id;
+                const btn = document.getElementById('asst-create-btn');
+                btn.textContent = '💾 Atualizar Assistente';
+
+                // Scroll to form
+                document.getElementById('asst-name').focus();
+                showToast('📝 Editando: ' + assistant.name, 'success');
+            } catch (error) {
+                console.error('🤖 Erro ao editar assistente:', error);
+                showToast('❌ Erro ao carregar dados do assistente', 'error');
+            }
+        }
+
+        async function deleteAssistant(id, name) {
+            if (!confirm('Tem certeza que deseja excluir o assistente "' + name + '"? Esta ação não pode ser desfeita.')) return;
+
+            try {
+                const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
+                const response = await fetch('/api/assistants/' + id + (apiKey ? '?apiKey=' + encodeURIComponent(apiKey) : ''), {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('✅ Assistente removido com sucesso!', 'success');
+                    loadAssistants();
+                } else {
+                    showToast('❌ ' + (data.error || 'Erro ao excluir'), 'error');
+                }
+            } catch (error) {
+                console.error('🤖 Erro ao excluir assistente:', error);
+                showToast('❌ Erro de conexão', 'error');
+            }
+        }
+        // ===== FIM MEUS ASSISTENTES JS =====
 
         // SAFE PATCH - BUG-WIDGET-001: Funções da aba Widget
         function copyWidgetCodeFromTab() {

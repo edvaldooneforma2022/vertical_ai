@@ -8,7 +8,8 @@
     "FEATURE_MODULAR_AI": true,
     "FEATURE_SMART_ESCALATION": true,
     "FEATURE_CONVERSATION_CONTEXT": true,
-    "FEATURE_CLEAN_CHAT_V2": true
+    "FEATURE_CLEAN_CHAT_V2": true,
+    "FEATURE_MEUS_ASSISTENTES": true
   },
   "tenantOverrides": {},
   "updatedAt": "2026-02-06T07:06:00Z",
