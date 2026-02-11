@@ -12,6 +12,16 @@ const { analyticsManager } = require('./analytics');
 const { llmOptimizer } = require('./llm-optimizer');
 const { knowledgeBaseManager } = require('./knowledge-base');
 
+// ===== Feature Flags (Meus Assistentes) =====
+let featureFlags = null;
+try {
+    const ffModule = require('./lib/feature-flags');
+    featureFlags = ffModule.featureFlags;
+} catch (e) {
+    // Feature flags não disponível — rotas protegidas retornarão 403
+}
+const crypto = require('crypto');
+
 /**
  * Configurar todas as novas rotas
  */
@@ -91,62 +101,62 @@ function setupRoutes(app) {
      */
     app.get('/api/tenant-stats', async (req, res) => {
         const FEATURE_TENANT_STATS_API = true;
-        
+
         // Feature flag: se desativado, retorna zeros (comportamento original)
         if (!FEATURE_TENANT_STATS_API) {
-            return res.json({ 
-                success: true, 
-                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+            return res.json({
+                success: true,
+                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 }
             });
         }
-        
+
         try {
             const { apiKey } = req.query;
-            
+
             // Sem API Key, retornar zeros (comportamento original mantido)
             if (!apiKey) {
-                return res.json({ 
-                    success: true, 
-                    stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+                return res.json({
+                    success: true,
+                    stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 }
                 });
             }
-            
+
             // Buscar short URLs (assistentes) do tenant
             let activeAssistants = 0;
             let createdToday = 0;
             let totalLeads = 0;
             let leadsToday = 0;
-            
+
             try {
                 const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
                 activeAssistants = shortUrls.length;
-                
+
                 // Contar criados hoje
                 const today = new Date().toISOString().split('T')[0];
-                createdToday = shortUrls.filter(s => 
+                createdToday = shortUrls.filter(s =>
                     s.created_at && s.created_at.toString().startsWith(today)
                 ).length;
             } catch (err) {
                 console.warn('⚠️ Erro ao buscar assistentes:', err.message);
                 // Fallback: manter zeros
             }
-            
+
             try {
                 // Buscar leads do tenant
                 const leads = await DatabaseHelpers.getLeads(apiKey);
                 totalLeads = leads.length;
-                
+
                 const today = new Date().toISOString().split('T')[0];
-                leadsToday = leads.filter(l => 
+                leadsToday = leads.filter(l =>
                     l.created_at && l.created_at.toString().startsWith(today)
                 ).length;
             } catch (err) {
                 console.warn('⚠️ Erro ao buscar leads:', err.message);
                 // Fallback: manter zeros
             }
-            
+
             console.log(`📊 Stats for tenant ${apiKey.substring(0, 8)}...: ${activeAssistants} assistants, ${totalLeads} leads`);
-            
+
             res.json({
                 success: true,
                 stats: {
@@ -156,13 +166,13 @@ function setupRoutes(app) {
                     leadsToday
                 }
             });
-            
+
         } catch (error) {
             console.error('❌ Erro ao buscar tenant stats:', error);
             // Fallback seguro: retornar zeros (comportamento original)
-            res.json({ 
-                success: true, 
-                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 } 
+            res.json({
+                success: true,
+                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 }
             });
         }
     });
@@ -781,6 +791,135 @@ function setupRoutes(app) {
                 success: false,
                 error: 'Erro ao obter status'
             });
+        }
+    });
+
+    // ===== ROTAS DE ASSISTENTES IA (Meus Assistentes) =====
+    // Código 100% aditivo — protegido por feature flag FEATURE_MEUS_ASSISTENTES
+    // Usa DatabaseHelpers (PostgreSQL em produção, SQLite em dev)
+
+    /**
+     * GET /api/assistants
+     * Listar todos os assistentes do tenant
+     */
+    app.get('/api/assistants', async (req, res) => {
+        try {
+            // Feature flag gate
+            if (!featureFlags || !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
+                return res.status(403).json({ success: false, error: 'Feature desabilitada' });
+            }
+
+            const apiKey = req.query.apiKey || req.session?.validatedApiKey || req.headers['x-api-key'];
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key obrigatória' });
+            }
+
+            const assistants = await DatabaseHelpers.getAssistants(apiKey);
+            console.log(`📋 [Assistentes] Listados ${assistants.length} assistentes para tenant ${apiKey.substring(0, 8)}...`);
+
+            res.json({ success: true, assistants });
+        } catch (error) {
+            console.error('❌ [Assistentes] Erro ao listar:', error);
+            res.status(500).json({ success: false, error: 'Erro ao listar assistentes' });
+        }
+    });
+
+    /**
+     * POST /api/assistants
+     * Criar novo assistente
+     */
+    app.post('/api/assistants', async (req, res) => {
+        try {
+            // Feature flag gate
+            if (!featureFlags || !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
+                return res.status(403).json({ success: false, error: 'Feature desabilitada' });
+            }
+
+            const apiKey = req.body.apiKey || req.query.apiKey || req.session?.validatedApiKey || req.headers['x-api-key'];
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key obrigatória' });
+            }
+
+            const { name, salesUrl, instructions } = req.body;
+            if (!name || !salesUrl) {
+                return res.status(400).json({ success: false, error: 'name e salesUrl são obrigatórios' });
+            }
+
+            const assistant = await DatabaseHelpers.saveAssistant(apiKey, {
+                id: crypto.randomUUID(),
+                name,
+                salesUrl,
+                instructions: instructions || '',
+                status: 'active'
+            });
+
+            console.log(`✅ [Assistentes] Criado "${name}" para tenant ${apiKey.substring(0, 8)}...`);
+            res.status(201).json({ success: true, assistant });
+        } catch (error) {
+            console.error('❌ [Assistentes] Erro ao criar:', error);
+            res.status(500).json({ success: false, error: 'Erro ao criar assistente' });
+        }
+    });
+
+    /**
+     * PUT /api/assistants/:id
+     * Atualizar assistente existente
+     */
+    app.put('/api/assistants/:id', async (req, res) => {
+        try {
+            // Feature flag gate
+            if (!featureFlags || !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
+                return res.status(403).json({ success: false, error: 'Feature desabilitada' });
+            }
+
+            const apiKey = req.body.apiKey || req.query.apiKey || req.session?.validatedApiKey || req.headers['x-api-key'];
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key obrigatória' });
+            }
+
+            const { id } = req.params;
+            const updated = await DatabaseHelpers.updateAssistant(apiKey, id, req.body);
+
+            if (!updated) {
+                return res.status(404).json({ success: false, error: 'Assistente não encontrado' });
+            }
+
+            console.log(`✏️ [Assistentes] Atualizado "${id}" para tenant ${apiKey.substring(0, 8)}...`);
+            res.json({ success: true, assistant: updated });
+        } catch (error) {
+            console.error('❌ [Assistentes] Erro ao atualizar:', error);
+            res.status(500).json({ success: false, error: 'Erro ao atualizar assistente' });
+        }
+    });
+
+    /**
+     * DELETE /api/assistants/:id
+     * Deletar assistente
+     */
+    app.delete('/api/assistants/:id', async (req, res) => {
+        try {
+            // Feature flag gate
+            if (!featureFlags || !featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES')) {
+                return res.status(403).json({ success: false, error: 'Feature desabilitada' });
+            }
+
+            const apiKey = req.query.apiKey || req.session?.validatedApiKey || req.headers['x-api-key'];
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key obrigatória' });
+            }
+
+            const { id } = req.params;
+            const deleted = await DatabaseHelpers.deleteAssistant(apiKey, id);
+
+            if (!deleted) {
+                return res.status(404).json({ success: false, error: 'Assistente não encontrado' });
+            }
+
+            console.log(`🗑️ [Assistentes] Deletado "${id}" para tenant ${apiKey.substring(0, 8)}...`);
+            res.json({ success: true, message: 'Assistente removido com sucesso' });
+        } catch (error) {
+            console.error('❌ [Assistentes] Erro ao deletar:', error);
+            res.status(500).json({ success: false, error: 'Erro ao deletar assistente' });
         }
     });
 
