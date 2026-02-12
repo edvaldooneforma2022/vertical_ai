@@ -1354,7 +1354,63 @@
             <div class="dashboard-header">
                 <h2 class="dashboard-title">Dashboard Analytics</h2>
                 <p class="dashboard-subtitle">Acompanhe o desempenho do seu assistente em tempo real</p>
+
+                <!-- ONBOARDING: Status visual do assistente (Item 5) -->
+                <div id="onboardingStatusBar"
+                    style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; padding:10px 16px; background:rgba(30,41,59,0.6); border-radius:10px; border:1px solid rgba(71,85,105,0.4);">
+                    <span id="obStatusActive"
+                        style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; color:#94a3b8;">
+                        <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;"
+                            id="obStatusDot"></span>
+                        <span id="obStatusText">Nenhum assistente ativo</span>
+                    </span>
+                    <span id="obStatusLink"
+                        style="display:none; align-items:center; gap:6px; font-size:0.82rem; color:#94a3b8;">
+                        🔗 <span id="obLinkText">Link não gerado</span>
+                    </span>
+                    <span id="obStatusFaqs"
+                        style="display:none; align-items:center; gap:6px; font-size:0.82rem; color:#94a3b8;">
+                        📚 <span id="obFaqCount">0</span> FAQs
+                    </span>
+                </div>
             </div>
+
+            <!-- ONBOARDING: Checklist visual de primeiro uso (Item 2) -->
+            <div id="onboardingChecklist"
+                style="background:linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08)); border:1px solid rgba(59,130,246,0.2); border-radius:16px; padding:20px 24px; margin-bottom:1.5rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <h3 style="color:#60a5fa; font-size:1rem; font-weight:700; margin:0;">🚀 Primeiros Passos</h3>
+                    <button onclick="document.getElementById('onboardingChecklist').style.display='none'"
+                        style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem; padding:4px 8px;"
+                        title="Fechar checklist">✕ Fechar</button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div id="obStep1"
+                        style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(30,41,59,0.4);">
+                        <span id="obCheck1"
+                            style="width:22px;height:22px;border-radius:50%;border:2px solid #475569;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;flex-shrink:0;">✓</span>
+                        <span style="color:#cbd5e1; font-size:0.88rem;">Definir objetivo do assistente (nome + URL da
+                            página)</span>
+                    </div>
+                    <div id="obStep2"
+                        style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(30,41,59,0.4);">
+                        <span id="obCheck2"
+                            style="width:22px;height:22px;border-radius:50%;border:2px solid #475569;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;flex-shrink:0;">✓</span>
+                        <span style="color:#cbd5e1; font-size:0.88rem;">Cadastrar pelo menos 3 FAQs na Base de
+                            Conhecimento</span>
+                    </div>
+                    <div id="obStep3"
+                        style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(30,41,59,0.4);">
+                        <span id="obCheck3"
+                            style="width:22px;height:22px;border-radius:50%;border:2px solid #475569;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;flex-shrink:0;">✓</span>
+                        <span style="color:#cbd5e1; font-size:0.88rem;">Gerar o link do assistente (clicar em "Ativar
+                            Assistente")</span>
+                    </div>
+                </div>
+                <p style="color:#64748b; font-size:0.75rem; margin:12px 0 0 0; text-align:center;">Este checklist é
+                    apenas um guia visual — não bloqueia nenhuma ação.</p>
+            </div>
+
 
             <div class="analytics-grid">
                 <div class="analytics-card">
@@ -4510,6 +4566,160 @@
         }
 
     </script>
+
+    <!-- ONBOARDING: Script de status visual + checklist (Item 2 + 5) -->
+    <script>
+        (function onboardingUX() {
+            // === CHECKLIST: Observar estado e marcar passos ===
+            function updateOnboardingChecklist() {
+                try {
+                    // Passo 1: Nome + URL preenchidos
+                    const nameVal = document.getElementById('robotName')?.value?.trim();
+                    const urlVal = document.getElementById('salesUrl')?.value?.trim();
+                    if (nameVal && urlVal) {
+                        markStep(1, true);
+                    }
+
+                    // Passo 2: FAQs >= 3 (checa o container de FAQs)
+                    const faqContainer = document.getElementById('faqs-container');
+                    if (faqContainer && !faqContainer.textContent.includes('Nenhuma FAQ')) {
+                        const faqItems = faqContainer.querySelectorAll('div[style*="background:#334155"]');
+                        if (faqItems.length >= 3) {
+                            markStep(2, true);
+                        }
+                    }
+
+                    // Passo 3: Link gerado (chatbotLinkSection ativo)
+                    const linkSection = document.getElementById('chatbotLinkSection');
+                    if (linkSection && linkSection.classList.contains('active')) {
+                        markStep(3, true);
+                    }
+
+                    // === STATUS BAR (Item 5) ===
+                    const activeCount = document.getElementById('activeChatbots')?.textContent?.trim();
+                    const statusDot = document.getElementById('obStatusDot');
+                    const statusText = document.getElementById('obStatusText');
+                    if (activeCount && parseInt(activeCount) > 0) {
+                        if (statusDot) statusDot.style.background = '#22c55e';
+                        if (statusText) statusText.textContent = activeCount + ' assistente(s) ativo(s)';
+                    }
+
+                    const linkUrl = document.getElementById('chatbotLinkUrl');
+                    const obLink = document.getElementById('obStatusLink');
+                    if (linkUrl && linkUrl.textContent.trim() && linkUrl.textContent.trim() !== '') {
+                        if (obLink) {
+                            obLink.style.display = 'inline-flex';
+                            document.getElementById('obLinkText').textContent = 'Link gerado ✓';
+                            document.getElementById('obLinkText').style.color = '#22c55e';
+                        }
+                    }
+                } catch (e) {
+                    console.warn('ONBOARDING: checklist update error (safe)', e);
+                }
+            }
+
+            function markStep(num, done) {
+                const check = document.getElementById('obCheck' + num);
+                const step = document.getElementById('obStep' + num);
+                if (!check || !step) return;
+                if (done) {
+                    check.style.background = '#22c55e';
+                    check.style.borderColor = '#22c55e';
+                    check.style.color = '#fff';
+                    step.style.opacity = '0.7';
+                }
+            }
+
+            // Atualizar a cada 3 segundos (leitura passiva do DOM, zero impacto)
+            setInterval(updateOnboardingChecklist, 3000);
+            // Primeira execução após carregamento
+            setTimeout(updateOnboardingChecklist, 1500);
+
+            // === FAQ PREFILL (Item 3): Sugestões visuais editáveis ===
+            const originalShowNewTab = window.showNewTab;
+            let faqPrefillDone = false;
+
+            if (typeof originalShowNewTab === 'function') {
+                window.showNewTab = function (tabName) {
+                    originalShowNewTab(tabName);
+                    if (tabName === 'knowledge' && !faqPrefillDone) {
+                        setTimeout(prefillExampleFAQs, 500);
+                    }
+                };
+            }
+
+            function prefillExampleFAQs() {
+                try {
+                    const container = document.getElementById('faqs-container');
+                    if (!container) return;
+                    // Só prefill se container estiver vazio
+                    if (!container.textContent.includes('Nenhuma FAQ cadastrada')) return;
+                    faqPrefillDone = true;
+
+                    const examples = [
+                        { q: 'Como funciona o produto/serviço?', a: 'Descreva aqui como seu produto ou serviço funciona. Exemplo: "Nosso produto é uma plataforma que permite..."' },
+                        { q: 'Qual o preço e formas de pagamento?', a: 'Informe aqui os preços e condições. Exemplo: "O plano básico custa R$ XX,XX por mês com pagamento via cartão ou PIX."' },
+                        { q: 'Tem garantia? Posso cancelar?', a: 'Explique sua política de garantia. Exemplo: "Sim, oferecemos 7 dias de garantia incondicional."' }
+                    ];
+
+                    container.innerHTML = `
+                    <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:12px; padding:14px; margin-bottom:16px;">
+                        <p style="color:#fbbf24; font-size:0.85rem; margin:0 0 4px 0; font-weight:600;">💡 Sugestões de FAQs</p>
+                        <p style="color:#94a3b8; font-size:0.78rem; margin:0;">Edite as perguntas e respostas abaixo e clique "Salvar" em cada uma. Elas NÃO são salvas automaticamente.</p>
+                    </div>
+                    ${examples.map((ex, i) => `
+                        <div id="obFaqSuggestion${i}" style="background:#334155; padding:1rem; border-radius:12px; margin-bottom:1rem; border:1px dashed #475569;">
+                            <label style="color:#94a3b8; font-size:0.78rem; display:block; margin-bottom:4px;">Pergunta:</label>
+                            <input id="obFaqQ${i}" type="text" value="${ex.q}" style="width:100%; padding:8px 12px; border:1px solid #475569; border-radius:8px; background:#1e293b; color:#f8fafc; margin-bottom:8px; font-size:0.88rem;">
+                            <label style="color:#94a3b8; font-size:0.78rem; display:block; margin-bottom:4px;">Resposta:</label>
+                            <textarea id="obFaqA${i}" style="width:100%; padding:8px 12px; border:1px solid #475569; border-radius:8px; background:#1e293b; color:#f8fafc; min-height:60px; font-size:0.88rem; resize:vertical;">${ex.a}</textarea>
+                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                <button onclick="obSaveFaq(${i})" style="flex:1; background:#10b981; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.85rem;">✓ Salvar FAQ</button>
+                                <button onclick="document.getElementById('obFaqSuggestion${i}').remove()" style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem;">✕</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+                } catch (e) {
+                    console.warn('ONBOARDING: FAQ prefill error (safe)', e);
+                }
+            }
+
+            // Salvar FAQ individual usando a função existente do sistema
+            window.obSaveFaq = async function (index) {
+                try {
+                    const q = document.getElementById('obFaqQ' + index)?.value?.trim();
+                    const a = document.getElementById('obFaqA' + index)?.value?.trim();
+                    if (!q || !a) {
+                        alert('Preencha pergunta e resposta!');
+                        return;
+                    }
+                    // Preencher os campos do formulário existente e chamar addFAQ
+                    document.getElementById('faq-question').value = q;
+                    document.getElementById('faq-answer').value = a;
+                    await addFAQ();
+                    // Remover a sugestão salva
+                    const suggestion = document.getElementById('obFaqSuggestion' + index);
+                    if (suggestion) suggestion.remove();
+                } catch (e) {
+                    console.error('ONBOARDING: Erro ao salvar FAQ sugerida', e);
+                }
+            };
+        })();
+    </script>
+
+    <!-- ONBOARDING: Frase anti-reembolso / alinhamento de expectativas (Item 7) -->
+    <div class="privacy-footer"
+        style="text-align:center; padding:16px 20px; margin-top:2rem; border-top:1px solid rgba(71,85,105,0.3);">
+        <p style="color:#64748b; font-size:0.78rem; line-height:1.6; margin:0; max-width:700px; margin:0 auto;">
+            O Link Mágico é uma <strong>ferramenta de automação conversacional</strong> que depende da configuração
+            feita pelo usuário.
+            Quanto melhor o treinamento (FAQs, instruções, página de vendas), melhores os resultados.
+            Resultados podem variar conforme o nicho, a qualidade do conteúdo e o volume de tráfego.
+            Ao utilizar a plataforma, você concorda com os <a href="#" style="color:#60a5fa;">Termos de Uso</a>.
+        </p>
+    </div>
+
 </body>
 
 </html>

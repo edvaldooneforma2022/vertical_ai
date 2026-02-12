@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>LinkMágico Chatbot - Assistente IA</title>
-    <meta content="light dark" name="color-scheme"/>
-    
+    <meta content="light dark" name="color-scheme" />
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    
+
     <style>
         :root {
             --primary: #667eea;
@@ -32,13 +33,13 @@
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
             --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--gradient-primary);
@@ -50,7 +51,7 @@
             line-height: 1.6;
             color: var(--gray-800);
         }
-        
+
         /* Dark Mode Toggle */
         .theme-toggle {
             position: fixed;
@@ -70,17 +71,17 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .theme-toggle:hover {
             transform: scale(1.05);
             box-shadow: var(--shadow-lg);
         }
-        
+
         .theme-toggle i {
             color: var(--primary);
             font-size: 1rem;
         }
-        
+
         /* Alert */
         .alert {
             position: fixed;
@@ -97,19 +98,19 @@
             display: none;
             max-width: 300px;
         }
-        
+
         .alert.success {
             background: rgba(16, 185, 129, 0.9);
             color: white;
             border-color: rgba(16, 185, 129, 0.3);
         }
-        
+
         .alert.error {
             background: rgba(239, 68, 68, 0.9);
             color: white;
             border-color: rgba(239, 68, 68, 0.3);
         }
-        
+
         /* Chat Container */
         .chat-container {
             background: rgba(255, 255, 255, 0.95);
@@ -126,7 +127,7 @@
             overflow: hidden;
             position: relative;
         }
-        
+
         .chat-container::before {
             content: '';
             position: absolute;
@@ -136,7 +137,7 @@
             height: 3px;
             background: var(--gradient-primary);
         }
-        
+
         /* Chat Header */
         .chat-header {
             background: var(--gradient-primary);
@@ -144,19 +145,19 @@
             padding: 20px 25px;
             position: relative;
         }
-        
+
         .header-content {
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
-        
+
         .header-left {
             display: flex;
             align-items: center;
             gap: 15px;
         }
-        
+
         .bot-avatar {
             width: 45px;
             height: 45px;
@@ -167,19 +168,19 @@
             justify-content: center;
             font-size: 1.4rem;
         }
-        
+
         .header-info h1 {
             font-size: 1.3rem;
             font-weight: 700;
             margin-bottom: 3px;
         }
-        
+
         .header-info p {
             opacity: 0.9;
             font-size: 0.85rem;
             font-weight: 400;
         }
-        
+
         .status-badge {
             background: rgba(16, 185, 129, 0.2);
             border: 1px solid rgba(16, 185, 129, 0.3);
@@ -192,14 +193,14 @@
             align-items: center;
             gap: 6px;
         }
-        
+
         .status-dot {
             width: 6px;
             height: 6px;
             background: #10b981;
             border-radius: 50%;
         }
-        
+
         /* Product Info (apenas se houver dados) */
         .product-info {
             background: rgba(248, 250, 252, 0.95);
@@ -207,25 +208,25 @@
             padding: 15px 25px;
             display: none;
         }
-        
+
         .product-main {
             flex: 1;
         }
-        
+
         .product-title {
             font-weight: 600;
             color: var(--gray-800);
             margin-bottom: 4px;
             font-size: 1rem;
         }
-        
+
         .product-price {
             color: var(--success);
             font-weight: 700;
             font-size: 1.1rem;
             margin-bottom: 6px;
         }
-        
+
         .product-bonuses {
             font-size: 0.8rem;
             color: var(--gray-600);
@@ -233,11 +234,11 @@
             align-items: center;
             gap: 6px;
         }
-        
+
         .bonus-icon {
             color: #f59e0b;
         }
-        
+
         /* Chat Messages */
         .chat-messages {
             flex: 1;
@@ -246,24 +247,24 @@
             background: linear-gradient(to bottom, var(--gray-50), white);
             position: relative;
         }
-        
+
         .chat-messages::-webkit-scrollbar {
             width: 4px;
         }
-        
+
         .chat-messages::-webkit-scrollbar-track {
             background: transparent;
         }
-        
+
         .chat-messages::-webkit-scrollbar-thumb {
             background: var(--gray-200);
             border-radius: 2px;
         }
-        
+
         .chat-messages::-webkit-scrollbar-thumb:hover {
             background: var(--gray-500);
         }
-        
+
         .message {
             margin-bottom: 15px;
             display: flex;
@@ -271,17 +272,24 @@
             gap: 10px;
             animation: fadeInUp 0.3s ease-out;
         }
-        
+
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
+
         .message.user {
             justify-content: flex-end;
             flex-direction: row-reverse;
         }
-        
+
         .message-avatar {
             width: 32px;
             height: 32px;
@@ -294,17 +302,17 @@
             flex-shrink: 0;
             box-shadow: var(--shadow-sm);
         }
-        
+
         .message.bot .message-avatar {
             background: var(--gradient-primary);
             color: white;
         }
-        
+
         .message.user .message-avatar {
             background: var(--gradient-success);
             color: white;
         }
-        
+
         .message-content {
             max-width: 75%;
             padding: 12px 16px;
@@ -317,22 +325,22 @@
             box-shadow: var(--shadow-sm);
             transition: all 0.2s ease;
         }
-        
+
         .message-content:hover {
             box-shadow: var(--shadow-md);
         }
-        
+
         .message.user .message-content {
             background: var(--gradient-primary);
             color: white;
         }
-        
+
         .message.bot .message-content {
             background: white;
             color: var(--gray-800);
             border: 1px solid var(--gray-200);
         }
-        
+
         /* CTA Links in messages */
         .cta-link {
             display: inline-block;
@@ -347,16 +355,16 @@
             transition: all 0.2s ease;
             box-shadow: var(--shadow-md);
         }
-        
+
         .cta-link:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
         }
-        
+
         .cta-link i {
             margin-left: 5px;
         }
-        
+
         /* Typing Indicator */
         .typing-indicator {
             display: none;
@@ -365,14 +373,14 @@
             font-style: italic;
             font-size: 0.85rem;
         }
-        
+
         .typing-dots {
             display: inline-flex;
             align-items: center;
             gap: 3px;
             margin-left: 6px;
         }
-        
+
         .typing-dots span {
             width: 5px;
             height: 5px;
@@ -380,22 +388,34 @@
             background: var(--primary);
             animation: typing 1.2s infinite ease-in-out;
         }
-        
-        .typing-dots span:nth-child(1) { animation-delay: -0.24s; }
-        .typing-dots span:nth-child(2) { animation-delay: -0.12s; }
-        .typing-dots span:nth-child(3) { animation-delay: 0s; }
-        
+
+        .typing-dots span:nth-child(1) {
+            animation-delay: -0.24s;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: -0.12s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0s;
+        }
+
         @keyframes typing {
-            0%, 80%, 100% {
+
+            0%,
+            80%,
+            100% {
                 transform: scale(0.8);
                 opacity: 0.5;
             }
+
             40% {
                 transform: scale(1.2);
                 opacity: 1;
             }
         }
-        
+
         /* Chat Input */
         .chat-input {
             padding: 20px 25px;
@@ -403,22 +423,22 @@
             border-top: 1px solid var(--gray-200);
             position: relative;
         }
-        
+
         .input-container {
             position: relative;
         }
-        
+
         .input-group {
             display: flex;
             gap: 10px;
             align-items: flex-end;
         }
-        
+
         .input-wrapper {
             flex: 1;
             position: relative;
         }
-        
+
         .message-input {
             width: 100%;
             padding: 12px 16px;
@@ -433,18 +453,18 @@
             min-height: 44px;
             max-height: 100px;
         }
-        
+
         .message-input:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
             background: white;
         }
-        
+
         .message-input::placeholder {
             color: var(--gray-500);
         }
-        
+
         .char-counter {
             position: absolute;
             bottom: -18px;
@@ -452,15 +472,15 @@
             font-size: 0.7rem;
             color: var(--gray-500);
         }
-        
+
         .char-counter.warning {
             color: #f59e0b;
         }
-        
+
         .char-counter.error {
             color: var(--error);
         }
-        
+
         .send-btn {
             width: 44px;
             height: 44px;
@@ -477,21 +497,21 @@
             box-shadow: var(--shadow-md);
             flex-shrink: 0;
         }
-        
+
         .send-btn:hover:not(:disabled) {
             transform: scale(1.05);
             box-shadow: var(--shadow-lg);
         }
-        
+
         .send-btn:active {
             transform: scale(0.95);
         }
-        
+
         .send-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        
+
         /* Quick Actions */
         .quick-actions {
             display: flex;
@@ -499,7 +519,7 @@
             margin-bottom: 12px;
             flex-wrap: wrap;
         }
-        
+
         .quick-action {
             background: rgba(102, 126, 234, 0.1);
             border: 1px solid rgba(102, 126, 234, 0.2);
@@ -511,78 +531,78 @@
             transition: all 0.2s ease;
             font-weight: 500;
         }
-        
+
         .quick-action:hover {
             background: rgba(102, 126, 234, 0.2);
             transform: translateY(-1px);
         }
-        
+
         /* Dark Mode */
         body.dark-mode {
             background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
         }
-        
+
         .dark-mode .chat-container {
             background: rgba(31, 41, 55, 0.95);
             border-color: rgba(75, 85, 99, 0.3);
         }
-        
+
         .dark-mode .product-info {
             background: rgba(17, 24, 39, 0.95);
             border-color: rgba(75, 85, 99, 0.3);
         }
-        
+
         .dark-mode .product-title {
             color: var(--gray-200);
         }
-        
+
         .dark-mode .product-bonuses {
             color: var(--gray-500);
         }
-        
+
         .dark-mode .chat-messages {
             background: linear-gradient(to bottom, rgba(17, 24, 39, 0.8), rgba(31, 41, 55, 0.8));
         }
-        
+
         .dark-mode .message.bot .message-content {
             background: rgba(55, 65, 81, 0.9);
             color: var(--gray-200);
             border-color: rgba(75, 85, 99, 0.5);
         }
-        
+
         .dark-mode .chat-input {
             background: rgba(17, 24, 39, 0.95);
             border-color: rgba(75, 85, 99, 0.3);
         }
-        
+
         .dark-mode .message-input {
             background: rgba(55, 65, 81, 0.5);
             border-color: rgba(75, 85, 99, 0.5);
             color: var(--gray-200);
         }
-        
+
         .dark-mode .message-input:focus {
             background: rgba(55, 65, 81, 0.8);
         }
-        
+
         .dark-mode .theme-toggle {
             background: rgba(17, 24, 39, 0.9);
             border-color: rgba(75, 85, 99, 0.3);
         }
-        
+
         /* Responsive */
         @media (max-width: 768px) {
             body {
                 padding: 8px;
             }
-            
+
             .chat-container {
                 height: 100vh;
                 max-height: 100vh;
                 max-width: 100%;
                 border-radius: 0;
             }
-            
+
             .chat-header,
             .product-info,
             .chat-messages,
@@ -590,67 +610,78 @@
                 padding-left: 15px;
                 padding-right: 15px;
             }
-            
+
             .header-content {
                 flex-direction: column;
                 gap: 10px;
                 text-align: center;
             }
-            
+
             .message-content {
                 max-width: 85%;
             }
-            
+
             .theme-toggle {
                 top: 10px;
                 right: 10px;
                 width: 40px;
                 height: 40px;
             }
-            
+
             .quick-actions {
                 justify-content: center;
             }
         }
-        
+
         @media (max-width: 480px) {
             .header-info h1 {
                 font-size: 1.1rem;
             }
-            
+
             .message-content {
                 max-width: 90%;
                 padding: 10px 12px;
             }
-            
+
             .chat-input {
                 padding: 15px;
             }
         }
-        
+
         /* Utility Classes */
-        .hidden { display: none; }
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .hidden {
+            display: none;
         }
-        
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
         /* High contrast mode */
         @media (prefers-contrast: high) {
             .message-content {
                 border: 2px solid currentColor;
             }
-            
+
             .send-btn,
             .quick-action {
                 border: 2px solid currentColor;
             }
         }
-        
+
         /* Reduced motion */
         @media (prefers-reduced-motion: reduce) {
+
             *,
             *::before,
             *::after {
@@ -661,6 +692,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Theme Toggle -->
     <button id="darkToggle" class="theme-toggle" aria-label="Alternar modo escuro">
@@ -705,6 +737,21 @@
 
         <!-- Chat Messages -->
         <div class="chat-messages" id="chatMessages">
+            <!-- ONBOARDING: Mensagem anti-teste-errado (informativa, não bloqueia) -->
+            <div class="message bot fade-in" id="onboardingChatTip" style="opacity:0.92;">
+                <div class="message-avatar" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="message-content"
+                    style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); font-size: 0.82rem; line-height: 1.5;">
+                    <strong style="color: #f59e0b;">👋 Antes de começar:</strong><br>
+                    Este assistente foi treinado para um <strong>objetivo específico</strong> (o produto/página que você
+                    configurou).<br>
+                    Perguntas fora desse contexto podem gerar respostas genéricas.<br>
+                    <span style="color: #94a3b8; font-size: 0.78rem;">Dica: teste com perguntas que seus clientes reais
+                        fariam.</span>
+                </div>
+            </div>
             <div class="message bot fade-in">
                 <div class="message-avatar">
                     <i class="fas fa-robot"></i>
@@ -742,15 +789,11 @@
                     Quero o link
                 </button>
             </div>
-            
+
             <div class="input-group">
                 <div class="input-wrapper">
-                    <textarea 
-                        id="messageInput" 
-                        class="message-input" 
-                        placeholder="Digite sua pergunta..." 
-                        maxlength="500"
-                        rows="1"></textarea>
+                    <textarea id="messageInput" class="message-input" placeholder="Digite sua pergunta..."
+                        maxlength="500" rows="1"></textarea>
                     <div class="char-counter" id="charCounter">0/500</div>
                 </div>
                 <button id="sendBtn" class="send-btn" onclick="sendMessage()" aria-label="Enviar mensagem">
@@ -774,7 +817,7 @@
         const robotNameParam = urlParams.get('name');
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             initializeChat();
             setupEventListeners();
             loadPageData();
@@ -788,15 +831,15 @@
 
             // Auto-resize textarea
             const messageInput = document.getElementById('messageInput');
-            messageInput.addEventListener('input', function() {
+            messageInput.addEventListener('input', function () {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-                
+
                 // Update character counter
                 const counter = document.getElementById('charCounter');
                 const length = this.value.length;
                 counter.textContent = `${length}/500`;
-                
+
                 if (length > 450) {
                     counter.classList.add('error');
                     counter.classList.remove('warning');
@@ -811,7 +854,7 @@
 
         function setupEventListeners() {
             // Enter key to send message
-            document.getElementById('messageInput').addEventListener('keydown', function(e) {
+            document.getElementById('messageInput').addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
@@ -821,20 +864,20 @@
             // Dark mode toggle
             const darkToggle = document.getElementById('darkToggle');
             const savedTheme = localStorage.getItem('lm_theme');
-            
+
             if (savedTheme === 'dark') {
                 document.body.classList.add('dark-mode');
                 darkToggle.innerHTML = '<i class="fas fa-sun"></i>';
             }
 
-            darkToggle.addEventListener('click', function() {
+            darkToggle.addEventListener('click', function () {
                 document.body.classList.toggle('dark-mode');
                 const isDark = document.body.classList.contains('dark-mode');
-                
-                this.innerHTML = isDark 
-                    ? '<i class="fas fa-sun"></i>' 
+
+                this.innerHTML = isDark
+                    ? '<i class="fas fa-sun"></i>'
                     : '<i class="fas fa-moon"></i>';
-                    
+
                 localStorage.setItem('lm_theme', isDark ? 'dark' : 'light');
             });
         }
@@ -846,27 +889,27 @@
                 const response = await fetch('/extract', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        url: pageUrl, 
-                        instructions: customInstructions 
+                    body: JSON.stringify({
+                        url: pageUrl,
+                        instructions: customInstructions
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data && data.data) {
                     pageData = data.data;
                 } else if (data) {
                     pageData = data;
                 }
-                
+
                 if (pageData && customInstructions) {
                     pageData.custom_instructions = customInstructions;
                 }
-                
+
                 updateProductInfo();
                 updateWelcomeMessage();
-                
+
             } catch (error) {
                 console.error('Erro ao carregar dados da página:', error);
                 showAlert('Erro ao carregar dados da página', 'error');
@@ -894,7 +937,7 @@
 
             // Show bonuses if detected
             if (pageData.bonuses_detected && pageData.bonuses_detected.length > 0) {
-                productBonuses.querySelector('span').textContent = 
+                productBonuses.querySelector('span').textContent =
                     "Bônus detectados: " + pageData.bonuses_detected.join(", ");
                 productBonuses.style.display = 'flex';
             }
@@ -905,43 +948,43 @@
 
             const welcomeMessage = document.getElementById('welcomeMessage');
             const productName = pageData.title || 'este produto';
-            
-            welcomeMessage.textContent = 
+
+            welcomeMessage.textContent =
                 `Olá! Sou o ${robotName}, seu assistente especializado em "${productName}". Como posso te ajudar hoje?`;
         }
 
         function addMessage(content, isUser = false, animate = true) {
             const messagesContainer = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
-            
+
             messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
             if (animate) messageDiv.classList.add('fade-in');
-            
+
             const avatar = document.createElement('div');
             avatar.className = 'message-avatar';
-            avatar.innerHTML = isUser 
-                ? '<i class="fas fa-user"></i>' 
+            avatar.innerHTML = isUser
+                ? '<i class="fas fa-user"></i>'
                 : '<i class="fas fa-robot"></i>';
-            
+
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
-            
+
             // Process content for CTA links
             const processedContent = processMessageContent(content, isUser);
-            
+
             if (typeof processedContent === 'string') {
                 contentDiv.textContent = processedContent;
             } else {
                 contentDiv.appendChild(processedContent);
             }
-            
+
             messageDiv.appendChild(avatar);
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
-            
+
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             messageCount++;
-            
+
             // Update quick actions after few messages
             if (messageCount > 1) updateQuickActions();
         }
@@ -952,15 +995,15 @@
             // Check for URLs and convert to CTA buttons
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             const urls = content.match(urlRegex);
-            
+
             if (urls && urls.length > 0) {
                 const container = document.createElement('div');
                 let textContent = content;
-                
+
                 urls.forEach(url => {
                     textContent = textContent.replace(url, '');
                 });
-                
+
                 // Add text content
                 if (textContent.trim()) {
                     const textNode = document.createTextNode(textContent.trim());
@@ -968,7 +1011,7 @@
                     container.appendChild(document.createElement('br'));
                     container.appendChild(document.createElement('br'));
                 }
-                
+
                 // Add CTA buttons
                 urls.forEach(url => {
                     const ctaLink = document.createElement('a');
@@ -979,10 +1022,10 @@
                     ctaLink.innerHTML = 'Quero me inscrever agora <i class="fas fa-external-link-alt"></i>';
                     container.appendChild(ctaLink);
                 });
-                
+
                 return container;
             }
-            
+
             return content;
         }
 
@@ -1021,23 +1064,23 @@
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
-            
+
             if (!message) return;
-            
+
             // Disable send button
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
-            
+
             addMessage(message, true);
             input.value = '';
             input.style.height = 'auto';
-            
+
             // Reset character counter
             document.getElementById('charCounter').textContent = '0/500';
             document.getElementById('charCounter').classList.remove('warning', 'error');
-            
+
             showTyping();
-            
+
             try {
                 const response = await fetch('/api/chat-universal', {
                     method: 'POST',
@@ -1051,17 +1094,17 @@
                         apiKey: apiKey
                     })
                 });
-                
+
                 const data = await response.json();
                 hideTyping();
-                
+
                 if (data.success) {
                     let botReply = data.response;
 
                     // Include bonuses if detected
                     if (data.bonuses_detected && data.bonuses_detected.length > 0) {
-                        botReply += "\n\nBônus inclusos: " + 
-                                    data.bonuses_detected.slice(0, 3).join(", ");
+                        botReply += "\n\nBônus inclusos: " +
+                            data.bonuses_detected.slice(0, 3).join(", ");
                     }
 
                     addMessage(botReply);
@@ -1083,14 +1126,14 @@
             alert.className = `alert ${type}`;
             alert.textContent = message;
             alert.style.display = 'block';
-            
+
             setTimeout(() => {
                 alert.style.display = 'none';
             }, 4000);
         }
 
         // Handle visibility changes
-        document.addEventListener('visibilitychange', function() {
+        document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
                 document.body.style.animationPlayState = 'paused';
             } else {
@@ -1108,11 +1151,11 @@
         }
 
         // Enhanced error handling
-        window.addEventListener('error', function(e) {
+        window.addEventListener('error', function (e) {
             console.error('Chat error:', e.error);
             showAlert('Ocorreu um erro inesperado', 'error');
         });
     </script>
 </body>
+
 </html>
-        
