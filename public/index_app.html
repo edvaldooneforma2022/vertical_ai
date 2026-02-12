@@ -1519,9 +1519,29 @@
                 consentModal.style.display = 'flex';
             }
 
-            // SAFE PATCH - BUG-DASH-001: Carregar estatísticas reais do backend
-            setTimeout(() => loadDashboardStats(), 500);
+            // SAFE PATCH - BUG-DASH-003: Buscar apiKey da sessão antes de carregar stats
+            initializeApiKeyFromSession();
         });
+
+        // SAFE PATCH - BUG-DASH-003: Resolver apiKey da sessão e popular input/localStorage
+        async function initializeApiKeyFromSession() {
+            try {
+                const res = await fetch('/api/session/me');
+                const data = await res.json();
+                if (data.success && data.apiKey) {
+                    const apiKeyInput = document.getElementById('apiKeyInput');
+                    if (apiKeyInput && !apiKeyInput.value.trim()) {
+                        apiKeyInput.value = data.apiKey;
+                    }
+                    localStorage.setItem('linkmagico_api_key', data.apiKey);
+                    console.log('✅ ApiKey carregada da sessão:', data.apiKey.substring(0, 8) + '...');
+                }
+            } catch (err) {
+                console.warn('⚠️ Não foi possível obter apiKey da sessão:', err.message);
+            }
+            // Sempre chamar loadDashboardStats, mesmo que apiKey não tenha sido encontrada (fallback original)
+            loadDashboardStats();
+        }
 
         // ===== SAFE PATCH - BUG-DASH-001: Carregar estatísticas reais do backend =====
         async function loadDashboardStats() {
@@ -2757,6 +2777,9 @@
 
                 const totalLeads = data.totalLeads || 0;
                 const assistants = data.assistants || [];
+                // SAFE PATCH - BUG-EDIT-001: Armazenar dados completos para edição
+                window._assistantsData = {};
+                assistants.forEach(a => { window._assistantsData[a.id] = a; });
                 const listEl = document.getElementById('assistants-list');
 
                 if (assistants.length === 0) {
@@ -2801,7 +2824,7 @@
 
                         <!-- Action Buttons -->
                         <div style="display:flex; gap:0.5rem; margin-top:0.2rem;">
-                            <button onclick="editAssistantFromCard('${a.id}', '${safeName}', '${(a.salesUrl || '').replace(/'/g, "\\'")}', '${(a.instructions || '').replace(/'/g, "\\'").replace(/\n/g, ' ').substring(0, 100)}')"
+                            <button onclick="editAssistantFromCard('${a.id}')"
                                 style="flex:1; background:#3b82f6; color:white; border:none; padding:0.55rem; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:600;">
                                 ✏️ Editar
                             </button>
@@ -2839,8 +2862,16 @@
             });
         }
 
-        function editAssistantFromCard(id, name, salesUrl, instructions) {
-            // Preenche o formulário principal "Criar Assistente" com os dados do assistente
+        function editAssistantFromCard(id) {
+            // SAFE PATCH - BUG-EDIT-001: Ler dados completos da variável em memória (sem truncamento)
+            const assistantData = window._assistantsData && window._assistantsData[id];
+            if (!assistantData) {
+                showToast('❌ Dados do assistente não encontrados. Atualize a lista.', 'error');
+                return;
+            }
+            const name = assistantData.name || '';
+            const salesUrl = assistantData.salesUrl || '';
+            const instructions = assistantData.instructions || '';
             try {
                 document.getElementById('robotName').value = name;
                 document.getElementById('salesUrl').value = salesUrl;

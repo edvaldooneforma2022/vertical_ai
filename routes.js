@@ -12,6 +12,16 @@ const { analyticsManager } = require('./analytics');
 const { llmOptimizer } = require('./llm-optimizer');
 const { knowledgeBaseManager } = require('./knowledge-base');
 
+// SAFE PATCH - BUG-LEADS-002: Importar getLeadSystem para dados de leads consistentes
+let getLeadSystem = null;
+try {
+    const leadsModule = require('./lib/leads/lead-capture');
+    getLeadSystem = leadsModule.getLeadSystem;
+    console.log('✅ Módulo de leads carregado em routes.js');
+} catch (e) {
+    console.warn('⚠️ Módulo de leads não disponível para routes.js:', e.message);
+}
+
 // ===== Feature Flags (Meus Assistentes) =====
 let featureFlags = null;
 try {
@@ -144,14 +154,26 @@ function setupRoutes(app) {
             }
 
             try {
-                // Buscar leads do tenant
-                const leads = await DatabaseHelpers.getLeads(apiKey);
-                totalLeads = leads.length;
+                // SAFE PATCH - BUG-LEADS-002: Buscar leads via getLeadSystem (mesma fonte que /admin/leads)
+                if (getLeadSystem) {
+                    const leadSystem = getLeadSystem(apiKey);
+                    const leads = leadSystem.getLeads();
+                    totalLeads = leads.length;
 
-                const today = new Date().toISOString().split('T')[0];
-                leadsToday = leads.filter(l =>
-                    l.created_at && l.created_at.toString().startsWith(today)
-                ).length;
+                    const today = new Date().toISOString().split('T')[0];
+                    leadsToday = leads.filter(l => {
+                        const ts = l.timestamp || l.created_at || l.lastInteraction;
+                        return ts && ts.toString().startsWith(today);
+                    }).length;
+                } else {
+                    // Fallback: usar DatabaseHelpers se módulo de leads indisponível
+                    const leads = await DatabaseHelpers.getLeads(apiKey);
+                    totalLeads = leads.length;
+                    const today = new Date().toISOString().split('T')[0];
+                    leadsToday = leads.filter(l =>
+                        l.created_at && l.created_at.toString().startsWith(today)
+                    ).length;
+                }
             } catch (err) {
                 console.warn('⚠️ Erro ao buscar leads:', err.message);
                 // Fallback: manter zeros
@@ -834,11 +856,18 @@ function setupRoutes(app) {
                     status: s.status || 'active'
                 }));
 
-            // SAFE PATCH - BUG-LEADS-001: Incluir contagem de leads do tenant
+            // SAFE PATCH - BUG-LEADS-002: Incluir contagem de leads do tenant (mesma fonte que /admin/leads)
             let totalLeads = 0;
             try {
-                const leads = await DatabaseHelpers.getLeads(apiKey);
-                totalLeads = leads ? leads.length : 0;
+                if (getLeadSystem) {
+                    const leadSystem = getLeadSystem(apiKey);
+                    const leads = leadSystem.getLeads();
+                    totalLeads = leads ? leads.length : 0;
+                } else {
+                    // Fallback: DatabaseHelpers
+                    const leads = await DatabaseHelpers.getLeads(apiKey);
+                    totalLeads = leads ? leads.length : 0;
+                }
             } catch (leadsErr) {
                 console.warn('⚠️ Erro ao buscar leads para assistentes:', leadsErr.message);
             }
