@@ -35,6 +35,8 @@ const { gmailManager } = require('./gmail-integration');
 const { whatsappManager } = require('./whatsapp-integration');
 const { chatgptManager } = require('./chatgpt-integration');
 const { crmIntegrations } = require('./crm-integrations');
+const { setupCRMRoutes } = require('./lib/crm/crm-routes');
+const { crmManager } = require('./lib/crm/index');
 const { whitelabelManager } = require('./whitelabel');
 const { structuredLeadsManager } = require('./structured-leads');
 const { ShortUrlGenerator } = require('./short-url-generator');
@@ -4601,6 +4603,17 @@ app.post("/api/capture-lead", async (req, res) => {
 
         console.log(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
 
+        // 🏢 [CRM V7.0] Sync hook — fire-and-forget, zero impacto no fluxo existente
+        try {
+            if (crmManager && typeof crmManager.syncLeadToCRM === 'function') {
+                crmManager.syncLeadToCRM(apiKey, newLead).catch(err => {
+                    console.warn('⚠️ [CRM] Sync hook falhou (não bloqueia captura):', err.message);
+                });
+            }
+        } catch (crmErr) {
+            console.warn('⚠️ [CRM] Erro no sync hook (não bloqueia captura):', crmErr.message);
+        }
+
         res.json({
             success: true,
             lead: newLead,
@@ -5785,6 +5798,14 @@ try {
             res.status(404).json({ success: false, error: 'CRM não encontrado' });
         }
     });
+
+    // ===== CRM V7.0 - Pipeline, Leads CRM, Follow-Up, Deals, Analytics =====
+    try {
+        setupCRMRoutes(app);
+        console.log('✅ [CRM V7.0] Rotas CRM registradas com sucesso');
+    } catch (err) {
+        console.error('❌ [CRM V7.0] Erro ao registrar rotas CRM:', err.message);
+    }
 
     // ===== SHORT URLS - Sistema de Encurtamento de Links =====
 
