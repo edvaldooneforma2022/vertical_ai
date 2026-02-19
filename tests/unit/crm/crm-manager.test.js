@@ -161,4 +161,142 @@ describe('CRMManager', () => {
             expect(call[1]).toContain('hot');
         });
     });
+
+    describe('calculateLeadScore', () => {
+        it('deve retornar 0 para lead sem dados', () => {
+            const score = crm.calculateLeadScore({});
+            expect(score).toBe(0);
+        });
+
+        it('deve pontuar +10 para nome válido', () => {
+            const score = crm.calculateLeadScore({ nome: 'João', email: '' });
+            expect(score).toBe(10);
+        });
+
+        it('deve ignorar nome "Não informado"', () => {
+            const score = crm.calculateLeadScore({ nome: 'Não informado' });
+            expect(score).toBe(0);
+        });
+
+        it('deve pontuar +10 para email válido', () => {
+            const score = crm.calculateLeadScore({ email: 'joao@test.com' });
+            expect(score).toBe(10);
+        });
+
+        it('deve pontuar +15 para telefone informado', () => {
+            const score = crm.calculateLeadScore({ telefone: '11999999999' });
+            expect(score).toBe(15);
+        });
+
+        it('deve ignorar telefone "Não informado"', () => {
+            const score = crm.calculateLeadScore({ telefone: 'Não informado' });
+            expect(score).toBe(0);
+        });
+
+        it('deve pontuar +10 para url_origem (widget)', () => {
+            const score = crm.calculateLeadScore({ url_origem: 'https://example.com' });
+            expect(score).toBe(10);
+        });
+
+        it('deve calcular score completo para lead com todos os dados', () => {
+            const score = crm.calculateLeadScore({
+                nome: 'João Silva',
+                email: 'joao@test.com',
+                telefone: '11999999999',
+                url_origem: 'https://example.com',
+                company: 'Empresa X',
+                conversationId: 'conv-123'
+            });
+            // 10 + 10 + 15 + 10 + 10 + 5 = 60
+            expect(score).toBe(60);
+        });
+
+        it('deve limitar score a 100', () => {
+            // Mesmo com muitos dados, não deve passar de 100
+            const score = crm.calculateLeadScore({
+                nome: 'João',
+                email: 'j@t.com',
+                telefone: '11999',
+                url_origem: 'https://x.com',
+                company: 'E',
+                conversationId: 'c'
+            });
+            expect(score).toBeLessThanOrEqual(100);
+        });
+    });
+
+    describe('determineTemperature', () => {
+        it('deve retornar cold para score < 20', () => {
+            expect(crm.determineTemperature(0)).toBe('cold');
+            expect(crm.determineTemperature(10)).toBe('cold');
+            expect(crm.determineTemperature(19)).toBe('cold');
+        });
+
+        it('deve retornar warm para score >= 20 e < 35', () => {
+            expect(crm.determineTemperature(20)).toBe('warm');
+            expect(crm.determineTemperature(30)).toBe('warm');
+            expect(crm.determineTemperature(34)).toBe('warm');
+        });
+
+        it('deve retornar hot para score >= 35', () => {
+            expect(crm.determineTemperature(35)).toBe('hot');
+            expect(crm.determineTemperature(50)).toBe('hot');
+            expect(crm.determineTemperature(100)).toBe('hot');
+        });
+    });
+
+    describe('syncLeadToCRM - scoring automático', () => {
+        it('deve classificar lead com nome+email+telefone+widget como hot', async () => {
+            const leadData = {
+                id: 'lead-1',
+                nome: 'Maria Silva',
+                email: 'maria@test.com',
+                telefone: '11999999999',
+                url_origem: 'https://example.com'
+            };
+
+            db.query.mockResolvedValueOnce({ rows: [] }); // não existe
+            db.query.mockResolvedValueOnce({ rows: [{ id: 'pipeline-1' }] }); // pipeline
+            db.query.mockResolvedValueOnce({ rows: [{ id: 'stage-1' }] }); // estágio
+            db.query.mockResolvedValueOnce({ rows: [] }); // INSERT lead
+            db.query.mockResolvedValueOnce({ rows: [] }); // addActivity
+            db.query.mockResolvedValueOnce({ rows: [] }); // followup triggers
+
+            await crm.syncLeadToCRM('tenant-abc', leadData);
+
+            // Verificar que o INSERT contém temperatura calculada
+            const insertCall = db.query.mock.calls.find(call =>
+                call[0].includes('INSERT INTO crm_leads')
+            );
+            expect(insertCall).toBeTruthy();
+            // nome(10) + email(10) + telefone(15) + url_origem(10) = 45 → hot
+            expect(insertCall[1]).toContain('hot');
+            expect(insertCall[1]).toContain(45);
+        });
+
+        it('deve classificar lead somente com email como cold', async () => {
+            const leadData = {
+                id: 'lead-2',
+                nome: 'Não informado',
+                email: 'anon@test.com',
+                telefone: 'Não informado'
+            };
+
+            db.query.mockResolvedValueOnce({ rows: [] });
+            db.query.mockResolvedValueOnce({ rows: [{ id: 'pipeline-1' }] });
+            db.query.mockResolvedValueOnce({ rows: [{ id: 'stage-1' }] });
+            db.query.mockResolvedValueOnce({ rows: [] });
+            db.query.mockResolvedValueOnce({ rows: [] });
+            db.query.mockResolvedValueOnce({ rows: [] });
+
+            await crm.syncLeadToCRM('tenant-abc', leadData);
+
+            const insertCall = db.query.mock.calls.find(call =>
+                call[0].includes('INSERT INTO crm_leads')
+            );
+            // email(10) = 10 → cold
+            expect(insertCall[1]).toContain('cold');
+            expect(insertCall[1]).toContain(10);
+        });
+    });
 });
