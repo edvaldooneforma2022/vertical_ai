@@ -44,6 +44,10 @@
         token: widgetToken,
         startTime: Date.now(),
 
+        // Lead capture state
+        leadCaptured: false,
+        leadId: null,
+
         // Security configuration
         security: {
             maxMessageLength: 500,
@@ -87,12 +91,17 @@
             retryAttempts: 3,
             timeout: 15000,
 
+            // Lead capture
+            captureLeads: true,
+            apiKey: '',
+
             // Callbacks
             onOpen: null,
             onClose: null,
             onMessage: null,
             onError: null,
-            onRateLimit: null
+            onRateLimit: null,
+            onLeadCaptured: null
         },
 
         // Initialize the widget
@@ -117,6 +126,20 @@
 
                 // Generate conversation ID
                 this.conversationId = 'widget_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+                // SAFE PATCH - LEAD-001: Restore lead from localStorage if available
+                try {
+                    if (this.config.captureLeads) {
+                        var storedLeadId = this.getStoredLeadId();
+                        if (storedLeadId) {
+                            this.leadId = storedLeadId;
+                            this.leadCaptured = true;
+                            console.log('✅ LinkMagico Widget: Lead restaurado:', storedLeadId);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ LinkMagico Widget: Erro ao restaurar lead:', e.message);
+                }
 
                 // Wait for DOM to be ready
                 if (document.readyState === 'loading') {
@@ -316,6 +339,15 @@
                             <div class="lm-message-content">
                                 ${this.escapeHtml(this.config.welcomeMessage)}
                             </div>
+                        </div>
+
+                        <!-- Lead Capture Form (hidden by default, shown by showLeadForm) -->
+                        <div class="lm-lead-form" id="lm-lead-form" style="display: none;">
+                            <div class="lm-lead-form-title">Para melhor atendê-lo, informe seus dados:</div>
+                            <input type="text" id="lm-lead-name" class="lm-lead-input" placeholder="Seu nome *" required>
+                            <input type="email" id="lm-lead-email" class="lm-lead-input" placeholder="Seu melhor email">
+                            <input type="tel" id="lm-lead-phone" class="lm-lead-input" placeholder="WhatsApp (opcional)">
+                            <button id="lm-lead-submit" class="lm-lead-submit">Continuar conversa →</button>
                         </div>
                     </div>
 
@@ -988,6 +1020,75 @@
                     }
                 }
 
+                /* Lead capture form */
+                .lm-lead-form {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin: 8px 12px;
+                    animation: lm-message-appear 0.3s ease;
+                }
+
+                .lm-lead-form-title {
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #475569;
+                    margin-bottom: 12px;
+                    text-align: center;
+                }
+
+                .lm-lead-input {
+                    width: 100%;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 10px 14px;
+                    font-size: 14px;
+                    margin-bottom: 8px;
+                    outline: none;
+                    transition: border-color 0.2s ease;
+                    font-family: inherit;
+                    background: white;
+                    color: #1e293b;
+                    box-sizing: border-box;
+                }
+
+                .lm-lead-input:focus {
+                    border-color: ${primaryColor};
+                    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                }
+
+                .lm-lead-input::placeholder {
+                    color: #94a3b8;
+                }
+
+                .lm-lead-submit {
+                    width: 100%;
+                    background: linear-gradient(135deg, ${primaryColor}, ${secondaryColor});
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 10px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-family: inherit;
+                    margin-top: 4px;
+                }
+
+                .lm-lead-submit:hover {
+                    opacity: 0.9;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                }
+
+                .lm-lead-submit:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                    transform: none;
+                }
+
                 /* Custom CSS injection */
                 ${config.customCSS || ''}
             `;
@@ -1078,6 +1179,22 @@
                     }
                 });
 
+                // SAFE PATCH - LEAD-002: Lead form submit binding
+                this.bindEvent('lm-lead-submit', 'click', function () {
+                    self.captureLead();
+                });
+
+                // Allow Enter key on lead form name field
+                var leadNameInput = document.getElementById('lm-lead-name');
+                if (leadNameInput) {
+                    leadNameInput.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            self.captureLead();
+                        }
+                    });
+                }
+
             } catch (error) {
                 console.error('LinkMagico Widget event binding failed:', error);
             }
@@ -1090,6 +1207,140 @@
                 element.addEventListener(eventType, handler);
             }
         },
+
+        // ===== SAFE PATCH - LEAD CAPTURE METHODS =====
+
+        // Show the lead capture form
+        showLeadForm: function () {
+            try {
+                var form = document.getElementById('lm-lead-form');
+                if (form) {
+                    form.style.display = 'block';
+                    var nameInput = document.getElementById('lm-lead-name');
+                    if (nameInput) {
+                        setTimeout(function () { nameInput.focus(); }, 100);
+                    }
+                    // Hide the message input area while form is visible
+                    var chatInput = document.querySelector('.lm-chat-input');
+                    if (chatInput) {
+                        chatInput.style.display = 'none';
+                    }
+                    this.trackEvent('lead_form_shown');
+                }
+            } catch (error) {
+                console.error('LinkMagico Widget: Failed to show lead form:', error);
+                // Fallback: allow chat without lead capture
+                this.leadCaptured = true;
+            }
+        },
+
+        // Capture lead data and send to API
+        captureLead: function () {
+            var self = this;
+            try {
+                var nameEl = document.getElementById('lm-lead-name');
+                var emailEl = document.getElementById('lm-lead-email');
+                var phoneEl = document.getElementById('lm-lead-phone');
+                var submitBtn = document.getElementById('lm-lead-submit');
+
+                var name = nameEl ? nameEl.value.trim() : '';
+                var email = emailEl ? emailEl.value.trim() : '';
+                var phone = phoneEl ? phoneEl.value.trim() : '';
+
+                // Name is required
+                if (!name) {
+                    if (nameEl) { nameEl.focus(); nameEl.style.borderColor = '#ef4444'; }
+                    return;
+                }
+
+                // Disable submit button while processing
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Enviando...'; }
+
+                var payload = {
+                    nome: name,
+                    email: email || '',
+                    telefone: phone || '',
+                    url_origem: this.config.salesUrl || window.location.href,
+                    robotName: this.config.robotName,
+                    apiKey: this.config.apiKey || ''
+                };
+
+                fetch(this.config.apiBase + '/api/capture-lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (data.success && data.lead && data.lead.id) {
+                            self.leadId = data.lead.id;
+                            self.storeLeadId(data.lead.id);
+                            console.log('✅ LinkMagico Widget: Lead capturado:', data.lead.id);
+                        }
+                        self.leadCaptured = true;
+                        self.onLeadCaptureComplete(name);
+
+                        // Track and callback
+                        self.trackEvent('lead_captured', { leadId: self.leadId });
+                        if (self.config.onLeadCaptured) {
+                            self.config.onLeadCaptured({ name: name, email: email, phone: phone, leadId: self.leadId });
+                        }
+                    })
+                    .catch(function (error) {
+                        console.error('LinkMagico Widget: Lead capture API error:', error);
+                        // Fallback: allow chat even if API fails
+                        self.leadCaptured = true;
+                        self.onLeadCaptureComplete(name);
+                        self.trackEvent('lead_capture_error', { error: error.message });
+                    });
+
+            } catch (error) {
+                console.error('LinkMagico Widget: Lead capture failed:', error);
+                // Fallback: allow chat
+                this.leadCaptured = true;
+                this.onLeadCaptureComplete('');
+            }
+        },
+
+        // Handle post-capture UI transition
+        onLeadCaptureComplete: function (name) {
+            try {
+                // Hide lead form
+                var form = document.getElementById('lm-lead-form');
+                if (form) { form.style.display = 'none'; }
+
+                // Show message input area
+                var chatInput = document.querySelector('.lm-chat-input');
+                if (chatInput) { chatInput.style.display = ''; }
+
+                // Add welcome message with name
+                var greeting = name ? ('Olá ' + this.escapeHtml(name) + '! Prazer em te conhecer. Como posso ajudar?') : 'Ótimo! Como posso ajudar você?';
+                this.addMessage(greeting, false);
+
+                // Focus input
+                var input = document.getElementById('lm-message-input');
+                if (input) { input.focus(); }
+            } catch (error) {
+                console.error('LinkMagico Widget: Post-capture UI error:', error);
+            }
+        },
+
+        // localStorage helpers for lead persistence
+        getStoredLeadId: function () {
+            try {
+                var key = 'lm_lead_' + (this.config.apiKey || this.config.robotName || 'default');
+                return localStorage.getItem(key);
+            } catch (e) { return null; }
+        },
+
+        storeLeadId: function (leadId) {
+            try {
+                var key = 'lm_lead_' + (this.config.apiKey || this.config.robotName || 'default');
+                localStorage.setItem(key, leadId);
+            } catch (e) { /* localStorage not available */ }
+        },
+
+        // ===== END LEAD CAPTURE METHODS =====
 
         // Enhanced chat control methods
         toggleChat: function () {
@@ -1115,13 +1366,19 @@
                         overlay.style.display = 'block';
                     }
 
-                    // Focus input after animation
-                    setTimeout(function () {
-                        var input = document.getElementById('lm-message-input');
-                        if (input) {
-                            input.focus();
-                        }
-                    }, this.config.animationSpeed);
+                    // SAFE PATCH - LEAD-003: Show lead form on first open if captureLeads enabled
+                    if (this.config.captureLeads && !this.leadCaptured) {
+                        this.showLeadForm();
+                    } else {
+                        // Focus input after animation (original behavior)
+                        var self = this;
+                        setTimeout(function () {
+                            var input = document.getElementById('lm-message-input');
+                            if (input) {
+                                input.focus();
+                            }
+                        }, this.config.animationSpeed);
+                    }
 
                     // Track and callback
                     this.trackEvent('chat_opened');
@@ -1179,6 +1436,12 @@
 
             if (!message) return;
 
+            // SAFE PATCH - LEAD-004: Block sending before lead capture
+            if (this.config.captureLeads && !this.leadCaptured) {
+                this.showLeadForm();
+                return;
+            }
+
             // Security checks
             if (message.length > this.security.maxMessageLength) {
                 this.showError('Mensagem muito longa. Limite: ' + this.security.maxMessageLength + ' caracteres.');
@@ -1231,7 +1494,10 @@
                 robotName: this.config.robotName,
                 instructions: this.config.instructions,
                 salesUrl: this.config.salesUrl,
-                conversationId: this.conversationId
+                conversationId: this.conversationId,
+                // SAFE PATCH - LEAD-005: Include lead data in API call
+                leadId: this.leadId || null,
+                apiKey: this.config.apiKey || ''
             };
 
             var headers = {
