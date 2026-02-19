@@ -342,7 +342,116 @@ function getPostgresTables() {
         `CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)`,
         `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`,
-        `CREATE INDEX IF NOT EXISTS idx_tenant_assistants_api_key ON tenant_assistants(api_key)`
+        `CREATE INDEX IF NOT EXISTS idx_tenant_assistants_api_key ON tenant_assistants(api_key)`,
+
+        // ========================================
+        // TABELAS CRM V7.0 — Pipeline, Leads CRM, Follow-Up, Deals
+        // ========================================
+
+        `CREATE TABLE IF NOT EXISTS crm_pipelines (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            is_default BOOLEAN DEFAULT false,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS crm_stages (
+            id VARCHAR(255) PRIMARY KEY,
+            pipeline_id VARCHAR(255) NOT NULL REFERENCES crm_pipelines(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            color VARCHAR(20) DEFAULT '#6366f1',
+            order_index INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS crm_leads (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255) NOT NULL,
+            original_lead_id VARCHAR(255),
+            name VARCHAR(255) DEFAULT 'Não informado',
+            email VARCHAR(255),
+            phone VARCHAR(50),
+            source VARCHAR(50) DEFAULT 'widget',
+            stage_id VARCHAR(255) REFERENCES crm_stages(id) ON DELETE SET NULL,
+            temperature VARCHAR(10) DEFAULT 'cold',
+            score INTEGER DEFAULT 0,
+            last_contact_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_response_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS crm_activities (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255) NOT NULL,
+            lead_id VARCHAR(255) NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+            type VARCHAR(50) NOT NULL,
+            description TEXT,
+            old_value TEXT,
+            new_value TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS crm_deals (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255) NOT NULL,
+            lead_id VARCHAR(255) REFERENCES crm_leads(id) ON DELETE SET NULL,
+            title VARCHAR(255) NOT NULL,
+            value NUMERIC(12,2) DEFAULT 0,
+            probability INTEGER DEFAULT 50,
+            expected_close_date DATE,
+            status VARCHAR(20) DEFAULT 'open',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS followup_rules (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            trigger_type VARCHAR(50) NOT NULL DEFAULT 'new_lead',
+            trigger_stage_id VARCHAR(255),
+            delay_minutes INTEGER DEFAULT 1440,
+            channel VARCHAR(20) DEFAULT 'email',
+            message_template TEXT,
+            max_attempts INTEGER DEFAULT 3,
+            active BOOLEAN DEFAULT true,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS followup_jobs (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255) NOT NULL,
+            lead_id VARCHAR(255) NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+            rule_id VARCHAR(255) NOT NULL REFERENCES followup_rules(id) ON DELETE CASCADE,
+            scheduled_for TIMESTAMP NOT NULL,
+            status VARCHAR(20) DEFAULT 'pending',
+            attempts INTEGER DEFAULT 0,
+            last_error TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS followup_logs (
+            id VARCHAR(255) PRIMARY KEY,
+            job_id VARCHAR(255) NOT NULL REFERENCES followup_jobs(id) ON DELETE CASCADE,
+            channel VARCHAR(20),
+            delivery_status VARCHAR(20) DEFAULT 'pending',
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Índices CRM V7.0
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_tenant ON crm_leads(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_email ON crm_leads(email)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_stage ON crm_leads(stage_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_stages_pipeline ON crm_stages(pipeline_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_deals_tenant ON crm_deals(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_rules_tenant ON followup_rules(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_jobs_status ON followup_jobs(status, scheduled_for)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_jobs_lead ON followup_jobs(lead_id)`
     ];
 }
 
@@ -596,7 +705,123 @@ function getSQLiteTables() {
         `CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)`,
         `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`,
-        `CREATE INDEX IF NOT EXISTS idx_tenant_assistants_api_key ON tenant_assistants(api_key)`
+        `CREATE INDEX IF NOT EXISTS idx_tenant_assistants_api_key ON tenant_assistants(api_key)`,
+
+        // ========================================
+        // TABELAS CRM V7.0 — Pipeline, Leads CRM, Follow-Up, Deals (SQLite)
+        // ========================================
+
+        `CREATE TABLE IF NOT EXISTS crm_pipelines (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            is_default INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS crm_stages (
+            id TEXT PRIMARY KEY,
+            pipeline_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            color TEXT DEFAULT '#6366f1',
+            order_index INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (pipeline_id) REFERENCES crm_pipelines(id) ON DELETE CASCADE
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS crm_leads (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            original_lead_id TEXT,
+            name TEXT DEFAULT 'Não informado',
+            email TEXT,
+            phone TEXT,
+            source TEXT DEFAULT 'widget',
+            stage_id TEXT,
+            temperature TEXT DEFAULT 'cold',
+            score INTEGER DEFAULT 0,
+            last_contact_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_response_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (stage_id) REFERENCES crm_stages(id) ON DELETE SET NULL
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS crm_activities (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            lead_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            description TEXT,
+            old_value TEXT,
+            new_value TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS crm_deals (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            lead_id TEXT,
+            title TEXT NOT NULL,
+            value REAL DEFAULT 0,
+            probability INTEGER DEFAULT 50,
+            expected_close_date TEXT,
+            status TEXT DEFAULT 'open',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE SET NULL
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS followup_rules (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            trigger_type TEXT NOT NULL DEFAULT 'new_lead',
+            trigger_stage_id TEXT,
+            delay_minutes INTEGER DEFAULT 1440,
+            channel TEXT DEFAULT 'email',
+            message_template TEXT,
+            max_attempts INTEGER DEFAULT 3,
+            active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS followup_jobs (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            lead_id TEXT NOT NULL,
+            rule_id TEXT NOT NULL,
+            scheduled_for DATETIME NOT NULL,
+            status TEXT DEFAULT 'pending',
+            attempts INTEGER DEFAULT 0,
+            last_error TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE,
+            FOREIGN KEY (rule_id) REFERENCES followup_rules(id) ON DELETE CASCADE
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS followup_logs (
+            id TEXT PRIMARY KEY,
+            job_id TEXT NOT NULL,
+            channel TEXT,
+            delivery_status TEXT DEFAULT 'pending',
+            error_message TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (job_id) REFERENCES followup_jobs(id) ON DELETE CASCADE
+        )`,
+
+        // Índices CRM V7.0
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_tenant ON crm_leads(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_email ON crm_leads(email)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_stage ON crm_leads(stage_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_stages_pipeline ON crm_stages(pipeline_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_deals_tenant ON crm_deals(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_rules_tenant ON followup_rules(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_jobs_status ON followup_jobs(status, scheduled_for)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_jobs_lead ON followup_jobs(lead_id)`
     ];
 }
 
