@@ -126,7 +126,18 @@ async function initializeDatabase() {
             headers ${USE_POSTGRES ? 'JSONB DEFAULT \'{}\'' : 'TEXT DEFAULT \'{}\''},
             active ${USE_POSTGRES ? 'BOOLEAN DEFAULT true' : 'INTEGER DEFAULT 1'},
             created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
-        )`
+        )`,
+        // OTIMIZAÇÃO V7.3 — Índices de Performance
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_tenant ON crm_leads(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_tenant_email ON crm_leads(tenant_id, email)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_leads_tenant_stage_updated ON crm_leads(tenant_id, stage_id, updated_at DESC)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_stages_pipeline ON crm_stages(pipeline_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_activities_lead ON crm_activities(lead_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_activities_tenant ON crm_activities(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_rules_tenant ON followup_rules(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_jobs_tenant ON followup_jobs(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_followup_jobs_status ON followup_jobs(status)`,
+        `CREATE INDEX IF NOT EXISTS idx_crm_deals_tenant ON crm_deals(tenant_id)`
     ];
 
     for (const migration of migrations) {
