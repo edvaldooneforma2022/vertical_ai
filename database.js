@@ -94,6 +94,51 @@ async function initializeDatabase() {
     }
 
     console.log('✅ Banco de dados inicializado com sucesso!');
+
+    // 🔄 Migrations seguras — adicionar colunas novas a tabelas existentes
+    const migrations = [
+        // CRM V7.1 — estimated_value em crm_leads
+        `ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS estimated_value ${USE_POSTGRES ? 'NUMERIC(12,2)' : 'REAL'} DEFAULT 0`,
+        // CRM V7.1 — sent_at e response_detected em followup_logs
+        `ALTER TABLE followup_logs ADD COLUMN IF NOT EXISTS sent_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'}`,
+        `ALTER TABLE followup_logs ADD COLUMN IF NOT EXISTS response_detected ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'}`,
+        // CRM V7.2 — crm_automation_rules table
+        `CREATE TABLE IF NOT EXISTS crm_automation_rules (
+            id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            tenant_id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
+            name ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
+            trigger_type ${USE_POSTGRES ? 'VARCHAR(50)' : 'TEXT'} NOT NULL DEFAULT 'stage_change',
+            condition_field ${USE_POSTGRES ? 'VARCHAR(50)' : 'TEXT'},
+            condition_operator ${USE_POSTGRES ? 'VARCHAR(20)' : 'TEXT'} DEFAULT 'equals',
+            condition_value ${USE_POSTGRES ? 'TEXT' : 'TEXT'},
+            action_type ${USE_POSTGRES ? 'VARCHAR(50)' : 'TEXT'} NOT NULL DEFAULT 'move_stage',
+            action_target ${USE_POSTGRES ? 'TEXT' : 'TEXT'},
+            action_config ${USE_POSTGRES ? 'JSONB DEFAULT \'{}\'' : 'TEXT DEFAULT \'{}\''},
+            active ${USE_POSTGRES ? 'BOOLEAN DEFAULT true' : 'INTEGER DEFAULT 1'},
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+        // CRM V7.2 — crm_webhooks table
+        `CREATE TABLE IF NOT EXISTS crm_webhooks (
+            id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            tenant_id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
+            event_type ${USE_POSTGRES ? 'VARCHAR(50)' : 'TEXT'} NOT NULL DEFAULT 'stage_change',
+            url ${USE_POSTGRES ? 'TEXT' : 'TEXT'} NOT NULL,
+            headers ${USE_POSTGRES ? 'JSONB DEFAULT \'{}\'' : 'TEXT DEFAULT \'{}\''},
+            active ${USE_POSTGRES ? 'BOOLEAN DEFAULT true' : 'INTEGER DEFAULT 1'},
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`
+    ];
+
+    for (const migration of migrations) {
+        try {
+            await db.query(migration);
+        } catch (err) {
+            // Ignorar erros de coluna já existente (SQLite não suporta IF NOT EXISTS no ALTER)
+            if (!err.message.includes('duplicate column') && !err.message.includes('already exists')) {
+                console.warn('⚠️ Migration:', err.message);
+            }
+        }
+    }
 }
 
 /**
@@ -374,6 +419,7 @@ function getPostgresTables() {
             phone VARCHAR(50),
             source VARCHAR(50) DEFAULT 'widget',
             stage_id VARCHAR(255) REFERENCES crm_stages(id) ON DELETE SET NULL,
+            estimated_value NUMERIC(12,2) DEFAULT 0,
             temperature VARCHAR(10) DEFAULT 'cold',
             score INTEGER DEFAULT 0,
             last_contact_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -440,6 +486,8 @@ function getPostgresTables() {
             channel VARCHAR(20),
             delivery_status VARCHAR(20) DEFAULT 'pending',
             error_message TEXT,
+            sent_at TIMESTAMP,
+            response_detected BOOLEAN DEFAULT false,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 
@@ -738,6 +786,7 @@ function getSQLiteTables() {
             phone TEXT,
             source TEXT DEFAULT 'widget',
             stage_id TEXT,
+            estimated_value REAL DEFAULT 0,
             temperature TEXT DEFAULT 'cold',
             score INTEGER DEFAULT 0,
             last_contact_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -809,6 +858,8 @@ function getSQLiteTables() {
             channel TEXT,
             delivery_status TEXT DEFAULT 'pending',
             error_message TEXT,
+            sent_at DATETIME,
+            response_detected INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (job_id) REFERENCES followup_jobs(id) ON DELETE CASCADE
         )`,
