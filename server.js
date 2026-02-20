@@ -4699,9 +4699,11 @@ app.post("/api/capture-lead", async (req, res) => {
         console.log(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
 
         // 🏢 [CRM V7.0] Sync hook — fire-and-forget, zero impacto no fluxo existente
+        // Priorizar UUID da sessão (setado pelo requireApiKey) para garantir pipeline correto
         try {
             if (crmManager && typeof crmManager.syncLeadToCRM === 'function') {
-                crmManager.syncLeadToCRM(apiKey, newLead).catch(err => {
+                const crmTenantId = req.session?.tenantId || apiKey;
+                crmManager.syncLeadToCRM(crmTenantId, newLead).catch(err => {
                     console.warn('⚠️ [CRM] Sync hook falhou (não bloqueia captura):', err.message);
                 });
             }
