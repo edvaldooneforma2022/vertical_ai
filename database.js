@@ -59,14 +59,21 @@ if (USE_POSTGRES) {
                     .replace(/\$(\d+)/g, '?')
                     .replace(/RETURNING \*/g, '');
 
-                if (text.toLowerCase().includes('select')) {
+                const textLower = text.toLowerCase().trimStart();
+                const isReadQuery = textLower.includes('select') || textLower.startsWith('pragma');
+
+                if (isReadQuery) {
                     return { rows: sqlite.prepare(sqliteQuery).all(params || []) };
                 } else {
                     const info = sqlite.prepare(sqliteQuery).run(params || []);
-                    return { rows: [{ id: info.lastInsertRowid }] };
+                    return { rows: [{ id: info.lastInsertRowid }], changes: info.changes };
                 }
             } catch (error) {
-                console.error('❌ Erro no SQLite:', error);
+                // Suprimir erros esperados de coluna duplicada (já tratados pelos callers)
+                const msg = error.message || '';
+                if (!msg.includes('duplicate column') && !msg.includes('already exists')) {
+                    console.error('❌ Erro no SQLite:', error);
+                }
                 throw error;
             }
         },
@@ -137,14 +144,73 @@ async function initializeDatabase() {
         `CREATE INDEX IF NOT EXISTS idx_followup_rules_tenant ON followup_rules(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_followup_jobs_tenant ON followup_jobs(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_followup_jobs_status ON followup_jobs(status)`,
-        `CREATE INDEX IF NOT EXISTS idx_crm_deals_tenant ON crm_deals(tenant_id)`
+        `CREATE INDEX IF NOT EXISTS idx_crm_deals_tenant ON crm_deals(tenant_id)`,
+
+        // ENTERPRISE SAAS MIGRATION - Stage 1
+        `CREATE TABLE IF NOT EXISTS tenants (
+            id ${USE_POSTGRES ? 'UUID PRIMARY KEY DEFAULT gen_random_uuid()' : 'TEXT PRIMARY KEY'},
+            name TEXT,
+            email TEXT,
+            plan TEXT DEFAULT 'basic',
+            status TEXT DEFAULT 'active',
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS api_keys (
+            id ${USE_POSTGRES ? 'UUID PRIMARY KEY DEFAULT gen_random_uuid()' : 'TEXT PRIMARY KEY'},
+            tenant_id ${USE_POSTGRES ? 'UUID' : 'TEXT'} NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            key_value TEXT NOT NULL,
+            key_hash TEXT NOT NULL,
+            active ${USE_POSTGRES ? 'BOOLEAN DEFAULT true' : 'INTEGER DEFAULT 1'},
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`,
+        `CREATE INDEX IF NOT EXISTS idx_api_keys_tenant ON api_keys(tenant_id)`,
+
+        // Adicionar tenant_uuid em todas as tabelas operacionais
+        `ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE short_urls ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE tenant_appointments ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE crm_pipelines ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE crm_activities ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE crm_deals ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE followup_rules ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE followup_jobs ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE crm_automation_rules ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE crm_webhooks ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE chatgpt_settings ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE conversation_memory ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+        `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`
     ];
 
     for (const migration of migrations) {
         try {
+            if (!USE_POSTGRES) {
+                // SQLite: não suporta ADD COLUMN IF NOT EXISTS
+                // Verificar via PRAGMA antes de executar
+                const alterMatch = migration.match(/ALTER TABLE (\w+) ADD COLUMN (?:IF NOT EXISTS )?(\w+)/i);
+                if (alterMatch) {
+                    const [, tableName, colName] = alterMatch;
+                    try {
+                        const cols = await db.query(`PRAGMA table_info(${tableName})`);
+                        const colList = cols.rows || cols;
+                        const exists = colList.some(c => c.name === colName);
+                        if (exists) continue; // coluna já existe, pular
+                    } catch (pragmaErr) {
+                        // Tabela pode não existir ainda — pular silenciosamente
+                        continue;
+                    }
+                    // Remover IF NOT EXISTS para SQLite
+                    const sqliteQuery = migration.replace(/ADD COLUMN IF NOT EXISTS/i, 'ADD COLUMN').replace(/REFERENCES \w+\(\w+\)/i, '');
+                    await db.query(sqliteQuery);
+                    continue;
+                }
+            }
             await db.query(migration);
         } catch (err) {
-            // Ignorar erros de coluna já existente (SQLite não suporta IF NOT EXISTS no ALTER)
+            // Ignorar erros de coluna já existente (PostgreSQL)
             if (!err.message.includes('duplicate column') && !err.message.includes('already exists')) {
                 console.warn('⚠️ Migration:', err.message);
             }
@@ -157,6 +223,29 @@ async function initializeDatabase() {
  */
 function getPostgresTables() {
     return [
+        // ENTERPRISE SAAS MIGRATION - pgcrypto for UUIDs
+        `CREATE EXTENSION IF NOT EXISTS "pgcrypto"`,
+
+        // Tabela de Tenants
+        `CREATE TABLE IF NOT EXISTS tenants (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name TEXT,
+            email TEXT,
+            plan TEXT DEFAULT 'basic',
+            status TEXT DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de API Keys
+        `CREATE TABLE IF NOT EXISTS api_keys (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            key_value TEXT NOT NULL,
+            key_hash TEXT NOT NULL,
+            active BOOLEAN DEFAULT true,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
         // Tabela de Chatbots
         `CREATE TABLE IF NOT EXISTS chatbots (
             id VARCHAR(255) PRIMARY KEY,
@@ -519,6 +608,27 @@ function getPostgresTables() {
  */
 function getSQLiteTables() {
     return [
+        // Tabela de Tenants
+        `CREATE TABLE IF NOT EXISTS tenants (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            email TEXT,
+            plan TEXT DEFAULT 'basic',
+            status TEXT DEFAULT 'active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de API Keys
+        `CREATE TABLE IF NOT EXISTS api_keys (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            key_value TEXT NOT NULL,
+            key_hash TEXT NOT NULL,
+            active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+        )`,
+
         // Tabela de Chatbots
         `CREATE TABLE IF NOT EXISTS chatbots (
             id TEXT PRIMARY KEY,
@@ -993,14 +1103,12 @@ const DatabaseHelpers = {
      */
     async getChatbotByApiKey(apiKey) {
         const query = USE_POSTGRES
-            ? `SELECT * FROM chatbots WHERE api_key = $1`
-            : `SELECT * FROM chatbots WHERE api_key = ?`;
+            ? `SELECT * FROM chatbots WHERE api_key = $1 OR tenant_uuid::text = $1`
+            : `SELECT * FROM chatbots WHERE api_key = ? OR tenant_uuid = ?`;
 
-        const parsedDays = parseInt(days, 10);
-        if (isNaN(parsedDays) || parsedDays <= 0) {
-            throw new Error('Invalid days parameter');
-        }
-        const result = await db.query(query, [chatbot_id, parsedDays]); const chatbot = result.rows[0];
+        const params = USE_POSTGRES ? [apiKey] : [apiKey, apiKey];
+        const result = await db.query(query, params);
+        const chatbot = result.rows[0];
 
         if (chatbot && !USE_POSTGRES) {
             chatbot.extracted_data = JSON.parse(chatbot.extracted_data || '{}');
@@ -1197,10 +1305,11 @@ const DatabaseHelpers = {
      */
     async getLeads(apiKey) {
         const query = USE_POSTGRES
-            ? `SELECT * FROM tenant_leads WHERE api_key = $1 ORDER BY created_at DESC`
-            : `SELECT * FROM tenant_leads WHERE api_key = ? ORDER BY created_at DESC`;
+            ? `SELECT * FROM tenant_leads WHERE api_key = $1 OR tenant_uuid::text = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_leads WHERE api_key = ? OR tenant_uuid = ? ORDER BY created_at DESC`;
 
-        const result = await db.query(query, [apiKey]);
+        const params = USE_POSTGRES ? [apiKey] : [apiKey, apiKey];
+        const result = await db.query(query, params);
         return result.rows.map(lead => {
             if (!USE_POSTGRES) {
                 lead.metadata = JSON.parse(lead.metadata || '{}');
@@ -1427,10 +1536,11 @@ const DatabaseHelpers = {
      */
     async getShortUrlsByApiKey(apiKey) {
         const query = USE_POSTGRES
-            ? `SELECT * FROM short_urls WHERE api_key = $1 ORDER BY created_at DESC`
-            : `SELECT * FROM short_urls WHERE api_key = ? ORDER BY created_at DESC`;
+            ? `SELECT * FROM short_urls WHERE api_key = $1 OR tenant_uuid::text = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM short_urls WHERE api_key = ? OR tenant_uuid = ? ORDER BY created_at DESC`;
 
-        const result = await db.query(query, [apiKey]);
+        const params = USE_POSTGRES ? [apiKey] : [apiKey, apiKey];
+        const result = await db.query(query, params);
         return result.rows.map(shortUrl => {
             if (!USE_POSTGRES) {
                 shortUrl.metadata = JSON.parse(shortUrl.metadata || '{}');
@@ -1529,10 +1639,11 @@ const DatabaseHelpers = {
      */
     async getWhatsAppSettings(apiKey) {
         const query = USE_POSTGRES
-            ? `SELECT * FROM whatsapp_settings WHERE api_key = $1 AND is_active = true`
-            : `SELECT * FROM whatsapp_settings WHERE api_key = ? AND is_active = 1`;
+            ? `SELECT * FROM whatsapp_settings WHERE (api_key = $1 OR tenant_uuid::text = $1) AND is_active = true`
+            : `SELECT * FROM whatsapp_settings WHERE (api_key = ? OR tenant_uuid = ?) AND is_active = 1`;
 
-        const result = await db.query(query, [apiKey]);
+        const params = USE_POSTGRES ? [apiKey] : [apiKey, apiKey];
+        const result = await db.query(query, params);
         const settings = result.rows[0];
 
         if (!settings) {

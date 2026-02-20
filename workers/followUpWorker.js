@@ -180,15 +180,18 @@ async function sendMessage(job) {
                     return { success: false, error: 'Lead não possui telefone cadastrado' };
                 }
 
-                // Usar a WhatsApp Integration existente se disponível
+                // Usar a WhatsApp Integration existente com suporte multi-tenant
                 try {
                     const { whatsappManager } = require('../whatsapp-integration');
-                    if (whatsappManager && whatsappManager.sendMessage) {
-                        await whatsappManager.sendMessage(lead_phone, message);
+                    if (whatsappManager) {
+                        const tenantId = job.tenant_uuid || job.tenant_id;
+                        const instance = await whatsappManager.getTenantInstance(tenantId);
+                        await instance.sendMessage(lead_phone, message);
                         return { success: true };
                     }
                 } catch (e) {
                     // WhatsApp manager não disponível
+                    console.error('❌ [WORKER] Erro no WhatsApp:', e.message);
                 }
 
                 return { success: false, error: 'WhatsApp integration não configurada' };
