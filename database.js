@@ -1297,7 +1297,54 @@ const DatabaseHelpers = {
         ];
 
         const result = await db.query(query, params);
-        return result.rows[0];
+        const savedLead = result.rows ? result.rows[0] : null;
+
+        // ===== HOOK: CRM SYNC (non-blocking, lazy require) =====
+        // Sincronizar lead no CRM sem bloquear a resposta ao usuário
+        setImmediate(async () => {
+            try {
+                const { crmManager } = require('./lib/crm/index');
+                // Buscar tenant_uuid a partir da api_key para garantir UUID no CRM
+                let tenantId = null;
+                if (USE_POSTGRES) {
+                    const akResult = await db.query(`SELECT tenant_uuid FROM api_keys WHERE key_hash = $1 LIMIT 1`, [
+                        require('crypto').createHash('sha256').update(apiKey).digest('hex')
+                    ]);
+                    const row = (akResult.rows || akResult)[0];
+                    tenantId = row?.tenant_uuid?.toString() || null;
+                }
+                // Fallback: buscar direto em tenants pela api_key legacy
+                if (!tenantId) {
+                    const tResult = USE_POSTGRES
+                        ? await db.query(`SELECT t.id FROM tenants t JOIN api_keys ak ON ak.tenant_uuid = t.id WHERE ak.key_hash = $1 LIMIT 1`, [
+                            require('crypto').createHash('sha256').update(apiKey).digest('hex')
+                        ])
+                        : await db.query(`SELECT tenant_uuid FROM tenant_leads WHERE api_key = ? LIMIT 1`, [apiKey]);
+                    const tRow = ((tResult.rows || tResult)[0]);
+                    tenantId = tRow?.id || tRow?.tenant_uuid || null;
+                }
+
+                if (tenantId) {
+                    await crmManager.syncLeadToCRM(tenantId, {
+                        id: leadData.id,
+                        nome: leadData.nome,
+                        email: leadData.email,
+                        telefone: leadData.telefone,
+                        url_origem: leadData.url_origem,
+                        source: leadData.source
+                    });
+                }
+            } catch (crmErr) {
+                // CRM sync falhou — não impacta o salvamento do lead
+                // Usar POST /api/crm/sync-leads para re-sync manual
+                if (process.env.NODE_ENV !== 'test') {
+                    console.warn('⚠️ [CRM-HOOK] Sync não executado:', crmErr.message);
+                }
+            }
+        });
+        // ===== FIM DO HOOK CRM SYNC =====
+
+        return savedLead;
     },
 
     /**

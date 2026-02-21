@@ -4,8 +4,8 @@
  */
 
 const express = require('express');
-const { DatabaseHelpers } = require('./database');
-const { CacheManager } = require('./cache');
+const { DatabaseHelpers, USE_POSTGRES } = require('./database');
+const { CacheManager, isRedisConnected } = require('./cache');
 const { webhookManager, WebhookEvents } = require('./webhooks');
 const { billingManager, PLANS } = require('./billing');
 const { analyticsManager } = require('./analytics');
@@ -347,12 +347,12 @@ function setupRoutes(app) {
      * GET /api/subscription/:userId
      * Obter assinatura de um usuário
      */
-    app.get('/api/subscription/:userId', (req, res) => {
+    app.get('/api/subscription/:userId', async (req, res) => {
         try {
             const { userId } = req.params;
-            const subscription = billingManager.getSubscription(userId);
+            const subscription = await billingManager.getSubscription(userId);
             const usage = billingManager.getUsage(userId);
-            const limits = billingManager.getRemainingLimits(userId);
+            const limits = await billingManager.getRemainingLimits(userId);
 
             res.json({
                 success: true,
@@ -468,7 +468,7 @@ function setupRoutes(app) {
      * Obter limites de billing do tenant autenticado
      * SAFE PATCH - QA FIX: BUG-003
      */
-    app.get('/api/billing/limits', (req, res) => {
+    app.get('/api/billing/limits', async (req, res) => {
         try {
             // Obter API Key da sessão para identificar o tenant
             const apiKey = req.session?.validatedApiKey || req.headers['x-api-key'];
@@ -483,9 +483,9 @@ function setupRoutes(app) {
             // Usar API Key como userId para o billingManager
             const userId = apiKey;
 
-            const subscription = billingManager.getSubscription(userId);
+            const subscription = await billingManager.getSubscription(userId);
             const usage = billingManager.getUsage(userId);
-            const limits = billingManager.getRemainingLimits(userId);
+            const limits = await billingManager.getRemainingLimits(userId);
 
             res.json({
                 success: true,
