@@ -81,7 +81,7 @@ class GmailIntegration {
                 return false;
             }
 
-            this.transporter = nodemailer.createTransporter({
+            this.transporter = nodemailer.createTransport({
                 service: service,
                 auth: {
                     user: user,
@@ -132,7 +132,7 @@ class GmailIntegration {
             };
 
             const info = await this.transporter.sendMail(mailOptions);
-            
+
             console.log(`✅ Email enviado para ${options.to}`);
             return { success: true, messageId: info.messageId };
         } catch (error) {
