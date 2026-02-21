@@ -5646,6 +5646,17 @@ function validateChatbotOwnership(req, res, next) {
     next();
 }
 
+// ===== WEBHOOK HOTMART (Provisionamento automático) =====
+// IMPORTANTE: Deve ser registrado ANTES de setupRoutes() para evitar
+// conflito com a rota genérica POST /api/webhooks/:chatbotId
+try {
+    const hotmartWebhook = require('./hotmart-webhook');
+    app.use(hotmartWebhook);
+    console.log('✅ [Hotmart] Webhook de provisionamento registrado em /api/webhooks/hotmart');
+} catch (e) {
+    console.log('⚠️ [Hotmart] Webhook não disponível:', e.message);
+}
+
 setupRoutes(app);
 
 // ===== ROTAS ADMIN V8.0 =====
@@ -5657,14 +5668,7 @@ try {
     console.log('⚠️ [V8.0] Rotas Admin não disponíveis:', e.message);
 }
 
-// ===== WEBHOOK HOTMART (Provisionamento automático) =====
-try {
-    const hotmartWebhook = require('./hotmart-webhook');
-    app.use(hotmartWebhook);
-    console.log('✅ [Hotmart] Webhook de provisionamento registrado em /api/webhooks/hotmart');
-} catch (e) {
-    console.log('⚠️ [Hotmart] Webhook não disponível:', e.message);
-}
+
 
 // ===== INICIALIZAR SISTEMAS =====
 (async () => {
