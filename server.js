@@ -22,7 +22,7 @@ const securityMonitor = new SecurityMonitor();
 const { db, initializeDatabase, DatabaseHelpers, USE_POSTGRES } = require('./database');
 const { initializeCache, CacheManager, rateLimitMiddleware, isRedisConnected } = require('./cache');
 const { webhookManager, WebhookEvents } = require('./webhooks');
-const { billingManager, PLANS } = require('./billing');
+const { billingManager, PLANS, createBillingEnforcement } = require('./billing');
 const { analyticsManager } = require('./analytics');
 const { llmOptimizer } = require('./llm-optimizer');
 const { knowledgeBaseManager } = require('./knowledge-base');
@@ -4758,7 +4758,7 @@ app.get("/api/appointments/:leadId", async (req, res) => {
 
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 
-app.post("/api/chat-universal", requireApiKey, async (req, res) => {
+app.post("/api/chat-universal", requireApiKey, createBillingEnforcement('messages'), async (req, res) => {
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
@@ -4805,6 +4805,9 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 
         let finalResponse = aiResponse;
 
+        // 💳 Billing: registrar uso de mensagem
+        billingManager.trackUsage(apiKey, 'messages');
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -4829,7 +4832,7 @@ app.post("/api/chat-universal", requireApiKey, async (req, res) => {
 });
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
-app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
+app.post("/api/process-chat-inteligente", requireApiKey, createBillingEnforcement('messages'), async (req, res) => {
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
@@ -5013,6 +5016,9 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
             leadSystem.updateLeadConversation(effectiveLeadId, finalResponse, false);
         }
 
+        // 💳 Billing: registrar uso de mensagem
+        billingManager.trackUsage(apiKey, 'messages');
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -5042,7 +5048,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, async (req, res) => {
 });
 
 // ===== ENDPOINT APRIMORADO DE EXTRAÇÃO =====
-app.post("/api/extract-enhanced", async (req, res) => {
+app.post("/api/extract-enhanced", createBillingEnforcement('extractions'), async (req, res) => {
     analytics.extractRequests++;
     try {
         const { url } = req.body || {};
@@ -5080,6 +5086,10 @@ app.post("/api/extract-enhanced", async (req, res) => {
         console.log(`🎯 Bônus encontrados: ${validacao.dadosValidados.bonus.length}`);
         console.log(`📞 Contatos encontrados: ${validacao.dadosValidados.contatos ? Object.keys(validacao.dadosValidados.contatos).length : 0}`);
         console.log(`📊 Confiança: ${(validacao.pontuacaoConfianca * 100).toFixed(1)}%`);
+
+        // 💳 Billing: registrar uso de extração
+        const extractApiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body?.apiKey || req.query?.apiKey;
+        if (extractApiKey) billingManager.trackUsage(extractApiKey, 'extractions');
 
         return res.json({
             success: true,
@@ -6045,6 +6055,32 @@ try {
                 });
             }
 
+            // 💳 Billing: verificar limite de chatbots do plano (fail-open)
+            try {
+                const subscription = await billingManager.getSubscription(apiKey);
+                const plan = subscription.plan || PLANS.free;
+                const maxChatbots = plan.features?.maxChatbots ?? 1;
+
+                if (maxChatbots !== -1) { // -1 = ilimitado (enterprise)
+                    const existingUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
+                    if (existingUrls.length >= maxChatbots) {
+                        console.warn(`⚠️ [Billing] Limite de chatbots atingido para tenant ${apiKey.substring(0, 8)}... (${existingUrls.length}/${maxChatbots})`);
+                        return res.status(429).json({
+                            success: false,
+                            error: `Limite de assistentes atingido para seu plano (${maxChatbots}). Faça upgrade para criar mais.`,
+                            billing: {
+                                current: existingUrls.length,
+                                max: maxChatbots,
+                                planId: subscription.planId
+                            }
+                        });
+                    }
+                }
+            } catch (billingErr) {
+                console.warn('⚠️ [Billing] Enforcement fail-open para maxChatbots:', billingErr.message);
+                // Fail-open: permite criar em caso de erro
+            }
+
             // Gerar código curto único
             const shortCode = await ShortUrlGenerator.generateUnique(
                 (code) => DatabaseHelpers.shortCodeExists(code)
@@ -6189,6 +6225,14 @@ try {
         console.log('✅ [V8.0] Rotas Admin montadas em /admin/v8');
     } catch (e) {
         console.log('⚠️ [V8.0] Rotas Admin não disponíveis:', e.message);
+    }
+
+    // ===== ROTAS DE BILLING/ANALYTICS (routes.js) =====
+    try {
+        setupRoutes(app);
+        console.log('✅ Rotas de Billing/Analytics registradas (routes.js)');
+    } catch (e) {
+        console.log('⚠️ Rotas de Billing/Analytics não disponíveis:', e.message);
     }
 
     // ===== V8.0 RATE LIMITER MIDDLEWARE (OPCIONAL - CONTROLADO POR FEATURE FLAG) =====
