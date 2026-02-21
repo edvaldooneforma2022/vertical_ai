@@ -2924,7 +2924,7 @@ async function requireApiKey(req, res, next) {
     logger.info(`[requireApiKey] Path: ${req.path}, Session Validated: ${!!(req.session && req.session.tenantId)}`);
 
     // Permitir acesso a rotas públicas sem API Key
-    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/l/") || req.path === "/api/system/status" || req.path === "/health") {
+    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/l/") || req.path === "/api/system/status" || req.path === "/health" || req.path === "/api/webhooks/hotmart" || req.path === "/api/webhooks/hotmart/status") {
         return next();
     }
 
@@ -5655,6 +5655,15 @@ try {
     console.log('✅ [V8.0] Rotas Admin montadas em /admin/v8');
 } catch (e) {
     console.log('⚠️ [V8.0] Rotas Admin não disponíveis:', e.message);
+}
+
+// ===== WEBHOOK HOTMART (Provisionamento automático) =====
+try {
+    const hotmartWebhook = require('./hotmart-webhook');
+    app.use(hotmartWebhook);
+    console.log('✅ [Hotmart] Webhook de provisionamento registrado em /api/webhooks/hotmart');
+} catch (e) {
+    console.log('⚠️ [Hotmart] Webhook não disponível:', e.message);
 }
 
 // ===== INICIALIZAR SISTEMAS =====
