@@ -37,7 +37,7 @@ const PLANS = {
             requestsPerDay: 500
         }
     },
-    
+
     starter: {
         id: 'starter',
         name: 'Iniciante',
@@ -62,7 +62,7 @@ const PLANS = {
             requestsPerDay: 5000
         }
     },
-    
+
     professional: {
         id: 'professional',
         name: 'Profissional',
@@ -89,7 +89,7 @@ const PLANS = {
             requestsPerDay: 20000
         }
     },
-    
+
     enterprise: {
         id: 'enterprise',
         name: 'Empresarial',
@@ -129,11 +129,11 @@ class BillingManager {
         this.subscriptions = new Map();
         this.usageTracking = new Map();
         this.stripeEnabled = !!process.env.STRIPE_SECRET_KEY;
-        
+
         if (this.stripeEnabled) {
             this.initializeStripe();
         }
-        
+
         console.log('💳 Sistema de Billing inicializado');
     }
 
@@ -170,7 +170,7 @@ class BillingManager {
      */
     async createSubscription(userId, planId, paymentMethod = 'stripe') {
         const plan = this.getPlan(planId);
-        
+
         if (!plan) {
             throw new Error('Plano não encontrado');
         }
@@ -189,12 +189,12 @@ class BillingManager {
         };
 
         this.subscriptions.set(userId, subscription);
-        
+
         // Inicializar tracking de uso
         this.initializeUsageTracking(userId, planId);
-        
+
         console.log(`✅ Assinatura criada: ${userId} -> ${planId}`);
-        
+
         return subscription;
     }
 
@@ -203,7 +203,7 @@ class BillingManager {
      */
     calculatePeriodEnd(interval) {
         const now = new Date();
-        
+
         switch (interval) {
             case 'month':
                 return new Date(now.setMonth(now.getMonth() + 1));
@@ -216,13 +216,48 @@ class BillingManager {
 
     /**
      * Obter assinatura do usuário
+     * Busca primeiro no cache in-memory, depois no banco (tenant.plan), com fallback para 'free'
      */
-    getSubscription(userId) {
-        return this.subscriptions.get(userId) || {
+    async getSubscription(userId) {
+        // 1. Checar Map in-memory primeiro (comportamento original)
+        if (this.subscriptions.has(userId)) {
+            return this.subscriptions.get(userId);
+        }
+
+        // 2. Tentar buscar plano real do tenant no banco de dados
+        try {
+            const { db, USE_POSTGRES } = require('./database');
+            if (db) {
+                const query = USE_POSTGRES
+                    ? `SELECT t.plan FROM tenants t JOIN api_keys ak ON t.id = ak.tenant_id WHERE ak.key_value = $1 AND ak.active = true LIMIT 1`
+                    : `SELECT t.plan FROM tenants t JOIN api_keys ak ON t.id = ak.tenant_id WHERE ak.key_value = ? AND ak.active = 1 LIMIT 1`;
+                const result = await db.query(query, [userId]);
+                const rows = result.rows || result;
+                if (rows.length > 0 && rows[0].plan && PLANS[rows[0].plan]) {
+                    const planId = rows[0].plan;
+                    const sub = {
+                        userId,
+                        planId,
+                        plan: PLANS[planId],
+                        status: 'active',
+                        source: 'database'
+                    };
+                    this.subscriptions.set(userId, sub); // Cache in-memory
+                    console.log(`💳 [Billing] Plano '${planId}' carregado do banco para tenant ${userId.substring(0, 8)}...`);
+                    return sub;
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ [Billing] Fallback para plano free:', e.message);
+        }
+
+        // 3. Fallback original: plano free
+        return {
             userId,
             planId: 'free',
             plan: PLANS.free,
-            status: 'active'
+            status: 'active',
+            source: 'fallback'
         };
     }
 
@@ -230,7 +265,7 @@ class BillingManager {
      * Atualizar plano
      */
     async upgradePlan(userId, newPlanId) {
-        const currentSubscription = this.getSubscription(userId);
+        const currentSubscription = await this.getSubscription(userId);
         const newPlan = this.getPlan(newPlanId);
 
         if (!newPlan) {
@@ -242,9 +277,9 @@ class BillingManager {
         currentSubscription.updatedAt = new Date().toISOString();
 
         this.subscriptions.set(userId, currentSubscription);
-        
+
         console.log(`✅ Plano atualizado: ${userId} -> ${newPlanId}`);
-        
+
         return currentSubscription;
     }
 
@@ -252,7 +287,7 @@ class BillingManager {
      * Cancelar assinatura
      */
     async cancelSubscription(userId, immediate = false) {
-        const subscription = this.getSubscription(userId);
+        const subscription = await this.getSubscription(userId);
 
         if (immediate) {
             subscription.status = 'cancelled';
@@ -262,9 +297,9 @@ class BillingManager {
         }
 
         this.subscriptions.set(userId, subscription);
-        
+
         console.log(`✅ Assinatura cancelada: ${userId}`);
-        
+
         return subscription;
     }
 
@@ -280,7 +315,7 @@ class BillingManager {
         }
 
         const userUsage = this.usageTracking.get(userId);
-        
+
         if (!userUsage.has(monthKey)) {
             userUsage.set(monthKey, {
                 messages: 0,
@@ -339,9 +374,9 @@ class BillingManager {
     /**
      * Verificar se usuário pode usar recurso
      */
-    canUseFeature(userId, feature, amount = 1) {
-        const subscription = this.getSubscription(userId);
-        const plan = subscription.plan;
+    async canUseFeature(userId, feature, amount = 1) {
+        const subscription = await this.getSubscription(userId);
+        const plan = subscription.plan || PLANS.free;
         const usage = this.getUsage(userId);
 
         // Verificar limites do plano
@@ -374,8 +409,8 @@ class BillingManager {
     /**
      * Obter limites restantes
      */
-    getRemainingLimits(userId) {
-        const subscription = this.getSubscription(userId);
+    async getRemainingLimits(userId) {
+        const subscription = await this.getSubscription(userId);
         const plan = subscription.plan;
         const usage = this.getUsage(userId);
 
@@ -383,15 +418,15 @@ class BillingManager {
             messages: {
                 used: usage.messages,
                 limit: plan.features.maxMessagesPerMonth,
-                remaining: plan.features.maxMessagesPerMonth === -1 
-                    ? -1 
+                remaining: plan.features.maxMessagesPerMonth === -1
+                    ? -1
                     : plan.features.maxMessagesPerMonth - usage.messages
             },
             extractions: {
                 used: usage.extractions,
                 limit: plan.features.maxExtractions,
-                remaining: plan.features.maxExtractions === -1 
-                    ? -1 
+                remaining: plan.features.maxExtractions === -1
+                    ? -1
                     : plan.features.maxExtractions - usage.extractions
             }
         };
@@ -494,7 +529,7 @@ class BillingManager {
         const planId = session.metadata.planId;
 
         await this.createSubscription(userId, planId, 'stripe');
-        
+
         console.log(`✅ Checkout completado: ${userId} -> ${planId}`);
     }
 
@@ -530,7 +565,42 @@ class BillingManager {
 // Instância global do gerenciador de billing
 const billingManager = new BillingManager();
 
+/**
+ * 🛡️ Middleware Express para enforcement de limites de billing.
+ * Fail-open: se ocorrer erro, permite acesso (não bloqueia).
+ * @param {string} feature - 'messages' ou 'extractions'
+ */
+function createBillingEnforcement(feature) {
+    return async (req, res, next) => {
+        try {
+            const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body?.apiKey || req.query?.apiKey;
+            if (!apiKey) return next(); // Sem API key → outro middleware tratará
+
+            const allowed = await billingManager.canUseFeature(apiKey, feature);
+            if (!allowed) {
+                const limits = await billingManager.getRemainingLimits(apiKey);
+                const subscription = await billingManager.getSubscription(apiKey);
+                console.warn(`⚠️ [Billing] Limite de ${feature} atingido para tenant ${apiKey.substring(0, 8)}... (plano: ${subscription.planId})`);
+                return res.status(429).json({
+                    success: false,
+                    error: `Limite de ${feature === 'messages' ? 'mensagens' : 'extrações'} atingido para seu plano.`,
+                    billing: {
+                        feature,
+                        planId: subscription.planId,
+                        limits
+                    }
+                });
+            }
+            next();
+        } catch (err) {
+            console.warn(`⚠️ [Billing] Enforcement fail-open para ${feature}:`, err.message);
+            next(); // Fail-open: permite acesso em caso de erro
+        }
+    };
+}
+
 module.exports = {
     billingManager,
-    PLANS
+    PLANS,
+    createBillingEnforcement
 };
