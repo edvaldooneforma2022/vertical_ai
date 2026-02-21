@@ -2954,6 +2954,15 @@ async function requireApiKey(req, res, next) {
 
 app.use(requireApiKey);
 
+// ===== Health Check (para UptimeRobot e monitoramento) =====
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
 // ===== Static Files with API Key Protection =====
 app.get("/", (req, res) => {
     // ✅ ENTERPRISE: verificar UUID do tenant (não a string da API Key)
