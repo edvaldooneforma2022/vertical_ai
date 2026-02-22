@@ -216,6 +216,15 @@ async function initializeDatabase() {
             }
         }
     }
+
+    // 🛡️ BILLING BLINDADO — Inicializar tabelas de billing (subscriptions, usage, keys, etc)
+    try {
+        const { runMigrations } = require('./billing-migrations');
+        await runMigrations(db, USE_POSTGRES);
+        console.log('✅ Migrations de Billing concluídas');
+    } catch (error) {
+        console.log('⚠️ Falha ao rodar migrations de billing (não crítico):', error.message);
+    }
 }
 
 /**

@@ -22,7 +22,7 @@ const securityMonitor = new SecurityMonitor();
 const { db, initializeDatabase, DatabaseHelpers, USE_POSTGRES } = require('./database');
 const { initializeCache, CacheManager, rateLimitMiddleware, isRedisConnected } = require('./cache');
 const { webhookManager, WebhookEvents } = require('./webhooks');
-const { billingManager, PLANS, createBillingEnforcement } = require('./billing');
+const { billingManager, PLANS } = require('./billing');
 const { analyticsManager } = require('./analytics');
 const { llmOptimizer } = require('./llm-optimizer');
 const { knowledgeBaseManager } = require('./knowledge-base');
@@ -30,6 +30,16 @@ const { setupRoutes } = require('./routes');
 const { initialize } = require('./init');
 
 console.log('✅ Módulos de melhorias carregados');
+
+// 🛡️ BILLING ENFORCEMENT — Middleware de rate limit, anti-fraude e quarentena (fail-open)
+let billingMiddleware = null;
+try {
+    const { createBillingEnforcement } = require('./billing-enforcement');
+    billingMiddleware = createBillingEnforcement(billingManager);
+    console.log('✅ Billing enforcement middleware carregado');
+} catch (error) {
+    console.log('⚠️ Billing enforcement não carregado (não crítico):', error.message);
+}
 // ===== NOVAS INTEGRAÇÕES V3.0 =====
 const { gmailManager } = require('./gmail-integration');
 const { whatsappManager } = require('./whatsapp-integration');
@@ -4758,7 +4768,7 @@ app.get("/api/appointments/:leadId", async (req, res) => {
 
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 
-app.post("/api/chat-universal", requireApiKey, createBillingEnforcement('messages'), async (req, res) => {
+app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boolean), async (req, res) => {
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
@@ -4832,7 +4842,7 @@ app.post("/api/chat-universal", requireApiKey, createBillingEnforcement('message
 });
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
-app.post("/api/process-chat-inteligente", requireApiKey, createBillingEnforcement('messages'), async (req, res) => {
+app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].filter(Boolean), async (req, res) => {
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
@@ -5048,7 +5058,7 @@ app.post("/api/process-chat-inteligente", requireApiKey, createBillingEnforcemen
 });
 
 // ===== ENDPOINT APRIMORADO DE EXTRAÇÃO =====
-app.post("/api/extract-enhanced", createBillingEnforcement('extractions'), async (req, res) => {
+app.post("/api/extract-enhanced", ...[billingMiddleware].filter(Boolean), async (req, res) => {
     analytics.extractRequests++;
     try {
         const { url } = req.body || {};
@@ -6210,6 +6220,14 @@ try {
     console.log('✅ 🤖 Rota GET /api/assistants configurada (lê de short_urls)');
     console.log('🔗 Short URLs habilitadas: GET /l/:code, POST /api/create-short-url');
 
+    // 🛡️ BILLING BLINDADO — Rotas admin (aditivo, protegido por try/catch)
+    try {
+        const { setupAdminRoutes } = require('./admin-routes');
+        setupAdminRoutes(app);
+    } catch (error) {
+        console.log('⚠️ Admin routes não carregadas (não crítico):', error.message);
+    }
+
     // ===== MULTI-TENANT WHATSAPP ROUTES (NOVO) =====
     require('./whatsapp-routes')(app, logger);  // Carrega e registra rotas WhatsApp multi-tenant
     console.log('✅ Rotas Multi-Tenant WhatsApp integradas');
@@ -6263,6 +6281,15 @@ try {
         } catch (e) {
             console.log('⚠️ [V8.0] Encryption Manager falhou:', e.message);
         }
+    }
+
+    // 🔧 ADMIN ROUTES — 10 endpoints /api/admin/* para billing blindado
+    try {
+        const { setupAdminRoutes } = require('./admin-routes');
+        setupAdminRoutes(app);
+        console.log('✅ Admin routes (billing) carregadas');
+    } catch (error) {
+        console.log('⚠️ Admin routes não carregadas (não crítico):', error.message);
     }
 
     app.listen(PORT, '0.0.0.0', () => {
