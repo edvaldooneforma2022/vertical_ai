@@ -5124,7 +5124,7 @@ app.post("/api/extract-enhanced", ...[billingMiddleware].filter(Boolean), async 
 });
 
 // /api/extract endpoint (ORIGINAL - mantido para compatibilidade)
-app.post("/api/extract", async (req, res) => {
+app.post("/api/extract", ...[billingMiddleware].filter(Boolean), async (req, res) => {
     analytics.extractRequests++;
     try {
         const { url, instructions, robotName, forceRefresh } = req.body || {};

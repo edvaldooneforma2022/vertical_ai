@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Billing — Link Mágico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg-primary:#0f172a;--bg-secondary:#1e293b;--bg-card:#1e293b;--bg-hover:#334155;--bg-input:#0f172a;--border:#334155;--text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--accent:#6366f1;--accent-hover:#818cf8;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--info:#3b82f6;--radius:12px;--radius-sm:8px;--shadow:0 4px 24px rgba(0,0,0,0.3);--glass:rgba(30,41,59,0.8)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh}
+.header{background:linear-gradient(135deg,var(--bg-secondary),#1a1f3a);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.header-left{display:flex;align-items:center;gap:16px}
+.header h1{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#818cf8,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.badge{background:var(--accent);color:#fff;padding:2px 10px;border-radius:20px;font-size:.7rem;font-weight:600}
+.btn-back{background:none;border:1px solid var(--border);color:var(--text-secondary);padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;transition:all .2s}
+.btn-back:hover{border-color:var(--accent);color:var(--accent)}
+.tabs{display:flex;gap:4px;padding:12px 24px;background:var(--bg-secondary);border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:10px 20px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;border-radius:var(--radius-sm);font-size:.875rem;font-weight:500;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:6px;font-family:inherit}
+.tab:hover{background:var(--bg-hover);color:var(--text-primary)}
+.tab.active{background:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(99,102,241,.3)}
+.content{padding:24px}
+.tab-panel{display:none;animation:fadeIn .3s}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all .2s;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0}
+.stat-card.accent::before{background:linear-gradient(90deg,#6366f1,#818cf8)}
+.stat-card.success::before{background:linear-gradient(90deg,#10b981,#34d399)}
+.stat-card.warning::before{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.stat-card.danger::before{background:linear-gradient(90deg,#ef4444,#f87171)}
+.stat-card.info::before{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.stat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.stat-label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:8px;letter-spacing:.5px}
+.stat-value{font-size:1.8rem;font-weight:800}
+.stat-sub{font-size:.8rem;color:var(--text-secondary);margin-top:4px}
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{text-align:left;padding:12px 16px;font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)}
+.data-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:.875rem}
+.data-table tr:hover{background:var(--bg-hover)}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.section-header h2{font-size:1.1rem;font-weight:700}
+.btn{padding:10px 20px;border:none;border-radius:var(--radius-sm);font-weight:600;font-size:.85rem;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover);box-shadow:0 4px 12px rgba(99,102,241,.3)}
+.btn-secondary{background:var(--bg-hover);color:var(--text-primary)}
+.btn-secondary:hover{background:var(--border)}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn-danger:hover{background:rgba(239,68,68,.1)}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#059669}
+.btn-sm{padding:6px 12px;font-size:.8rem}
+.card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty-state .icon{font-size:3rem;margin-bottom:16px}
+.empty-state p{font-size:.9rem;margin-bottom:8px}
+.loading{text-align:center;padding:40px;color:var(--text-muted)}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-badge{padding:4px 12px;border-radius:20px;font-size:.75rem;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.status-badge.healthy{background:rgba(16,185,129,.15);color:var(--success)}
+.status-badge.warning{background:rgba(245,158,11,.15);color:var(--warning)}
+.status-badge.danger{background:rgba(239,68,68,.15);color:var(--danger)}
+.status-badge.info{background:rgba(59,130,246,.15);color:var(--info)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;justify-content:center;align-items:center;z-index:200}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:95%;max-width:500px;box-shadow:var(--shadow)}
+.modal h2{font-size:1.1rem;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.8rem;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:.9rem;font-family:inherit}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--accent)}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.refresh-indicator{font-size:.75rem;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.pulse{width:8px;height:8px;background:var(--success);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.key-display{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-family:monospace;font-size:.85rem;word-break:break-all;color:var(--warning)}
+.alert-card{background:var(--bg-secondary);border:1px solid var(--border);border-left:4px solid var(--warning);border-radius:var(--radius);padding:16px;margin-bottom:12px;transition:all .2s}
+.alert-card:hover{border-color:var(--accent)}
+.alert-card.high{border-left-color:var(--danger)}
+.alert-card.medium{border-left-color:var(--warning)}
+.alert-card.low{border-left-color:var(--info)}
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.health-item{background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center}
+.health-item .h-label{font-size:.75rem;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase}
+.health-item .h-value{font-size:1.1rem;font-weight:700}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;font-size:.85rem;z-index:300;display:none;box-shadow:var(--shadow);animation:slideUp .3s}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* Login */
+.login-screen{display:flex;justify-content:center;align-items:center;min-height:100vh;background:var(--bg-primary)}
+.login-box{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:40px;width:95%;max-width:420px;box-shadow:var(--shadow);text-align:center}
+.login-box h1{font-size:1.5rem;margin-bottom:8px;background:linear-gradient(135deg,#818cf8,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-box p{color:var(--text-secondary);font-size:.9rem;margin-bottom:24px}
+.login-box input{width:100%;padding:12px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:1rem;margin-bottom:16px;font-family:inherit;text-align:center;letter-spacing:2px}
+.login-box input:focus{outline:none;border-color:var(--accent)}
+.login-error{color:var(--danger);font-size:.85rem;margin-bottom:12px;display:none}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+@media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}.health-grid{grid-template-columns:repeat(2,1fr)}.tabs{gap:2px}.tab{padding:8px 12px;font-size:.8rem}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-screen">
+<div class="login-box">
+<div style="font-size:2.5rem;margin-bottom:16px">💰</div>
+<h1>Admin Billing</h1>
+<p>Insira a chave de administrador para acessar o painel de billing.</p>
+<div id="loginError" class="login-error">Chave inválida. Tente novamente.</div>
+<input type="password" id="adminKeyInput" placeholder="ADMIN_SECRET_KEY" onkeydown="if(event.key==='Enter')doLogin()">
+<button class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem" onclick="doLogin()">🔐 Entrar</button>
+</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboardScreen" style="display:none">
+
+<div class="header">
+<div class="header-left">
+<button class="btn-back" onclick="window.history.back()">← Voltar</button>
+<h1>💰 Admin Billing</h1>
+<span class="badge">V7.0</span>
+</div>
+<div class="refresh-indicator"><div class="pulse"></div><span id="refreshStatus">Auto-refresh: 30s</span></div>
+</div>
+
+<div class="tabs">
+<button class="tab active" data-tab="overview" onclick="switchTab('overview')">📊 Overview</button>
+<button class="tab" data-tab="usage" onclick="switchTab('usage')">👥 Tenants & Uso</button>
+<button class="tab" data-tab="quarantine" onclick="switchTab('quarantine')">🚫 Quarentena</button>
+<button class="tab" data-tab="keys" onclick="switchTab('keys')">🔑 API Keys</button>
+<button class="tab" data-tab="alerts" onclick="switchTab('alerts')">🔔 Alertas & Health</button>
+</div>
+
+<div class="content">
+
+<!-- TAB: OVERVIEW -->
+<div id="tab-overview" class="tab-panel active">
+<div class="stats-grid" id="overviewKpis"></div>
+<div class="section-header"><h2>📋 Eventos Recentes</h2></div>
+<div class="card" style="overflow-x:auto">
+<table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Tenant</th><th>Detalhes</th><th>Valor</th></tr></thead>
+<tbody id="eventsBody"></tbody></table>
+<div id="eventsEmpty" class="empty-state" style="display:none"><div class="icon">📭</div><p>Nenhum evento registrado ainda</p></div>
+</div>
+</div>
+
+<!-- TAB: TENANTS & USO -->
+<div id="tab-usage" class="tab-panel">
+<div class="section-header"><h2>👥 Uso por Plano</h2></div>
+<div class="stats-grid" id="usageKpis"></div>
+<div class="section-header" style="margin-top:8px"><h2>📊 Breakdown por Tenant</h2></div>
+<div class="card" style="overflow-x:auto">
+<table class="data-table"><thead><tr><th>Tenant ID</th><th>Plano</th><th>Mensagens</th><th>Extrações</th><th>API Calls</th><th>% Uso</th></tr></thead>
+<tbody id="usageBody"></tbody></table>
+<div id="usageEmpty" class="empty-state" style="display:none"><div class="icon">📊</div><p>Nenhum dado de uso disponível</p></div>
+</div>
+</div>
+
+<!-- TAB: QUARENTENA -->
+<div id="tab-quarantine" class="tab-panel">
+<div class="section-header"><h2>🚫 Tenants em Quarentena</h2><span id="quarantineCount" class="status-badge info">0</span></div>
+<div id="quarantineList"></div>
+<div id="quarantineEmpty" class="empty-state"><div class="icon">✅</div><p>Nenhum tenant em quarentena</p><p style="color:var(--success)">Tudo limpo!</p></div>
+</div>
+
+<!-- TAB: API KEYS -->
+<div id="tab-keys" class="tab-panel">
+<div class="section-header"><h2>🔑 Gerenciar API Keys</h2></div>
+<div class="card">
+<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+<div class="form-group" style="flex:1;min-width:200px;margin-bottom:0">
+<label>Tenant ID</label>
+<input type="text" id="keysTenantInput" placeholder="Ex: tenant_abc123">
+</div>
+<button class="btn btn-primary" onclick="searchKeys()">🔍 Buscar</button>
+<button class="btn btn-success" onclick="showCreateKeyModal()">+ Criar Key</button>
+</div>
+</div>
+<div id="keysResults" style="margin-top:16px"></div>
+</div>
+
+<!-- TAB: ALERTAS & HEALTH -->
+<div id="tab-alerts" class="tab-panel">
+<div class="section-header"><h2>🏥 System Health</h2></div>
+<div class="health-grid" id="healthGrid"></div>
+<div class="section-header" style="margin-top:24px"><h2>🔔 Alertas de Fraude</h2><span id="alertsCount" class="status-badge warning">0</span></div>
+<div id="alertsList"></div>
+<div id="alertsEmpty" class="empty-state"><div class="icon">🛡️</div><p>Nenhum alerta de fraude</p><p style="color:var(--success)">Sistema seguro!</p></div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /dashboardScreen -->
+
+<!-- MODALS -->
+<div id="createKeyModal" class="modal-overlay">
+<div class="modal">
+<h2>🔑 Criar Nova API Key</h2>
+<div class="form-group"><label>Tenant ID</label><input type="text" id="newKeyTenant" placeholder="tenant_abc123"></div>
+<div class="form-group"><label>Nome da Key</label><input type="text" id="newKeyName" placeholder="Ex: Produção"></div>
+<div class="form-group"><label>Escopos (separados por vírgula)</label><input type="text" id="newKeyScopes" placeholder="chat,extract,api"></div>
+<div class="form-group"><label>Expira em (dias, vazio = sem expiração)</label><input type="number" id="newKeyExpires" placeholder="90"></div>
+<div class="form-actions">
+<button class="btn btn-secondary" onclick="closeModal('createKeyModal')">Cancelar</button>
+<button class="btn btn-primary" onclick="createKey()">Criar Key</button>
+</div>
+</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ===== STATE =====
+let ADMIN_KEY = sessionStorage.getItem('admin_billing_key') || '';
+let refreshInterval = null;
+const API_BASE = window.location.origin;
+
+// ===== AUTH =====
+function doLogin() {
+    const key = document.getElementById('adminKeyInput').value.trim();
+    if (!key) return;
+    ADMIN_KEY = key;
+    sessionStorage.setItem('admin_billing_key', key);
+    // Test the key
+    api('/api/admin/health').then(r => {
+        if (r.success) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboardScreen').style.display = 'block';
+            document.getElementById('loginError').style.display = 'none';
+            loadAllData();
+            startAutoRefresh();
+        } else {
+            showLoginError();
+        }
+    }).catch(() => showLoginError());
+}
+
+function showLoginError() {
+    document.getElementById('loginError').style.display = 'block';
+    ADMIN_KEY = '';
+    sessionStorage.removeItem('admin_billing_key');
+}
+
+// Check if already authenticated
+if (ADMIN_KEY) {
+    api('/api/admin/health').then(r => {
+        if (r.success) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboardScreen').style.display = 'block';
+            loadAllData();
+            startAutoRefresh();
+        } else {
+            sessionStorage.removeItem('admin_billing_key');
+        }
+    }).catch(() => sessionStorage.removeItem('admin_billing_key'));
+}
+
+// ===== API HELPER =====
+async function api(endpoint, options = {}) {
+    try {
+        const res = await fetch(API_BASE + endpoint, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-key': ADMIN_KEY,
+                ...(options.headers || {})
+            }
+        });
+        return await res.json();
+    } catch (e) {
+        console.error('API Error:', e);
+        return { success: false, error: e.message };
+    }
+}
+
+// ===== TABS =====
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+}
+
+// ===== LOAD ALL DATA =====
+async function loadAllData() {
+    await Promise.all([loadOverview(), loadUsage(), loadQuarantine(), loadAlerts()]);
+}
+
+// ===== TAB 1: OVERVIEW =====
+async function loadOverview() {
+    const [overviewRes, metricsRes, eventsRes] = await Promise.all([
+        api('/api/admin/billing/overview'),
+        api('/api/admin/billing/metrics'),
+        api('/api/admin/billing/events?limit=20')
+    ]);
+
+    const ov = overviewRes.data || {};
+    const mt = metricsRes.data || {};
+
+    const mrr = mt.mrr || ov.mrr || 0;
+    const activeSubs = ov.activeSubscriptions || ov.active_subscriptions || 0;
+    const revenue30 = mt.revenue30d || ov.revenue30d || 0;
+    const churn = mt.churnRate || mt.churn_rate || 0;
+    const totalTenants = ov.totalTenants || ov.total_tenants || 0;
+    const trialCount = ov.trialCount || ov.trial_count || 0;
+
+    document.getElementById('overviewKpis').innerHTML = `
+        <div class="stat-card accent"><div class="stat-label">MRR</div><div class="stat-value" style="color:var(--accent)">R$ ${fmt(mrr)}</div><div class="stat-sub">Receita mensal recorrente</div></div>
+        <div class="stat-card success"><div class="stat-label">Assinaturas Ativas</div><div class="stat-value" style="color:var(--success)">${activeSubs}</div><div class="stat-sub">${trialCount} em trial</div></div>
+        <div class="stat-card info"><div class="stat-label">Receita 30 dias</div><div class="stat-value" style="color:var(--info)">R$ ${fmt(revenue30)}</div><div class="stat-sub">Total faturado</div></div>
+        <div class="stat-card ${churn > 5 ? 'danger' : 'warning'}"><div class="stat-label">Churn Rate</div><div class="stat-value" style="color:var(--${churn > 5 ? 'danger' : 'warning'})">${churn.toFixed(1)}%</div><div class="stat-sub">Taxa de cancelamento</div></div>
+        <div class="stat-card info"><div class="stat-label">Total Tenants</div><div class="stat-value" style="color:var(--text-primary)">${totalTenants}</div><div class="stat-sub">Todos os planos</div></div>
+    `;
+
+    // Events table
+    const events = eventsRes.events || [];
+    const tbody = document.getElementById('eventsBody');
+    const empty = document.getElementById('eventsEmpty');
+    if (events.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+    } else {
+        empty.style.display = 'none';
+        tbody.innerHTML = events.map(e => `<tr>
+            <td>${fmtDate(e.created_at || e.timestamp)}</td>
+            <td><span class="status-badge info">${e.event_type || e.type || '-'}</span></td>
+            <td style="font-family:monospace;font-size:.8rem">${shortId(e.tenant_id || e.tenantId)}</td>
+            <td>${e.description || e.details || '-'}</td>
+            <td style="color:var(--success);font-weight:600">${e.amount ? 'R$ ' + fmt(e.amount) : '-'}</td>
+        </tr>`).join('');
+    }
+}
+
+// ===== TAB 2: USAGE =====
+async function loadUsage() {
+    const res = await api('/api/admin/usage/summary');
+    const data = res.data || {};
+    const plans = data.byPlan || data.by_plan || {};
+    const tenants = data.byTenant || data.by_tenant || data.tenants || [];
+
+    // KPIs from plan data
+    const planEntries = Object.entries(plans);
+    const kpisEl = document.getElementById('usageKpis');
+    if (planEntries.length > 0) {
+        kpisEl.innerHTML = planEntries.map(([plan, info]) => `
+            <div class="stat-card accent"><div class="stat-label">Plano ${plan}</div>
+            <div class="stat-value" style="color:var(--accent)">${info.count || info.tenants || 0}</div>
+            <div class="stat-sub">${info.messages || 0} msgs · ${info.extractions || 0} ext</div></div>
+        `).join('');
+    } else {
+        kpisEl.innerHTML = `<div class="stat-card info"><div class="stat-label">Total de Uso</div><div class="stat-value" style="color:var(--info)">${data.totalMessages || data.total_messages || 0}</div><div class="stat-sub">mensagens processadas</div></div>
+        <div class="stat-card accent"><div class="stat-label">Extrações</div><div class="stat-value" style="color:var(--accent)">${data.totalExtractions || data.total_extractions || 0}</div><div class="stat-sub">total de extrações</div></div>`;
+    }
+
+    // Tenant table
+    const tenantList = Array.isArray(tenants) ? tenants : Object.entries(tenants).map(([id, d]) => ({ tenantId: id, ...d }));
+    const tbody = document.getElementById('usageBody');
+    const empty = document.getElementById('usageEmpty');
+    if (tenantList.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+    } else {
+        empty.style.display = 'none';
+        tbody.innerHTML = tenantList.map(t => {
+            const pct = t.usagePercent || t.usage_percent || 0;
+            const color = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--success)';
+            return `<tr>
+                <td style="font-family:monospace;font-size:.8rem">${shortId(t.tenantId || t.tenant_id)}</td>
+                <td><span class="status-badge info">${t.plan || '-'}</span></td>
+                <td>${t.messages || 0}</td><td>${t.extractions || 0}</td><td>${t.apiCalls || t.api_calls || 0}</td>
+                <td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden"><div style="width:${Math.min(pct,100)}%;height:100%;background:${color};border-radius:3px"></div></div><span style="font-size:.8rem;color:${color}">${pct.toFixed(0)}%</span></div></td>
+            </tr>`;
+        }).join('');
+    }
+}
+
+// ===== TAB 3: QUARANTINE =====
+async function loadQuarantine() {
+    const res = await api('/api/admin/quarantine');
+    const tenants = res.tenants || [];
+    const countEl = document.getElementById('quarantineCount');
+    const listEl = document.getElementById('quarantineList');
+    const emptyEl = document.getElementById('quarantineEmpty');
+    countEl.textContent = tenants.length;
+    countEl.className = 'status-badge ' + (tenants.length > 0 ? 'danger' : 'info');
+
+    if (tenants.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+    } else {
+        emptyEl.style.display = 'none';
+        listEl.innerHTML = tenants.map(t => `
+        <div class="card" style="border-left:4px solid var(--danger)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+                <div>
+                    <div style="font-weight:700;margin-bottom:4px">🚫 ${shortId(t.tenant_id || t.tenantId)}</div>
+                    <div style="font-size:.85rem;color:var(--text-secondary);margin-bottom:8px"><strong>Razão:</strong> ${t.reason || 'Não especificada'}</div>
+                    <div style="font-size:.8rem;color:var(--text-muted)"><strong>Evidência:</strong> ${t.evidence || '-'}</div>
+                    <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px">Bloqueado em: ${fmtDate(t.quarantined_at || t.created_at)}</div>
+                </div>
+                <button class="btn btn-success btn-sm" onclick="clearQuarantine('${t.tenant_id || t.tenantId}')">✅ Liberar</button>
+            </div>
+        </div>`).join('');
+    }
+}
+
+async function clearQuarantine(tenantId) {
+    if (!confirm(`Liberar tenant ${tenantId} da quarentena?`)) return;
+    const res = await api(`/api/admin/quarantine/${tenantId}/clear`, { method: 'POST', body: JSON.stringify({ reviewedBy: 'admin-dashboard' }) });
+    showToast(res.success ? '✅ Tenant liberado com sucesso!' : '❌ Falha ao liberar: ' + (res.error || ''), res.success ? 'success' : 'danger');
+    if (res.success) loadQuarantine();
+}
+
+// ===== TAB 4: API KEYS =====
+async function searchKeys() {
+    const tenantId = document.getElementById('keysTenantInput').value.trim();
+    if (!tenantId) { showToast('⚠️ Informe o Tenant ID', 'warning'); return; }
+    const res = await api(`/api/admin/keys/${tenantId}`);
+    const keys = res.keys || [];
+    const container = document.getElementById('keysResults');
+
+    if (keys.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">🔑</div><p>Nenhuma key encontrada para <strong>${tenantId}</strong></p></div>`;
+    } else {
+        container.innerHTML = keys.map(k => `
+        <div class="card" style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+                <div style="flex:1">
+                    <div style="font-weight:700;margin-bottom:4px">${k.name || 'API Key'} <span class="status-badge ${k.status === 'active' ? 'healthy' : 'danger'}">${k.status || 'active'}</span></div>
+                    <div class="key-display" style="margin:8px 0">${maskKey(k.key_value || k.api_key || k.key || '')}</div>
+                    <div style="font-size:.8rem;color:var(--text-muted)">ID: ${k.id || '-'} · Criada: ${fmtDate(k.created_at)} · Expira: ${k.expires_at ? fmtDate(k.expires_at) : 'Nunca'}</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn btn-secondary btn-sm" onclick="rotateKey('${tenantId}',${k.id})">🔄 Rotacionar</button>
+                    <button class="btn btn-danger btn-sm" onclick="revokeKey('${tenantId}',${k.id})">🗑️ Revogar</button>
+                </div>
+            </div>
+        </div>`).join('');
+    }
+}
+
+function showCreateKeyModal() {
+    const tenantId = document.getElementById('keysTenantInput').value.trim();
+    if (tenantId) document.getElementById('newKeyTenant').value = tenantId;
+    document.getElementById('createKeyModal').classList.add('active');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+async function createKey() {
+    const tenantId = document.getElementById('newKeyTenant').value.trim();
+    const name = document.getElementById('newKeyName').value.trim();
+    const scopes = document.getElementById('newKeyScopes').value.trim();
+    const expires = document.getElementById('newKeyExpires').value;
+    if (!tenantId) { showToast('⚠️ Informe o Tenant ID', 'warning'); return; }
+
+    const body = { name: name || 'Dashboard-created', scopes: scopes ? scopes.split(',').map(s => s.trim()) : undefined, expiresInDays: expires ? parseInt(expires) : undefined };
+    const res = await api(`/api/admin/keys/${tenantId}`, { method: 'POST', body: JSON.stringify(body) });
+    closeModal('createKeyModal');
+    if (res.success) {
+        showToast('✅ Key criada com sucesso!', 'success');
+        document.getElementById('keysTenantInput').value = tenantId;
+        searchKeys();
+    } else {
+        showToast('❌ Erro: ' + (res.error || 'Falha ao criar key'), 'danger');
+    }
+}
+
+async function revokeKey(tenantId, keyId) {
+    if (!confirm('Revogar esta API key? Esta ação não pode ser desfeita.')) return;
+    const res = await api(`/api/admin/keys/${tenantId}/${keyId}/revoke`, { method: 'POST' });
+    showToast(res.success ? '✅ Key revogada!' : '❌ Erro: ' + (res.error || ''), res.success ? 'success' : 'danger');
+    if (res.success) searchKeys();
+}
+
+async function rotateKey(tenantId, keyId) {
+    if (!confirm('Rotacionar esta API key? A key atual será substituída.')) return;
+    const res = await api(`/api/admin/keys/${tenantId}/${keyId}/rotate`, { method: 'POST' });
+    showToast(res.success ? '✅ Key rotacionada!' : '❌ Erro: ' + (res.error || ''), res.success ? 'success' : 'danger');
+    if (res.success) searchKeys();
+}
+
+// ===== TAB 5: ALERTS & HEALTH =====
+async function loadAlerts() {
+    const [healthRes, alertsRes] = await Promise.all([
+        api('/api/admin/health'),
+        api('/api/admin/alerts?limit=50')
+    ]);
+
+    // Health
+    const h = healthRes.health || {};
+    const grid = document.getElementById('healthGrid');
+    const status = h.status || 'unknown';
+    const tables = h.tables || h.tablesCreated || h.tables_created || 0;
+    const uptime = h.uptime || 0;
+    const dbStatus = h.database || h.db || 'ok';
+
+    grid.innerHTML = `
+        <div class="health-item"><div class="h-label">Status</div><div class="h-value"><span class="status-badge ${status === 'healthy' ? 'healthy' : 'danger'}">${status}</span></div></div>
+        <div class="health-item"><div class="h-label">Tabelas Billing</div><div class="h-value" style="color:var(--accent)">${tables}</div></div>
+        <div class="health-item"><div class="h-label">Uptime</div><div class="h-value" style="color:var(--success)">${fmtUptime(uptime)}</div></div>
+        <div class="health-item"><div class="h-label">Database</div><div class="h-value"><span class="status-badge healthy">${dbStatus}</span></div></div>
+    `;
+
+    // Alerts
+    const alerts = alertsRes.alerts || [];
+    const countEl = document.getElementById('alertsCount');
+    const listEl = document.getElementById('alertsList');
+    const emptyEl = document.getElementById('alertsEmpty');
+    countEl.textContent = alerts.length;
+    countEl.className = 'status-badge ' + (alerts.length > 0 ? 'danger' : 'healthy');
+
+    if (alerts.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+    } else {
+        emptyEl.style.display = 'none';
+        listEl.innerHTML = alerts.map(a => {
+            const sev = (a.severity || a.level || 'medium').toLowerCase();
+            return `<div class="alert-card ${sev}">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                    <div>
+                        <div style="font-weight:700;margin-bottom:4px">${a.type || a.alert_type || 'Alerta'} <span class="status-badge ${sev === 'high' ? 'danger' : sev === 'low' ? 'info' : 'warning'}">${sev}</span></div>
+                        <div style="font-size:.85rem;color:var(--text-secondary);margin-bottom:4px">${a.message || a.description || '-'}</div>
+                        <div style="font-size:.75rem;color:var(--text-muted)">Tenant: ${shortId(a.tenant_id || a.tenantId || '-')} · ${fmtDate(a.created_at || a.timestamp)}</div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+}
+
+// ===== AUTO REFRESH =====
+function startAutoRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = setInterval(() => {
+        loadAllData();
+        document.getElementById('refreshStatus').textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
+    }, 30000);
+}
+
+// ===== HELPERS =====
+function fmt(n) { return Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtDate(d) { if (!d) return '-'; try { return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch(e) { return d; } }
+function shortId(id) { if (!id || id === '-') return '-'; return id.length > 20 ? id.substring(0, 8) + '...' + id.substring(id.length - 4) : id; }
+function maskKey(key) { if (!key) return '-'; return key.length > 12 ? key.substring(0, 8) + '••••••••' + key.substring(key.length - 4) : key; }
+function fmtUptime(s) { if (!s) return '-'; const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return h > 0 ? `${h}h ${m}m` : `${m}m`; }
+
+function showToast(msg, type = 'info') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.borderColor = type === 'success' ? 'var(--success)' : type === 'danger' ? 'var(--danger)' : type === 'warning' ? 'var(--warning)' : 'var(--info)';
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 4000);
+}
+</script>
+</body>
+</html>
