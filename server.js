@@ -2902,6 +2902,31 @@ async function validateApiKey(apiKey) {
                 ]);
 
                 logger.info(`[validateApiKey] Tenant auto-criado via fallback: ${tenantId}`);
+
+                // Criar billing_subscription para o dashboard (Opção A)
+                try {
+                    if (USE_POSTGRES) {
+                        const subId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
+                        const plano = meta.plano || 'basic';
+                        await db.query(
+                            `INSERT INTO billing_subscriptions (id, tenant_id, plan_id, status, payment_method, metadata)
+                             VALUES ($1, $2, $3, $4, $5, $6)
+                             ON CONFLICT (tenant_id) DO NOTHING`,
+                            [subId, tenantId, plano, 'active', 'api_keys_json', JSON.stringify({ nome: meta.nome, source: 'fallback' })]
+                        );
+                        const { getAuditLedger } = require('./billing-audit');
+                        const ledger = getAuditLedger();
+                        await ledger.recordEvent({
+                            tenantId, eventType: 'subscription_created', planId: plano,
+                            amountCents: 0, source: 'api_keys_json',
+                            newState: { plan: plano, status: 'active' },
+                            metadata: { nome: meta.nome, source: 'fallback_auto_create' }
+                        });
+                    }
+                } catch (billingErr) {
+                    // Não-crítico: tenant já foi criado, billing é best-effort
+                    logger.warn(`[validateApiKey] billing_subscription fallback falhou (não crítico): ${billingErr.message}`);
+                }
             } catch (insertErr) {
                 // Se falhar a inserção (ex: já existe por race condition), continuar mesmo assim
                 logger.warn(`[validateApiKey] Fallback insert falhou (pode já existir): ${insertErr.message}`);

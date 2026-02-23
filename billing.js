@@ -344,6 +344,34 @@ class BillingManager {
         if (monthUsage) {
             monthUsage[type] = (monthUsage[type] || 0) + amount;
         }
+
+        // Persistir no banco (fire-and-forget, não bloqueia)
+        this._persistUsageToDB(userId, monthKey, type, amount).catch(() => { });
+    }
+
+    /**
+     * Persistir uso no PostgreSQL (best-effort, não falha se DB offline)
+     */
+    async _persistUsageToDB(tenantId, period, type, amount) {
+        try {
+            const { db, USE_POSTGRES } = require('./database');
+            if (!USE_POSTGRES || !db) return;
+
+            const column = type === 'messages' ? 'messages'
+                : type === 'extractions' ? 'extractions'
+                    : 'api_calls';
+
+            await db.query(
+                `INSERT INTO billing_usage (tenant_id, period, ${column})
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (tenant_id, period)
+                 DO UPDATE SET ${column} = billing_usage.${column} + $3, updated_at = CURRENT_TIMESTAMP`,
+                [tenantId, period, amount]
+            );
+        } catch (e) {
+            // Silencioso — tracking em DB é best-effort
+            console.warn('⚠️ [Billing] Erro ao persistir uso no DB:', e.message);
+        }
     }
 
     /**

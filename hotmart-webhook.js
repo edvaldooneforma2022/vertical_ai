@@ -267,6 +267,30 @@ async function handlePurchaseApproved(buyerData) {
     // 4. Adicionar ao JSON local (fallback para compatibilidade)
     addToLocalJson(apiKey, nome, plano);
 
+    // 4.1. Criar assinatura billing e registrar evento (para dashboard admin)
+    try {
+        const { getAuditLedger } = require('./billing-audit');
+        const subId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
+        if (USE_POSTGRES && db) {
+            await db.query(
+                `INSERT INTO billing_subscriptions (id, tenant_id, plan_id, status, payment_method, metadata)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (tenant_id) DO UPDATE SET plan_id = $3, status = $4, updated_at = CURRENT_TIMESTAMP`,
+                [subId, tenantId, plano, 'active', 'hotmart', JSON.stringify({ email, nome })]
+            );
+            console.log(`💳 [Hotmart] billing_subscription criada para tenant ${tenantId}`);
+        }
+        const ledger = getAuditLedger();
+        await ledger.recordEvent({
+            tenantId, eventType: 'subscription_created', planId: plano,
+            amountCents: 0, source: 'hotmart',
+            newState: { plan: plano, status: 'active' },
+            metadata: { email, nome }
+        });
+    } catch (e) {
+        console.warn('⚠️ [Hotmart] Erro ao criar billing_subscription (não crítico):', e.message);
+    }
+
     // 5. Atualizar env API_KEYS_JSON se disponível (para Render)
     try {
         const localKeys = {};
@@ -321,6 +345,26 @@ async function handlePurchaseCancelled(buyerData) {
                 await db.query(deactivateKeys, [tenant.id]);
 
                 console.log(`✅ [Hotmart] Tenant suspenso: ${tenant.id}`);
+
+                // Registrar cancelamento no billing (dashboard admin)
+                try {
+                    if (USE_POSTGRES) {
+                        await db.query(
+                            `UPDATE billing_subscriptions SET status = $1, cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2`,
+                            ['cancelled', tenant.id]
+                        );
+                    }
+                    const { getAuditLedger } = require('./billing-audit');
+                    const ledger = getAuditLedger();
+                    await ledger.recordEvent({
+                        tenantId: tenant.id, eventType: 'subscription_cancelled',
+                        source: 'hotmart', previousState: { status: 'active' },
+                        newState: { status: 'cancelled' },
+                        metadata: { email, reason: 'hotmart_refund_or_cancel' }
+                    });
+                } catch (e) {
+                    console.warn('⚠️ [Hotmart] Erro ao atualizar billing_subscription (não crítico):', e.message);
+                }
             } else {
                 console.log(`ℹ️ [Hotmart] Nenhum tenant encontrado para ${email} — nada a desativar`);
             }
