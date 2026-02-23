@@ -2934,7 +2934,7 @@ async function requireApiKey(req, res, next) {
     logger.info(`[requireApiKey] Path: ${req.path}, Session Validated: ${!!(req.session && req.session.tenantId)}`);
 
     // Permitir acesso a rotas públicas sem API Key
-    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/l/") || req.path === "/api/system/status" || req.path === "/health" || req.path === "/api/webhooks/hotmart" || req.path === "/api/webhooks/hotmart/status") {
+    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/l/") || req.path === "/api/system/status" || req.path === "/health" || req.path === "/api/webhooks/hotmart" || req.path === "/api/webhooks/hotmart/status" || req.path.startsWith("/api/admin")) {
         return next();
     }
 
