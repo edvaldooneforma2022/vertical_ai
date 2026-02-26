@@ -3055,10 +3055,12 @@
                     activeBtn.style.color = 'white';
                 }
 
+                // SAFE PATCH - BILLING-FIX-001: Usar API key do tenant (não hardcoded)
+                const tenantApiKey = localStorage.getItem('linkmagico_api_key') || '';
                 // Buscar dados de leads
                 const leadsResponse = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': tenantApiKey
                     }
                 });
                 const leadsData = await leadsResponse.json();
@@ -3104,12 +3106,9 @@
                         }
                     });
 
-                    // SAFE PATCH - QA FIX: BUG-001 - Usar maior valor entre leads e servidor
-                    if (totalMessages === 0 && serverAnalytics.chatRequests > 0) {
-                        totalMessages = serverAnalytics.chatRequests;
-                    } else {
-                        totalMessages = Math.max(totalMessages, serverAnalytics.chatRequests || 0);
-                    }
+                    // SAFE PATCH - BILLING-FIX-001: Manter totalMessages do tenant
+                    // (não usar analytics.chatRequests global pois é soma de TODOS os tenants)
+                    // totalMessages já reflete corretamente os dados do tenant via leads
 
                     // Calcular taxa de sucesso (leads com email ou telefone / total)
                     const leadsWithContact = filteredLeads.filter(lead => {
@@ -3840,7 +3839,7 @@
                 // Usar endpoint real /admin/leads
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': (localStorage.getItem('linkmagico_api_key') || '')
                     }
                 });
                 const data = await response.json();
@@ -3937,7 +3936,7 @@
             try {
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': (localStorage.getItem('linkmagico_api_key') || '')
                     }
                 });
                 const data = await response.json();
@@ -4012,7 +4011,7 @@
                 // Buscar dados do lead
                 const leadsResponse = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': (localStorage.getItem('linkmagico_api_key') || '')
                     }
                 });
                 const leadsData = await leadsResponse.json();
@@ -4198,7 +4197,7 @@
                 // Buscar todos os leads
                 const response = await fetch('/admin/leads', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': (localStorage.getItem('linkmagico_api_key') || '')
                     }
                 });
                 const data = await response.json();
@@ -4261,7 +4260,7 @@
                 const response = await fetch('/admin/leads/backup/create', {
                     method: 'POST',
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024',
+                        'X-API-Key': (localStorage.getItem('linkmagico_api_key') || ''),
                         'Content-Type': 'application/json'
                     }
                 });
@@ -4284,7 +4283,7 @@
             try {
                 const response = await fetch('/admin/leads/backup/list', {
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024'
+                        'X-API-Key': (localStorage.getItem('linkmagico_api_key') || '')
                     }
                 });
 
@@ -4348,7 +4347,7 @@
                 const response = await fetch('/admin/leads/backup/restore', {
                     method: 'POST',
                     headers: {
-                        'X-API-Key': 'linkmagico-api-key-2024',
+                        'X-API-Key': (localStorage.getItem('linkmagico_api_key') || ''),
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ filename })
