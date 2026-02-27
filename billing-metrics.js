@@ -46,7 +46,8 @@ class BillingMetrics {
             SELECT 
                 plan_id,
                 status,
-                COUNT(*) as count
+                COUNT(*) as count,
+                SUM(COALESCE(amount_cents, 0)) as total_amount_cents
             FROM billing_subscriptions
             GROUP BY plan_id, status
             ORDER BY plan_id
@@ -56,10 +57,14 @@ class BillingMetrics {
         const active = result.rows
             .filter(r => r.status === 'active')
             .reduce((sum, r) => sum + parseInt(r.count), 0);
+        const totalAmountCents = result.rows
+            .filter(r => r.status === 'active')
+            .reduce((sum, r) => sum + parseInt(r.total_amount_cents || 0), 0);
 
         return {
             total,
             active,
+            totalAmountCents,
             byPlan: result.rows
         };
     }
@@ -74,7 +79,7 @@ class BillingMetrics {
                 COUNT(*) as payment_count,
                 AVG(amount_cents) as avg_cents
             FROM billing_events
-            WHERE event_type = 'payment_succeeded'
+            WHERE (event_type = 'payment_succeeded' OR event_type = 'subscription_created')
             AND created_at >= CURRENT_DATE - INTERVAL '30 days'
         `);
 

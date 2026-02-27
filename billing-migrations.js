@@ -35,6 +35,12 @@ function getBillingMigrations() {
         `CREATE INDEX IF NOT EXISTS idx_billing_sub_status 
             ON billing_subscriptions(status)`,
 
+        // ===== 1.1 ADICIONAR COLUNA amount_cents (se não existir) =====
+        `DO $$ BEGIN
+            ALTER TABLE billing_subscriptions ADD COLUMN amount_cents INTEGER DEFAULT 0;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$`,
+
         // ===== 2. TRACKING DE USO MENSAL PERSISTENTE =====
         `CREATE TABLE IF NOT EXISTS billing_usage (
             id SERIAL PRIMARY KEY,

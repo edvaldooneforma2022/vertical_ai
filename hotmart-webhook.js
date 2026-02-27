@@ -47,6 +47,7 @@ const HOTTOK = process.env.HOTMART_HOTTOK || null;
 const DEFAULT_PLAN = process.env.HOTMART_DEFAULT_PLAN || 'starter';
 const PLATFORM_URL = process.env.PLATFORM_URL || 'https://vertical-ai-dktu.onrender.com';
 const API_KEYS_JSON_PATH = path.join(__dirname, 'data', 'api_keys.json');
+const PLAN_PRICE_CENTS = parseInt(process.env.HOTMART_PLAN_PRICE_CENTS || '9700'); // R$97,00
 
 // ─── Funções auxiliares ─────────────────────────────────────────────────────
 
@@ -273,17 +274,17 @@ async function handlePurchaseApproved(buyerData) {
         const subId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
         if (USE_POSTGRES && db) {
             await db.query(
-                `INSERT INTO billing_subscriptions (id, tenant_id, plan_id, status, payment_method, metadata)
-                 VALUES ($1, $2, $3, $4, $5, $6)
-                 ON CONFLICT (tenant_id) DO UPDATE SET plan_id = $3, status = $4, updated_at = CURRENT_TIMESTAMP`,
-                [subId, tenantId, plano, 'active', 'hotmart', JSON.stringify({ email, nome })]
+                `INSERT INTO billing_subscriptions (id, tenant_id, plan_id, status, payment_method, metadata, amount_cents)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                 ON CONFLICT (tenant_id) DO UPDATE SET plan_id = $3, status = $4, amount_cents = $7, updated_at = CURRENT_TIMESTAMP`,
+                [subId, tenantId, plano, 'active', 'hotmart', JSON.stringify({ email, nome }), PLAN_PRICE_CENTS]
             );
             console.log(`💳 [Hotmart] billing_subscription criada para tenant ${tenantId}`);
         }
         const ledger = getAuditLedger();
         await ledger.recordEvent({
             tenantId, eventType: 'subscription_created', planId: plano,
-            amountCents: 0, source: 'hotmart',
+            amountCents: PLAN_PRICE_CENTS, source: 'hotmart',
             newState: { plan: plano, status: 'active' },
             metadata: { email, nome }
         });
