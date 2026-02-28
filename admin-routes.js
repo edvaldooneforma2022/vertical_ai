@@ -183,7 +183,7 @@ function setupAdminRoutes(app) {
     app.post('/api/admin/keys/:tenantId/:keyId/revoke', async (req, res) => {
         try {
             const keyManager = getApiKeyManager();
-            await keyManager.revokeKey(parseInt(req.params.keyId));
+            await keyManager.revokeKey(req.params.keyId);
             res.json({ success: true, message: 'Key revogada' });
         } catch (error) {
             console.error('❌ [ADMIN] Erro ao revogar key:', error.message);
@@ -196,7 +196,7 @@ function setupAdminRoutes(app) {
             const keyManager = getApiKeyManager();
             const newKey = await keyManager.rotateKey(
                 req.params.tenantId,
-                parseInt(req.params.keyId)
+                req.params.keyId
             );
             res.json({ success: true, key: newKey });
         } catch (error) {

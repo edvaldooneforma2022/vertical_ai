@@ -187,29 +187,40 @@ class ApiKeyManager {
         return { allowed: true };
     }
 
-    /**
-     * Rotacionar key (criar nova, revogar antiga)
-     */
     async rotateKey(tenantId, oldKeyId, newOptions = {}) {
         if (!this.enabled) throw new Error('Requer PostgreSQL');
 
-        // Verificar que a key antiga pertence ao tenant
-        const oldKey = await this.db.query(
-            `SELECT * FROM api_keys_v2 WHERE id = $1 AND tenant_id = $2 AND status = 'active'`,
-            [oldKeyId, tenantId]
-        );
+        const isLegacy = typeof oldKeyId === 'string' && oldKeyId.startsWith('legacy_');
+        let oldMetadata = {};
 
-        if (oldKey.rows.length === 0) {
-            throw new Error('Key não encontrada ou já revogada');
+        if (isLegacy) {
+            // Buscar na tabela legado
+            const legacyId = oldKeyId.replace('legacy_', '');
+            const legacyKey = await this.db.query(
+                `SELECT * FROM api_keys WHERE id = $1 AND tenant_id = $2 AND active = true`,
+                [legacyId, tenantId]
+            );
+            if (legacyKey.rows.length === 0) throw new Error('Chave legada não encontrada ou inativa');
+            oldMetadata = { name: 'Chave Legacy Rotacionada', scopes: ['*'] };
+        } else {
+            // Buscar na tabela V2
+            const oldKey = await this.db.query(
+                `SELECT * FROM api_keys_v2 WHERE id = $1 AND tenant_id = $2 AND status = 'active'`,
+                [oldKeyId, tenantId]
+            );
+            if (oldKey.rows.length === 0) throw new Error('Key não encontrada ou já revogada');
+            const old = oldKey.rows[0];
+            oldMetadata = {
+                name: old.name,
+                scopes: typeof old.scopes === 'string' ? JSON.parse(old.scopes) : old.scopes,
+                allowedIps: typeof old.allowed_ips === 'string' ? JSON.parse(old.allowed_ips) : old.allowed_ips,
+                allowedDomains: typeof old.allowed_domains === 'string' ? JSON.parse(old.allowed_domains) : old.allowed_domains
+            };
         }
 
-        const old = oldKey.rows[0];
-
-        // Criar nova key com mesmos scopes/restrições
-        const newKey = await this.createKey(tenantId, `${old.name} (rotacionada)`, {
-            scopes: typeof old.scopes === 'string' ? JSON.parse(old.scopes) : old.scopes,
-            allowedIps: typeof old.allowed_ips === 'string' ? JSON.parse(old.allowed_ips) : old.allowed_ips,
-            allowedDomains: typeof old.allowed_domains === 'string' ? JSON.parse(old.allowed_domains) : old.allowed_domains,
+        // Criar nova key (sempre V2)
+        const newKey = await this.createKey(tenantId, `${oldMetadata.name} (rotacionada)`, {
+            ...oldMetadata,
             ...newOptions
         });
 
@@ -228,10 +239,20 @@ class ApiKeyManager {
     async revokeKey(keyId) {
         if (!this.enabled) throw new Error('Requer PostgreSQL');
 
-        await this.db.query(
-            `UPDATE api_keys_v2 SET status = 'revoked', revoked_at = CURRENT_TIMESTAMP WHERE id = $1`,
-            [keyId]
-        );
+        const isLegacy = typeof keyId === 'string' && keyId.startsWith('legacy_');
+
+        if (isLegacy) {
+            const legacyId = keyId.replace('legacy_', '');
+            await this.db.query(
+                `UPDATE api_keys SET active = false WHERE id = $1`,
+                [legacyId]
+            );
+        } else {
+            await this.db.query(
+                `UPDATE api_keys_v2 SET status = 'revoked', revoked_at = CURRENT_TIMESTAMP WHERE id = $1`,
+                [keyId]
+            );
+        }
 
         // Invalidar cache
         this.validationCache.clear();

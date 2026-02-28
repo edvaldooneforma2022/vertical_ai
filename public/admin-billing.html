@@ -987,10 +987,10 @@
         async function loadUsage() {
             const res = await api('/api/admin/usage/summary');
             const data = res.data || {};
-            
+
             // Suporte para o novo formato { byPlan, byTenant } e fallback para legado
-            const planList = Array.isArray(data.byPlan) ? data.byPlan : 
-                             (Array.isArray(data) ? data : []);
+            const planList = Array.isArray(data.byPlan) ? data.byPlan :
+                (Array.isArray(data) ? data : []);
             const tenantList = Array.isArray(data.byTenant) ? data.byTenant : [];
 
             // 1. KPIs por Plano
@@ -1013,7 +1013,7 @@
             // 2. Tabela de Tenants
             const tbody = document.getElementById('usageBody');
             const empty = document.getElementById('usageEmpty');
-            
+
             if (tenantList.length === 0) {
                 tbody.innerHTML = '';
                 empty.style.display = 'block';
@@ -1026,7 +1026,7 @@
                     const messages = parseInt(t.messages || 0);
                     const pct = Math.min((messages / limit) * 100, 100);
                     const color = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--success)';
-                    
+
                     return `<tr>
                         <td style="font-family:monospace;font-size:.8rem">${shortId(t.tenantId || t.tenant_id)}</td>
                         <td><span class="status-badge info">${(t.plan || 'starter').toUpperCase()}</span></td>
@@ -1103,8 +1103,8 @@
                     <div style="font-size:.8rem;color:var(--text-muted)">ID: ${k.id || '-'} · Criada: ${fmtDate(k.created_at)} · Expira: ${k.expires_at ? fmtDate(k.expires_at) : 'Nunca'}</div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="btn btn-secondary btn-sm" onclick="rotateKey('${tenantId}',${k.id})">🔄 Rotacionar</button>
-                    <button class="btn btn-danger btn-sm" onclick="revokeKey('${tenantId}',${k.id})">🗑️ Revogar</button>
+                    <button class="btn btn-secondary btn-sm" onclick="rotateKey('${tenantId}','${k.id}')">🔄 Rotacionar</button>
+                    <button class="btn btn-danger btn-sm" onclick="revokeKey('${tenantId}','${k.id}')">🗑️ Revogar</button>
                 </div>
             </div>
         </div>`).join('');
