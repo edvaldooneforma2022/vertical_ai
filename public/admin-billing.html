@@ -987,41 +987,61 @@
         async function loadUsage() {
             const res = await api('/api/admin/usage/summary');
             const data = res.data || {};
-            const plans = data.byPlan || data.by_plan || {};
-            const tenants = data.byTenant || data.by_tenant || data.tenants || [];
+            
+            // Suporte para o novo formato { byPlan, byTenant } e fallback para legado
+            const planList = Array.isArray(data.byPlan) ? data.byPlan : 
+                             (Array.isArray(data) ? data : []);
+            const tenantList = Array.isArray(data.byTenant) ? data.byTenant : [];
 
-            // KPIs from plan data
-            const planEntries = Object.entries(plans);
+            // 1. KPIs por Plano
             const kpisEl = document.getElementById('usageKpis');
-            if (planEntries.length > 0) {
-                kpisEl.innerHTML = planEntries.map(([plan, info]) => `
-            <div class="stat-card accent"><div class="stat-label">Plano ${plan}</div>
-            <div class="stat-value" style="color:var(--accent)">${info.count || info.tenants || 0}</div>
-            <div class="stat-sub">${info.messages || 0} msgs · ${info.extractions || 0} ext</div></div>
-        `).join('');
+            if (planList.length > 0) {
+                kpisEl.innerHTML = planList.map(info => {
+                    const planName = info.plan || info.plan_id || '???';
+                    return `
+                        <div class="stat-card accent">
+                            <div class="stat-label">Plano ${planName.toUpperCase()}</div>
+                            <div class="stat-value" style="color:var(--accent)">${info.tenants || info.tenant_count || 0}</div>
+                            <div class="stat-sub">${info.messages || 0} msgs · ${info.extractions || 0} ext</div>
+                        </div>
+                    `;
+                }).join('');
             } else {
-                kpisEl.innerHTML = `<div class="stat-card info"><div class="stat-label">Total de Uso</div><div class="stat-value" style="color:var(--info)">${data.totalMessages || data.total_messages || 0}</div><div class="stat-sub">mensagens processadas</div></div>
-        <div class="stat-card accent"><div class="stat-label">Extrações</div><div class="stat-value" style="color:var(--accent)">${data.totalExtractions || data.total_extractions || 0}</div><div class="stat-sub">total de extrações</div></div>`;
+                kpisEl.innerHTML = `<div class="stat-card info"><div class="stat-label">Total de Uso</div><div class="stat-value" style="color:var(--info)">0</div><div class="stat-sub">Sem dados disponíveis</div></div>`;
             }
 
-            // Tenant table
-            const tenantList = Array.isArray(tenants) ? tenants : Object.entries(tenants).map(([id, d]) => ({ tenantId: id, ...d }));
+            // 2. Tabela de Tenants
             const tbody = document.getElementById('usageBody');
             const empty = document.getElementById('usageEmpty');
+            
             if (tenantList.length === 0) {
                 tbody.innerHTML = '';
                 empty.style.display = 'block';
             } else {
                 empty.style.display = 'none';
                 tbody.innerHTML = tenantList.map(t => {
-                    const pct = t.usagePercent || t.usage_percent || 0;
+                    // Calculando % de uso (simplificado baseado nos limites do billing.js)
+                    const limits = { 'free': 100, 'starter': 1000, 'professional': 5000, 'enterprise': 1000000 };
+                    const limit = limits[t.plan] || 1000;
+                    const messages = parseInt(t.messages || 0);
+                    const pct = Math.min((messages / limit) * 100, 100);
                     const color = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--success)';
+                    
                     return `<tr>
-                <td style="font-family:monospace;font-size:.8rem">${shortId(t.tenantId || t.tenant_id)}</td>
-                <td><span class="status-badge info">${t.plan || '-'}</span></td>
-                <td>${t.messages || 0}</td><td>${t.extractions || 0}</td><td>${t.apiCalls || t.api_calls || 0}</td>
-                <td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden"><div style="width:${Math.min(pct, 100)}%;height:100%;background:${color};border-radius:3px"></div></div><span style="font-size:.8rem;color:${color}">${pct.toFixed(0)}%</span></div></td>
-            </tr>`;
+                        <td style="font-family:monospace;font-size:.8rem">${shortId(t.tenantId || t.tenant_id)}</td>
+                        <td><span class="status-badge info">${(t.plan || 'starter').toUpperCase()}</span></td>
+                        <td>${messages}</td>
+                        <td>${t.extractions || 0}</td>
+                        <td>${t.api_calls || t.apiCalls || 0}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div style="flex:1;height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden">
+                                    <div style="width:${pct}%;height:100%;background:${color};border-radius:3px"></div>
+                                </div>
+                                <span style="font-size:.8rem;color:${color}">${pct.toFixed(0)}%</span>
+                            </div>
+                        </td>
+                    </tr>`;
                 }).join('');
             }
         }

@@ -115,30 +115,46 @@ class BillingMetrics {
      * Uso agregado por plano
      */
     async getUsageSummary() {
-        if (!this.enabled) return [];
+        if (!this.enabled) return { byPlan: [], byTenant: [] };
 
         try {
             const currentPeriod = new Date().toISOString().substring(0, 7); // YYYY-MM
 
-            const result = await this.db.query(`
+            // 1. Resumo por Plano
+            const planResult = await this.db.query(`
                 SELECT 
-                    bs.plan_id,
-                    COUNT(DISTINCT bu.tenant_id) as tenant_count,
-                    SUM(bu.messages) as total_messages,
-                    SUM(bu.extractions) as total_extractions,
-                    SUM(bu.api_calls) as total_api_calls,
-                    AVG(bu.messages) as avg_messages
-                FROM billing_usage bu
-                LEFT JOIN billing_subscriptions bs ON bu.tenant_id = bs.tenant_id
-                WHERE bu.period = $1
+                    bs.plan_id as plan,
+                    COUNT(DISTINCT bs.tenant_id) as tenants,
+                    COALESCE(SUM(bu.messages), 0) as messages,
+                    COALESCE(SUM(bu.extractions), 0) as extractions,
+                    COALESCE(SUM(bu.api_calls), 0) as api_calls
+                FROM billing_subscriptions bs
+                LEFT JOIN billing_usage bu ON bs.tenant_id = bu.tenant_id AND bu.period = $1
                 GROUP BY bs.plan_id
                 ORDER BY bs.plan_id
             `, [currentPeriod]);
 
-            return result.rows;
+            // 2. Detalhes por Tenant (incluindo os com uso zero)
+            const tenantResult = await this.db.query(`
+                SELECT 
+                    bs.tenant_id as "tenantId",
+                    bs.plan_id as plan,
+                    COALESCE(bu.messages, 0) as messages,
+                    COALESCE(bu.extractions, 0) as extractions,
+                    COALESCE(bu.api_calls, 0) as api_calls
+                FROM billing_subscriptions bs
+                LEFT JOIN billing_usage bu ON bs.tenant_id = bu.tenant_id AND bu.period = $1
+                ORDER BY messages DESC, bs.tenant_id ASC
+                LIMIT 100
+            `, [currentPeriod]);
+
+            return {
+                byPlan: planResult.rows,
+                byTenant: tenantResult.rows
+            };
         } catch (error) {
             console.error('❌ [BILLING METRICS] Erro ao calcular uso:', error.message);
-            return [];
+            return { byPlan: [], byTenant: [] };
         }
     }
 
