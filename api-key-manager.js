@@ -119,7 +119,10 @@ class ApiKeyManager {
                 for (const row of result.rows) {
                     const matches = await bcrypt.compare(rawKey, row.key_hash);
                     if (matches) {
-                        if (row.status !== 'active') return { valid: false, reason: 'Key revogada ou inativa' };
+                        if (row.status !== 'active') {
+                            console.log(`🚫 [SECURITY] Key V2 BLOQUEADA (status=${row.status}): tenant=${row.tenant_id}`);
+                            return { valid: false, reason: 'Key revogada ou inativa' };
+                        }
                         if (row.expires_at && new Date(row.expires_at) < new Date()) return { valid: false, reason: 'Key expirada' };
 
                         const validResult = {
@@ -142,15 +145,42 @@ class ApiKeyManager {
                 }
             } else {
                 // --- LÓGICA LEGADO (Sistema Antigo) ---
-                const result = await this.db.query(
+                // Busca 1: Por key_value (plaintext)
+                let result = await this.db.query(
                     `SELECT * FROM api_keys WHERE key_value = $1`,
                     [rawKey]
                 );
 
+                // Busca 2: Se não encontrou por plaintext, buscar por key_hash (SHA-256)
+                if (result.rows.length === 0) {
+                    const keyHash = require('crypto').createHash('sha256').update(rawKey).digest('hex');
+                    result = await this.db.query(
+                        `SELECT * FROM api_keys WHERE key_hash = $1`,
+                        [keyHash]
+                    );
+                }
+
                 if (result.rows.length === 0) return { valid: false, reason: 'Key legada não encontrada' };
                 const row = result.rows[0];
 
-                if (!row.active) return { valid: false, reason: 'Key legada revogada' };
+                if (!row.active) {
+                    console.log(`🚫 [SECURITY] Key LEGADA BLOQUEADA (active=false): tenant=${row.tenant_id}, key_id=${row.id}`);
+                    const blockedResult = { valid: false, reason: 'Key legada revogada' };
+                    this._setCache(rawKey, blockedResult);
+                    return blockedResult;
+                }
+
+                // Verificar tenant ativo
+                try {
+                    const tenantCheck = await this.db.query(
+                        `SELECT status FROM tenants WHERE id = $1`,
+                        [row.tenant_id]
+                    );
+                    if (tenantCheck.rows.length > 0 && tenantCheck.rows[0].status !== 'active') {
+                        console.log(`🚫 [SECURITY] Tenant SUSPENSO: ${row.tenant_id}`);
+                        return { valid: false, reason: 'Tenant suspenso ou inativo' };
+                    }
+                } catch (e) { /* tenant check é best-effort */ }
 
                 const validResult = {
                     valid: true,
