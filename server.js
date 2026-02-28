@@ -50,6 +50,7 @@ const { crmManager } = require('./lib/crm/index');
 const { whitelabelManager } = require('./whitelabel');
 const { structuredLeadsManager } = require('./structured-leads');
 const { ShortUrlGenerator } = require('./short-url-generator');
+const { getApiKeyManager } = require('./api-key-manager');
 console.log('✅ Módulos V3.0 carregados');
 
 // ===== MÓDULOS V8.0 - MELHORIAS AVANÇADAS =====
@@ -2806,184 +2807,80 @@ app.use(bodyParser.json({ limit: "10mb" }));
 app.use(morgan("combined"));
 
 // ===== API Key Validation Functions =====
-function loadApiKeys() {
-    try {
-        if (process.env.API_KEYS_JSON) {
-            logger.info("Loading API keys from environment variable");
-            return JSON.parse(process.env.API_KEYS_JSON);
-        }
-
-        const dataFile = path.join(__dirname, "data", "api_keys.json");
-        if (fs.existsSync(dataFile)) {
-            logger.info("Loading API keys from file");
-            const raw = fs.readFileSync(dataFile, "utf8");
-            return JSON.parse(raw);
-        }
-
-        logger.warn("No API keys found - neither in environment variable nor in file");
-    } catch (error) {
-        logger.error("Error loading API keys:", error.message);
-    }
-    return {};
-}
-
-function hashKey(key) {
-    return crypto.createHash('sha256').update(key).digest('hex');
-}
-
+// ===== API Key Validation Functions (Powered by ApiKeyManager) =====
 async function validateApiKey(apiKey) {
     try {
-        const keyHash = hashKey(apiKey);
-        const query = `
-            SELECT ak.*, t.name as tenant_name, t.plan, t.status as tenant_status
-            FROM api_keys ak
-            JOIN tenants t ON ak.tenant_id = t.id
-            WHERE ak.key_hash = ${USE_POSTGRES ? '$1' : '?'} AND ak.active = ${USE_POSTGRES ? 'true' : '1'}
-        `;
+        const manager = getApiKeyManager();
+        const result = await manager.validateKey(apiKey);
 
-        const result = await db.query(query, [keyHash]);
-        const rows = result.rows || result;
-
-        if (rows.length > 0) {
-            const row = rows[0];
-
-            // Verificar se o tenant está ativo
-            if (row.tenant_status !== 'active') {
-                return { success: false, error: 'Tenant suspenso ou inativo' };
-            }
-
+        if (result.valid) {
             return {
                 success: true,
                 tenant: {
-                    id: row.tenant_id,
-                    name: row.tenant_name,
-                    plan: row.plan,
-                    status: row.tenant_status,
-                    apiKey: apiKey
-                }
-            };
-        }
-    } catch (error) {
-        logger.error("Error validating API key from DB:", error.message);
-    }
-
-    // ─── FALLBACK: tabela api_keys vazia (pré-migration) ─────────────────────
-    // Se a tabela ainda não tem dados (ex: primeiro deploy após migration do schema),
-    // tentar validar contra o JSON local e auto-criar o tenant no banco.
-    try {
-        const localKeys = loadApiKeys();
-        if (localKeys && localKeys[apiKey]) {
-            const meta = localKeys[apiKey];
-            logger.info(`[validateApiKey] Fallback JSON: criando tenant para chave ${apiKey.substring(0, 10)}...`);
-
-            const tenantId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
-            const apiKeyId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
-            const keyHash = hashKey(apiKey);
-
-            // Criar tenant e api_key no banco (para migração automática suave)
-            try {
-                const insertTenant = USE_POSTGRES
-                    ? `INSERT INTO tenants (id, name, email, plan, status) VALUES ($1, $2, $3, $4, $5)`
-                    : `INSERT INTO tenants (id, name, email, plan, status) VALUES (?, ?, ?, ?, ?)`;
-                await db.query(insertTenant, [
-                    tenantId,
-                    meta.nome || `Tenant ${apiKey.substring(0, 8)}`,
-                    meta.email || null,
-                    meta.plano || 'basic',
-                    meta.active === false ? 'suspended' : 'active'
-                ]);
-
-                const insertKey = USE_POSTGRES
-                    ? `INSERT INTO api_keys (id, tenant_id, key_value, key_hash, active) VALUES ($1, $2, $3, $4, $5)`
-                    : `INSERT INTO api_keys (id, tenant_id, key_value, key_hash, active) VALUES (?, ?, ?, ?, ?)`;
-                await db.query(insertKey, [
-                    apiKeyId, tenantId, apiKey, keyHash,
-                    meta.active !== false ? (USE_POSTGRES ? true : 1) : (USE_POSTGRES ? false : 0)
-                ]);
-
-                logger.info(`[validateApiKey] Tenant auto-criado via fallback: ${tenantId}`);
-
-                // Criar billing_subscription para o dashboard (Opção A)
-                try {
-                    if (USE_POSTGRES) {
-                        const subId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
-                        const plano = meta.plano || 'basic';
-                        await db.query(
-                            `INSERT INTO billing_subscriptions (id, tenant_id, plan_id, status, payment_method, metadata)
-                             VALUES ($1, $2, $3, $4, $5, $6)
-                             ON CONFLICT (tenant_id) DO NOTHING`,
-                            [subId, tenantId, plano, 'active', 'api_keys_json', JSON.stringify({ nome: meta.nome, source: 'fallback' })]
-                        );
-                        const { getAuditLedger } = require('./billing-audit');
-                        const ledger = getAuditLedger();
-                        await ledger.recordEvent({
-                            tenantId, eventType: 'subscription_created', planId: plano,
-                            amountCents: 0, source: 'api_keys_json',
-                            newState: { plan: plano, status: 'active' },
-                            metadata: { nome: meta.nome, source: 'fallback_auto_create' }
-                        });
-                    }
-                } catch (billingErr) {
-                    // Não-crítico: tenant já foi criado, billing é best-effort
-                    logger.warn(`[validateApiKey] billing_subscription fallback falhou (não crítico): ${billingErr.message}`);
-                }
-            } catch (insertErr) {
-                // Se falhar a inserção (ex: já existe por race condition), continuar mesmo assim
-                logger.warn(`[validateApiKey] Fallback insert falhou (pode já existir): ${insertErr.message}`);
-            }
-
-            if (meta.active === false) {
-                return { success: false, error: 'Tenant suspenso ou inativo' };
-            }
-
-            return {
-                success: true,
-                tenant: {
-                    id: tenantId,
-                    name: meta.nome || apiKey.substring(0, 8),
-                    plan: meta.plano || 'basic',
+                    id: result.tenantId,
+                    name: result.name || `Tenant ${result.tenantId.substring(0, 8)}`,
+                    plan: result.plan || 'basic',
                     status: 'active',
-                    apiKey: apiKey
+                    apiKey: apiKey,
+                    scopes: result.scopes,
+                    keyId: result.keyId
                 }
             };
         }
-    } catch (fallbackErr) {
-        logger.error("[validateApiKey] Erro no fallback JSON:", fallbackErr.message);
+        return { success: false, error: result.reason || 'API Key inválida ou revogada' };
+    } catch (error) {
+        logger.error("Error validating API key via Manager:", error.message);
+        return { success: false, error: 'Erro interno na validação' };
     }
-
-    return { success: false };
 }
 
-// ===== API Key Middleware =====
+// ===== API Key Middleware (Real-time Protection) =====
 async function requireApiKey(req, res, next) {
-    logger.info(`[requireApiKey] Path: ${req.path}, Session Validated: ${!!(req.session && req.session.tenantId)}`);
+    // 1. Rotas Públicas (Bypass)
+    const publicPaths = [
+        "/", "/validate-api-key", "/chat.html", "/chatbot",
+        "/api/system/status", "/health", "/api/webhooks/hotmart",
+        "/api/webhooks/hotmart/status"
+    ];
 
-    // Permitir acesso a rotas públicas sem API Key
-    if (req.path === "/" || req.path === "/validate-api-key" || req.path.startsWith("/public/") || req.path === "/chat.html" || req.path === "/chatbot" || req.path.startsWith("/l/") || req.path === "/api/system/status" || req.path === "/health" || req.path === "/api/webhooks/hotmart" || req.path === "/api/webhooks/hotmart/status" || req.path.startsWith("/api/admin")) {
+    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/admin")) {
         return next();
     }
 
+    // 2. Tentar validar via Header/Query/Body
     let apiKey = req.headers['x-api-key'] || req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
 
     if (apiKey) {
         const validation = await validateApiKey(apiKey);
         if (validation.success) {
             req.session.tenantId = validation.tenant.id;
-            req.session.validatedApiKey = apiKey; // Mantido para compatibilidade temporária
+            req.session.validatedApiKey = apiKey;
             req.session.clientData = validation.tenant;
             req.session.plan = validation.tenant.plan;
             req.session.status = validation.tenant.status;
             req.cliente = validation.tenant;
             return next();
+        } else {
+            return res.status(401).json({ success: false, error: validation.error });
         }
     }
 
-    if (req.session && req.session.tenantId) {
-        req.cliente = req.session.clientData;
-        return next();
+    // 3. Validar Sessão Existente com CHECK DE STATUS EM TEMPO REAL
+    if (req.session && req.session.tenantId && req.session.validatedApiKey) {
+        const manager = getApiKeyManager();
+        const verification = await manager.validateKey(req.session.validatedApiKey);
+
+        if (verification.valid) {
+            req.cliente = req.session.clientData;
+            return next();
+        } else {
+            logger.warn(`🚫 [SECURITY] Revoking session for tenant ${req.session.tenantId}: API Key is no longer valid.`);
+            req.session.destroy();
+            return res.redirect("/?error=key_revoked");
+        }
     }
 
-    // Se a API Key não for encontrada ou for inválida, e não houver sessão validada, redirecionar para a página inicial
+    // 4. Sem acesso: Redirecionar para login
     return res.redirect("/");
 }
 

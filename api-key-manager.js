@@ -96,66 +96,78 @@ class ApiKeyManager {
      */
     async validateKey(rawKey) {
         if (!this.enabled || !rawKey) {
-            return { valid: false, reason: 'Sistema de keys v2 desabilitado' };
-        }
-
-        // Verificar formato
-        if (!rawKey.startsWith('lm_live_') && !rawKey.startsWith('lm_test_')) {
-            return { valid: false, reason: 'Formato de key inválido' };
+            return { valid: false, reason: 'Sistema de keys desabilitado' };
         }
 
         // Check cache primeiro
         const cached = this._getCached(rawKey);
         if (cached) return cached;
 
-        const prefix = rawKey.substring(0, 12);
+        const isV2 = rawKey.startsWith('lm_live_') || rawKey.startsWith('lm_test_');
 
         try {
-            // Buscar por prefix (otimizado pelo índice)
-            const result = await this.db.query(
-                `SELECT * FROM api_keys_v2 WHERE key_prefix = $1 AND status = 'active'`,
-                [prefix]
-            );
+            if (isV2) {
+                // --- LÓGICA V2 (Sistema Novo) ---
+                const prefix = rawKey.substring(0, 12);
+                const result = await this.db.query(
+                    `SELECT * FROM api_keys_v2 WHERE key_prefix = $1`,
+                    [prefix]
+                );
 
-            if (result.rows.length === 0) {
-                return { valid: false, reason: 'Key não encontrada' };
-            }
+                if (result.rows.length === 0) return { valid: false, reason: 'Key não encontrada' };
 
-            // Comparar hash (pode ter múltiplas keys com mesmo prefix, improvável)
-            for (const row of result.rows) {
-                const matches = await bcrypt.compare(rawKey, row.key_hash);
-                if (matches) {
-                    // Verificar expiração
-                    if (row.expires_at && new Date(row.expires_at) < new Date()) {
-                        return { valid: false, reason: 'Key expirada' };
+                for (const row of result.rows) {
+                    const matches = await bcrypt.compare(rawKey, row.key_hash);
+                    if (matches) {
+                        if (row.status !== 'active') return { valid: false, reason: 'Key revogada ou inativa' };
+                        if (row.expires_at && new Date(row.expires_at) < new Date()) return { valid: false, reason: 'Key expirada' };
+
+                        const validResult = {
+                            valid: true,
+                            keyId: row.id,
+                            tenantId: row.tenant_id,
+                            scopes: typeof row.scopes === 'string' ? JSON.parse(row.scopes) : row.scopes,
+                            allowedIps: typeof row.allowed_ips === 'string' ? JSON.parse(row.allowed_ips) : row.allowed_ips,
+                            allowedDomains: typeof row.allowed_domains === 'string' ? JSON.parse(row.allowed_domains) : row.allowed_domains
+                        };
+
+                        this.db.query(
+                            `UPDATE api_keys_v2 SET last_used_at = CURRENT_TIMESTAMP, usage_count = usage_count + 1 WHERE id = $1`,
+                            [row.id]
+                        ).catch(() => { });
+
+                        this._setCache(rawKey, validResult);
+                        return validResult;
                     }
-
-                    const validResult = {
-                        valid: true,
-                        keyId: row.id,
-                        tenantId: row.tenant_id,
-                        scopes: typeof row.scopes === 'string' ? JSON.parse(row.scopes) : row.scopes,
-                        allowedIps: typeof row.allowed_ips === 'string' ? JSON.parse(row.allowed_ips) : row.allowed_ips,
-                        allowedDomains: typeof row.allowed_domains === 'string' ? JSON.parse(row.allowed_domains) : row.allowed_domains
-                    };
-
-                    // Atualizar last_used_at (fire-and-forget)
-                    this.db.query(
-                        `UPDATE api_keys_v2 SET last_used_at = CURRENT_TIMESTAMP, usage_count = usage_count + 1 WHERE id = $1`,
-                        [row.id]
-                    ).catch(() => { }); // Ignorar erros de atualização
-
-                    // Cachear resultado
-                    this._setCache(rawKey, validResult);
-
-                    return validResult;
                 }
+            } else {
+                // --- LÓGICA LEGADO (Sistema Antigo) ---
+                const result = await this.db.query(
+                    `SELECT * FROM api_keys WHERE key_value = $1`,
+                    [rawKey]
+                );
+
+                if (result.rows.length === 0) return { valid: false, reason: 'Key legada não encontrada' };
+                const row = result.rows[0];
+
+                if (!row.active) return { valid: false, reason: 'Key legada revogada' };
+
+                const validResult = {
+                    valid: true,
+                    keyId: `legacy_${row.id}`,
+                    tenantId: row.tenant_id,
+                    scopes: ['*'],
+                    isLegacy: true
+                };
+
+                this._setCache(rawKey, validResult);
+                return validResult;
             }
 
             return { valid: false, reason: 'Key inválida' };
         } catch (error) {
-            console.error('❌ [API KEY MANAGER] Erro ao validar:', error.message);
-            return { valid: false, reason: 'Erro interno de validação' };
+            console.error('❌ [API KEY MANAGER] Erro na validação:', error.message);
+            return { valid: false, reason: 'Erro interno na validação' };
         }
     }
 
