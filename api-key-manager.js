@@ -245,16 +245,45 @@ class ApiKeyManager {
     async listKeys(tenantId) {
         if (!this.enabled) return [];
 
-        const result = await this.db.query(
-            `SELECT id, key_prefix, name, scopes, status, created_at, expires_at, 
-                    last_used_at, usage_count
-             FROM api_keys_v2 
-             WHERE tenant_id = $1 
-             ORDER BY created_at DESC`,
-            [tenantId]
-        );
+        try {
+            // 1. Chaves V2 (Sistema Novo)
+            const v2Result = await this.db.query(
+                `SELECT id, key_prefix, name, scopes, status, created_at, expires_at, 
+                        last_used_at, usage_count
+                 FROM api_keys_v2 
+                 WHERE tenant_id = $1 
+                 ORDER BY created_at DESC`,
+                [tenantId]
+            );
 
-        return result.rows;
+            // 2. Chaves Legadas (Sistema Antigo)
+            // Nota: Tentamos buscar da tabela 'api_keys' se ela existir
+            let legacyKeys = [];
+            try {
+                const legacyResult = await this.db.query(
+                    `SELECT id, key_value, active, 'active' as status, 'Chave Legada' as name
+                     FROM api_keys 
+                     WHERE tenant_id = $1`,
+                    [tenantId]
+                );
+                legacyKeys = legacyResult.rows.map(k => ({
+                    ...k,
+                    id: `legacy_${k.id}`,
+                    key_prefix: k.key_value ? k.key_value.substring(0, 8) : '********',
+                    status: k.active ? 'active' : 'revoked',
+                    is_legacy: true
+                }));
+            } catch (e) {
+                // Tabela legado pode não existir ou ter estrutura diferente
+                console.log('ℹ️ [API KEY MANAGER] Sem chaves legadas para este tenant ou tabela inexistente.');
+            }
+
+            // Unificar resultados
+            return [...v2Result.rows, ...legacyKeys];
+        } catch (error) {
+            console.error('❌ [API KEY MANAGER] Erro ao listar keys:', error.message);
+            return [];
+        }
     }
 
     // ===== CACHE INTERNO =====
