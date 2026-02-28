@@ -10,92 +10,92 @@
 
 let nodemailer;
 try {
-    nodemailer = require('nodemailer');
+  nodemailer = require('nodemailer');
 } catch (e) {
-    // nodemailer não instalado — fallback ativado
-    nodemailer = null;
+  // nodemailer não instalado — fallback ativado
+  nodemailer = null;
 }
 
 class EmailService {
-    constructor() {
-        this.transporter = null;
-        this.configured = false;
-        this._initialize();
+  constructor() {
+    this.transporter = null;
+    this.configured = false;
+    this._initialize();
+  }
+
+  _initialize() {
+    const host = process.env.SMTP_HOST;
+    const port = parseInt(process.env.SMTP_PORT || '587', 10);
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+
+    if (!nodemailer || !host || !user || !pass) {
+      console.log('⚠️ [EmailService] SMTP não configurado — emails serão logados no console (dev mode)');
+      return;
     }
 
-    _initialize() {
-        const host = process.env.SMTP_HOST;
-        const port = parseInt(process.env.SMTP_PORT || '587', 10);
-        const user = process.env.SMTP_USER;
-        const pass = process.env.SMTP_PASS;
+    try {
+      this.transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: { user, pass }
+      });
+      this.configured = true;
+      console.log(`✅ [EmailService] SMTP configurado: ${host}:${port}`);
+    } catch (error) {
+      console.error('❌ [EmailService] Falha ao configurar SMTP:', error.message);
+    }
+  }
 
-        if (!nodemailer || !host || !user || !pass) {
-            console.log('⚠️ [EmailService] SMTP não configurado — emails serão logados no console (dev mode)');
-            return;
-        }
+  /**
+   * Envia email com a API key para o cliente
+   * @param {string} email - Email do comprador
+   * @param {string} nome - Nome do comprador
+   * @param {string} apiKey - API key gerada
+   * @param {string} plataformaUrl - URL da plataforma (ex: https://vertical-ai-dktu.onrender.com)
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  async sendApiKeyEmail(email, nome, apiKey, plataformaUrl) {
+    const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'linkmagicobot@gmail.com';
+    const subject = '🔑 Sua chave de acesso — Link Mágico';
 
-        try {
-            this.transporter = nodemailer.createTransport({
-                host,
-                port,
-                secure: port === 465,
-                auth: { user, pass }
-            });
-            this.configured = true;
-            console.log(`✅ [EmailService] SMTP configurado: ${host}:${port}`);
-        } catch (error) {
-            console.error('❌ [EmailService] Falha ao configurar SMTP:', error.message);
-        }
+    const htmlBody = this._buildEmailHtml(nome, apiKey, plataformaUrl);
+    const textBody = this._buildEmailText(nome, apiKey, plataformaUrl);
+
+    if (!this.configured) {
+      console.log('═══════════════════════════════════════════════════');
+      console.log('📧 [EmailService] DEV MODE — Email que seria enviado:');
+      console.log(`   Para: ${email}`);
+      console.log(`   Nome: ${nome}`);
+      console.log(`   API Key: ${apiKey}`);
+      console.log(`   URL: ${plataformaUrl}`);
+      console.log('═══════════════════════════════════════════════════');
+      return { success: true, message: 'Email logado no console (SMTP não configurado)' };
     }
 
-    /**
-     * Envia email com a API key para o cliente
-     * @param {string} email - Email do comprador
-     * @param {string} nome - Nome do comprador
-     * @param {string} apiKey - API key gerada
-     * @param {string} plataformaUrl - URL da plataforma (ex: https://vertical-ai-dktu.onrender.com)
-     * @returns {Promise<{success: boolean, message: string}>}
-     */
-    async sendApiKeyEmail(email, nome, apiKey, plataformaUrl) {
-        const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'linkmagicobot@gmail.com';
-        const subject = '🔑 Sua chave de acesso — Link Mágico';
+    try {
+      await this.transporter.sendMail({
+        from: `"Link Mágico" <${fromAddress}>`,
+        to: email,
+        subject,
+        text: textBody,
+        html: htmlBody
+      });
 
-        const htmlBody = this._buildEmailHtml(nome, apiKey, plataformaUrl);
-        const textBody = this._buildEmailText(nome, apiKey, plataformaUrl);
-
-        if (!this.configured) {
-            console.log('═══════════════════════════════════════════════════');
-            console.log('📧 [EmailService] DEV MODE — Email que seria enviado:');
-            console.log(`   Para: ${email}`);
-            console.log(`   Nome: ${nome}`);
-            console.log(`   API Key: ${apiKey}`);
-            console.log(`   URL: ${plataformaUrl}`);
-            console.log('═══════════════════════════════════════════════════');
-            return { success: true, message: 'Email logado no console (SMTP não configurado)' };
-        }
-
-        try {
-            await this.transporter.sendMail({
-                from: `"Link Mágico" <${fromAddress}>`,
-                to: email,
-                subject,
-                text: textBody,
-                html: htmlBody
-            });
-
-            console.log(`✅ [EmailService] Email enviado com sucesso para: ${email}`);
-            return { success: true, message: `Email enviado para ${email}` };
-        } catch (error) {
-            console.error(`❌ [EmailService] Falha ao enviar email para ${email}:`, error.message);
-            // Logar a API key no console como fallback de segurança
-            console.log(`🔑 [EmailService] FALLBACK — API Key para ${email}: ${apiKey}`);
-            return { success: false, message: `Falha ao enviar email: ${error.message}` };
-        }
+      console.log(`✅ [EmailService] Email enviado com sucesso para: ${email}`);
+      return { success: true, message: `Email enviado para ${email}` };
+    } catch (error) {
+      console.error(`❌ [EmailService] Falha ao enviar email para ${email}:`, error.message);
+      // Logar a API key no console como fallback de segurança
+      console.log(`🔑 [EmailService] FALLBACK — API Key para ${email}: ${apiKey}`);
+      return { success: false, message: `Falha ao enviar email: ${error.message}` };
     }
+  }
 
-    _buildEmailHtml(nome, apiKey, plataformaUrl) {
-        const primeiroNome = (nome || 'Cliente').split(' ')[0];
-        return `
+  _buildEmailHtml(nome, apiKey, plataformaUrl) {
+    const primeiroNome = (nome || 'Cliente').split(' ')[0];
+    return `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"></head>
@@ -129,6 +129,16 @@ class EmailService {
               <li>Cole sua API Key no campo de autenticação</li>
               <li>Clique em <strong>"Validar"</strong> e comece a usar!</li>
             </ol>
+            <!-- Training Link -->
+            <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:16px 20px;margin:0 0 24px;">
+              <h3 style="color:#065f46;font-size:16px;margin:0 0 8px;">🎓 Treinamento Exclusivo</h3>
+              <p style="color:#047857;font-size:14px;line-height:1.6;margin:0;">
+                Acesse o treinamento completo para aproveitar ao máximo a plataforma:
+              </p>
+              <div style="text-align:center;margin:12px 0 0;">
+                <a href="https://www.arsenalsecretodosceos.com.br/BEMVINDO" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:600;">Acessar Treinamento →</a>
+              </div>
+            </div>
             <!-- CTA Button -->
             <div style="text-align:center;margin:0 0 24px;">
               <a href="${plataformaUrl}" style="display:inline-block;background:#6366f1;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;">Acessar a Plataforma →</a>
@@ -154,11 +164,11 @@ class EmailService {
   </table>
 </body>
 </html>`;
-    }
+  }
 
-    _buildEmailText(nome, apiKey, plataformaUrl) {
-        const primeiroNome = (nome || 'Cliente').split(' ')[0];
-        return `Olá, ${primeiroNome}!
+  _buildEmailText(nome, apiKey, plataformaUrl) {
+    const primeiroNome = (nome || 'Cliente').split(' ')[0];
+    return `Olá, ${primeiroNome}!
 
 Obrigado por adquirir o Link Mágico! Sua chave de acesso está pronta:
 
@@ -169,11 +179,14 @@ Obrigado por adquirir o Link Mágico! Sua chave de acesso está pronta:
 2. Cole sua API Key no campo de autenticação
 3. Clique em "Validar" e comece a usar!
 
+🎓 Treinamento Exclusivo:
+Acesse o treinamento completo: https://www.arsenalsecretodosceos.com.br/BEMVINDO
+
 ⚠️ Importante: Guarde esta chave com segurança. Ela é pessoal e intransferível.
 
 ---
 Este é um email automático do Link Mágico.`;
-    }
+  }
 }
 
 // Instância singleton
