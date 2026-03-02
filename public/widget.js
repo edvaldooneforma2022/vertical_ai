@@ -188,9 +188,25 @@
                             this.config.secondaryColor = wlConfig.secondaryColor;
                         }
 
-                        console.log('🎨 LinkMagico Widget: Cores whitelabel aplicadas', {
+                        // 🎯 BUG-FIX-001: Aplicar logo e nome da empresa do whitelabel
+                        if (wlConfig.companyName) {
+                            this.config.robotName = wlConfig.companyName;
+                        }
+                        if (wlConfig.logoUrl) {
+                            this.config.logoUrl = wlConfig.logoUrl;
+                        }
+
+                        // 🎯 BUG-FIX-002/005: Aplicar mensagem de saudação do whitelabel
+                        if (wlConfig.welcomeMessage) {
+                            this.config.welcomeMessage = wlConfig.welcomeMessage;
+                        }
+
+                        console.log('🎨 LinkMagico Widget: Whitelabel aplicado', {
                             primary: this.config.primaryColor,
-                            secondary: this.config.secondaryColor
+                            secondary: this.config.secondaryColor,
+                            company: this.config.robotName,
+                            logo: this.config.logoUrl || '(sem logo)',
+                            welcomeMessage: this.config.welcomeMessage
                         });
                     }
                 }
@@ -311,7 +327,7 @@
                     <div class="lm-chat-header">
                         <div class="lm-chat-info">
                             <div class="lm-chat-avatar">
-                                <i class="fas fa-robot"></i>
+                                ${this.config.logoUrl ? `<img src="${this.escapeHtml(this.config.logoUrl)}" alt="${this.escapeHtml(this.config.robotName)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><i class="fas fa-robot" style="display:none;width:40px;height:40px;align-items:center;justify-content:center"></i>` : `<i class="fas fa-robot"></i>`}
                             </div>
                             <div class="lm-chat-details">
                                 <div class="lm-chat-title">${this.escapeHtml(this.config.robotName)}</div>

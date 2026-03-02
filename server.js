@@ -1073,6 +1073,54 @@ class LeadCaptureSystem {
         return this.leads.find(l => l.email === email);
     }
 
+    // 🎯 BUG-FIX-004: Excluir lead individual por ID (novo método isolado)
+    deleteLeadById(leadId) {
+        try {
+            const index = this.leads.findIndex(l => l.id === leadId);
+            if (index === -1) return null;
+
+            const removedLead = this.leads.splice(index, 1)[0];
+            this.saveLeads();
+            console.log(`🗑️ Lead removido: ${removedLead.nome || removedLead.email} (ID: ${leadId})`);
+
+            // Tentar remover do PostgreSQL também (fallback silencioso)
+            if (USE_POSTGRES) {
+                try {
+                    DatabaseHelpers.run(
+                        'DELETE FROM leads WHERE id = $1 AND api_key = $2',
+                        [leadId, this.apiKey]
+                    ).catch(err => console.warn('⚠️ Fallback: Erro ao deletar lead do PostgreSQL:', err.message));
+                } catch (pgErr) {
+                    // Silencioso - JSON já foi atualizado
+                }
+            }
+
+            return removedLead;
+        } catch (error) {
+            console.error('❌ Erro ao deletar lead:', error);
+            return null;
+        }
+    }
+
+    // 🎯 BUG-FIX-003: Excluir leads por robotName (para limpeza ao deletar assistente)
+    deleteLeadsByRobotName(robotName) {
+        try {
+            const before = this.leads.length;
+            const removedLeads = this.leads.filter(l => l.robotName === robotName);
+            this.leads = this.leads.filter(l => l.robotName !== robotName);
+            const removed = before - this.leads.length;
+
+            if (removed > 0) {
+                this.saveLeads();
+                console.log(`🗑️ ${removed} leads do assistente "${robotName}" removidos`);
+            }
+            return removed;
+        } catch (error) {
+            console.error('❌ Erro ao deletar leads por robotName:', error);
+            return 0;
+        }
+    }
+
     // 🎯 Encontrar lead por conversationId para rastrear mensagens
     findLeadByConversationId(conversationId) {
         return this.leads.find(l => l.conversationId === conversationId);
@@ -3001,6 +3049,30 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
         res.json({ success: true, lead });
     } else {
         res.status(404).json({ success: false, error: "Lead não encontrado" });
+    }
+});
+
+// 🎯 BUG-FIX-004: Endpoint para excluir lead individual
+app.delete("/admin/leads/:id", requireApiKey, (req, res) => {
+    try {
+        const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
+
+        if (!apiKey) {
+            return res.status(401).json({ success: false, error: "API Key não fornecida" });
+        }
+
+        const leadSystem = getLeadSystem(apiKey);
+        const removed = leadSystem.deleteLeadById(req.params.id);
+
+        if (removed) {
+            console.log(`🗑️ Lead ${req.params.id} removido pelo admin (tenant ${apiKey.substring(0, 8)}...)`);
+            res.json({ success: true, message: "Lead removido com sucesso", lead: removed });
+        } else {
+            res.status(404).json({ success: false, error: "Lead não encontrado" });
+        }
+    } catch (error) {
+        console.error("❌ Erro ao excluir lead:", error);
+        res.status(500).json({ success: false, error: "Erro ao excluir lead" });
     }
 });
 
@@ -5128,9 +5200,15 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
     const bgPrimary = whitelabel.primaryColor || '#667eea';
     const bgSecondary = whitelabel.secondaryColor || '#764ba2';
 
-    // Título da página: usar nome da empresa do whitelabel se definido
+    // 🎨 BUG-FIX-001: Logo e nome da empresa do whitelabel
+    const logoUrl = whitelabel.logoUrl || '';
     const companyBrand = whitelabel.companyName || 'LinkMágico';
+    // BUG-FIX-001: Usar companyName como nome exibido no header quando configurado
+    const headerTitle = whitelabel.companyName || safeRobotName;
     const pageTitle = `${companyBrand} - ${safeRobotName}`;
+
+    // 🎯 BUG-FIX-005: Mensagem de saudação configurável
+    const welcomeMessage = whitelabel.welcomeMessage || `Olá! Sou ${safeRobotName}, estou aqui para tirar todas as suas dúvidas. Como posso ajudar você hoje?`;
 
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
@@ -5157,9 +5235,12 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,${bgPrimary} 0%,${bgSecondary} 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
         .chat-container{width:100%;max-width:800px;height:90vh;background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.15);display:flex;flex-direction:column;overflow:hidden}
         .chat-header{background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;padding:20px;text-align:center;position:relative}
+        .chat-header img.wl-logo{max-width:140px;max-height:50px;margin-bottom:8px;object-fit:contain}
         .chat-header h1{font-size:1.5rem;font-weight:600}
         .chat-header .subtitle{font-size:0.9rem;opacity:0.9;margin-top:5px}
         .chat-messages{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:15px;background:#f8fafc}
+        .cta-link{display:inline-block;background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white!important;text-decoration:none;padding:10px 20px;border-radius:25px;font-weight:600;margin:8px 4px;transition:all .3s;box-shadow:0 4px 12px rgba(0,0,0,0.15);cursor:pointer}
+        .cta-link:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
         .chat-message{max-width:70%;padding:15px;border-radius:15px;font-size:0.95rem;line-height:1.4}
         .chat-message.user{background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;align-self:flex-end;border-bottom-right-radius:5px}
         .chat-message.bot{background:#f1f5f9;color:#334155;align-self:flex-start;border-bottom-left-radius:5px}
@@ -5191,7 +5272,8 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <h1>${safeRobotName}</h1>
+            ${logoUrl ? `<img class="wl-logo" src="${logoUrl}" alt="${escapeForJS(companyBrand)}" onerror="this.style.display='none'">` : ''}
+            <h1>${headerTitle}</h1>
             <div class="subtitle">Estou aqui para tirar todas as suas dúvidas</div>
         </div>
         ${botoesFixos}
@@ -5204,7 +5286,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             <button id="startChat"><i class="fas fa-comments" style="margin-right:8px"></i> Iniciar Conversa</button>
         </div>
         <div class="chat-messages" id="chatMessages" style="display:none">
-            <div class="chat-message bot">Olá! Sou ${safeRobotName}, estou aqui para tirar todas as suas dúvidas. Como posso ajudar você hoje?</div>
+            <div class="chat-message bot">${welcomeMessage}</div>
         </div>
         <div class="chat-input-container" id="chatInputContainer" style="display:none">
             <input type="text" class="chat-input" id="messageInput" placeholder="Digite sua mensagem..." autocomplete="off">
@@ -5276,10 +5358,25 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             }
         });
 
+        // 🎯 BUG-FIX-006: Processar URLs como botões CTA clicáveis
+        function processMessageContent(text) {
+            if (!text) return text;
+            const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+            return text.replace(urlRegex, function(url) {
+                let displayText = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+                if (displayText.length > 30) displayText = displayText.substring(0, 30) + '...';
+                return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="cta-link">🔗 ' + displayText + '</a>';
+            });
+        }
+
         function addMessage(text, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = \`chat-message \${isUser ? 'user' : 'bot'}\`;
-            messageDiv.textContent = text;
+            if (isUser) {
+                messageDiv.textContent = text;
+            } else {
+                messageDiv.innerHTML = processMessageContent(text);
+            }
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -5377,6 +5474,8 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         .contact-button{flex:1;min-width:120px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center;cursor:pointer;transition:all 0.3s;text-decoration:none;color:#334155;font-size:0.85rem}
         .contact-button:hover{background:#3b82f6;color:white;transform:translateY(-2px)}
         .contact-button i{margin-right:5px}
+        .cta-link{display:inline-block;background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white!important;text-decoration:none;padding:10px 20px;border-radius:25px;font-weight:600;margin:8px 4px;transition:all .3s;box-shadow:0 4px 12px rgba(0,0,0,0.15);cursor:pointer}
+        .cta-link:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
     </style>
 </head>
 <body>
@@ -5466,10 +5565,25 @@ url_origem: window.location.href,
             }
         });
 
+        // 🎯 BUG-FIX-006: Processar URLs como botões CTA clicáveis
+        function processMessageContent(text) {
+            if (!text) return text;
+            const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+            return text.replace(urlRegex, function(url) {
+                let displayText = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+                if (displayText.length > 30) displayText = displayText.substring(0, 30) + '...';
+                return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="cta-link">🔗 ' + displayText + '</a>';
+            });
+        }
+
         function addMessage(content, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'chat-message ' + (isUser ? 'user' : 'bot');
-            messageDiv.textContent = content;
+            if (isUser) {
+                messageDiv.textContent = content;
+            } else {
+                messageDiv.innerHTML = processMessageContent(content);
+            }
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -5767,12 +5881,13 @@ try {
             const { chatbotId } = req.params;
             const result = await whitelabelManager.getConfig(chatbotId);
 
-            // Retornar apenas as cores (sem dados sensíveis)
+            // Retornar cores e dados visuais públicos (sem dados sensíveis)
             const publicConfig = {
                 primaryColor: result?.settings?.primaryColor || result?.primaryColor || '#3b82f6',
                 secondaryColor: result?.settings?.secondaryColor || result?.secondaryColor || '#8b5cf6',
                 companyName: result?.settings?.companyName || result?.companyName || null,
-                logoUrl: result?.settings?.logoUrl || result?.logoUrl || null
+                logoUrl: result?.settings?.logoUrl || result?.logoUrl || null,
+                welcomeMessage: result?.settings?.welcomeMessage || null
             };
 
             res.json({ success: true, config: publicConfig });

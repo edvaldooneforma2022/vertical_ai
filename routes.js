@@ -905,8 +905,22 @@ function setupRoutes(app) {
                 return res.status(404).json({ success: false, error: 'Assistente não encontrado' });
             }
 
-            console.log(`🗑️ Assistente removido: ${removed.robot_name || removed.short_code} (tenant ${apiKey.substring(0, 8)}...)`);
-            res.json({ success: true, message: 'Assistente removido com sucesso', removedId: id });
+            // 🎯 BUG-FIX-003: Limpar leads associados ao assistente deletado (try/catch isolado)
+            let leadsRemoved = 0;
+            try {
+                if (getLeadSystem && removed.robot_name) {
+                    const leadSystem = getLeadSystem(apiKey);
+                    if (leadSystem && typeof leadSystem.deleteLeadsByRobotName === 'function') {
+                        leadsRemoved = leadSystem.deleteLeadsByRobotName(removed.robot_name);
+                    }
+                }
+            } catch (leadErr) {
+                // Fallback silencioso - a exclusão do assistente já foi feita com sucesso
+                console.warn('⚠️ Limpeza de leads falhou (não crítico):', leadErr.message);
+            }
+
+            console.log(`🗑️ Assistente removido: ${removed.robot_name || removed.short_code} (tenant ${apiKey.substring(0, 8)}...) | Leads removidos: ${leadsRemoved}`);
+            res.json({ success: true, message: 'Assistente removido com sucesso', removedId: id, leadsRemoved });
         } catch (error) {
             console.error('❌ Erro ao remover assistente:', error);
             res.status(500).json({ success: false, error: 'Erro ao remover assistente' });

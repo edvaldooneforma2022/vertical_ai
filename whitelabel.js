@@ -44,12 +44,22 @@ class WhitelabelManager {
                     custom_domain TEXT,
                     favicon_url TEXT,
                     custom_css TEXT,
+                    welcome_message TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `;
 
             await DatabaseHelpers.run(query);
+
+            // BUG-FIX-005: Adicionar coluna welcome_message se não existir (migração)
+            try {
+                await DatabaseHelpers.run(`ALTER TABLE whitelabel_settings ADD COLUMN welcome_message TEXT`);
+                console.log('✅ Coluna welcome_message adicionada à tabela whitelabel_settings');
+            } catch (alterErr) {
+                // Coluna já existe - ignorar erro silenciosamente
+            }
+
             console.log('✅ Tabela whitelabel_settings criada/verificada');
             return true;
         } catch (error) {
@@ -91,8 +101,8 @@ class WhitelabelManager {
                         id, chatbot_id, plan_type, company_name, logo_url,
                         primary_color, secondary_color, powered_by_text,
                         show_powered_by, custom_domain, favicon_url, custom_css,
-                        updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP)
+                        welcome_message, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP)
                     ON CONFLICT (id) DO UPDATE SET
                         plan_type = $3,
                         company_name = $4,
@@ -104,6 +114,7 @@ class WhitelabelManager {
                         custom_domain = $10,
                         favicon_url = $11,
                         custom_css = $12,
+                        welcome_message = $13,
                         updated_at = CURRENT_TIMESTAMP
                 `;
             } else {
@@ -113,8 +124,8 @@ class WhitelabelManager {
                         id, chatbot_id, plan_type, company_name, logo_url,
                         primary_color, secondary_color, powered_by_text,
                         show_powered_by, custom_domain, favicon_url, custom_css,
-                        updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        welcome_message, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 `;
             }
 
@@ -130,7 +141,8 @@ class WhitelabelManager {
                 settings.showPoweredBy !== undefined ? settings.showPoweredBy : true,
                 settings.customDomain || null,
                 settings.faviconUrl || null,
-                settings.customCss || null
+                settings.customCss || null,
+                settings.welcomeMessage || null
             ]);
 
             console.log(`✅ Whitelabel configurado para chatbot ${chatbotId}`);
@@ -192,7 +204,8 @@ class WhitelabelManager {
                     showPoweredBy: settings.show_powered_by === 1 || settings.show_powered_by === true,
                     customDomain: settings.custom_domain,
                     faviconUrl: settings.favicon_url,
-                    customCss: settings.custom_css
+                    customCss: settings.custom_css,
+                    welcomeMessage: settings.welcome_message || null
                 },
                 isDefault: false
             };
