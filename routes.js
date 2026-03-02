@@ -905,22 +905,179 @@ function setupRoutes(app) {
                 return res.status(404).json({ success: false, error: 'Assistente não encontrado' });
             }
 
-            // 🎯 BUG-FIX-003: Limpar leads associados ao assistente deletado (try/catch isolado)
-            let leadsRemoved = 0;
+            // ===== 🧹 LIMPEZA COMPLETA DE DADOS ASSOCIADOS =====
+            // Cada bloco em try/catch isolado — se um falhar, os demais continuam
+            const cleanup = { leads: 0, whitelabel: false, appointments: 0, structuredLeads: 0, knowledgeBase: 0, crm: 0 };
+            const robotName = removed.robot_name;
+            const shortCode = removed.short_code;
+
+            // 1. 🎯 Limpar Leads (JSON + PostgreSQL)
             try {
-                if (getLeadSystem && removed.robot_name) {
+                if (getLeadSystem && robotName) {
                     const leadSystem = getLeadSystem(apiKey);
                     if (leadSystem && typeof leadSystem.deleteLeadsByRobotName === 'function') {
-                        leadsRemoved = leadSystem.deleteLeadsByRobotName(removed.robot_name);
+                        cleanup.leads = leadSystem.deleteLeadsByRobotName(robotName);
                     }
                 }
-            } catch (leadErr) {
-                // Fallback silencioso - a exclusão do assistente já foi feita com sucesso
-                console.warn('⚠️ Limpeza de leads falhou (não crítico):', leadErr.message);
+            } catch (err) {
+                console.warn('⚠️ Limpeza de leads falhou (não crítico):', err.message);
             }
 
-            console.log(`🗑️ Assistente removido: ${removed.robot_name || removed.short_code} (tenant ${apiKey.substring(0, 8)}...) | Leads removidos: ${leadsRemoved}`);
-            res.json({ success: true, message: 'Assistente removido com sucesso', removedId: id, leadsRemoved });
+            // 2. 🎨 Limpar Whitelabel
+            try {
+                const { whitelabelManager } = require('./whitelabel');
+                if (whitelabelManager && typeof whitelabelManager.removeSettings === 'function') {
+                    await whitelabelManager.removeSettings(apiKey);
+                    cleanup.whitelabel = true;
+                }
+            } catch (err) {
+                console.warn('⚠️ Limpeza de whitelabel falhou (não crítico):', err.message);
+            }
+
+            // 3. 📅 Limpar Agendamentos (PostgreSQL)
+            try {
+                const delApptQuery = USE_POSTGRES
+                    ? `DELETE FROM tenant_appointments WHERE api_key = $1`
+                    : `DELETE FROM tenant_appointments WHERE api_key = ?`;
+                const apptResult = await DatabaseHelpers.run(delApptQuery, [apiKey]);
+                cleanup.appointments = apptResult?.changes || 0;
+            } catch (err) {
+                console.warn('⚠️ Limpeza de agendamentos falhou (não crítico):', err.message);
+            }
+
+            // 4. 📋 Limpar Leads Estruturados (structured_leads)
+            try {
+                const { structuredLeadsManager } = require('./structured-leads');
+                if (structuredLeadsManager && typeof structuredLeadsManager.removeSettings === 'function') {
+                    await structuredLeadsManager.removeSettings(apiKey);
+                }
+                // Fallback direto no banco
+                const delStructQuery = USE_POSTGRES
+                    ? `DELETE FROM structured_leads WHERE chatbot_id = $1`
+                    : `DELETE FROM structured_leads WHERE chatbot_id = ?`;
+                const structResult = await DatabaseHelpers.run(delStructQuery, [apiKey]);
+                cleanup.structuredLeads = structResult?.changes || 0;
+            } catch (err) {
+                // Tabela pode não existir — ignorar silenciosamente
+                console.warn('⚠️ Limpeza de leads estruturados falhou (não crítico):', err.message);
+            }
+
+            // 5. 📚 Limpar Knowledge Base
+            try {
+                const { knowledgeBaseManager } = require('./knowledge-base');
+                if (knowledgeBaseManager && typeof knowledgeBaseManager.deleteByAssistant === 'function') {
+                    await knowledgeBaseManager.deleteByAssistant(apiKey);
+                }
+                // Fallback direto no banco
+                const delKbQuery = USE_POSTGRES
+                    ? `DELETE FROM knowledge_base WHERE chatbot_id = $1`
+                    : `DELETE FROM knowledge_base WHERE chatbot_id = ?`;
+                const kbResult = await DatabaseHelpers.run(delKbQuery, [apiKey]);
+                cleanup.knowledgeBase = kbResult?.changes || 0;
+            } catch (err) {
+                console.warn('⚠️ Limpeza de Knowledge Base falhou (não crítico):', err.message);
+            }
+
+            // 6. 📊 Limpar CRM/Pipeline (leads CRM, atividades, deals, follow-up)
+            try {
+                // Buscar tenant_id via api_key
+                const tenantQuery = USE_POSTGRES
+                    ? `SELECT t.id FROM tenants t JOIN api_keys ak ON ak.tenant_id = t.id WHERE ak.key_hash = $1 LIMIT 1`
+                    : `SELECT tenant_uuid as id FROM tenant_leads WHERE api_key = ? LIMIT 1`;
+                const crypto = require('crypto');
+                const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+                const tenantResult = await DatabaseHelpers.get(
+                    USE_POSTGRES ? tenantQuery : tenantQuery.replace('$1', '?'),
+                    USE_POSTGRES ? [keyHash] : [apiKey]
+                );
+                const tenantId = tenantResult?.id;
+
+                if (tenantId) {
+                    // Deletar follow-up jobs e logs primeiro (dependências)
+                    try {
+                        const delJobsQuery = USE_POSTGRES
+                            ? `DELETE FROM followup_jobs WHERE tenant_id = $1`
+                            : `DELETE FROM followup_jobs WHERE tenant_id = ?`;
+                        await DatabaseHelpers.run(delJobsQuery, [tenantId]);
+                    } catch (e) { /* tabela pode não existir */ }
+
+                    try {
+                        const delRulesQuery = USE_POSTGRES
+                            ? `DELETE FROM followup_rules WHERE tenant_id = $1`
+                            : `DELETE FROM followup_rules WHERE tenant_id = ?`;
+                        await DatabaseHelpers.run(delRulesQuery, [tenantId]);
+                    } catch (e) { /* tabela pode não existir */ }
+
+                    // Deletar atividades CRM
+                    try {
+                        const delActQuery = USE_POSTGRES
+                            ? `DELETE FROM crm_activities WHERE tenant_id = $1`
+                            : `DELETE FROM crm_activities WHERE tenant_id = ?`;
+                        await DatabaseHelpers.run(delActQuery, [tenantId]);
+                    } catch (e) { /* tabela pode não existir */ }
+
+                    // Deletar deals CRM
+                    try {
+                        const delDealsQuery = USE_POSTGRES
+                            ? `DELETE FROM crm_deals WHERE tenant_id = $1`
+                            : `DELETE FROM crm_deals WHERE tenant_id = ?`;
+                        await DatabaseHelpers.run(delDealsQuery, [tenantId]);
+                    } catch (e) { /* tabela pode não existir */ }
+
+                    // Deletar leads CRM
+                    try {
+                        const delCrmLeadsQuery = USE_POSTGRES
+                            ? `DELETE FROM crm_leads WHERE tenant_id = $1`
+                            : `DELETE FROM crm_leads WHERE tenant_id = ?`;
+                        const crmResult = await DatabaseHelpers.run(delCrmLeadsQuery, [tenantId]);
+                        cleanup.crm = crmResult?.changes || 0;
+                    } catch (e) { /* tabela pode não existir */ }
+
+                    // Deletar stages e pipelines CRM
+                    try {
+                        const delStagesQuery = USE_POSTGRES
+                            ? `DELETE FROM crm_stages WHERE pipeline_id IN (SELECT id FROM crm_pipelines WHERE tenant_id = $1)`
+                            : `DELETE FROM crm_stages WHERE pipeline_id IN (SELECT id FROM crm_pipelines WHERE tenant_id = ?)`;
+                        await DatabaseHelpers.run(delStagesQuery, [tenantId]);
+                        const delPipelineQuery = USE_POSTGRES
+                            ? `DELETE FROM crm_pipelines WHERE tenant_id = $1`
+                            : `DELETE FROM crm_pipelines WHERE tenant_id = ?`;
+                        await DatabaseHelpers.run(delPipelineQuery, [tenantId]);
+                    } catch (e) { /* tabela pode não existir */ }
+
+                    // Deletar automações e webhooks CRM
+                    try {
+                        await DatabaseHelpers.run(
+                            USE_POSTGRES ? `DELETE FROM crm_automation_rules WHERE tenant_id = $1` : `DELETE FROM crm_automation_rules WHERE tenant_id = ?`,
+                            [tenantId]
+                        );
+                        await DatabaseHelpers.run(
+                            USE_POSTGRES ? `DELETE FROM crm_webhooks WHERE tenant_id = $1` : `DELETE FROM crm_webhooks WHERE tenant_id = ?`,
+                            [tenantId]
+                        );
+                    } catch (e) { /* tabelas podem não existir */ }
+                }
+            } catch (err) {
+                console.warn('⚠️ Limpeza de CRM/Pipeline falhou (não crítico):', err.message);
+            }
+
+            // 7. 🗄️ Limpar tenant_leads restantes no PostgreSQL (que não tenham robotName)
+            try {
+                if (USE_POSTGRES) {
+                    const delAllLeadsQuery = `DELETE FROM tenant_leads WHERE api_key = $1`;
+                    await DatabaseHelpers.run(delAllLeadsQuery, [apiKey]);
+                }
+            } catch (err) {
+                console.warn('⚠️ Limpeza final de tenant_leads falhou (não crítico):', err.message);
+            }
+
+            console.log(`🗑️ EXCLUSÃO COMPLETA do assistente: ${robotName || shortCode} (tenant ${apiKey.substring(0, 8)}...)`, cleanup);
+            res.json({
+                success: true,
+                message: 'Assistente e todos os dados associados removidos permanentemente',
+                removedId: id,
+                cleanup
+            });
         } catch (error) {
             console.error('❌ Erro ao remover assistente:', error);
             res.status(500).json({ success: false, error: 'Erro ao remover assistente' });
