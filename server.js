@@ -1083,13 +1083,15 @@ class LeadCaptureSystem {
             this.saveLeads();
             console.log(`🗑️ Lead removido: ${removedLead.nome || removedLead.email} (ID: ${leadId})`);
 
-            // Tentar remover do PostgreSQL também (fallback silencioso)
+            // Remover do PostgreSQL também (tabela tenant_leads) — fallback silencioso
             if (USE_POSTGRES) {
                 try {
-                    DatabaseHelpers.run(
-                        'DELETE FROM leads WHERE id = $1 AND api_key = $2',
+                    db.query(
+                        'DELETE FROM tenant_leads WHERE id = $1 AND api_key = $2',
                         [leadId, this.apiKey]
-                    ).catch(err => console.warn('⚠️ Fallback: Erro ao deletar lead do PostgreSQL:', err.message));
+                    ).then(() => {
+                        console.log(`🗄️ Lead ${leadId} removido do PostgreSQL`);
+                    }).catch(err => console.warn('⚠️ Fallback: Erro ao deletar lead do PostgreSQL:', err.message));
                 } catch (pgErr) {
                     // Silencioso - JSON já foi atualizado
                 }
@@ -1112,7 +1114,23 @@ class LeadCaptureSystem {
 
             if (removed > 0) {
                 this.saveLeads();
-                console.log(`🗑️ ${removed} leads do assistente "${robotName}" removidos`);
+                console.log(`🗑️ ${removed} leads do assistente "${robotName}" removidos do JSON`);
+
+                // Remover leads do PostgreSQL (tabela tenant_leads) — fallback silencioso
+                if (USE_POSTGRES) {
+                    try {
+                        const idsToRemove = removedLeads.map(l => l.id);
+                        for (const leadId of idsToRemove) {
+                            db.query(
+                                'DELETE FROM tenant_leads WHERE id = $1 AND api_key = $2',
+                                [leadId, this.apiKey]
+                            ).catch(err => console.warn(`⚠️ Fallback PG delete lead ${leadId}:`, err.message));
+                        }
+                        console.log(`🗄️ ${idsToRemove.length} leads removidos do PostgreSQL`);
+                    } catch (pgErr) {
+                        console.warn('⚠️ Erro ao limpar leads do PostgreSQL (não crítico):', pgErr.message);
+                    }
+                }
             }
             return removed;
         } catch (error) {
