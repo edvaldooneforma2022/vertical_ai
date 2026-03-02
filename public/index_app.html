@@ -1306,23 +1306,47 @@
                         placeholder="Ex: https://seusite.com/pagina-de-vendas">
                     <p class="input-hint">A URL deve ser da sua página de vendas ou de conteúdo relevante.</p>
                 </div>
-                <div class="form-group">
-                    <label for="customInstructions" class="form-label"><i class="fas fa-comment-dots"></i> Instruções
-                        Personalizadas (opcional):</label>
-                    <textarea id="customInstructions" class="form-input form-textarea"
-                        placeholder="Ex: Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva">Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva</textarea>
-                    <p class="input-hint">Dica: peça respostas curtas (2-3 frases), objetivas e sem repetições.</p>
+                <!-- UX-004: Link para mostrar opções avançadas -->
+                <div style="margin-bottom:1rem;">
+                    <button id="toggleAdvancedBtn" onclick="toggleAdvancedOptions()"
+                        style="background:none; border:1px solid #475569; color:#94a3b8; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem; width:100%; transition:all 0.3s;">
+                        ⚙️ Mostrar opções avançadas
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="apiKeyInput" class="form-label"><i class="fas fa-key"></i> API Key (para
-                        Agendamentos):</label>
-                    <input type="text" id="apiKeyInput" class="form-input" placeholder="Ex: LMV7-XXXX-XXXX-XXXX">
-                    <p class="input-hint">Sua chave única para identificar o tenant. Obtenha em Configurações > API
-                        Keys.</p>
+
+                <!-- UX-004: Opções avançadas colapsadas por padrão -->
+                <div id="advancedOptions" style="display:none; transition:all 0.3s;">
+                    <div class="form-group">
+                        <label for="customInstructions" class="form-label"><i class="fas fa-comment-dots"></i>
+                            Instruções
+                            Personalizadas (opcional):</label>
+                        <textarea id="customInstructions" class="form-input form-textarea"
+                            placeholder="Ex: Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva">Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva</textarea>
+                        <p class="input-hint">Dica: peça respostas curtas (2-3 frases), objetivas e sem repetições.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="apiKeyInput" class="form-label"><i class="fas fa-key"></i> API Key (para
+                            Agendamentos):</label>
+                        <!-- UX-002: API Key mascarada com toggle -->
+                        <div style="position:relative;">
+                            <input type="password" id="apiKeyInput" class="form-input"
+                                placeholder="Ex: LMV7-XXXX-XXXX-XXXX" style="padding-right:3rem;">
+                            <button id="toggleApiKeyBtn" onclick="toggleApiKeyVisibility()"
+                                style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem; padding:4px 8px;"
+                                title="Mostrar/ocultar API Key">👁</button>
+                        </div>
+                        <p class="input-hint">Sua chave única para identificar o tenant. Obtenha em Configurações > API
+                            Keys.</p>
+                    </div>
                 </div>
-                <button class="btn btn-primary" id="activateChatbotBtn">
+
+                <!-- UX-003: Botão Ativar desabilitado até que nome+URL estejam preenchidos -->
+                <button class="btn btn-primary" id="activateChatbotBtn" disabled
+                    style="opacity:0.5; cursor:not-allowed;">
                     <i class="fas fa-play-circle"></i> Ativar Assistente IA
                 </button>
+                <p id="activateBtnHint" style="color:#f59e0b; font-size:0.78rem; text-align:center; margin-top:0.5rem;">
+                    ⚠️ Preencha o nome e a URL para ativar</p>
             </div>
 
             <!-- ===== NOVA SEÇÃO: LINK DO CHATBOT ===== -->
@@ -1423,45 +1447,62 @@
                             Assistente")</span>
                     </div>
                 </div>
-                <p style="color:#64748b; font-size:0.75rem; margin:12px 0 0 0; text-align:center;">Este checklist é
-                    apenas um guia visual — não bloqueia nenhuma ação.</p>
+                <p style="color:#10b981; font-size:0.75rem; margin:12px 0 0 0; text-align:center;">✅ Complete os passos
+                    acima para ativar seu assistente com máximo potencial.</p>
             </div>
 
 
-            <div class="analytics-grid">
-                <div class="analytics-card">
-                    <div class="card-header">
-                        <span class="card-title">Assistentes Ativos</span>
-                        <div class="card-icon"><i class="fas fa-robot"></i></div>
+            <!-- UX-005: Card motivacional quando não há assistente ativo -->
+            <div id="emptyStateCard"
+                style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1)); border:1px solid rgba(59,130,246,0.25); border-radius:16px; padding:2.5rem; text-align:center; margin-bottom:1.5rem;">
+                <div style="font-size:3rem; margin-bottom:1rem;">🚀</div>
+                <h3 style="color:#60a5fa; margin:0 0 0.75rem 0; font-size:1.2rem;">Crie seu primeiro assistente para
+                    começar</h3>
+                <p style="color:#94a3b8; margin:0; font-size:0.9rem; line-height:1.6;">Preencha o nome e a URL à
+                    esquerda, cadastre suas FAQs na Knowledge Base,<br>e clique em "Ativar Assistente IA" para ver a
+                    mágica acontecer! ✨</p>
+            </div>
+
+            <!-- UX-005: Analytics oculto por padrão (aparece quando existir assistente ativo) -->
+            <div id="analyticsSection" style="display:none;">
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <div class="card-header">
+                            <span class="card-title">Assistentes Ativos</span>
+                            <div class="card-icon"><i class="fas fa-robot"></i></div>
+                        </div>
+                        <div class="card-value" id="activeChatbots">0</div>
+                        <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="createdToday">0</span>
+                            Criados
+                            hoje</div>
                     </div>
-                    <div class="card-value" id="activeChatbots">0</div>
-                    <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="createdToday">0</span> Criados
-                        hoje</div>
-                </div>
-                <div class="analytics-card">
-                    <div class="card-header">
-                        <span class="card-title">Conversas Hoje</span>
-                        <div class="card-icon"><i class="fas fa-comments"></i></div>
+                    <div class="analytics-card">
+                        <div class="card-header">
+                            <span class="card-title">Conversas Hoje</span>
+                            <div class="card-icon"><i class="fas fa-comments"></i></div>
+                        </div>
+                        <div class="card-value" id="conversationsToday">0</div>
+                        <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="messagesSent">0</span>
+                            Mensagens
+                            enviadas</div>
                     </div>
-                    <div class="card-value" id="conversationsToday">0</div>
-                    <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="messagesSent">0</span> Mensagens
-                        enviadas</div>
-                </div>
-                <div class="analytics-card">
-                    <div class="card-header">
-                        <span class="card-title">Leads Capturados</span>
-                        <div class="card-icon"><i class="fas fa-user-check"></i></div>
+                    <div class="analytics-card">
+                        <div class="card-header">
+                            <span class="card-title">Leads Capturados</span>
+                            <div class="card-icon"><i class="fas fa-user-check"></i></div>
+                        </div>
+                        <div class="card-value" id="totalLeads">0</div>
+                        <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="leadsToday">0</span> Hoje
+                        </div>
                     </div>
-                    <div class="card-value" id="totalLeads">0</div>
-                    <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="leadsToday">0</span> Hoje</div>
-                </div>
-                <div class="analytics-card">
-                    <div class="card-header">
-                        <span class="card-title">Taxa de Sucesso</span>
-                        <div class="card-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="analytics-card">
+                        <div class="card-header">
+                            <span class="card-title">Taxa de Sucesso</span>
+                            <div class="card-icon"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                        <div class="card-value">100%</div>
+                        <div class="card-change"><i class="fas fa-arrow-up"></i> Extração de dados</div>
                     </div>
-                    <div class="card-value">100%</div>
-                    <div class="card-change"><i class="fas fa-arrow-up"></i> Extração de dados</div>
                 </div>
             </div>
 
@@ -1649,6 +1690,18 @@
                     if (totalLeadsEl) totalLeadsEl.textContent = data.stats.totalLeads || 0;
                     if (leadsTodayEl) leadsTodayEl.textContent = data.stats.leadsToday || 0;
 
+                    // UX-005: Alternar visibilidade analytics vs card motivacional
+                    const activeCount = parseInt(data.stats.activeAssistants) || 0;
+                    const analyticsEl = document.getElementById('analyticsSection');
+                    const emptyEl = document.getElementById('emptyStateCard');
+                    if (activeCount > 0) {
+                        if (analyticsEl) analyticsEl.style.display = 'block';
+                        if (emptyEl) emptyEl.style.display = 'none';
+                    } else {
+                        if (analyticsEl) analyticsEl.style.display = 'none';
+                        if (emptyEl) emptyEl.style.display = 'block';
+                    }
+
                     console.log('✅ Dashboard stats carregados:', data.stats);
                 }
 
@@ -1666,6 +1719,64 @@
                 loadDashboardStats();
             }
         });
+
+        // ===== UX MELHORIAS: FUNÇÕES UTILITÁRIAS =====
+
+        // UX-002: Toggle visibilidade da API Key
+        function toggleApiKeyVisibility() {
+            const input = document.getElementById('apiKeyInput');
+            const btn = document.getElementById('toggleApiKeyBtn');
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🔒';
+                btn.title = 'Ocultar API Key';
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁';
+                btn.title = 'Mostrar API Key';
+            }
+        }
+
+        // UX-004: Toggle opções avançadas
+        function toggleAdvancedOptions() {
+            const panel = document.getElementById('advancedOptions');
+            const btn = document.getElementById('toggleAdvancedBtn');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                btn.textContent = '⚙️ Ocultar opções avançadas';
+                btn.style.borderColor = '#60a5fa';
+                btn.style.color = '#60a5fa';
+            } else {
+                panel.style.display = 'none';
+                btn.textContent = '⚙️ Mostrar opções avançadas';
+                btn.style.borderColor = '#475569';
+                btn.style.color = '#94a3b8';
+            }
+        }
+
+        // UX-003: Validação do botão Ativar (exige nome + URL preenchidos)
+        function validateActivateButton() {
+            const nameVal = document.getElementById('robotName')?.value?.trim();
+            const urlVal = document.getElementById('salesUrl')?.value?.trim();
+            const btn = document.getElementById('activateChatbotBtn');
+            const hint = document.getElementById('activateBtnHint');
+            if (nameVal && urlVal) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+                if (hint) hint.style.display = 'none';
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+                if (hint) hint.style.display = 'block';
+            }
+        }
+        // Monitorar campos para validação em tempo real
+        document.getElementById('robotName')?.addEventListener('input', validateActivateButton);
+        document.getElementById('salesUrl')?.addEventListener('input', validateActivateButton);
+        // Executar validação inicial
+        validateActivateButton();
 
 
         // ===== NOVA LÓGICA: GERAÇÃO DO LINK DO CHATBOT =====
