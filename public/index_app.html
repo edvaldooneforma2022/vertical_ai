@@ -2581,6 +2581,14 @@
                             </div>
                         </div>
 
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Mensagem de
+                            Saudação:</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Texto de boas-vindas que
+                            aparece quando o visitante abre o chat</p>
+                        <textarea id="wl-welcome" rows="2"
+                            placeholder="Ex: Olá! 👋 Bem-vindo à nossa empresa! Como posso ajudar?"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1.5rem; resize:vertical; font-family:inherit;"></textarea>
+
                         <button onclick="saveWhitelabel()" id="wl-save-btn"
                             style="background:#3b82f6; color:white; border:none; padding:1rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; width:100%; font-size:1rem;">
                             💾 Salvar Configuração
@@ -3707,7 +3715,8 @@
                 companyName: document.getElementById('wl-company').value,
                 logoUrl: document.getElementById('wl-logo').value,
                 primaryColor: document.getElementById('wl-primary').value,
-                secondaryColor: document.getElementById('wl-secondary').value
+                secondaryColor: document.getElementById('wl-secondary').value,
+                welcomeMessage: document.getElementById('wl-welcome').value
             };
 
             const statusEl = document.getElementById('wl-status');
@@ -3798,6 +3807,7 @@
                     if (config.logoUrl) document.getElementById('wl-logo').value = config.logoUrl;
                     if (config.primaryColor) document.getElementById('wl-primary').value = config.primaryColor;
                     if (config.secondaryColor) document.getElementById('wl-secondary').value = config.secondaryColor;
+                    if (config.welcomeMessage) document.getElementById('wl-welcome').value = config.welcomeMessage;
 
                     // Atualizar preview com valores carregados
                     updateWhitelabelPreview(config);
@@ -3814,13 +3824,15 @@
             const logoInput = document.getElementById('wl-logo');
             const primaryInput = document.getElementById('wl-primary');
             const secondaryInput = document.getElementById('wl-secondary');
+            const welcomeInput = document.getElementById('wl-welcome');
 
             function updatePreviewFromInputs() {
                 updateWhitelabelPreview({
                     companyName: companyInput.value,
                     logoUrl: logoInput.value,
                     primaryColor: primaryInput.value,
-                    secondaryColor: secondaryInput.value
+                    secondaryColor: secondaryInput.value,
+                    welcomeMessage: welcomeInput.value
                 });
             }
 
@@ -3828,6 +3840,7 @@
             logoInput.addEventListener('input', updatePreviewFromInputs);
             primaryInput.addEventListener('input', updatePreviewFromInputs);
             secondaryInput.addEventListener('input', updatePreviewFromInputs);
+            welcomeInput.addEventListener('input', updatePreviewFromInputs);
         }
 
         // Inicializar listeners quando DOM estiver pronto
