@@ -2343,14 +2343,106 @@
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h2 style="color:#60a5fa; margin-bottom:1rem;">🔗 Webhooks</h2>
                     <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure webhooks para integrar com sistemas
-                        externos</p>
+                        externos e receba notificações em tempo real</p>
 
-                    <div id="webhooks-list" style="margin-bottom:2rem;">
+                    <!-- Seção Explicativa -->
+                    <div
+                        style="background:#334155; padding:1rem 1.5rem; border-radius:12px; margin-bottom:1.5rem; border-left:4px solid #60a5fa;">
+                        <h4 style="color:#60a5fa; margin-bottom:0.5rem; font-size:1rem;">💡 O que são Webhooks?</h4>
+                        <p style="color:#94a3b8; font-size:0.9rem; line-height:1.6; margin-bottom:0.75rem;">
+                            <strong style="color:#cbd5e1;">Webhooks</strong> enviam notificações automáticas para URLs
+                            externas quando eventos ocorrem no seu chatbot.
+                            Ideal para integrar com CRMs, planilhas, automações (Zapier, Make, n8n) e sistemas próprios.
+                        </p>
+                        <ul style="color:#94a3b8; font-size:0.85rem; margin-left:1rem; line-height:1.8;">
+                            <li>🟢 <strong style="color:#cbd5e1;">Lead Capturado</strong> — Receba dados do lead assim
+                                que ele preencher o formulário</li>
+                            <li>🔵 <strong style="color:#cbd5e1;">Conversa Iniciada/Finalizada</strong> — Monitore
+                                sessões de chat em tempo real</li>
+                            <li>🟡 <strong style="color:#cbd5e1;">Palavra-Chave Detectada</strong> — Gatilho para ações
+                                baseadas em palavras específicas</li>
+                        </ul>
+                    </div>
+
+                    <!-- Métricas -->
+                    <div
+                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                        <div style="background:#334155; padding:1.25rem; border-radius:12px; text-align:center;">
+                            <div style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.4rem;">Webhooks Ativos</div>
+                            <div id="webhooks-total-count" style="color:#60a5fa; font-size:1.8rem; font-weight:700;">0
+                            </div>
+                        </div>
+                        <div style="background:#334155; padding:1.25rem; border-radius:12px; text-align:center;">
+                            <div style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.4rem;">Eventos Monitorados
+                            </div>
+                            <div id="webhooks-events-count" style="color:#10b981; font-size:1.8rem; font-weight:700;">0
+                            </div>
+                        </div>
+                        <div style="background:#334155; padding:1.25rem; border-radius:12px; text-align:center;">
+                            <div style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.4rem;">Status</div>
+                            <div id="webhooks-status-badge" style="color:#22c55e; font-size:1.1rem; font-weight:700;">✅
+                                Operacional</div>
+                        </div>
+                    </div>
+
+                    <!-- Formulário de Adicionar Webhook (oculto por padrão) -->
+                    <div id="webhook-add-form"
+                        style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem; border:1px solid #475569;">
+                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">➕ Novo Webhook</h3>
+
+                        <label
+                            style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Evento:</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Selecione qual evento deve
+                            disparar este webhook</p>
+                        <select id="webhook-event-type"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem; cursor:pointer;">
+                            <option value="lead_captured">🟢 Lead Capturado — Quando um visitante preenche o formulário
+                            </option>
+                            <option value="conversation_started">🔵 Conversa Iniciada — Quando uma nova sessão de chat
+                                começa</option>
+                            <option value="conversation_ended">🔵 Conversa Finalizada — Quando uma sessão de chat
+                                termina</option>
+                            <option value="message_sent">💬 Mensagem Enviada — Cada resposta do bot</option>
+                            <option value="message_received">📩 Mensagem Recebida — Cada mensagem do usuário</option>
+                            <option value="keyword_detected">🟡 Palavra-Chave Detectada — Quando uma keyword específica
+                                aparece</option>
+                        </select>
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">URL de
+                            Destino:</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">A URL que receberá o POST com
+                            os dados do evento (ex: Zapier, Make, sua API)</p>
+                        <input type="url" id="webhook-url"
+                            placeholder="https://hooks.zapier.com/... ou https://seuservidor.com/webhook"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+
+                        <label style="color:#94a3b8; display:block; margin-bottom:0.25rem; font-weight:600;">Secret
+                            (opcional):</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.5rem;">Chave secreta para assinar as
+                            requisições (HMAC-SHA256). Deixe vazio se não precisar</p>
+                        <input type="text" id="webhook-secret" placeholder="minha-chave-secreta-123"
+                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1.5rem;">
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                            <button onclick="addWebhook()"
+                                style="background:#10b981; color:white; border:none; padding:0.85rem; border-radius:10px; cursor:pointer; font-weight:600; font-size:0.95rem;">
+                                💾 Salvar Webhook
+                            </button>
+                            <button onclick="hideAddWebhook()"
+                                style="background:transparent; color:#94a3b8; border:1px solid #475569; padding:0.85rem; border-radius:10px; cursor:pointer; font-weight:600; font-size:0.95rem;">
+                                ✕ Cancelar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Webhooks -->
+                    <div id="webhooks-list" style="margin-bottom:1.5rem;">
                         <p style="color:#94a3b8;">Carregando webhooks...</p>
                     </div>
 
-                    <button onclick="showAddWebhook()"
-                        style="background:#10b981; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
+                    <!-- Botão Adicionar -->
+                    <button id="webhook-add-btn" onclick="showAddWebhook()"
+                        style="background:#10b981; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; font-size:1rem;">
                         ➕ Adicionar Webhook
                     </button>
                 </div>
@@ -3262,24 +3354,212 @@
         }
 
 
+        // ===== SAFE PATCH - WEBHOOKS UI COMPLETA =====
+        // Variável para armazenar o chatbotId do tenant (carregado via sessão)
+        let _webhookChatbotId = null;
+
+        async function getWebhookChatbotId() {
+            if (_webhookChatbotId) return _webhookChatbotId;
+            try {
+                const sessionRes = await fetch('/api/session/me');
+                const sessionData = await sessionRes.json();
+                _webhookChatbotId = sessionData.apiKey || (sessionData.user && sessionData.user.apiKey) || 'default';
+            } catch (e) {
+                console.warn('⚠️ Webhooks: Erro ao obter sessão, usando chatbotId fallback');
+                _webhookChatbotId = 'default';
+            }
+            return _webhookChatbotId;
+        }
+
+        // Mapeamento de nomes amigáveis para eventos
+        const webhookEventLabels = {
+            'lead_captured': { icon: '🟢', label: 'Lead Capturado', color: '#22c55e' },
+            'conversation_started': { icon: '🔵', label: 'Conversa Iniciada', color: '#3b82f6' },
+            'conversation_ended': { icon: '🔵', label: 'Conversa Finalizada', color: '#60a5fa' },
+            'message_sent': { icon: '💬', label: 'Mensagem Enviada', color: '#8b5cf6' },
+            'message_received': { icon: '📩', label: 'Mensagem Recebida', color: '#a78bfa' },
+            'keyword_detected': { icon: '🟡', label: 'Palavra-Chave', color: '#f59e0b' }
+        };
+
         async function loadWebhooks() {
             try {
-                const response = await fetch('/api/webhooks/default');
+                const chatbotId = await getWebhookChatbotId();
+                const response = await fetch(`/api/webhooks/${encodeURIComponent(chatbotId)}`);
                 const data = await response.json();
 
                 const container = document.getElementById('webhooks-list');
-                if (data.success && data.webhooks.length > 0) {
-                    container.innerHTML = data.webhooks.map(w => `
-                        <div style="background:#334155; padding:1rem; border-radius:12px; margin-bottom:1rem;">
-                            <div style="color:#cbd5e1; font-weight:600;">${w.eventType}</div>
-                            <div style="color:#94a3b8; font-size:0.9rem;">${w.url}</div>
-                        </div>
-                    `).join('');
+                const totalEl = document.getElementById('webhooks-total-count');
+                const eventsEl = document.getElementById('webhooks-events-count');
+
+                if (data.success && data.webhooks && data.webhooks.length > 0) {
+                    const webhooks = data.webhooks;
+
+                    // Atualizar métricas
+                    if (totalEl) totalEl.textContent = webhooks.length;
+                    const uniqueEvents = new Set(webhooks.map(w => w.eventType));
+                    if (eventsEl) eventsEl.textContent = uniqueEvents.size;
+
+                    container.innerHTML = webhooks.map(w => {
+                        const info = webhookEventLabels[w.eventType] || { icon: '⚙️', label: w.eventType, color: '#94a3b8' };
+                        const urlShort = w.url.length > 55 ? w.url.substring(0, 55) + '...' : w.url;
+                        const createdAt = w.createdAt ? new Date(w.createdAt).toLocaleDateString('pt-BR') : '';
+
+                        return `
+                        <div style="background:#334155; padding:1.25rem; border-radius:12px; margin-bottom:0.75rem; border-left:4px solid ${info.color};">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem;">
+                                <div style="flex:1; min-width:200px;">
+                                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+                                        <span style="background:${info.color}22; color:${info.color}; padding:3px 10px; border-radius:20px; font-size:0.8rem; font-weight:600;">
+                                            ${info.icon} ${info.label}
+                                        </span>
+                                        <span style="color:#22c55e; font-size:0.75rem; font-weight:600;">● Ativo</span>
+                                    </div>
+                                    <div style="color:#cbd5e1; font-size:0.88rem; word-break:break-all; margin-top:0.3rem;" title="${w.url}">
+                                        🔗 ${urlShort}
+                                    </div>
+                                    ${createdAt ? `<div style="color:#64748b; font-size:0.75rem; margin-top:0.3rem;">Criado em ${createdAt}</div>` : ''}
+                                </div>
+                                <div style="display:flex; gap:0.5rem; flex-shrink:0;">
+                                    <button onclick="testWebhook('${w.id}')" title="Testar webhook"
+                                        style="background:#3b82f6; color:white; border:none; padding:0.5rem 0.85rem; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.82rem;">
+                                        ▶️ Testar
+                                    </button>
+                                    <button onclick="deleteWebhook('${w.id}')" title="Remover webhook"
+                                        style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:0.5rem 0.85rem; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.82rem;">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
                 } else {
-                    container.innerHTML = '<p style="color:#94a3b8;">Nenhum webhook configurado.</p>';
+                    if (totalEl) totalEl.textContent = '0';
+                    if (eventsEl) eventsEl.textContent = '0';
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:2rem; color:#64748b;">
+                            <div style="font-size:2.5rem; margin-bottom:0.5rem;">🔗</div>
+                            <p style="font-size:1rem; margin-bottom:0.3rem;">Nenhum webhook configurado</p>
+                            <p style="font-size:0.85rem;">Clique em "Adicionar Webhook" para começar a receber notificações em sistemas externos</p>
+                        </div>`;
                 }
             } catch (error) {
-                console.error('Erro ao carregar webhooks:', error);
+                console.error('❌ Erro ao carregar webhooks:', error);
+                const container = document.getElementById('webhooks-list');
+                if (container) {
+                    container.innerHTML = '<p style="color:#ef4444;">Erro ao carregar webhooks. Tente novamente.</p>';
+                }
+            }
+        }
+
+        function showAddWebhook() {
+            const form = document.getElementById('webhook-add-form');
+            const btn = document.getElementById('webhook-add-btn');
+            if (form) form.style.display = 'block';
+            if (btn) btn.style.display = 'none';
+            // Limpar campos
+            const urlInput = document.getElementById('webhook-url');
+            const secretInput = document.getElementById('webhook-secret');
+            const eventSelect = document.getElementById('webhook-event-type');
+            if (urlInput) urlInput.value = '';
+            if (secretInput) secretInput.value = '';
+            if (eventSelect) eventSelect.selectedIndex = 0;
+        }
+
+        function hideAddWebhook() {
+            const form = document.getElementById('webhook-add-form');
+            const btn = document.getElementById('webhook-add-btn');
+            if (form) form.style.display = 'none';
+            if (btn) btn.style.display = 'block';
+        }
+
+        async function addWebhook() {
+            try {
+                const eventType = document.getElementById('webhook-event-type').value;
+                const url = document.getElementById('webhook-url').value.trim();
+                const secret = document.getElementById('webhook-secret').value.trim();
+
+                if (!url) {
+                    showToast('Por favor, informe a URL de destino do webhook.', 'error');
+                    return;
+                }
+
+                // Validação básica de URL
+                try { new URL(url); } catch (e) {
+                    showToast('URL inválida. Informe uma URL completa (ex: https://...)', 'error');
+                    return;
+                }
+
+                const chatbotId = await getWebhookChatbotId();
+
+                const response = await fetch(`/api/webhooks/${encodeURIComponent(chatbotId)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ eventType, url, secret: secret || undefined })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const info = webhookEventLabels[eventType] || { label: eventType };
+                    showToast(`✅ Webhook "${info.label}" adicionado com sucesso!`, 'success');
+                    hideAddWebhook();
+                    loadWebhooks();
+                } else {
+                    showToast(`Erro ao adicionar webhook: ${data.error || 'Erro desconhecido'}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao adicionar webhook:', error);
+                showToast('Erro de conexão ao adicionar webhook. Tente novamente.', 'error');
+            }
+        }
+
+        async function deleteWebhook(webhookId) {
+            if (!confirm('Tem certeza que deseja remover este webhook? Esta ação não pode ser desfeita.')) return;
+
+            try {
+                const chatbotId = await getWebhookChatbotId();
+
+                const response = await fetch(`/api/webhooks/${encodeURIComponent(chatbotId)}/${encodeURIComponent(webhookId)}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('🗑️ Webhook removido com sucesso!', 'success');
+                    loadWebhooks();
+                } else {
+                    showToast(`Erro ao remover: ${data.error || 'Webhook não encontrado'}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao remover webhook:', error);
+                showToast('Erro de conexão ao remover webhook.', 'error');
+            }
+        }
+
+        async function testWebhook(webhookId) {
+            try {
+                showToast('⏳ Testando webhook... aguarde', 'info');
+
+                const chatbotId = await getWebhookChatbotId();
+
+                const response = await fetch(`/api/webhooks/${encodeURIComponent(chatbotId)}/${encodeURIComponent(webhookId)}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const statusCode = data.result?.statusCode || 'OK';
+                    showToast(`✅ Webhook testado com sucesso! Resposta: ${statusCode}`, 'success');
+                } else {
+                    const errorMsg = data.result?.error || data.error || 'Falha no envio';
+                    showToast(`❌ Teste falhou: ${errorMsg}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao testar webhook:', error);
+                showToast('Erro de conexão ao testar webhook.', 'error');
             }
         }
 
