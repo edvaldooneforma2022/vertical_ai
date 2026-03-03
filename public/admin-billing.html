@@ -1114,8 +1114,8 @@
         <div class="card" style="margin-bottom:12px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
                 <div style="flex:1">
-                    <div style="font-weight:700;margin-bottom:4px">${k.name || 'API Key'} <span class="status-badge ${k.status === 'active' ? 'healthy' : 'danger'}">${k.status || 'active'}</span></div>
-                    <div class="key-display" style="margin:8px 0">${maskKey(k.key_value || k.api_key || k.key || '')}</div>
+                    <div style="font-weight:700;margin-bottom:4px">${k.name || 'API Key'} <span class="status-badge ${k.status === 'active' ? 'healthy' : 'danger'}">${k.status || 'active'}</span> ${k.is_legacy ? '<span class="status-badge warning">Legada</span>' : '<span class="status-badge info">V2</span>'}</div>
+                    <div class="key-display" style="margin:8px 0">${k.is_legacy ? maskKey(k.key_value || '') : (k.key_prefix ? k.key_prefix + '••••••••••••••••••••' : '(hash seguro — copie no momento da criação)')}</div>
                     <div style="font-size:.8rem;color:var(--text-muted)">ID: ${k.id || '-'} · Criada: ${fmtDate(k.created_at)} · Expira: ${k.expires_at ? fmtDate(k.expires_at) : 'Nunca'}</div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
