@@ -167,13 +167,32 @@ function setupAdminRoutes(app) {
     app.post('/api/admin/keys/:tenantId', async (req, res) => {
         try {
             const keyManager = getApiKeyManager();
-            const { name, scopes, allowedIps, allowedDomains, expiresInDays } = req.body;
+            const { name, scopes, allowedIps, allowedDomains, expiresInDays, email, plan } = req.body;
+            const tenantId = req.params.tenantId;
 
-            const newKey = await keyManager.createKey(req.params.tenantId, name || 'Admin-created key', {
+            // Auto-criar tenant se não existir (permite criar clientes novos direto pelo Admin Billing)
+            try {
+                const db = keyManager.db;
+                if (db) {
+                    const existing = await db.query('SELECT id FROM tenants WHERE id = $1', [tenantId]);
+                    if (existing.rows.length === 0) {
+                        await db.query(
+                            'INSERT INTO tenants (id, name, email, plan, status) VALUES ($1, $2, $3, $4, $5)',
+                            [tenantId, name || 'Tenant Manual', email || '', plan || 'starter', 'active']
+                        );
+                        console.log(`✅ [ADMIN] Tenant auto-criado: ${tenantId} (${name || 'Tenant Manual'})`);
+                    }
+                }
+            } catch (tenantErr) {
+                console.warn('⚠️ [ADMIN] Aviso ao verificar/criar tenant:', tenantErr.message);
+                // Continua — pode ser que a tabela tenants não exista ou outro erro não-crítico
+            }
+
+            const newKey = await keyManager.createKey(tenantId, name || 'Admin-created key', {
                 scopes, allowedIps, allowedDomains, expiresInDays
             });
 
-            res.json({ success: true, key: newKey });
+            res.json({ success: true, key: newKey, tenantId });
         } catch (error) {
             console.error('❌ [ADMIN] Erro ao criar key:', error.message);
             res.status(500).json({ success: false, error: error.message });
