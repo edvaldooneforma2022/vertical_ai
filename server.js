@@ -3516,7 +3516,8 @@ app.get("/chat.html", async (req, res) => {
                         logoUrl: wlResult.settings.logoUrl || null,
                         primaryColor: wlResult.settings.primaryColor || null,
                         secondaryColor: wlResult.settings.secondaryColor || null,
-                        showPoweredBy: wlResult.settings.showPoweredBy !== false
+                        showPoweredBy: wlResult.settings.showPoweredBy !== false,
+                        welcomeMessage: wlResult.settings.welcomeMessage || null
                     };
                     console.log(`🎨 Whitelabel carregado do banco para /chat.html (tenant: ${apiKey})`);
                 }
@@ -3569,7 +3570,8 @@ app.get("/chatbot", async (req, res) => {
                         logoUrl: wlResult.settings.logoUrl || whitelabel.logoUrl,
                         primaryColor: wlResult.settings.primaryColor || null,
                         secondaryColor: wlResult.settings.secondaryColor || null,
-                        showPoweredBy: wlResult.settings.showPoweredBy !== false
+                        showPoweredBy: wlResult.settings.showPoweredBy !== false,
+                        welcomeMessage: wlResult.settings.welcomeMessage || null
                     };
                     console.log(`🎨 Whitelabel carregado do banco para /chatbot (tenant: ${apiKey})`);
                 }
@@ -5416,7 +5418,8 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         robotName: robotName,
                         instructions: customInstructions,
                         conversationId: 'chatbot_' + Date.now(),
-                        leadId: leadId
+                        leadId: leadId,
+                        apiKey: currentApiKey
                     })
                 });
                 const data = await response.json();
@@ -5634,7 +5637,8 @@ url_origem: window.location.href,
                         instructions: config.instructions,
                         robotName: config.robotName,
                         conversationId: config.conversationId,
-                        leadId: leadId
+                        leadId: leadId,
+                        apiKey: currentApiKey
                     })
                 });
                 const data = await response.json();
