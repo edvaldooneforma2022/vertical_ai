@@ -6092,7 +6092,8 @@ try {
             if (whitelabel.secondaryColor) params.set('wlSecondary', whitelabel.secondaryColor);
             if (whitelabel.showPoweredBy !== undefined) params.set('wlPoweredBy', whitelabel.showPoweredBy ? '1' : '0');
 
-            logger.info(`🔗 Redirecionando ${shortCode} para chatbot (tenant: ${shortUrl.api_key}, whitelabel: ${!!whitelabel.companyName})`);
+            // 🔍 DIAG-SHORT-URL: Log detalhado do redirecionamento
+            logger.info(`🔗 [SHORT-URL-REDIRECT] ${shortCode} -> /chatbot | apiKey=${shortUrl.api_key ? shortUrl.api_key.substring(0, 12) + '...' : '⚠️ VAZIA'} | robot=${shortUrl.robot_name || '(sem nome)'} | whitelabel=${!!whitelabel.companyName}`);
             res.redirect(`/chatbot?${params.toString()}`);
 
         } catch (error) {
@@ -6111,6 +6112,9 @@ try {
     app.post('/api/create-short-url', async (req, res) => {
         try {
             const { robotName, salesUrl, instructions, apiKey } = req.body;
+
+            // 🔍 DIAG-SHORT-URL: Log para diagnóstico de criação
+            logger.info(`🔗 [CREATE-SHORT-URL] Recebido: robotName=${robotName || '(vazio)'}, salesUrl=${salesUrl ? salesUrl.substring(0, 40) : '(vazio)'}, apiKey=${apiKey ? apiKey.substring(0, 12) + '...' : '⚠️ VAZIA'}`);
 
             // Validações
             if (!apiKey) {

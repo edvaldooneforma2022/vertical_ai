@@ -1917,13 +1917,37 @@
             const robotName = robotNameInput.value;
             const salesUrl = salesUrlInput.value;
             const customInstructions = customInstructionsInput.value;
-            const apiKeyValue = document.getElementById('apiKeyInput').value.trim()
+
+            // 🔑 FIX-APIKEY-SESSION: Resolver API key com fallback robusto
+            // 1) Campo de input (pode estar em seção colapsada)
+            // 2) localStorage (salvo por initializeApiKeyFromSession)
+            // 3) Sessão ativa (/api/session/me) — fallback final
+            let apiKeyValue = document.getElementById('apiKeyInput').value.trim()
                 || localStorage.getItem('linkmagico_api_key')
                 || '';
+
+            if (!apiKeyValue) {
+                try {
+                    console.log('🔑 [FIX-APIKEY-SESSION] Campo API Key vazio, buscando da sessão...');
+                    const sessionRes = await fetch('/api/session/me');
+                    const sessionData = await sessionRes.json();
+                    if (sessionData.success && sessionData.apiKey) {
+                        apiKeyValue = sessionData.apiKey;
+                        // Popular o campo e localStorage para próximas interações
+                        const apiKeyInput = document.getElementById('apiKeyInput');
+                        if (apiKeyInput) apiKeyInput.value = apiKeyValue;
+                        localStorage.setItem('linkmagico_api_key', apiKeyValue);
+                        console.log('✅ [FIX-APIKEY-SESSION] API Key recuperada da sessão:', apiKeyValue.substring(0, 12) + '...');
+                    }
+                } catch (sessionErr) {
+                    console.warn('⚠️ [FIX-APIKEY-SESSION] Não foi possível obter API Key da sessão:', sessionErr.message);
+                }
+            }
 
             // SAFE PATCH - BUG-APIKEY-001: Avisar quando API Key estiver vazia
             if (!apiKeyValue) {
                 console.warn('⚠️ API Key vazia ao ativar assistente. Chat será gerado sem tenant identificado.');
+                showToast('⚠️ API Key não encontrada. O assistente pode não funcionar corretamente. Preencha a API Key nas opções avançadas.', 'error');
             }
 
             if (!robotName || !salesUrl) {
