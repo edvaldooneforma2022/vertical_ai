@@ -1917,7 +1917,14 @@
             const robotName = robotNameInput.value;
             const salesUrl = salesUrlInput.value;
             const customInstructions = customInstructionsInput.value;
-            const apiKeyValue = document.getElementById('apiKeyInput').value.trim();
+            const apiKeyValue = document.getElementById('apiKeyInput').value.trim()
+                || localStorage.getItem('linkmagico_api_key')
+                || '';
+
+            // SAFE PATCH - BUG-APIKEY-001: Avisar quando API Key estiver vazia
+            if (!apiKeyValue) {
+                console.warn('⚠️ API Key vazia ao ativar assistente. Chat será gerado sem tenant identificado.');
+            }
 
             if (!robotName || !salesUrl) {
                 showToast('Por favor, preencha o nome do assistente e a URL da página.', 'error');
@@ -1999,10 +2006,12 @@
                 updateSocialShareLinks(currentChatbotUrl, robotName);
 
                 // Atualiza o iframe do chatbot preview
+                // SAFE PATCH - BUG-APIKEY-002: Passar apiKey para o iframe preview
                 const chatbotParams = new URLSearchParams({
                     url: salesUrl,
                     name: robotName,
-                    instructions: customInstructions
+                    instructions: customInstructions,
+                    apiKey: apiKeyValue
                 });
                 chatbotFrame.src = `/chat.html?${chatbotParams.toString()}`;
 
