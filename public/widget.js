@@ -427,6 +427,7 @@
             return `
                 /* LinkMagico Commercial Widget Styles v${this.version} */
                 .lm-widget-container {
+                    all: initial;
                     position: fixed;
                     z-index: ${config.zIndex};
                     font-family: ${config.fontFamily};
@@ -435,6 +436,7 @@
                     color: #333;
                     box-sizing: border-box;
                     pointer-events: none;
+                    -webkit-text-size-adjust: 100%;
                 }
 
                 .lm-widget-container *,
@@ -1105,6 +1107,33 @@
                     transform: none;
                 }
 
+                /* CTA Button for links in bot messages */
+                .lm-cta-button {
+                    display: inline-block;
+                    background: linear-gradient(135deg, ${primaryColor}, ${secondaryColor});
+                    color: white !important;
+                    text-decoration: none;
+                    padding: 10px 20px;
+                    border-radius: 25px;
+                    font-weight: 600;
+                    margin: 8px 4px;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    cursor: pointer;
+                    font-size: 13px;
+                }
+
+                .lm-cta-button:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+                    opacity: 0.95;
+                }
+
+                .lm-cta-button i {
+                    margin-left: 6px;
+                    font-size: 11px;
+                }
+
                 /* Custom CSS injection */
                 ${config.customCSS || ''}
             `;
@@ -1329,8 +1358,9 @@
                 var chatInput = document.querySelector('.lm-chat-input');
                 if (chatInput) { chatInput.style.display = ''; }
 
-                // Add welcome message with name
-                var greeting = name ? ('Olá ' + this.escapeHtml(name) + '! Prazer em te conhecer. Como posso ajudar?') : 'Ótimo! Como posso ajudar você?';
+                // Add welcome message with name — usa welcomeMessage configurada (whitelabel/config)
+                var baseGreeting = this.config.welcomeMessage || 'Olá! Como posso ajudar?';
+                var greeting = name ? ('Olá ' + this.escapeHtml(name) + '! ' + baseGreeting) : baseGreeting;
                 this.addMessage(greeting, false);
 
                 // Focus input
@@ -1524,7 +1554,7 @@
             var controller = new AbortController();
             var timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
-            fetch(this.config.apiBase + '/api/widget/chat', {
+            fetch(this.config.apiBase + '/api/process-chat-inteligente', {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify(payload),
@@ -1650,7 +1680,8 @@
             for (var i = 0; i < parts.length; i++) {
                 var part = parts[i];
 
-                if (urlRegex.test(part)) {
+                // FIX: Usar regex literal sem flag /g para evitar bug de lastIndex
+                if (/^https?:\/\//.test(part)) {
                     // Create enhanced CTA button for URL
                     var ctaLink = document.createElement('a');
                     ctaLink.href = part;

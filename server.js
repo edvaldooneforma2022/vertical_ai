@@ -2906,7 +2906,10 @@ async function requireApiKey(req, res, next) {
     const publicPaths = [
         "/", "/validate-api-key", "/chat.html", "/chatbot",
         "/api/system/status", "/health", "/api/webhooks/hotmart",
-        "/api/webhooks/hotmart/status"
+        "/api/webhooks/hotmart/status",
+        "/api/capture-lead",
+        "/api/process-chat-inteligente",
+        "/api/chat-universal"
     ];
 
     if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/admin")) {
