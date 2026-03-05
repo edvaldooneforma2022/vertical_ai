@@ -5212,6 +5212,20 @@ function escapeForJS(str) {
         .replace(/>/g, '\\u003e'); // Escape >
 }
 
+// 🎯 BUG-FIX-007: Bloco processMessageContent gerado como string pura para evitar
+// problemas de escape em template literals (causa raiz do chat não abrir)
+const PROCESS_MESSAGE_CONTENT_JS = [
+    'function processMessageContent(text) {',
+    '    if (!text) return text;',
+    '    var urlRegex = /(https?:\\/\\/[^\\s<>"\x27]+)/gi;',
+    '    return text.replace(urlRegex, function(url) {',
+    '        var displayText = url.replace(/^https?:\\/\\/(www\\.)?/, \'\').split(\'/\')[0];',
+    '        if (displayText.length > 30) displayText = displayText.substring(0, 30) + \'...\';',
+    '        return \'<a href="\' + url + \'" target="_blank" rel="noopener noreferrer" class="cta-link">🔗 \' + displayText + \'</a>\';',
+    '    });',
+    '}'
+].join('\n');
+
 function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', customInstructions = '', apiKey = '', whitelabel = {}) {
     const escapedPageData = JSON.stringify(pageData || {});
     const safeRobotName = escapeForJS(robotName || 'Assistente IA');
@@ -5381,16 +5395,8 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             }
         });
 
-        // 🎯 BUG-FIX-006: Processar URLs como botões CTA clicáveis
-        function processMessageContent(text) {
-            if (!text) return text;
-            const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
-            return text.replace(urlRegex, function(url) {
-                let displayText = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
-                if (displayText.length > 30) displayText = displayText.substring(0, 30) + '...';
-                return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="cta-link">🔗 ' + displayText + '</a>';
-            });
-        }
+        // 🎯 BUG-FIX-006/007: Processar URLs como botões CTA clicáveis
+        ${PROCESS_MESSAGE_CONTENT_JS}
 
         function addMessage(text, isUser = false) {
             const messageDiv = document.createElement('div');
@@ -5589,16 +5595,8 @@ url_origem: window.location.href,
             }
         });
 
-        // 🎯 BUG-FIX-006: Processar URLs como botões CTA clicáveis
-        function processMessageContent(text) {
-            if (!text) return text;
-            const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
-            return text.replace(urlRegex, function(url) {
-                let displayText = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
-                if (displayText.length > 30) displayText = displayText.substring(0, 30) + '...';
-                return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="cta-link">🔗 ' + displayText + '</a>';
-            });
-        }
+        // 🎯 BUG-FIX-006/007: Processar URLs como botões CTA clicáveis
+        ${PROCESS_MESSAGE_CONTENT_JS}
 
         function addMessage(content, isUser = false) {
             const messageDiv = document.createElement('div');
