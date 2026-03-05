@@ -1,4 +1,4 @@
-(function(window, document) {
+(function (window, document) {
     'use strict';
 
     // Prevent multiple initializations
@@ -44,7 +44,7 @@
         },
 
         // Initialize the widget
-        init: function(userConfig) {
+        init: function (userConfig) {
             if (this.initialized) {
                 console.warn('LinkMagico Widget already initialized');
                 return;
@@ -73,7 +73,7 @@
         },
 
         // Deep merge configuration objects
-        mergeConfig: function(defaultConfig, userConfig) {
+        mergeConfig: function (defaultConfig, userConfig) {
             var merged = {};
 
             for (var key in defaultConfig) {
@@ -90,7 +90,7 @@
         },
 
         // Create the widget HTML structure
-        createWidget: function() {
+        createWidget: function () {
             try {
                 // Create main container
                 var container = document.createElement('div');
@@ -123,7 +123,7 @@
         },
 
         // Generate widget HTML
-        getWidgetHTML: function() {
+        getWidgetHTML: function () {
             var position = this.config.position;
             var positionClass = 'lm-position-' + position;
 
@@ -210,7 +210,7 @@
         },
 
         // Inject CSS styles
-        injectStyles: function() {
+        injectStyles: function () {
             if (document.getElementById('linkmagico-widget-styles')) {
                 return; // Styles already injected
             }
@@ -222,7 +222,7 @@
         },
 
         // Generate widget CSS
-        getWidgetCSS: function() {
+        getWidgetCSS: function () {
             var config = this.config;
             var primaryColor = config.primaryColor;
             var secondaryColor = config.secondaryColor;
@@ -789,14 +789,14 @@
         },
 
         // Bind all event listeners
-        bindEvents: function() {
+        bindEvents: function () {
             var self = this;
 
             try {
                 // Widget button click
                 var button = document.getElementById('lm-widget-button');
                 if (button) {
-                    button.addEventListener('click', function() {
+                    button.addEventListener('click', function () {
                         self.toggleChat();
                     });
                 }
@@ -804,7 +804,7 @@
                 // Close button
                 var closeBtn = document.getElementById('lm-chat-close');
                 if (closeBtn) {
-                    closeBtn.addEventListener('click', function() {
+                    closeBtn.addEventListener('click', function () {
                         self.closeChat();
                     });
                 }
@@ -812,7 +812,7 @@
                 // Minimize button
                 var minimizeBtn = document.getElementById('lm-chat-minimize');
                 if (minimizeBtn) {
-                    minimizeBtn.addEventListener('click', function() {
+                    minimizeBtn.addEventListener('click', function () {
                         self.minimizeChat();
                     });
                 }
@@ -820,7 +820,7 @@
                 // Send button
                 var sendBtn = document.getElementById('lm-send-button');
                 if (sendBtn) {
-                    sendBtn.addEventListener('click', function() {
+                    sendBtn.addEventListener('click', function () {
                         self.sendMessage();
                     });
                 }
@@ -829,7 +829,7 @@
                 var input = document.getElementById('lm-message-input');
                 if (input) {
                     // Enter key to send
-                    input.addEventListener('keydown', function(e) {
+                    input.addEventListener('keydown', function (e) {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
                             self.sendMessage();
@@ -837,13 +837,13 @@
                     });
 
                     // Auto-resize textarea
-                    input.addEventListener('input', function() {
+                    input.addEventListener('input', function () {
                         self.autoResizeInput(this);
                         self.updateCharCounter(this);
                     });
 
                     // Focus handling
-                    input.addEventListener('focus', function() {
+                    input.addEventListener('focus', function () {
                         self.hideBadge();
                     });
                 }
@@ -851,18 +851,18 @@
                 // Overlay click to close on mobile
                 var overlay = document.getElementById('lm-widget-overlay');
                 if (overlay) {
-                    overlay.addEventListener('click', function() {
+                    overlay.addEventListener('click', function () {
                         self.closeChat();
                     });
                 }
 
                 // Window resize handler
-                window.addEventListener('resize', function() {
+                window.addEventListener('resize', function () {
                     self.handleResize();
                 });
 
                 // Handle visibility change
-                document.addEventListener('visibilitychange', function() {
+                document.addEventListener('visibilitychange', function () {
                     if (!document.hidden && self.isOpen) {
                         self.hideBadge();
                     }
@@ -874,7 +874,7 @@
         },
 
         // Toggle chat window
-        toggleChat: function() {
+        toggleChat: function () {
             if (this.isOpen) {
                 this.closeChat();
             } else {
@@ -883,7 +883,7 @@
         },
 
         // Open chat window
-        openChat: function() {
+        openChat: function () {
             try {
                 var chat = document.getElementById('lm-widget-chat');
                 var overlay = document.getElementById('lm-widget-overlay');
@@ -899,7 +899,7 @@
                     }
 
                     // Focus input after animation
-                    setTimeout(function() {
+                    setTimeout(function () {
                         var input = document.getElementById('lm-message-input');
                         if (input) {
                             input.focus();
@@ -914,7 +914,7 @@
         },
 
         // Close chat window
-        closeChat: function() {
+        closeChat: function () {
             try {
                 var chat = document.getElementById('lm-widget-chat');
                 var overlay = document.getElementById('lm-widget-overlay');
@@ -935,12 +935,12 @@
         },
 
         // Minimize chat (same as close for now)
-        minimizeChat: function() {
+        minimizeChat: function () {
             this.closeChat();
         },
 
         // Send message
-        sendMessage: function() {
+        sendMessage: function () {
             var input = document.getElementById('lm-message-input');
             var message = input ? input.value.trim() : '';
 
@@ -972,7 +972,7 @@
         },
 
         // Call the LinkMagico API
-        callAPI: function(message) {
+        callAPI: function (message) {
             var self = this;
 
             var payload = {
@@ -995,40 +995,40 @@
                 },
                 body: JSON.stringify(payload)
             })
-            .then(function(response) {
-                if (!response.ok) {
-                    throw new Error('API request failed: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(function(data) {
-                self.hideTyping();
-                self.setInputState(true);
-
-                if (data.success && data.response) {
-                    self.addMessage(data.response, false);
-
-                    // Handle bonuses if present
-                    if (data.bonuses_detected && data.bonuses_detected.length > 0) {
-                        var bonusText = "🎁 Bônus inclusos: " + data.bonuses_detected.slice(0, 3).join(", ");
-                        setTimeout(function() {
-                            self.addMessage(bonusText, false);
-                        }, 500);
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('API request failed: ' + response.status);
                     }
-                } else {
-                    self.addMessage('Desculpe, ocorreu um erro. Tente novamente.', false);
-                }
-            })
-            .catch(function(error) {
-                self.hideTyping();
-                self.setInputState(true);
-                self.log('API call failed:', error);
-                self.addMessage('Erro de conexão. Tente novamente em instantes.', false);
-            });
+                    return response.json();
+                })
+                .then(function (data) {
+                    self.hideTyping();
+                    self.setInputState(true);
+
+                    if (data.success && data.response) {
+                        self.addMessage(data.response, false);
+
+                        // Handle bonuses if present
+                        if (data.bonuses_detected && data.bonuses_detected.length > 0) {
+                            var bonusText = "🎁 Bônus inclusos: " + data.bonuses_detected.slice(0, 3).join(", ");
+                            setTimeout(function () {
+                                self.addMessage(bonusText, false);
+                            }, 500);
+                        }
+                    } else {
+                        self.addMessage('Desculpe, ocorreu um erro. Tente novamente.', false);
+                    }
+                })
+                .catch(function (error) {
+                    self.hideTyping();
+                    self.setInputState(true);
+                    self.log('API call failed:', error);
+                    self.addMessage('Erro de conexão. Tente novamente em instantes.', false);
+                });
         },
 
         // Add message to chat
-        addMessage: function(content, isUser) {
+        addMessage: function (content, isUser) {
             try {
                 var messagesContainer = document.getElementById('lm-chat-messages');
                 if (!messagesContainer) return;
@@ -1069,7 +1069,7 @@
         },
 
         // Process message content with URLs
-        processMessageContent: function(content) {
+        processMessageContent: function (content) {
             var container = document.createElement('div');
             var urlRegex = /(https?:\/\/[^\s]+)/g;
             var parts = content.split(urlRegex);
@@ -1077,7 +1077,7 @@
             for (var i = 0; i < parts.length; i++) {
                 var part = parts[i];
 
-                if (urlRegex.test(part)) {
+                if (/^https?:\/\//.test(part)) {
                     // Create CTA button for URL
                     var ctaLink = document.createElement('a');
                     ctaLink.href = part;
@@ -1100,7 +1100,7 @@
         },
 
         // Show typing indicator
-        showTyping: function() {
+        showTyping: function () {
             var typingIndicator = document.getElementById('lm-typing-indicator');
             if (typingIndicator) {
                 typingIndicator.style.display = 'flex';
@@ -1109,7 +1109,7 @@
         },
 
         // Hide typing indicator
-        hideTyping: function() {
+        hideTyping: function () {
             var typingIndicator = document.getElementById('lm-typing-indicator');
             if (typingIndicator) {
                 typingIndicator.style.display = 'none';
@@ -1117,21 +1117,21 @@
         },
 
         // Utility functions
-        autoResizeInput: function(input) {
+        autoResizeInput: function (input) {
             if (input) {
                 input.style.height = 'auto';
                 input.style.height = Math.min(input.scrollHeight, 120) + 'px';
             }
         },
 
-        updateCharCounter: function(input) {
+        updateCharCounter: function (input) {
             var counter = document.getElementById('lm-char-count');
             if (counter && input) {
                 counter.textContent = input.value.length;
             }
         },
 
-        setInputState: function(enabled) {
+        setInputState: function (enabled) {
             var input = document.getElementById('lm-message-input');
             var button = document.getElementById('lm-send-button');
 
@@ -1139,21 +1139,21 @@
             if (button) button.disabled = !enabled;
         },
 
-        scrollToBottom: function() {
+        scrollToBottom: function () {
             var messagesContainer = document.getElementById('lm-chat-messages');
             if (messagesContainer) {
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         },
 
-        hideBadge: function() {
+        hideBadge: function () {
             var badge = document.getElementById('lm-widget-badge');
             if (badge) {
                 badge.style.display = 'none';
             }
         },
 
-        limitMessages: function() {
+        limitMessages: function () {
             var messagesContainer = document.getElementById('lm-chat-messages');
             if (!messagesContainer) return;
 
@@ -1169,15 +1169,15 @@
             }
         },
 
-        containsURL: function(text) {
+        containsURL: function (text) {
             return /https?:\/\/[^\s]+/.test(text);
         },
 
-        isMobile: function() {
+        isMobile: function () {
             return window.innerWidth <= this.config.mobileBreakpoint;
         },
 
-        handleResize: function() {
+        handleResize: function () {
             // Handle responsive behavior on resize
             if (this.isOpen && this.isMobile()) {
                 var overlay = document.getElementById('lm-widget-overlay');
@@ -1187,13 +1187,13 @@
             }
         },
 
-        escapeHtml: function(text) {
+        escapeHtml: function (text) {
             var div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         },
 
-        log: function() {
+        log: function () {
             try {
                 if (!this.config || !this.config.debug) return;
                 var args = Array.prototype.slice.call(arguments);
@@ -1212,109 +1212,109 @@
                 var event = new CustomEvent('linkmagico:' + eventName, {
                     detail: data || {}
                 });
-                window.dispatchEvent(event);
-            } catch (error) {
-                // Fallback for older browsers
-                var event = document.createEvent('CustomEvent');
-                event.initCustomEvent('linkmagico:' + eventName, false, false, data || {});
-                window.dispatchEvent(event);
-            }
+    window.dispatchEvent(event);
+} catch (error) {
+    // Fallback for older browsers
+    var event = document.createEvent('CustomEvent');
+    event.initCustomEvent('linkmagico:' + eventName, false, false, data || {});
+    window.dispatchEvent(event);
+}
         },
 
-        // Public API methods
-        open: function() {
-            this.openChat();
-        },
+// Public API methods
+open: function() {
+    this.openChat();
+},
 
-        close: function() {
-            this.closeChat();
-        },
+close: function() {
+    this.closeChat();
+},
 
-        toggle: function() {
-            this.toggleChat();
-        },
+toggle: function() {
+    this.toggleChat();
+},
 
-        sendMessage: function(message) {
-            if (message && typeof message === 'string') {
-                var input = document.getElementById('lm-message-input');
-                if (input) {
-                    input.value = message;
-                    this.sendMessage();
-                }
-            }
-        },
-
-        updateConfig: function(newConfig) {
-            this.config = this.mergeConfig(this.config, newConfig);
-            // Re-inject styles with new config
-            var existingStyles = document.getElementById('linkmagico-widget-styles');
-            if (existingStyles) {
-                existingStyles.textContent = this.getWidgetCSS();
-            }
-        },
-
-        destroy: function() {
-            try {
-                // Remove widget elements
-                var container = document.getElementById('linkmagico-widget');
-                if (container) {
-                    container.remove();
-                }
-
-                // Remove styles
-                var styles = document.getElementById('linkmagico-widget-styles');
-                if (styles) {
-                    styles.remove();
-                }
-
-                // Reset state
-                this.initialized = false;
-                this.isOpen = false;
-                this.messageCount = 0;
-
-                this.dispatchEvent('widgetDestroyed');
-
-            } catch (error) {
-                console.error('Failed to destroy widget:', error);
-            }
-        },
-
-        // Get widget state
-        getState: function() {
-            return {
-                initialized: this.initialized,
-                isOpen: this.isOpen,
-                messageCount: this.messageCount,
-                conversationId: this.conversationId,
-                version: this.version
-            };
+sendMessage: function(message) {
+    if (message && typeof message === 'string') {
+        var input = document.getElementById('lm-message-input');
+        if (input) {
+            input.value = message;
+            this.sendMessage();
         }
+    }
+},
+
+updateConfig: function(newConfig) {
+    this.config = this.mergeConfig(this.config, newConfig);
+    // Re-inject styles with new config
+    var existingStyles = document.getElementById('linkmagico-widget-styles');
+    if (existingStyles) {
+        existingStyles.textContent = this.getWidgetCSS();
+    }
+},
+
+destroy: function() {
+    try {
+        // Remove widget elements
+        var container = document.getElementById('linkmagico-widget');
+        if (container) {
+            container.remove();
+        }
+
+        // Remove styles
+        var styles = document.getElementById('linkmagico-widget-styles');
+        if (styles) {
+            styles.remove();
+        }
+
+        // Reset state
+        this.initialized = false;
+        this.isOpen = false;
+        this.messageCount = 0;
+
+        this.dispatchEvent('widgetDestroyed');
+
+    } catch (error) {
+        console.error('Failed to destroy widget:', error);
+    }
+},
+
+// Get widget state
+getState: function() {
+    return {
+        initialized: this.initialized,
+        isOpen: this.isOpen,
+        messageCount: this.messageCount,
+        conversationId: this.conversationId,
+        version: this.version
+    };
+}
     };
 
-    // Expose widget to global scope
-    window.LinkMagicoWidget = LinkMagicoWidget;
+// Expose widget to global scope
+window.LinkMagicoWidget = LinkMagicoWidget;
 
-    // Auto-initialize if config is provided via data attributes
-    document.addEventListener('DOMContentLoaded', function() {
-        var scripts = document.querySelectorAll('script[data-linkmagico-config]');
-        if (scripts.length > 0) {
-            try {
-                var configScript = scripts[0];
-                var config = JSON.parse(configScript.getAttribute('data-linkmagico-config'));
-                LinkMagicoWidget.init(config);
-            } catch (error) {
-                console.error('Failed to auto-initialize LinkMagico Widget:', error);
-            }
+// Auto-initialize if config is provided via data attributes
+document.addEventListener('DOMContentLoaded', function () {
+    var scripts = document.querySelectorAll('script[data-linkmagico-config]');
+    if (scripts.length > 0) {
+        try {
+            var configScript = scripts[0];
+            var config = JSON.parse(configScript.getAttribute('data-linkmagico-config'));
+            LinkMagicoWidget.init(config);
+        } catch (error) {
+            console.error('Failed to auto-initialize LinkMagico Widget:', error);
         }
-    });
-
-    // AMD/CommonJS compatibility
-    if (typeof define === 'function' && define.amd) {
-        define(function() {
-            return LinkMagicoWidget;
-        });
-    } else if (typeof module !== 'undefined' && module.exports) {
-        module.exports = LinkMagicoWidget;
     }
+});
 
-})(window, document);
+// AMD/CommonJS compatibility
+if (typeof define === 'function' && define.amd) {
+    define(function () {
+        return LinkMagicoWidget;
+    });
+} else if (typeof module !== 'undefined' && module.exports) {
+    module.exports = LinkMagicoWidget;
+}
+
+}) (window, document);
