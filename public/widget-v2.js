@@ -605,10 +605,19 @@
             }
         },
 
-        addMessage: function (text, isUser = false) {
+        addMessage: function (text, isUser) {
             const msgDiv = document.createElement('div');
             msgDiv.className = 'lm-message ' + (isUser ? 'lm-user' : 'lm-bot');
-            msgDiv.textContent = text;
+            if (isUser) {
+                msgDiv.textContent = text;
+            } else if (/https?:\/\//i.test(text)) {
+                var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                msgDiv.innerHTML = escaped.replace(/(https?:\/\/[^\s<>"']+)/gi, function (url) {
+                    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:white;padding:6px 14px;border-radius:16px;text-decoration:none;font-size:13px;font-weight:600;margin:4px 0;">🔗 Acessar agora</a>';
+                });
+            } else {
+                msgDiv.textContent = text;
+            }
             messages.appendChild(msgDiv);
             messages.scrollTop = messages.scrollHeight;
         },
