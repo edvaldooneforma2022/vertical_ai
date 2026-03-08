@@ -115,6 +115,26 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-
 
 .btn-restart{margin-top:16px}
 
+/* PERSONALIZE STEPS */
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.type-btn{background:var(--surface2);border:2px solid var(--border);color:var(--text);border-radius:14px;padding:16px 14px;font-size:.88rem;cursor:pointer;transition:border-color .25s,background .25s,transform .15s;font-family:inherit;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.type-btn:hover{border-color:var(--purple-light);background:rgba(124,58,237,.08);transform:translateY(-2px)}
+.type-btn .t-icon{font-size:1.6rem}
+.type-btn .t-label{font-weight:600;font-size:.82rem}
+.step-confirm{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:14px;padding:16px 20px;text-align:center;margin-bottom:18px;font-size:.9rem;color:var(--green-light);animation:fadeUp .4s ease}
+
+/* WOW MOMENT */
+.wow-box{background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(16,185,129,.08));border:1px solid var(--border);border-radius:16px;padding:24px 20px;text-align:center;margin-top:18px;animation:fadeUp .5s ease}
+.wow-box .wow-stat{font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--green),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.wow-box .wow-text{color:var(--text-muted);font-size:.9rem;margin-top:6px}
+.wow-box .wow-cta{color:var(--text);font-weight:700;font-size:1.05rem;margin-top:14px}
+
+/* INSTAGRAM SIM */
+.ig-sim-box{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:20px;margin-top:16px;text-align:center;animation:fadeUp .4s ease}
+.ig-sim-box p{font-size:.9rem;color:var(--text-muted);margin-bottom:12px}
+.btn-ig{background:linear-gradient(135deg,#E1306C,#833AB4,#5851DB);color:#fff;border:none;border-radius:var(--radius);padding:14px 20px;font-size:.92rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;width:100%}
+.btn-ig:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(131,58,180,.4)}
+
 /* OFFER */
 #offer-section{display:none;border-top:1px solid var(--border);margin-top:20px;padding-top:26px;text-align:center;animation:fadeUp .5s ease}
 .offer-label{font-size:.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
@@ -244,7 +264,33 @@ footer a{color:var(--text-muted)}
       </div>
     </div>
 
-    <!-- STEP 2: LOADING -->
+    <!-- STEP 2: CHOOSE TYPE -->
+    <div id="step-type" class="demo-step">
+      <div class="step-headline">Vamos simular seu atendimento automático 🎯</div>
+      <div class="step-sub">Qual é o seu tipo de negócio?</div>
+      <div class="type-grid">
+        <button class="type-btn" onclick="escolherTipo('infoproduto')"><span class="t-icon">📚</span><span class="t-label">Curso / Infoproduto</span></button>
+        <button class="type-btn" onclick="escolherTipo('negocio_local')"><span class="t-icon">🏥</span><span class="t-label">Negócio Local</span></button>
+        <button class="type-btn" onclick="escolherTipo('ecommerce')"><span class="t-icon">🛍️</span><span class="t-label">E-commerce</span></button>
+        <button class="type-btn" onclick="escolherTipo('marketing')"><span class="t-icon">📢</span><span class="t-label">Afiliado</span></button>
+        <button class="type-btn" onclick="escolherTipo('servicos')"><span class="t-icon">💼</span><span class="t-label">Prestação de Serviço</span></button>
+        <button class="type-btn" onclick="escolherTipo('emagrecimento')"><span class="t-icon">💪</span><span class="t-label">Saúde / Fitness</span></button>
+      </div>
+    </div>
+
+    <!-- STEP 3: BUSINESS NAME -->
+    <div id="step-name" class="demo-step">
+      <div class="step-confirm" id="type-confirm">✅ Tipo selecionado</div>
+      <div class="step-headline">Qual é o nome do seu negócio? ✍️</div>
+      <div class="step-sub">Pode ser o nome da sua empresa, marca, curso ou perfil.</div>
+      <div class="input-wrap">
+        <input type="text" id="name-input" placeholder="Ex: Clínica Bella Estética" autocomplete="off" maxlength="50">
+      </div>
+      <button class="btn-primary" onclick="confirmarNome()">CONTINUAR →</button>
+      <p class="disclaimer">Isso personaliza a demonstração para você</p>
+    </div>
+
+    <!-- STEP 4: LOADING -->
     <div id="step-loading" class="demo-step">
       <div class="loading-icon">⚙️</div>
       <h2>Preparando seu atendimento...</h2>
@@ -271,6 +317,19 @@ footer a{color:var(--text-muted)}
 
       <div class="client-counter">
         Clientes atendidos nesta demonstração: <strong id="client-count">0</strong>
+      </div>
+
+      <!-- WOW MOMENT -->
+      <div class="wow-box" id="wow-box" style="display:none">
+        <div class="wow-stat">⚡ <span id="wow-count">5</span> clientes atendidos</div>
+        <div class="wow-text">Seu atendimento automático respondeu todas as perguntas sem intervenção humana.</div>
+        <div class="wow-cta" id="wow-name-cta">Imagine isso respondendo todos os visitantes do seu negócio.</div>
+      </div>
+
+      <!-- INSTAGRAM SIM -->
+      <div class="ig-sim-box" id="ig-sim-box" style="display:none">
+        <p>📸 Quer ver como ficaria no seu Instagram?</p>
+        <button class="btn-ig" onclick="simularInstagram()">Simular no meu Instagram →</button>
       </div>
 
       <button class="btn-outline btn-restart" onclick="reiniciarDemo()">🔄 Testar outro negócio</button>
@@ -595,118 +654,205 @@ function testarExemplo(tipo) {
 }
 
 // =====================================================
-// INICIAR DEMO
+// INICIAR DEMO → vai para personalização
 // =====================================================
-async function iniciarDemo(skipDetect) {
+function iniciarDemo(skipDetect) {
   const input = document.getElementById('url-input');
   const err = document.getElementById('url-error');
   const texto = input.value.trim();
-
   err.style.display='none';
   if (!texto) { err.style.display='block'; input.focus(); return; }
-
-  showStep('step-loading');
-  document.getElementById('demo-zone').scrollIntoView({behavior:'smooth'});
-
   if (!skipDetect) nichoAtual = detectarNicho(texto);
   negocioNome = texto.length>40 ? texto.substring(0,40)+'...' : texto;
+  // Ir para step de escolha de tipo
+  showStep('step-type');
+  document.getElementById('demo-zone').scrollIntoView({behavior:'smooth'});
+}
 
+// =====================================================
+// PERSONALIZAÇÃO: escolher tipo
+// =====================================================
+function escolherTipo(tipo) {
+  nichoAtual = tipo;
+  const nichoData = NICHOS[nichoAtual] || NICHOS.infoproduto;
+  document.getElementById('type-confirm').textContent = '✅ ' + nichoData.nome + ' selecionado';
+  showStep('step-name');
+}
+
+// =====================================================
+// PERSONALIZAÇÃO: confirmar nome
+// =====================================================
+function confirmarNome() {
+  const nameInput = document.getElementById('name-input').value.trim();
+  if (nameInput) negocioNome = nameInput;
+  iniciarLoading();
+}
+
+// =====================================================
+// LOADING
+// =====================================================
+async function iniciarLoading() {
+  showStep('step-loading');
   const MSGS = [
     'Analisando conteúdo informado...',
     'Identificando tipo de negócio...',
+    'Personalizando respostas para ' + negocioNome + '...',
     'Configurando base de respostas...',
     'Preparando atendimento automático...',
     'Sistema pronto. ✅'
   ];
-
   let pct=0, msgIdx=0;
   const fill=document.getElementById('progress-fill');
   const msgEl=document.getElementById('loading-msg');
   const pctEl=document.getElementById('progress-pct');
+  fill.style.width='0%'; pctEl.textContent='0%';
   msgEl.textContent=MSGS[0];
-
   await new Promise(resolve=>{
     const iv=setInterval(()=>{
-      pct=Math.min(pct+2,95);
+      pct=Math.min(pct+1.5,95);
       fill.style.width=pct+'%';
-      pctEl.textContent=pct+'%';
+      pctEl.textContent=Math.round(pct)+'%';
       const ni=Math.floor((pct/95)*(MSGS.length-1));
       if(ni!==msgIdx){msgIdx=ni;msgEl.textContent=MSGS[msgIdx]}
       if(pct>=95){clearInterval(iv);resolve()}
-    },80);
+    },70);
   });
-
   fill.style.width='100%'; pctEl.textContent='100%';
   msgEl.textContent=MSGS[MSGS.length-1];
-  await new Promise(r=>setTimeout(r,700));
-
+  await new Promise(r=>setTimeout(r,800));
   iniciarChat();
 }
 
 // =====================================================
-// CHAT
+// CHAT (com nome do negócio nas respostas)
 // =====================================================
+function personalizarResposta(resposta) {
+  // Injeta o nome do negócio na resposta quando fizer sentido
+  if (negocioNome && negocioNome.length > 2) {
+    const frases = resposta.split('.');
+    if (frases.length > 1) {
+      // Adiciona menção ao negócio na segunda frase
+      frases.splice(1, 0, ' Na ' + negocioNome + ', isso pode ser configurado facilmente');
+      return frases.join('.');
+    }
+  }
+  return resposta;
+}
+
 function iniciarChat() {
   showStep('step-chat');
   const nichoData = NICHOS[nichoAtual] || NICHOS.infoproduto;
-  document.getElementById('chat-name').textContent = 'Atendimento — ' + nichoData.nome;
+  document.getElementById('chat-name').textContent = negocioNome || ('Atendimento — ' + nichoData.nome);
   clienteCount = 0;
   clienteIdx = 0;
   ofertaMostrada = false;
   document.getElementById('client-count').textContent = '0';
   document.getElementById('offer-section').style.display = 'none';
+  document.getElementById('wow-box').style.display = 'none';
+  document.getElementById('ig-sim-box').style.display = 'none';
   document.getElementById('messages-wrap').innerHTML = '';
 
   iniciarTimer();
   iniciarToasts();
 
-  // Mensagem inicial do sistema
-  setTimeout(()=>mostrarTyping(800,()=>{
-    addMsg('bot','Sistema ativado. ✅\n\nAgora veja como o atendimento automático responde perguntas reais de clientes.');
-  }),500);
+  // Mensagem inicial personalizada
+  const msgInicial = negocioNome
+    ? 'Sistema ativado para **' + negocioNome + '**. ✅\n\nAgora veja como o atendimento automático responde perguntas reais de clientes.'
+    : 'Sistema ativado. ✅\n\nAgora veja como o atendimento automático responde perguntas reais de clientes.';
 
-  // Iniciar simulação de clientes
+  setTimeout(()=>mostrarTyping(800,()=>{
+    addMsg('bot', msgInicial);
+  }),500);
   setTimeout(()=>simularProximoCliente(), 3500);
 }
 
 function simularProximoCliente() {
   const nichoData = NICHOS[nichoAtual] || NICHOS.infoproduto;
   if (clienteIdx >= nichoData.clientes.length) {
-    // Mostrar oferta após todos os clientes
-    if (!ofertaMostrada) { ofertaMostrada=true; setTimeout(mostrarOferta,1500); }
+    if (!ofertaMostrada) { ofertaMostrada=true; setTimeout(mostrarWow, 1500); }
     return;
   }
-
   const cliente = nichoData.clientes[clienteIdx];
-  const resposta = nichoData.respostas[clienteIdx];
+  let resposta = nichoData.respostas[clienteIdx];
+  // Personalizar 2ª e 4ª resposta com nome do negócio
+  if ((clienteIdx === 1 || clienteIdx === 3) && negocioNome) {
+    resposta = personalizarResposta(resposta);
+  }
   clienteIdx++;
-
-  // Cliente envia pergunta
   addClientMsg(cliente.nome, cliente.origem, cliente.pergunta);
   clienteCount++;
   document.getElementById('client-count').textContent = clienteCount;
-
-  // Sistema responde com delay de "digitando"
   setTimeout(()=>{
     mostrarTyping(900+resposta.length*4, ()=>{
       addMsg('bot', resposta);
-
-      // Próximo cliente após 4s
       if (clienteIdx < nichoData.clientes.length) {
         setTimeout(simularProximoCliente, 4000);
       } else {
-        // Último cliente — mostrar oferta
-        if (!ofertaMostrada) { ofertaMostrada=true; setTimeout(mostrarOferta,2500); }
+        if (!ofertaMostrada) { ofertaMostrada=true; setTimeout(mostrarWow, 2500); }
       }
     });
   }, 1200);
+}
+
+// =====================================================
+// WOW MOMENT
+// =====================================================
+function mostrarWow() {
+  const wow = document.getElementById('wow-box');
+  document.getElementById('wow-count').textContent = clienteCount;
+  if (negocioNome) {
+    document.getElementById('wow-name-cta').textContent = 'Imagine isso respondendo todos os visitantes de ' + negocioNome + '.';
+  }
+  wow.style.display='block';
+  wow.scrollIntoView({behavior:'smooth',block:'nearest'});
+  // Mostrar IG sim após 2s
+  setTimeout(()=>{
+    document.getElementById('ig-sim-box').style.display='block';
+  }, 2000);
+  // Mostrar oferta após 4s
+  setTimeout(mostrarOferta, 4000);
+}
+
+// =====================================================
+// INSTAGRAM SIMULATION
+// =====================================================
+function simularInstagram() {
+  const wrap = document.getElementById('messages-wrap');
+  // Adicionar separador visual
+  const sep = document.createElement('div');
+  sep.className='msg msg-bot';
+  sep.innerHTML='📸 <strong>Simulação Instagram</strong><br><br>Veja como ficaria no DM do seu perfil:';
+  wrap.appendChild(sep);
+  wrap.scrollTop=wrap.scrollHeight;
+
+  const igMsgs = [
+    {nome:'@usuario_real', pergunta:'Oi! Vi seu post, vocês tem mais informações?'},
+    {nome:'@curiosa.123', pergunta:'Isso funciona mesmo? Quero saber mais!'}
+  ];
+
+  let i = 0;
+  function nextIg() {
+    if (i >= igMsgs.length) return;
+    const m = igMsgs[i]; i++;
+    setTimeout(()=>{
+      addClientMsg(m.nome, 'Instagram DM', m.pergunta);
+      setTimeout(()=>{
+        mostrarTyping(800, ()=>{
+          const nichoData = NICHOS[nichoAtual] || NICHOS.infoproduto;
+          addMsg('bot', nichoData.respostas[i-1] || 'Claro! Posso te ajudar com mais informações. O que gostaria de saber?');
+          nextIg();
+        });
+      }, 1000);
+    }, 2000);
+  }
+  nextIg();
 }
 
 function addMsg(tipo, texto) {
   const wrap=document.getElementById('messages-wrap');
   const div=document.createElement('div');
   div.className = tipo==='bot' ? 'msg msg-bot' : 'msg msg-client';
-  div.innerHTML = texto.replace(/\n/g,'<br>');
+  div.innerHTML = texto.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
   wrap.appendChild(div);
   wrap.scrollTop=wrap.scrollHeight;
 }
@@ -759,15 +905,17 @@ function reiniciarDemo() {
   if(toastInterval) clearInterval(toastInterval);
   showStep('step-url');
   document.getElementById('url-input').value='';
+  document.getElementById('name-input').value='';
   document.getElementById('progress-fill').style.width='0%';
   document.getElementById('progress-pct').textContent='0%';
   document.getElementById('demo-zone').scrollIntoView({behavior:'smooth'});
 }
 
 // =====================================================
-// ENTER no input
+// ENTER handlers
 // =====================================================
 document.getElementById('url-input').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarDemo()});
+document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmarNome()});
 </script>
 </body>
 </html>
