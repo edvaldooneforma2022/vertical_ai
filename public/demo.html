@@ -150,6 +150,24 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-
 @keyframes slideInToast{from{transform:translateX(-30px);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes fadeOutToast{to{opacity:0;transform:translateX(-20px)}}
 
+/* SOCIAL PROOF BAR */
+.social-proof-bar{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;padding:14px 20px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:14px;margin:0 auto 20px;max-width:700px}
+.sp-item{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-muted);white-space:nowrap}
+.sp-item .sp-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:lm-pulse 2s infinite}
+.sp-item strong{color:var(--green-light)}
+
+/* FOMO NOTIFICATION */
+.fomo-toast{position:fixed;bottom:90px;left:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:.82rem;color:var(--text-muted);z-index:199;display:flex;align-items:center;gap:10px;animation:slideInToast .4s ease,fadeOutToast .4s ease 4.6s forwards;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.fomo-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--green));display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+
+/* VSL FALLBACK */
+.vsl-fallback{display:block;position:relative;cursor:pointer;text-decoration:none}
+.vsl-fallback img{width:100%;border-radius:16px;display:block}
+.vsl-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:68px;background:rgba(255,0,0,.85);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .2s,background .2s}
+.vsl-fallback:hover .vsl-play-btn{transform:translate(-50%,-50%) scale(1.15);background:rgba(255,0,0,1)}
+.vsl-play-btn::after{content:'';border-style:solid;border-width:12px 0 12px 22px;border-color:transparent transparent transparent #fff;margin-left:4px}
+.vsl-credibility{text-align:center;font-size:.82rem;color:var(--text-muted);margin-top:12px;font-style:italic}
+
 /* EDUCATION BLOCKS */
 .edu-block{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 28px}
 .edu-block h3{font-size:1.2rem;font-weight:700;margin-bottom:16px}
@@ -241,9 +259,11 @@ footer a{color:var(--text-muted)}
     <!-- VSL -->
     <div class="vsl-section">
       <div class="vsl-title">⚡ Veja em menos de 4 minutos como o sistema é poderoso atendendo clientes automaticamente.</div>
-      <div class="vsl-wrap">
-        <iframe src="https://www.youtube.com/embed/u6p9LwvLHgQ" title="Link Mágico — Demonstração" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      <div class="vsl-wrap" id="vsl-container">
+        <iframe src="https://www.youtube-nocookie.com/embed/u6p9LwvLHgQ?rel=0&modestbranding=1" title="Link Mágico — Demonstração" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" id="vsl-iframe"></iframe>
       </div>
+      <noscript><a href="https://youtu.be/u6p9LwvLHgQ" target="_blank">Assistir vídeo no YouTube</a></noscript>
+      <p class="vsl-credibility">Sistema em produção utilizado por empreendedores reais para automatizar atendimento de clientes.</p>
     </div>
 
     <div class="curiosity-cta">
@@ -252,7 +272,15 @@ footer a{color:var(--text-muted)}
   </div>
 </div>
 
-<br><hr class="divider">
+<br>
+
+<!-- SOCIAL PROOF BAR -->
+<div class="social-proof-bar">
+  <div class="sp-item"><span class="sp-dot"></span> <strong id="sp-counter">2.847</strong> atendimentos hoje</div>
+  <div class="sp-item">👁 <strong id="sp-visitors">23</strong> pessoas testando agora</div>
+</div>
+
+<hr class="divider">
 
 <!-- DEMO ZONE -->
 <section id="demo-zone">
@@ -947,6 +975,78 @@ function reiniciarDemo() {
 // =====================================================
 document.getElementById('url-input').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarDemo()});
 document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmarNome()});
+
+// =====================================================
+// SOCIAL PROOF: contadores dinâmicos
+// =====================================================
+(function(){
+  const spCounter=document.getElementById('sp-counter');
+  const spVisitors=document.getElementById('sp-visitors');
+  let baseCount=2800+Math.floor(Math.random()*200);
+  let visitors=18+Math.floor(Math.random()*12);
+  spCounter.textContent=baseCount.toLocaleString('pt-BR');
+  spVisitors.textContent=visitors;
+  // Incrementar atendimentos a cada 8-15s
+  setInterval(()=>{
+    baseCount+=Math.floor(Math.random()*3)+1;
+    spCounter.textContent=baseCount.toLocaleString('pt-BR');
+  },8000+Math.random()*7000);
+  // Variar visitantes a cada 12-25s
+  setInterval(()=>{
+    visitors+=Math.floor(Math.random()*5)-2;
+    if(visitors<14)visitors=14+Math.floor(Math.random()*4);
+    if(visitors>38)visitors=38-Math.floor(Math.random()*4);
+    spVisitors.textContent=visitors;
+  },12000+Math.random()*13000);
+})();
+
+// =====================================================
+// FOMO: notificações de outros usuários
+// =====================================================
+(function(){
+  const nomes=['João','Maria','Carlos','Ana','Pedro','Juliana','Rafael','Camila','Lucas','Fernanda','Thiago','Beatriz','Daniel','Sandra','Marcos','Priscila','Roberto','Amanda','Felipe','Larissa'];
+  const acoes=[
+    'acabou de testar a IA',
+    'iniciou uma conversa agora',
+    'está simulando um atendimento',
+    'ativou o sistema para loja virtual',
+    'testou com um curso online',
+    'criou um atendimento automático',
+    'está vendo a demonstração',
+    'acabou de ativar o sistema'
+  ];
+  let fomoTimeout;
+  function showFomo(){
+    const nome=nomes[Math.floor(Math.random()*nomes.length)];
+    const acao=acoes[Math.floor(Math.random()*acoes.length)];
+    const initials=nome.charAt(0);
+    const existing=document.querySelector('.fomo-toast');
+    if(existing)existing.remove();
+    const div=document.createElement('div');
+    div.className='fomo-toast';
+    div.innerHTML='<div class="fomo-avatar">'+initials+'</div><span>🔵 <strong>'+nome+'</strong> '+acao+'</span>';
+    document.body.appendChild(div);
+    setTimeout(()=>div.remove(),5200);
+    fomoTimeout=setTimeout(showFomo,10000+Math.random()*10000);
+  }
+  // Primeira notificação após 6s
+  fomoTimeout=setTimeout(showFomo,6000);
+})();
+
+// =====================================================
+// VSL: fallback se iframe falhar
+// =====================================================
+(function(){
+  const iframe=document.getElementById('vsl-iframe');
+  if(iframe){
+    iframe.addEventListener('error',function(){
+      const container=document.getElementById('vsl-container');
+      container.style.paddingBottom='0';
+      container.style.height='auto';
+      container.innerHTML='<a href="https://youtu.be/u6p9LwvLHgQ" target="_blank" class="vsl-fallback" style="display:block;position:relative"><img src="https://img.youtube.com/vi/u6p9LwvLHgQ/maxresdefault.jpg" alt="Assistir vídeo" style="width:100%;border-radius:16px"><div class="vsl-play-btn"></div></a>';
+    });
+  }
+})();
 </script>
 
 <!-- LinkMágico Chatbot Widget v2.0 - Chat Flutuante -->
