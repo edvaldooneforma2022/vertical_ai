@@ -194,6 +194,19 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-
 footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 20px;text-align:center;font-size:.78rem;color:var(--text-muted)}
 footer a{color:var(--text-muted)}
 
+/* VSL */
+.vsl-section{margin:24px 0 20px;text-align:center}
+.vsl-title{font-size:.95rem;color:var(--text);font-weight:600;margin-bottom:14px;line-height:1.5}
+.vsl-wrap{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:16px;border:1px solid var(--border);background:#000}
+.vsl-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+
+/* SUPPORT CHAT BLOCK */
+.support-block{max-width:640px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;text-align:center}
+.support-block h3{font-size:1.15rem;font-weight:700;margin-bottom:8px}
+.support-block p{color:var(--text-muted);font-size:.9rem;margin-bottom:18px;line-height:1.6}
+.btn-chat{display:inline-block;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:var(--radius);padding:16px 32px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;text-decoration:none}
+.btn-chat:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(37,211,102,.35)}
+
 @media(max-width:600px){
   .demo-container{padding:24px 18px}
   .examples-grid{grid-template-columns:1fr}
@@ -224,6 +237,15 @@ footer a{color:var(--text-muted)}
       <div class="c-msg"><span class="c-msg-origin">Google</span><span class="c-msg-text">Posso falar com alguém?</span></div>
     </div>
     <p class="curiosity-highlight">⚡ Agora imagine um sistema respondendo tudo isso automaticamente.</p>
+
+    <!-- VSL -->
+    <div class="vsl-section">
+      <div class="vsl-title">⚡ Veja em menos de 4 minutos como o sistema é poderoso atendendo clientes automaticamente.</div>
+      <div class="vsl-wrap">
+        <iframe src="https://www.youtube.com/embed/u6p9LwvLHgQ" title="Link Mágico — Demonstração" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+
     <div class="curiosity-cta">
       <button class="btn-primary" onclick="document.getElementById('demo-zone').scrollIntoView({behavior:'smooth'})">VER ISSO FUNCIONANDO AGORA →</button>
     </div>
@@ -352,6 +374,15 @@ footer a{color:var(--text-muted)}
       </div>
     </div>
 
+  </div>
+</section>
+
+<!-- SUPPORT CHAT BLOCK -->
+<section class="section" style="padding-top:50px;padding-bottom:50px">
+  <div class="support-block">
+    <h3>💬 Ainda tem dúvidas?</h3>
+    <p>Fale com nosso atendimento agora e veja como configurar o sistema para seu negócio.</p>
+    <a href="https://vertical-ai-dktu.onrender.com/l/2Rf5vf" target="_blank" class="btn-chat">ABRIR CHAT →</a>
   </div>
 </section>
 
@@ -916,6 +947,99 @@ function reiniciarDemo() {
 // =====================================================
 document.getElementById('url-input').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarDemo()});
 document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmarNome()});
+</script>
+
+<!-- LinkMágico Chatbot Widget v2.0 - Chat Flutuante -->
+<script>
+(function() {
+    var config = {
+        robotName: "Lia",
+        salesUrl: "https://www.arsenalsecretodosceos.com.br/linkmagico",
+        instructions: "Você é a Lia, consultora especializada em automação de vendas e IA conversacional e assistente oficial do Link Mágico.\nSeu papel é conversar com leads que chegam pela página de vendas, tirar dúvidas e guiar para a compra — sem forçar, sem floreio e sem repetição.\n═══════════════════════════════════\nREGRAS ABSOLUTAS (NUNCA QUEBRE):\n═══════════════════════════════════\nNUNCA repita informações que já deu na mesma conversa. Se já falou o preço, diga: \"como mencionei antes\" e siga.\nMáximo 1 emoji por mensagem — e apenas se for natural. Zero emojis é melhor que emoji forçado.\nNUNCA faça mais de 1 pergunta por mensagem.\nPROIBIDO usar frases como:\n\"é como ter um vendedor superinteligente\"\n\"enquanto você dorme\"\n\"vejo que você está sentindo na pele\"\n\"é um prazer conversar\"\nQuando o lead disser que quer comprar → ENVIE O LINK IMEDIATAMENTE:\nhttps://pay.hotmart.com/G103177435I\nNão faça mais perguntas. Não qualifique mais. Não adicione nada.\nRespostas com NO MÁXIMO 4 linhas.\nSe precisar organizar melhor, use tópicos curtos com travessão.\nNUNCA comece respostas com:\n\"Entendi!\"\n\"Ótima pergunta!\"\n\"Priorizando sua solicitação!\"\nVá direto ao ponto.\nNUNCA repita a pergunta do lead. Responda direto.\nSe o lead demonstrar irritação ou disser que você está repetindo, peça desculpas brevemente e mude de direção.\nNa despedida, NÃO tente vender novamente. Apenas finalize.\nNUNCA invente funcionalidades, integrações ou promessas que não estejam nas informações oficiais abaixo.\n═══════════════════════════════════\nTOM DE VOZ:\n═══════════════════════════════════\nConsultora experiente, não vendedora agressiva\nDireta e objetiva\nLinguagem simples\nEmpática sem dramatizar\nSe o lead responder \"ok\", \"entendi\", \"hmm\", pergunte brevemente se quer esclarecer algo específico\n═══════════════════════════════════\nFASES DA CONVERSA (SIGA SEMPRE):\n═══════════════════════════════════\nFASE 1 — CHEGADA\nCumprimento breve (1 linha).\nFaça apenas 1 pergunta para entender o contexto do lead.\nFASE 2 — DIAGNÓSTICO\nReflita a dor em 1 frase curta.\nConfirme que entendeu corretamente.\nApresente o Link Mágico como solução da dor específica (não como lista genérica de funcionalidades).\nFASE 3 — DÚVIDAS\nResponda apenas o que foi perguntado.\nNão adicione informações extras que o lead não solicitou.\nFASE 4 — COMPRA\nEnvie imediatamente o link:\nhttps://pay.hotmart.com/G103177435I\nSem perguntas adicionais. Sem reforços desnecessários.\nFASE 5 — DESPEDIDA\n\"Fico por aqui. Qualquer dúvida, me chama.\"\nPonto final.\n═══════════════════════════════════\nSOBRE O LINK MÁGICO (INFORMAÇÕES OFICIAIS):\n═══════════════════════════════════\nO que é:\nPlataforma de IA conversacional — um Vendedor IA que responde leads automaticamente, 24h, com a marca do cliente.\nComo funciona (3 passos):\nCola a URL do site/produto → a IA extrai as informações automaticamente\nPersonaliza tom de voz e whitelabel (opcional)\nCola o widget na página ou usa o link no Instagram/WhatsApp\nPreço:\nR$97 pagamento único.\nAcesso completo por 12 meses + atualizações + suporte.\nGarantia:\n7 dias incondicional. Reembolso total se não gostar.\nPrincipais funcionalidades:\nRespostas em menos de 1 segundo\nSuperInteligência Conversacional (detecta emoção, urgência, contexto)\n3 motores de IA (Groq + OpenAI + OpenRouter)\nMemória persistente de conversa\nCRM integrado + Analytics + Export CSV\nWidget 100% whitelabel\nIntegração com WhatsApp, Gmail, qualquer site e link de bio\nSistema de agendamentos\nWebhooks (6 eventos) + 25+ endpoints de API\nDiferencial estratégico:\nPode usar com sua marca e até revender como serviço próprio.\nProva ao vivo:\nO chat da própria página é o Link Mágico funcionando.\nPúblico-alvo:\nAfiliados, infoprodutores, agências, e-commerces e qualquer negócio que recebe leads.",
+        primaryColor: "#f7ce3b",
+        apiKey: "LMV7-9BOT-HM5M-JOUV",
+        greetingMessage: "Oi! Posso ajudar?",
+        welcomeMessage: "Olá 👋 Muito bom ter você aqui!",
+        secondMessage: "Como posso ajudar você hoje?"
+    };
+    var apiBase = "https://vertical-ai-dktu.onrender.com";
+    if (!config.apiKey || config.apiKey === "SUA_API_KEY") { console.error("❌ LinkMágico Widget: API Key não configurada!"); return; }
+    var isOpen = false, leadId = null, leadCaptured = false, conversationId = 'lm_' + Date.now();
+    var styles = document.createElement('style');
+    styles.textContent = '.lm-widget-container *{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Inter,-apple-system,BlinkMacSystemFont,sans-serif}.lm-widget-container{position:fixed;bottom:20px;right:20px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;gap:12px}.lm-greeting-tooltip{background:#1f2937;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;font-weight:500;box-shadow:0 4px 15px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:lm-slideIn .3s ease;cursor:pointer;transition:all .2s ease}.lm-greeting-tooltip:hover{transform:scale(1.02);box-shadow:0 6px 20px rgba(0,0,0,.2)}.lm-greeting-tooltip .lm-online-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:lm-pulse 2s infinite}.lm-greeting-tooltip.lm-hidden{display:none}.lm-bubble{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(59,130,246,.4);transition:all .3s ease}.lm-bubble:hover{transform:scale(1.1);box-shadow:0 6px 25px rgba(59,130,246,.5)}.lm-bubble svg{width:28px;height:28px;fill:#fff}.lm-bubble.lm-hidden{display:none}.lm-chat-window{position:fixed;bottom:90px;right:20px;width:380px;height:520px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.15);display:none;flex-direction:column;overflow:hidden;animation:lm-scaleIn .3s ease;z-index:999998}.lm-chat-window.lm-open{display:flex}.lm-chat-header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px;display:flex;align-items:center;justify-content:space-between}.lm-chat-header-left{display:flex;align-items:center;gap:12px}.lm-chat-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#8b5cf6 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px}.lm-chat-header-info{display:flex;flex-direction:column}.lm-chat-header-subtitle{font-size:12px;color:#6b7280}.lm-chat-header-title{font-size:15px;font-weight:600;color:#1f2937}.lm-header-btn{width:36px;height:36px;border-radius:50%;border:none;background:#f3f4f6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease;color:#6b7280}.lm-header-btn:hover{background:#e5e7eb;color:#1f2937}.lm-chat-messages{flex:1;padding:16px;overflow-y:auto;background:#f9fafb;display:flex;flex-direction:column;gap:12px}.lm-message{max-width:80%;padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.5;animation:lm-fadeIn .3s ease}.lm-message.lm-bot{background:#fff;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb;border-bottom-left-radius:4px}.lm-message.lm-user{background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}.lm-typing{display:none;align-items:center;gap:4px;padding:12px 16px;background:#fff;border-radius:18px;border:1px solid #e5e7eb;align-self:flex-start;max-width:80px}.lm-typing.lm-active{display:flex}.lm-typing-dot{width:8px;height:8px;background:#9ca3af;border-radius:50%;animation:lm-typingBounce 1.4s infinite}.lm-typing-dot:nth-child(2){animation-delay:.2s}.lm-typing-dot:nth-child(3){animation-delay:.4s}.lm-chat-input-area{padding:16px;background:#fff;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:12px}.lm-chat-input{flex:1;border:1px solid #e5e7eb;border-radius:24px;padding:12px 20px;font-size:14px;outline:none;transition:all .2s ease;background:#f9fafb}.lm-chat-input:focus{border-color:'+config.primaryColor+';background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1)}.lm-chat-input::placeholder{color:#9ca3af}.lm-send-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease}.lm-send-btn:hover{transform:scale(1.05);box-shadow:0 4px 15px rgba(59,130,246,.4)}.lm-send-btn:disabled{opacity:.5;cursor:not-allowed}.lm-send-btn svg{width:20px;height:20px}.lm-lead-prompt{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:8px 0;align-self:flex-start;max-width:90%}.lm-lead-prompt input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:10px;outline:none;transition:all .2s ease}.lm-lead-prompt input:focus{border-color:'+config.primaryColor+'}.lm-lead-prompt button{width:100%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s ease}.lm-lead-prompt button:hover{opacity:.9}@keyframes lm-slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes lm-scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}@keyframes lm-fadeIn{from{opacity:0}to{opacity:1}}@keyframes lm-pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes lm-typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}@media (max-width:480px){.lm-chat-window{width:calc(100% - 20px);height:calc(100% - 100px);right:10px;bottom:80px;border-radius:20px}.lm-widget-container{right:10px;bottom:10px}.lm-bubble{width:55px;height:55px}.lm-greeting-tooltip{display:none}}';
+    document.head.appendChild(styles);
+    var container = document.createElement('div');
+    container.className = 'lm-widget-container';
+    container.id = 'lmWidgetContainer';
+    container.innerHTML = '<div class="lm-greeting-tooltip" id="lmGreeting"><span class="lm-online-dot"></span><span>'+config.greetingMessage+'</span></div><div class="lm-bubble" id="lmBubble"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/><path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg></div><div class="lm-chat-window" id="lmChatWindow"><div class="lm-chat-header"><div class="lm-chat-header-left"><div class="lm-chat-avatar">'+config.robotName.charAt(0).toUpperCase()+'</div><div class="lm-chat-header-info"><span class="lm-chat-header-subtitle">Assistente Virtual</span><span class="lm-chat-header-title">'+config.robotName+'</span></div></div><button class="lm-header-btn" id="lmCloseBtn" title="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="lm-chat-messages" id="lmMessages"></div><div class="lm-typing" id="lmTyping"><span class="lm-typing-dot"></span><span class="lm-typing-dot"></span><span class="lm-typing-dot"></span></div><div class="lm-chat-input-area"><input type="text" class="lm-chat-input" id="lmInput" placeholder="Escreva sua mensagem..." autocomplete="off"><button class="lm-send-btn" id="lmSendBtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div></div>';
+    document.body.appendChild(container);
+    var chatWindow = document.getElementById('lmChatWindow');
+    var bubble = document.getElementById('lmBubble');
+    var greeting = document.getElementById('lmGreeting');
+    var messages = document.getElementById('lmMessages');
+    var input = document.getElementById('lmInput');
+    var sendBtn = document.getElementById('lmSendBtn');
+    var typing = document.getElementById('lmTyping');
+    var closeBtn = document.getElementById('lmCloseBtn');
+    function addMessage(text, isUser) {
+        var msgDiv = document.createElement('div');
+        msgDiv.className = 'lm-message ' + (isUser ? 'lm-user' : 'lm-bot');
+        if (isUser) { msgDiv.textContent = text; }
+        else if (/https?:\/\//.test(text)) {
+            var esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            msgDiv.innerHTML = esc.replace(/(https?:\/\/[^\s<>"']+)/gi, function(u) {
+                return '<a href="'+u+'" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:white;padding:6px 14px;border-radius:16px;text-decoration:none;font-size:13px;font-weight:600;margin:4px 0;">&#128279; Acessar agora</a>';
+            });
+        } else { msgDiv.textContent = text; }
+        messages.appendChild(msgDiv);
+        messages.scrollTop = messages.scrollHeight;
+    }
+    function showLeadForm() {
+        var formDiv = document.createElement('div');
+        formDiv.className = 'lm-lead-prompt'; formDiv.id = 'lmLeadForm';
+        formDiv.innerHTML = '<input type="text" id="lmLeadName" placeholder="Qual o seu nome?" required><input type="email" id="lmLeadEmail" placeholder="Seu melhor email"><input type="tel" id="lmLeadPhone" placeholder="WhatsApp (opcional)"><button id="lmLeadSubmit">Continuar conversa</button>';
+        messages.appendChild(formDiv); messages.scrollTop = messages.scrollHeight;
+        document.getElementById('lmLeadName').focus();
+        document.getElementById('lmLeadSubmit').addEventListener('click', captureLead);
+    }
+    function captureLead() {
+        var name = document.getElementById('lmLeadName').value.trim();
+        var email = document.getElementById('lmLeadEmail').value.trim();
+        var phone = document.getElementById('lmLeadPhone').value.trim();
+        if (!name) { document.getElementById('lmLeadName').focus(); return; }
+        var form = document.getElementById('lmLeadForm'); if (form) form.remove();
+        fetch(apiBase + '/api/capture-lead', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome: name, email: email || '', telefone: phone || '', url_origem: config.salesUrl, robotName: config.robotName, apiKey: config.apiKey })
+        }).then(function(r){return r.json()}).then(function(data){
+            if(data.success){leadId=data.lead.id;leadCaptured=true;addMessage('Olá '+name+'! Prazer em te conhecer. Como posso ajudar?',false);}
+        }).catch(function(e){console.error('Erro:',e);leadCaptured=true;});
+    }
+    function sendMessage() {
+        var message = input.value.trim(); if (!message) return;
+        if (!leadCaptured) { showLeadForm(); return; }
+        addMessage(message, true); input.value = ''; sendBtn.disabled = true;
+        typing.classList.add('lm-active');
+        fetch(apiBase + '/api/process-chat-inteligente', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message, pageData: { url: config.salesUrl }, robotName: config.robotName, instructions: config.instructions, conversationId: conversationId, leadId: leadId, apiKey: config.apiKey })
+        }).then(function(r){return r.json()}).then(function(data){
+            typing.classList.remove('lm-active');
+            if(data.success&&data.response){addMessage(data.response,false);}
+            else{addMessage('Desculpe, tive um problema. Pode repetir?',false);}
+        }).catch(function(e){typing.classList.remove('lm-active');addMessage('Ops! Erro de conexão. Tente novamente.',false);console.error('Erro:',e);});
+        sendBtn.disabled = false; input.focus();
+    }
+    function openChat() { isOpen=true; chatWindow.classList.add('lm-open'); greeting.classList.add('lm-hidden'); input.focus(); if(messages.children.length===0){addMessage(config.welcomeMessage,false);setTimeout(function(){addMessage(config.secondMessage,false);},800);} }
+    function closeChat() { isOpen=false; chatWindow.classList.remove('lm-open'); }
+    function toggleChat() { if(isOpen){closeChat();}else{openChat();} }
+    bubble.addEventListener('click', toggleChat);
+    greeting.addEventListener('click', openChat);
+    closeBtn.addEventListener('click', closeChat);
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', function(e){if(e.key==='Enter')sendMessage();});
+    console.log('✅ LinkMágico Widget v2.0 carregado!');
+})();
 </script>
 </body>
 </html>
