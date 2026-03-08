@@ -259,10 +259,10 @@ footer a{color:var(--text-muted)}
     <!-- VSL -->
     <div class="vsl-section">
       <div class="vsl-title">⚡ Veja em menos de 4 minutos como o sistema é poderoso atendendo clientes automaticamente.</div>
-      <div class="vsl-wrap" id="vsl-container">
-        <iframe src="https://www.youtube-nocookie.com/embed/u6p9LwvLHgQ?rel=0&modestbranding=1" title="Link Mágico — Demonstração" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" id="vsl-iframe"></iframe>
-      </div>
-      <noscript><a href="https://youtu.be/u6p9LwvLHgQ" target="_blank">Assistir vídeo no YouTube</a></noscript>
+      <a href="https://youtu.be/u6p9LwvLHgQ" target="_blank" class="vsl-fallback" title="Assistir vídeo no YouTube">
+        <img src="https://img.youtube.com/vi/u6p9LwvLHgQ/maxresdefault.jpg" alt="Link Mágico — Demonstração" style="width:100%;border-radius:16px;display:block">
+        <div class="vsl-play-btn"></div>
+      </a>
       <p class="vsl-credibility">Sistema em produção utilizado por empreendedores reais para automatizar atendimento de clientes.</p>
     </div>
 
