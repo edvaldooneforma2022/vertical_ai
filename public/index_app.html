@@ -3205,9 +3205,46 @@
                 document.getElementById('robotName').value = name;
                 document.getElementById('salesUrl').value = salesUrl;
                 document.getElementById('customInstructions').value = instructions;
+
+                // SAFE PATCH - BUG-EDIT-002: Regenerar código do widget ao editar assistente
+                try {
+                    const apiKey = document.getElementById('apiKeyInput')?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
+                    const wlColor = document.getElementById('wl-primary')?.value || '#3b82f6';
+                    if (name && salesUrl && typeof generateModernWidgetScript === 'function') {
+                        const widgetCode = generateModernWidgetScript(name, salesUrl, instructions, apiKey, wlColor);
+                        const mainDisplay = document.getElementById('widgetCodeDisplay');
+                        if (mainDisplay) mainDisplay.textContent = widgetCode;
+                        const tabDisplay = document.getElementById('widget-code-output');
+                        if (tabDisplay) tabDisplay.textContent = widgetCode;
+                        console.log('✅ [Editar] Widget code regenerado para:', name);
+                    }
+                } catch (wErr) {
+                    console.warn('⚠️ [Editar] Erro ao regenerar widget code (não crítico):', wErr.message);
+                }
+
+                // SAFE PATCH - BUG-EDIT-003: Carregar FAQs da Knowledge Base ao editar
+                try {
+                    if (typeof loadFAQs === 'function') {
+                        loadFAQs();
+                        console.log('✅ [Editar] FAQs recarregadas para o assistente:', name);
+                    }
+                } catch (fErr) {
+                    console.warn('⚠️ [Editar] Erro ao carregar FAQs (não crítico):', fErr.message);
+                }
+
+                // SAFE PATCH - BUG-EDIT-004: Carregar configuração Whitelabel ao editar
+                try {
+                    if (typeof loadWhitelabelConfig === 'function') {
+                        loadWhitelabelConfig();
+                        console.log('✅ [Editar] Whitelabel recarregado para:', name);
+                    }
+                } catch (wlErr) {
+                    console.warn('⚠️ [Editar] Erro ao carregar Whitelabel (não crítico):', wlErr.message);
+                }
+
                 closeNewSystems();
                 document.getElementById('robotName').focus();
-                showToast('📝 Dados de "' + name + '" carregados no formulário principal. Clique em "Ativar Assistente IA" para atualizar.', 'success');
+                showToast('📝 Dados de "' + name + '" carregados com FAQs e Widget. Clique em "Ativar Assistente IA" para atualizar.', 'success');
             } catch (e) {
                 console.error('🤖 Erro ao editar assistente:', e);
                 showToast('❌ Erro ao carregar dados do assistente', 'error');
