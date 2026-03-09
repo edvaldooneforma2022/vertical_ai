@@ -2295,10 +2295,7 @@
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     ⚙️ Sistema
                 </button>
-                <button class="new-tab" onclick="showNewTab('gmail')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                    📧 Gmail
-                </button>
+
                 <button class="new-tab" onclick="showNewTab('whatsapp')"
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     📱 WhatsApp
@@ -2602,28 +2599,6 @@
                 </div>
             </div>
 
-            <!-- Tab Gmail -->
-            <div id="tab-gmail" class="new-tab-content" style="display:none;">
-                <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📧 Integração Gmail</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure envio automático de emails</p>
-
-                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status da Integração</h3>
-                        <div id="gmail-status" style="color:#94a3b8;">Carregando...</div>
-                    </div>
-
-                    <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Testar Envio</h3>
-                        <input type="email" id="test-email" placeholder="email@exemplo.com"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <button onclick="testGmail()"
-                            style="background:#3b82f6; color:white; border:none; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600;">
-                            Enviar Email de Teste
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <!-- Tab WhatsApp -->
             <div id="tab-whatsapp" class="new-tab-content" style="display:none;">
@@ -3072,7 +3047,7 @@
             if (tabName === 'billing') loadBillingLimits(); // SAFE PATCH - QA FIX: BUG-003
             if (tabName === 'llm') loadLLMStats();
             if (tabName === 'system') loadSystemStatus();
-            if (tabName === 'gmail') loadGmailStatus();
+
             if (tabName === 'whatsapp') loadWhatsAppStatus();
             if (tabName === 'chatgpt') loadChatGPTStatus();
             if (tabName === 'knowledge') loadFAQs();
@@ -3906,52 +3881,6 @@
 
 
         // ===== FUNÇÕES DAS NOVAS INTEGRAÇÕES V3 =====
-
-        async function loadGmailStatus() {
-            try {
-                const response = await fetch('/api/gmail/status');
-                const data = await response.json();
-                const statusEl = document.getElementById('gmail-status');
-
-                if (data.configured) {
-                    statusEl.innerHTML = '<div style="color:#10b981;">✅ Gmail configurado e pronto para uso</div>';
-                } else {
-                    statusEl.innerHTML = '<div style="color:#f59e0b;">⚠️ Gmail não configurado. Configure as variáveis GMAIL_USER e GMAIL_PASSWORD no .env</div>';
-                }
-            } catch (error) {
-                console.error('Erro ao carregar status Gmail:', error);
-            }
-        }
-
-        async function testGmail() {
-            const email = document.getElementById('test-email').value;
-            if (!email) {
-                alert('Digite um email!');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/gmail/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        to: email,
-                        subject: 'Teste Link Mágico V3',
-                        html: '<h1>Email de teste!</h1><p>Se você recebeu este email, a integração Gmail está funcionando! 🎉</p>'
-                    })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    alert('Email enviado com sucesso! Verifique a caixa de entrada.');
-                } else {
-                    alert('Erro ao enviar email: ' + (data.error || 'Desconhecido'));
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('Erro ao enviar email');
-            }
-        }
 
         async function loadWhatsAppStatus() {
             try {
