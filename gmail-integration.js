@@ -237,6 +237,30 @@ class GmailIntegration {
             return { success: false, error: error.message };
         }
     }
+
+    // SAFE PATCH - GMAIL-001: Método getStatus() esperado pelo server.js
+    getStatus() {
+        return {
+            configured: this.isConfigured,
+            ready: this.isReady(),
+            service: 'gmail',
+            templates: this.getTemplates(),
+            fromEmail: this.fromEmail || null
+        };
+    }
+
+    // SAFE PATCH - GMAIL-002: Método sendLeadNotification() esperado pelo server.js
+    async sendLeadNotification(leadData) {
+        try {
+            return await this.notifyNewLead(leadData, {
+                name: leadData.robotName || leadData.chatbotName || 'Chatbot',
+                ownerEmail: leadData.ownerEmail || process.env.OWNER_EMAIL
+            });
+        } catch (error) {
+            console.warn('⚠️ [Gmail] Erro ao notificar lead (não crítico):', error.message);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Singleton instance
@@ -251,8 +275,10 @@ if (process.env.GMAIL_USER && process.env.GMAIL_PASSWORD) {
     });
 }
 
+// SAFE PATCH - GMAIL-003: Alias gmailManager para compatibilidade com server.js
 module.exports = {
     gmailIntegration,
+    gmailManager: gmailIntegration,
     GmailIntegration
 };
 
