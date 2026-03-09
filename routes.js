@@ -620,13 +620,13 @@ function setupRoutes(app) {
     app.get('/api/knowledge/:chatbotId', (req, res) => {
         try {
             const { chatbotId } = req.params;
-            const kb = knowledgeBaseManager.getKnowledgeBase(chatbotId);
+            let kb = knowledgeBaseManager.getKnowledgeBase(chatbotId);
 
+            // SAFE PATCH - BUG-FAQ-001: Auto-inicializar KB vazia ao invés de retornar 404
+            // Isso permite que o frontend sempre exiba o formulário de FAQs funcional
             if (!kb) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Base de conhecimento não encontrada'
-                });
+                kb = knowledgeBaseManager.initializeKnowledgeBase(chatbotId);
+                console.log(`📚 [Knowledge] KB auto-inicializada para: ${chatbotId.substring(0, 8)}...`);
             }
 
             res.json({

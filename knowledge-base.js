@@ -96,15 +96,51 @@ class KnowledgeBaseManager {
      */
     initializeKnowledgeBase(chatbotId, initialData = {}) {
         if (!this.knowledgeBases.has(chatbotId)) {
+            // SAFE PATCH - BUG-FAQ-002: Adicionar FAQs de exemplo na inicialização
+            const exampleFaqs = [
+                {
+                    id: 'example_1',
+                    question: 'Qual o horário de funcionamento?',
+                    answer: 'Funcionamos de segunda a sexta, das 9h às 18h. Aos sábados, das 9h às 13h.',
+                    category: 'geral',
+                    addedAt: new Date().toISOString(),
+                    active: true,
+                    hits: 0,
+                    isExample: true
+                },
+                {
+                    id: 'example_2',
+                    question: 'Quais as formas de pagamento aceitas?',
+                    answer: 'Aceitamos PIX, cartão de crédito (até 12x), cartão de débito e boleto bancário.',
+                    category: 'pagamento',
+                    addedAt: new Date().toISOString(),
+                    active: true,
+                    hits: 0,
+                    isExample: true
+                },
+                {
+                    id: 'example_3',
+                    question: 'Tem garantia ou política de reembolso?',
+                    answer: 'Sim! Oferecemos garantia incondicional de 7 dias. Se não ficar satisfeito, devolvemos 100% do valor.',
+                    category: 'garantia',
+                    addedAt: new Date().toISOString(),
+                    active: true,
+                    hits: 0,
+                    isExample: true
+                }
+            ];
+
             this.knowledgeBases.set(chatbotId, {
                 chatbotId,
                 sources: [],
-                faqs: [],
+                faqs: exampleFaqs,
                 documents: [],
                 manualEntries: [],
                 lastUpdated: new Date().toISOString(),
-                totalEntries: 0
+                totalEntries: 3
             });
+
+            console.log(`📚 [Knowledge] KB inicializada com 3 FAQs de exemplo para: ${chatbotId.substring(0, 8)}...`);
         }
 
         // Adicionar dados iniciais se fornecidos
