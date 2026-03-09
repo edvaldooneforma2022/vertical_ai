@@ -4431,9 +4431,27 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
 
         let response = "";
         let usedProvider = "none";
+        let llmCacheHit = false;
 
-        // Try Groq first
-        if (process.env.GROQ_API_KEY) {
+        // SAFE PATCH - LLM-OPT-001: Verificar cache antes de chamar IA
+        try {
+            if (llmOptimizer && (chatbotId || apiKey)) {
+                const cacheKey = chatbotId || apiKey;
+                const cached = llmOptimizer.responseCache.findSimilar(cleanUserMessage, cacheKey);
+                if (cached) {
+                    response = cached;
+                    usedProvider = "cache";
+                    llmCacheHit = true;
+                    llmOptimizer.trackUsage(cacheKey, 'cache', 0, 0);
+                    console.log(`⚡ [LLM-OPT] Cache HIT para: "${cleanUserMessage.substring(0, 40)}..."`);
+                }
+            }
+        } catch (cacheErr) {
+            console.warn('⚠️ [LLM-OPT] Erro no cache check (ignorado):', cacheErr.message);
+        }
+
+        // Try Groq first (FLUXO ORIGINAL INALTERADO)
+        if (!llmCacheHit && process.env.GROQ_API_KEY) {
             try {
                 response = await callGroq(messages, 0.4, 300);
                 usedProvider = "groq";
@@ -4443,8 +4461,8 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
             }
         }
 
-        // Try OpenRouter if Groq failed
-        if (!response && process.env.OPENROUTER_API_KEY) {
+        // Try OpenRouter if Groq failed (FLUXO ORIGINAL INALTERADO)
+        if (!llmCacheHit && !response && process.env.OPENROUTER_API_KEY) {
             try {
                 response = await callOpenRouter(messages, 0.3, 250);
                 usedProvider = "openrouter";
@@ -4455,7 +4473,7 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         }
 
         // Try OpenAI if others failed
-        if (!response && process.env.OPENAI_API_KEY) {
+        if (!llmCacheHit && !response && process.env.OPENAI_API_KEY) {
             try {
                 response = await callOpenAI(messages, 0.2, 250);
                 usedProvider = "openai";
@@ -4492,6 +4510,18 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         // 🎯 CORREÇÃO FINAL: Limpar resposta de qualquer caractere especial
         const finalResponse = String(response).replace(/<s>\s*\[OUT\]/g, '').replace(/<[^>]*>/g, '').replace(/\[.*?\]/g, '').trim();
         const responseTime = Date.now() - startTime;
+
+        // SAFE PATCH - LLM-OPT-002: Salvar resposta no cache para futuras consultas
+        try {
+            if (llmOptimizer && (chatbotId || apiKey) && !llmCacheHit && finalResponse && usedProvider !== 'local') {
+                const cacheKey = chatbotId || apiKey;
+                llmOptimizer.cacheResponse(cacheKey, cleanUserMessage, finalResponse, { provider: usedProvider });
+                llmOptimizer.trackUsage(cacheKey, usedProvider, 0, 0);
+                console.log(`💾 [LLM-OPT] Resposta cacheada (${usedProvider}): "${cleanUserMessage.substring(0, 40)}..."`);
+            }
+        } catch (cacheErr) {
+            console.warn('⚠️ [LLM-OPT] Erro ao salvar cache (ignorado):', cacheErr.message);
+        }
 
         console.log(`🧠 [SUPERINTELIGÊNCIA] Resposta Gerada:`);
         console.log(`   Emoção: ${estadoEmocional.emocaoPrimaria} | Intenções: ${estadoEmocional.intencoesMultiplas.length}`);
