@@ -2,6 +2,9 @@
  * 📚 SISTEMA DE GESTÃO DE CONHECIMENTO - Link Mágico
  * Permite adicionar múltiplas fontes de conhecimento além de URLs
  * 
+ * SAFE PATCH - BUG-FAQ-003: Migrado para PostgreSQL como armazenamento principal
+ * Mantém fallback para filesystem (compatibilidade com desenvolvimento local)
+ * 
  * Fontes suportadas:
  * - URLs (web scraping)
  * - PDFs (upload)
@@ -18,8 +21,24 @@ class KnowledgeBaseManager {
     constructor() {
         this.knowledgeBases = new Map();
         this.dataPath = path.join(__dirname, 'data', 'knowledge');
+        this.db = null;
+        this.usePostgres = false;
 
         this.ensureDataDirectory();
+
+        // Tentar conectar ao PostgreSQL (lazy — será configurado pelo server.js)
+        try {
+            const { db, USE_POSTGRES } = require('./database');
+            if (USE_POSTGRES && db) {
+                this.db = db;
+                this.usePostgres = true;
+                console.log('📚 Knowledge Base: PostgreSQL conectado ✅');
+            }
+        } catch (err) {
+            console.warn('📚 Knowledge Base: PostgreSQL não disponível, usando filesystem (fallback)');
+        }
+
+        // Carregar do filesystem como cache inicial (fallback)
         this.loadKnowledgeBases();
 
         console.log('📚 Sistema de Gestão de Conhecimento inicializado');
@@ -29,16 +48,21 @@ class KnowledgeBaseManager {
      * Garantir que o diretório existe
      */
     ensureDataDirectory() {
-        if (!fs.existsSync(this.dataPath)) {
-            fs.mkdirSync(this.dataPath, { recursive: true });
+        try {
+            if (!fs.existsSync(this.dataPath)) {
+                fs.mkdirSync(this.dataPath, { recursive: true });
+            }
+        } catch (err) {
+            console.warn('📚 [Knowledge] Não foi possível criar diretório de dados:', err.message);
         }
     }
 
     /**
-     * Carregar bases de conhecimento salvas
+     * Carregar bases de conhecimento salvas (filesystem — fallback/cache)
      */
     loadKnowledgeBases() {
         try {
+            if (!fs.existsSync(this.dataPath)) return;
             const files = fs.readdirSync(this.dataPath);
 
             for (const file of files) {
@@ -50,16 +74,90 @@ class KnowledgeBaseManager {
                 }
             }
 
-            console.log(`📥 ${this.knowledgeBases.size} base(s) de conhecimento carregadas`);
+            console.log(`📥 ${this.knowledgeBases.size} base(s) de conhecimento carregadas (filesystem)`);
         } catch (error) {
             console.error('❌ Erro ao carregar bases de conhecimento:', error);
         }
     }
 
     /**
-     * Recarregar base de conhecimento do disco (para garantir dados atualizados)
+     * === POSTGRESQL: Salvar KB no banco ===
+     */
+    async saveToPostgres(chatbotId) {
+        if (!this.usePostgres || !this.db) return false;
+
+        try {
+            const kb = this.knowledgeBases.get(chatbotId);
+            if (!kb) return false;
+
+            const dataJson = JSON.stringify(kb);
+
+            // UPSERT: INSERT ou UPDATE se já existe
+            await this.db.query(
+                `INSERT INTO tenant_knowledge (api_key, data, updated_at) 
+                 VALUES ($1, $2, CURRENT_TIMESTAMP)
+                 ON CONFLICT (api_key) 
+                 DO UPDATE SET data = $2, updated_at = CURRENT_TIMESTAMP`,
+                [chatbotId, dataJson]
+            );
+
+            console.log(`💾 [PostgreSQL] KB salva: ${chatbotId.substring(0, 8)}...`);
+            return true;
+        } catch (error) {
+            console.error(`❌ [PostgreSQL] Erro ao salvar KB ${chatbotId.substring(0, 8)}:`, error.message);
+            return false;
+        }
+    }
+
+    /**
+     * === POSTGRESQL: Carregar KB do banco ===
+     */
+    async loadFromPostgres(chatbotId) {
+        if (!this.usePostgres || !this.db) return null;
+
+        try {
+            const result = await this.db.query(
+                'SELECT data FROM tenant_knowledge WHERE api_key = $1',
+                [chatbotId]
+            );
+
+            if (result.rows && result.rows.length > 0) {
+                const data = typeof result.rows[0].data === 'string' 
+                    ? JSON.parse(result.rows[0].data) 
+                    : result.rows[0].data;
+                
+                // Atualizar cache em memória
+                this.knowledgeBases.set(chatbotId, data);
+                console.log(`📥 [PostgreSQL] KB carregada: ${chatbotId.substring(0, 8)}...`);
+                return data;
+            }
+            return null;
+        } catch (error) {
+            console.error(`❌ [PostgreSQL] Erro ao carregar KB ${chatbotId.substring(0, 8)}:`, error.message);
+            return null;
+        }
+    }
+
+    /**
+     * Recarregar base de conhecimento (PostgreSQL → filesystem → memória)
      */
     reloadKnowledgeBase(chatbotId) {
+        // Prioridade 1: Tentar PostgreSQL (síncrono via cache — async no background)
+        // Para manter compatibilidade com código síncrono existente, 
+        // fazemos o load async em background e retornamos o cache
+        if (this.usePostgres) {
+            // Disparar reload async (atualiza cache para próxima chamada)
+            this.loadFromPostgres(chatbotId).catch(err => {
+                console.warn('📚 [Knowledge] Reload async falhou:', err.message);
+            });
+        }
+
+        // Prioridade 2: Cache em memória (já carregado do PostgreSQL ou filesystem)
+        if (this.knowledgeBases.has(chatbotId)) {
+            return this.knowledgeBases.get(chatbotId);
+        }
+
+        // Prioridade 3: Filesystem (fallback)
         try {
             const filepath = path.join(this.dataPath, `${chatbotId}.json`);
             if (fs.existsSync(filepath)) {
@@ -70,24 +168,31 @@ class KnowledgeBaseManager {
         } catch (error) {
             console.error(`❌ Erro ao recarregar base de conhecimento ${chatbotId}:`, error);
         }
-        return this.knowledgeBases.get(chatbotId);
+
+        return null;
     }
 
     /**
-     * Salvar base de conhecimento
+     * Salvar base de conhecimento (PostgreSQL + filesystem dual-write)
      */
     saveKnowledgeBase(chatbotId) {
+        const kb = this.knowledgeBases.get(chatbotId);
+        if (!kb) return;
+
+        // Salvar no PostgreSQL (async, não bloqueia)
+        if (this.usePostgres) {
+            this.saveToPostgres(chatbotId).catch(err => {
+                console.warn('📚 [Knowledge] Save PostgreSQL falhou, filesystem ok:', err.message);
+            });
+        }
+
+        // Salvar no filesystem (fallback síncrono — garantia extra)
         try {
-            const kb = this.knowledgeBases.get(chatbotId);
-
-            if (!kb) return;
-
             const filepath = path.join(this.dataPath, `${chatbotId}.json`);
             fs.writeFileSync(filepath, JSON.stringify(kb, null, 2));
-
-            console.log(`💾 Base de conhecimento salva: ${chatbotId}`);
         } catch (error) {
-            console.error('❌ Erro ao salvar base de conhecimento:', error);
+            // Não é crítico se filesystem falhar (PostgreSQL é o principal)
+            console.warn('📚 [Knowledge] Save filesystem falhou:', error.message);
         }
     }
 
@@ -455,7 +560,7 @@ class KnowledgeBaseManager {
      * Compilar contexto para o chatbot
      */
     compileContext(chatbotId, maxLength = 4000) {
-        // Recarregar do disco para garantir que pegamos as FAQs mais recentes
+        // Recarregar para garantir que pegamos as FAQs mais recentes
         const kb = this.reloadKnowledgeBase(chatbotId);
 
         if (!kb) {

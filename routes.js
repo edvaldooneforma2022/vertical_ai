@@ -617,13 +617,19 @@ function setupRoutes(app) {
      * GET /api/knowledge/:chatbotId
      * Obter base de conhecimento completa
      */
-    app.get('/api/knowledge/:chatbotId', (req, res) => {
+    app.get('/api/knowledge/:chatbotId', async (req, res) => {
         try {
             const { chatbotId } = req.params;
+
+            // SAFE PATCH - BUG-FAQ-003: Tentar PostgreSQL primeiro (persistente)
             let kb = knowledgeBaseManager.getKnowledgeBase(chatbotId);
 
-            // SAFE PATCH - BUG-FAQ-001: Auto-inicializar KB vazia ao invés de retornar 404
-            // Isso permite que o frontend sempre exiba o formulário de FAQs funcional
+            // Se não está em cache, tentar carregar do PostgreSQL diretamente
+            if (!kb && knowledgeBaseManager.usePostgres) {
+                kb = await knowledgeBaseManager.loadFromPostgres(chatbotId);
+            }
+
+            // Se ainda não existe, auto-inicializar com FAQs de exemplo
             if (!kb) {
                 kb = knowledgeBaseManager.initializeKnowledgeBase(chatbotId);
                 console.log(`📚 [Knowledge] KB auto-inicializada para: ${chatbotId.substring(0, 8)}...`);

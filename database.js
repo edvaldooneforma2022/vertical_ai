@@ -182,7 +182,15 @@ async function initializeDatabase() {
         `ALTER TABLE crm_webhooks ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
         `ALTER TABLE chatgpt_settings ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
         `ALTER TABLE conversation_memory ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
-        `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`
+        `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
+
+        // SAFE PATCH - BUG-FAQ-003: Tabela para persistir Knowledge Base no PostgreSQL
+        // Substitui o armazenamento em arquivos JSON (que eram perdidos a cada deploy)
+        `CREATE TABLE IF NOT EXISTS tenant_knowledge (
+            api_key ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            data ${USE_POSTGRES ? 'JSONB' : 'TEXT'} NOT NULL DEFAULT '${USE_POSTGRES ? '{}' : '{}'}',
+            updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`
     ];
 
     for (const migration of migrations) {
