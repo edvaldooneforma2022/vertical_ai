@@ -5878,8 +5878,8 @@ try {
         // GET disponibilidade do tenant
         app.get('/api/availability', requireApiKeyV3, async (req, res) => {
             try {
-                const apiKey = req.apiKey || req.session?.validatedApiKey;
-                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const apiKey = req.session.validatedApiKey || req.query.apiKey || req.body.apiKey;
+                const tenantId = apiKey;
                 const availability = await schedulingManager.getAvailability(tenantId);
                 const blockedDates = await schedulingManager.getBlockedDates(tenantId);
                 const publicHash = schedulingManager.generatePublicHash(apiKey);
@@ -5893,8 +5893,8 @@ try {
         // PUT salvar disponibilidade do tenant
         app.put('/api/availability', requireApiKeyV3, async (req, res) => {
             try {
-                const apiKey = req.apiKey || req.session?.validatedApiKey;
-                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const apiKey = req.session.validatedApiKey || req.query.apiKey || req.body.apiKey;
+                const tenantId = apiKey;
                 const { slots } = req.body;
                 if (!Array.isArray(slots)) {
                     return res.status(400).json({ success: false, error: 'slots deve ser um array' });
@@ -5910,8 +5910,8 @@ try {
         // POST adicionar data bloqueada
         app.post('/api/availability/blocked', requireApiKeyV3, async (req, res) => {
             try {
-                const apiKey = req.apiKey || req.session?.validatedApiKey;
-                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const apiKey = req.session.validatedApiKey || req.query.apiKey || req.body.apiKey;
+                const tenantId = apiKey;
                 const { date, reason } = req.body;
                 if (!date) return res.status(400).json({ success: false, error: 'date é obrigatório' });
                 const result = await schedulingManager.addBlockedDate(tenantId, date, reason);
@@ -5925,8 +5925,8 @@ try {
         // DELETE remover data bloqueada
         app.delete('/api/availability/blocked/:id', requireApiKeyV3, async (req, res) => {
             try {
-                const apiKey = req.apiKey || req.session?.validatedApiKey;
-                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const apiKey = req.session.validatedApiKey || req.query.apiKey || req.body.apiKey;
+                const tenantId = apiKey;
                 await schedulingManager.removeBlockedDate(tenantId, req.params.id);
                 res.json({ success: true });
             } catch (error) {
@@ -5942,7 +5942,7 @@ try {
                 if (!apiKey) {
                     return res.status(404).json({ success: false, error: 'Calendário não encontrado' });
                 }
-                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const tenantId = apiKey;
                 const slots = await schedulingManager.getPublicSlots(tenantId);
                 res.json({ success: true, slots });
             } catch (error) {
