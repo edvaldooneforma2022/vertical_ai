@@ -5463,17 +5463,19 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         function selectSchedDay(idx) {
             schedSelectedDate = schedSlots[idx];
             schedSelectedTime = null;
-            // Highlight day button
             document.querySelectorAll('.sched-day-btn').forEach(function(b) { b.classList.remove('active'); });
-            document.querySelector('.sched-day-btn[data-idx="' + idx + '"]').classList.add('active');
-            // Show times
+            var activeBtn = document.querySelector('.sched-day-btn[data-idx="' + idx + '"]');
+            if (activeBtn) activeBtn.classList.add('active');
             var area = document.getElementById('sched-times-area');
             var html = '<div class="sched-times">';
-            schedSelectedDate.times.forEach(function(time) {
-                html += '<button class="sched-time-btn" onclick="selectSchedTime(this, \'' + time + '\')">' + time + '</button>';
+            schedSelectedDate.times.forEach(function(time, ti) {
+                html += '<button class="sched-time-btn" data-time="' + time + '">' + time + '</button>';
             });
             html += '</div>';
             area.innerHTML = html;
+            area.querySelectorAll('.sched-time-btn').forEach(function(b) {
+                b.addEventListener('click', function() { selectSchedTime(this, this.getAttribute('data-time')); });
+            });
             document.getElementById('sched-selection').innerHTML = '';
             document.getElementById('sched-confirm-btn').disabled = true;
         }
