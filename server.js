@@ -51,6 +51,15 @@ const { whitelabelManager } = require('./whitelabel');
 const { structuredLeadsManager } = require('./structured-leads');
 const { ShortUrlGenerator } = require('./short-url-generator');
 const { getApiKeyManager } = require('./api-key-manager');
+// SAFE PATCH - SCHED-005: Módulo de agendamento com calendário real
+let schedulingManager = null;
+try {
+    const schedModule = require('./scheduling-manager');
+    schedulingManager = schedModule.schedulingManager;
+    console.log('✅ Scheduling Manager carregado');
+} catch (e) {
+    console.warn('⚠️ Scheduling Manager não carregado (não crítico):', e.message);
+}
 console.log('✅ Módulos V3.0 carregados');
 
 // ===== MÓDULOS V8.0 - MELHORIAS AVANÇADAS =====
@@ -2912,7 +2921,7 @@ async function requireApiKey(req, res, next) {
         "/api/chat-universal"
     ];
 
-    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/admin")) {
+    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/admin") || req.path.startsWith("/api/public/")) {
         return next();
     }
 
@@ -5863,6 +5872,114 @@ try {
         const status = gmailManager.getStatus();
         res.json(status);
     });
+
+    // ===== 📅 SCHEDULING / CALENDÁRIO REAL (SAFE PATCH - SCHED-006) =====
+    if (schedulingManager) {
+        // GET disponibilidade do tenant
+        app.get('/api/availability', requireApiKeyV3, async (req, res) => {
+            try {
+                const apiKey = req.apiKey || req.session?.validatedApiKey;
+                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const availability = await schedulingManager.getAvailability(tenantId);
+                const blockedDates = await schedulingManager.getBlockedDates(tenantId);
+                const publicHash = schedulingManager.generatePublicHash(apiKey);
+                res.json({ success: true, availability, blockedDates, publicHash });
+            } catch (error) {
+                console.error('❌ [Scheduling] Erro GET availability:', error.message);
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // PUT salvar disponibilidade do tenant
+        app.put('/api/availability', requireApiKeyV3, async (req, res) => {
+            try {
+                const apiKey = req.apiKey || req.session?.validatedApiKey;
+                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const { slots } = req.body;
+                if (!Array.isArray(slots)) {
+                    return res.status(400).json({ success: false, error: 'slots deve ser um array' });
+                }
+                const result = await schedulingManager.saveAvailability(tenantId, slots);
+                res.json({ success: true, ...result });
+            } catch (error) {
+                console.error('❌ [Scheduling] Erro PUT availability:', error.message);
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // POST adicionar data bloqueada
+        app.post('/api/availability/blocked', requireApiKeyV3, async (req, res) => {
+            try {
+                const apiKey = req.apiKey || req.session?.validatedApiKey;
+                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const { date, reason } = req.body;
+                if (!date) return res.status(400).json({ success: false, error: 'date é obrigatório' });
+                const result = await schedulingManager.addBlockedDate(tenantId, date, reason);
+                res.json({ success: true, blockedDate: result });
+            } catch (error) {
+                console.error('❌ [Scheduling] Erro POST blocked date:', error.message);
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // DELETE remover data bloqueada
+        app.delete('/api/availability/blocked/:id', requireApiKeyV3, async (req, res) => {
+            try {
+                const apiKey = req.apiKey || req.session?.validatedApiKey;
+                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                await schedulingManager.removeBlockedDate(tenantId, req.params.id);
+                res.json({ success: true });
+            } catch (error) {
+                console.error('❌ [Scheduling] Erro DELETE blocked date:', error.message);
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // 🌐 ROTAS PÚBLICAS (sem auth — usadas pelo calendário no chatbot)
+        app.get('/api/public/availability/:hash', async (req, res) => {
+            try {
+                const apiKey = await schedulingManager.resolveApiKeyFromHash(req.params.hash);
+                if (!apiKey) {
+                    return res.status(404).json({ success: false, error: 'Calendário não encontrado' });
+                }
+                const tenantId = await schedulingManager._resolveTenantId(apiKey) || apiKey;
+                const slots = await schedulingManager.getPublicSlots(tenantId);
+                res.json({ success: true, slots });
+            } catch (error) {
+                console.error('❌ [Scheduling] Erro GET public slots:', error.message);
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        app.post('/api/public/book/:hash', async (req, res) => {
+            try {
+                const apiKey = await schedulingManager.resolveApiKeyFromHash(req.params.hash);
+                if (!apiKey) {
+                    return res.status(404).json({ success: false, error: 'Calendário não encontrado' });
+                }
+                const { name, email, phone, date, time, notes } = req.body;
+                if (!date || !time) {
+                    return res.status(400).json({ success: false, error: 'date e time são obrigatórios' });
+                }
+                // Usar o sistema de agendamento existente
+                const leadSystem = getLeadSystem(apiKey);
+                const appointment = leadSystem.addAppointment({
+                    leadName: name || 'Não informado',
+                    leadEmail: email || 'Não informado',
+                    leadPhone: phone || '',
+                    datetime: `${date} ${time}`,
+                    notes: notes || 'Agendado via calendário',
+                    robotName: 'Calendário Online'
+                });
+                res.json({ success: true, appointment });
+            } catch (error) {
+                console.error('❌ [Scheduling] Erro POST public book:', error.message);
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        console.log('📅 Rotas de Agendamento/Calendário configuradas');
+    }
 
     // WhatsApp Integration
     app.post('/api/whatsapp/send', requireApiKeyV3, async (req, res) => {

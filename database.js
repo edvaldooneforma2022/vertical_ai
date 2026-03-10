@@ -190,7 +190,33 @@ async function initializeDatabase() {
             api_key ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
             data ${USE_POSTGRES ? 'JSONB' : 'TEXT'} NOT NULL DEFAULT '${USE_POSTGRES ? '{}' : '{}'}',
             updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
-        )`
+        )`,
+
+        // SAFE PATCH - SCHED-001: Tabela de disponibilidade por tenant (calendário real)
+        `CREATE TABLE IF NOT EXISTS tenant_availability (
+            id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            tenant_id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
+            day_of_week ${USE_POSTGRES ? 'INTEGER' : 'INTEGER'} NOT NULL,
+            start_time ${USE_POSTGRES ? 'VARCHAR(5)' : 'TEXT'} NOT NULL,
+            end_time ${USE_POSTGRES ? 'VARCHAR(5)' : 'TEXT'} NOT NULL,
+            slot_duration_minutes ${USE_POSTGRES ? 'INTEGER' : 'INTEGER'} DEFAULT 60,
+            active ${USE_POSTGRES ? 'BOOLEAN DEFAULT true' : 'INTEGER DEFAULT 1'},
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP,
+            updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // SAFE PATCH - SCHED-002: Tabela de datas bloqueadas por tenant
+        `CREATE TABLE IF NOT EXISTS tenant_blocked_dates (
+            id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            tenant_id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
+            blocked_date ${USE_POSTGRES ? 'DATE' : 'TEXT'} NOT NULL,
+            reason ${USE_POSTGRES ? 'TEXT' : 'TEXT'},
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // SAFE PATCH - SCHED-003: Índices para performance
+        `CREATE INDEX IF NOT EXISTS idx_tenant_availability_tenant ON tenant_availability(tenant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_blocked_dates_tenant ON tenant_blocked_dates(tenant_id)`
     ];
 
     for (const migration of migrations) {

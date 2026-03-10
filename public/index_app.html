@@ -2325,6 +2325,10 @@
                     style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
                     🤖 Meus Assistentes
                 </button>
+                <button class="new-tab" onclick="showNewTab('scheduling')"
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600; border:1px solid #10b981;">
+                    📅 Agendamentos
+                </button>
             </div>
 
             <!-- Tab Contents -->
@@ -2986,6 +2990,56 @@
             </div>
             <!-- ===== FIM TAB MEUS ASSISTENTES ===== -->
 
+            <!-- ===== TAB AGENDAMENTOS (SAFE PATCH - SCHED-007) ===== -->
+            <div id="tab-scheduling" class="new-tab-content" style="display:none;">
+                <div style="background:#1e293b; padding:2rem; border-radius:16px; margin-bottom:1rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                        <div>
+                            <h2 style="color:#10b981; margin:0;">📅 Configuração de Agendamentos</h2>
+                            <p style="color:#94a3b8; margin:0.5rem 0 0 0;">Defina seus horários disponíveis para que clientes agendem pelo calendário</p>
+                        </div>
+                        <button onclick="saveScheduling()" style="background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; padding:0.7rem 1.5rem; border-radius:10px; cursor:pointer; font-weight:600;">💾 Salvar</button>
+                    </div>
+
+                    <!-- Duração do Slot -->
+                    <div style="margin-bottom:1.5rem;">
+                        <label style="color:#e2e8f0; font-weight:600;">⏱️ Duração de cada horário</label>
+                        <select id="sched-slot-duration" style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; margin-left:1rem;">
+                            <option value="30">30 minutos</option>
+                            <option value="60" selected>1 hora</option>
+                            <option value="90">1h30</option>
+                            <option value="120">2 horas</option>
+                        </select>
+                    </div>
+
+                    <!-- Grid de Dias -->
+                    <div id="sched-days-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
+                    </div>
+
+                    <!-- Link Público -->
+                    <div id="sched-public-link" style="margin-top:1.5rem; padding:1rem; background:#0f172a; border-radius:10px; display:none;">
+                        <label style="color:#10b981; font-weight:600;">🔗 Link do Calendário Público</label>
+                        <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                            <input id="sched-public-url" readonly style="flex:1; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; font-family:monospace;">
+                            <button onclick="navigator.clipboard.writeText(document.getElementById('sched-public-url').value); this.textContent='✅ Copiado!'; setTimeout(()=>this.textContent='📋 Copiar',2000)" style="background:#334155; color:#e2e8f0; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;">📋 Copiar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datas Bloqueadas -->
+                <div style="background:#1e293b; padding:2rem; border-radius:16px;">
+                    <h3 style="color:#f59e0b; margin:0 0 1rem 0;">🚫 Datas Bloqueadas</h3>
+                    <p style="color:#94a3b8; margin:0 0 1rem 0;">Bloqueie feriados, férias ou dias que não estará disponível</p>
+                    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+                        <input type="date" id="sched-block-date" style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px;">
+                        <input type="text" id="sched-block-reason" placeholder="Motivo (opcional)" style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; flex:1; min-width:150px;">
+                        <button onclick="addBlockedDate()" style="background:#f59e0b; color:#0f172a; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">+ Bloquear</button>
+                    </div>
+                    <div id="sched-blocked-list" style="display:flex; flex-wrap:wrap; gap:0.5rem;"></div>
+                </div>
+            </div>
+            <!-- ===== FIM TAB AGENDAMENTOS ===== -->
+
         </div>
     </div>
 
@@ -3063,7 +3117,186 @@
             if (tabName === 'assistentes') {
                 loadAssistants();
             }
+            // SAFE PATCH - SCHED-007: Carregar configuração de agendamentos
+            if (tabName === 'scheduling') {
+                loadScheduling();
+            }
         }
+        // ===== 📅 AGENDAMENTOS - Funções JavaScript (SAFE PATCH - SCHED-008) =====
+
+        const SCHED_DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+        async function loadScheduling() {
+            try {
+                const apiKey = document.getElementById('apiKeyInput')?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
+                const response = await fetch('/api/availability?apiKey=' + encodeURIComponent(apiKey));
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.warn('⚠️ Scheduling: falha ao carregar', data.error);
+                }
+
+                // Renderizar grid de dias
+                renderSchedulingGrid(data.availability || [], data.blockedDates || []);
+
+                // Mostrar link público
+                if (data.publicHash) {
+                    const url = `${window.location.origin}/api/public/availability/${data.publicHash}`;
+                    document.getElementById('sched-public-url').value = url;
+                    document.getElementById('sched-public-link').style.display = 'block';
+                }
+
+                // Renderizar datas bloqueadas
+                renderBlockedDates(data.blockedDates || []);
+
+                // Detectar duração do slot a partir dos dados
+                if (data.availability && data.availability.length > 0) {
+                    document.getElementById('sched-slot-duration').value = data.availability[0].slotDuration || 60;
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar agendamentos:', error);
+            }
+        }
+
+        function renderSchedulingGrid(availability, blockedDates) {
+            const grid = document.getElementById('sched-days-grid');
+            const existingSlots = {};
+
+            // Mapear slots existentes por dia
+            for (const slot of availability) {
+                if (!existingSlots[slot.dayOfWeek]) existingSlots[slot.dayOfWeek] = [];
+                existingSlots[slot.dayOfWeek].push(slot);
+            }
+
+            let html = '';
+            // Seg a Sáb (1-6) + Domingo (0)
+            const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+
+            for (const day of dayOrder) {
+                const slots = existingSlots[day] || [];
+                const isActive = slots.length > 0;
+                const startTime = slots.length > 0 ? slots[0].startTime : '09:00';
+                const endTime = slots.length > 0 ? slots[0].endTime : '18:00';
+
+                html += `
+                <div style="background:${isActive ? '#0f172a' : '#1a1f2e'}; padding:1rem; border-radius:12px; border:1px solid ${isActive ? '#10b981' : '#334155'};">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                        <label style="color:#e2e8f0; font-weight:600;">${SCHED_DAY_NAMES[day]}</label>
+                        <label style="cursor:pointer;">
+                            <input type="checkbox" class="sched-day-toggle" data-day="${day}" ${isActive ? 'checked' : ''}
+                                onchange="this.closest('div').parentElement.style.borderColor = this.checked ? '#10b981' : '#334155'"
+                                style="accent-color:#10b981;">
+                            <span style="color:${isActive ? '#10b981' : '#64748b'}; font-size:0.85rem;">${isActive ? 'Ativo' : 'Inativo'}</span>
+                        </label>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="time" class="sched-start" data-day="${day}" value="${startTime}"
+                            style="background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.4rem; border-radius:6px; flex:1;">
+                        <span style="color:#64748b;">até</span>
+                        <input type="time" class="sched-end" data-day="${day}" value="${endTime}"
+                            style="background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.4rem; border-radius:6px; flex:1;">
+                    </div>
+                </div>`;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        function renderBlockedDates(blockedDates) {
+            const container = document.getElementById('sched-blocked-list');
+            if (!blockedDates || blockedDates.length === 0) {
+                container.innerHTML = '<span style="color:#64748b;">Nenhuma data bloqueada</span>';
+                return;
+            }
+            container.innerHTML = blockedDates.map(bd => {
+                const dateStr = new Date(bd.date + 'T12:00:00').toLocaleDateString('pt-BR');
+                return `<div style="background:#451a03; color:#fbbf24; padding:0.4rem 0.8rem; border-radius:8px; display:flex; align-items:center; gap:0.5rem; font-size:0.9rem;">
+                    🚫 ${dateStr}${bd.reason ? ' — ' + bd.reason : ''}
+                    <button onclick="removeBlockedDate('${bd.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1rem; padding:0;">✕</button>
+                </div>`;
+            }).join('');
+        }
+
+        async function saveScheduling() {
+            try {
+                const apiKey = document.getElementById('apiKeyInput')?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
+                const slotDuration = parseInt(document.getElementById('sched-slot-duration').value) || 60;
+                const slots = [];
+
+                document.querySelectorAll('.sched-day-toggle').forEach(toggle => {
+                    if (toggle.checked) {
+                        const day = parseInt(toggle.dataset.day);
+                        const startEl = document.querySelector(`.sched-start[data-day="${day}"]`);
+                        const endEl = document.querySelector(`.sched-end[data-day="${day}"]`);
+                        if (startEl && endEl) {
+                            slots.push({
+                                dayOfWeek: day,
+                                startTime: startEl.value,
+                                endTime: endEl.value,
+                                slotDuration: slotDuration
+                            });
+                        }
+                    }
+                });
+
+                const response = await fetch('/api/availability?apiKey=' + encodeURIComponent(apiKey), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ slots })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Disponibilidade salva com sucesso! ' + (data.slotsCount || 0) + ' horários configurados.');
+                    loadScheduling();
+                } else {
+                    alert('❌ Erro: ' + (data.error || 'Falha ao salvar'));
+                }
+            } catch (error) {
+                console.error('❌ Erro ao salvar disponibilidade:', error);
+                alert('❌ Erro ao salvar: ' + error.message);
+            }
+        }
+
+        async function addBlockedDate() {
+            const dateInput = document.getElementById('sched-block-date');
+            const reasonInput = document.getElementById('sched-block-reason');
+            const date = dateInput.value;
+            const reason = reasonInput.value;
+
+            if (!date) { alert('Selecione uma data'); return; }
+
+            try {
+                const apiKey = document.getElementById('apiKeyInput')?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
+                const response = await fetch('/api/availability/blocked?apiKey=' + encodeURIComponent(apiKey), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, reason })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    dateInput.value = '';
+                    reasonInput.value = '';
+                    loadScheduling();
+                } else {
+                    alert('❌ ' + (data.error || 'Erro'));
+                }
+            } catch (error) {
+                alert('❌ Erro: ' + error.message);
+            }
+        }
+
+        async function removeBlockedDate(id) {
+            try {
+                const apiKey = document.getElementById('apiKeyInput')?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
+                await fetch('/api/availability/blocked/' + id + '?apiKey=' + encodeURIComponent(apiKey), { method: 'DELETE' });
+                loadScheduling();
+            } catch (error) {
+                console.error('❌ Erro ao remover data bloqueada:', error);
+            }
+        }
+
         // ===== 🤖 MEUS ASSISTENTES - Funções JavaScript (REDESIGN — short_urls) =====
 
         async function loadAssistants() {
