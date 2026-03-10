@@ -2221,17 +2221,10 @@ class SuperInteligenciaEmocional {
     }
 
     gerarOpcoesAgendamento() {
-        const horarios = this.horariosDisponiveis.slice(0, 3); // 3 primeiros horários
+        // SAFE PATCH - SCHED-009: Marcador para calendário visual no chat
         let resposta = `**📅 AGENDAMENTO DISPONÍVEL**\n\n`;
-        resposta += `Encontrei estes horários para nossa conversa:\n\n`;
-
-        horarios.forEach((horario, index) => {
-            resposta += `${index + 1}. ${horario}\n`;
-        });
-
-        resposta += `\n💬 **Qual horário prefere?**\n`;
-        resposta += `📞 Ou se preferir, posso passar nossos contatos diretos!`;
-
+        resposta += `Escolha um dia e horário no calendário abaixo:\n\n`;
+        resposta += `[CALENDAR_WIDGET]`;
         return resposta;
     }
 
@@ -5342,7 +5335,21 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         .contact-button{flex:1;min-width:120px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:all 0.3s;text-decoration:none;color:#334155;font-size:0.9rem;display:flex;align-items:center;justify-content:center;gap:5px}
         .contact-button:hover{background:${primaryColor};color:white;transform:translateY(-2px)}
         .lm-botoes-fixos a, .lm-botoes-fixos button { font-size: 0.85rem; }
-        @media (max-width:768px){.chat-container{height:100vh;border-radius:0}.chat-message{max-width:85%}.lead-form{margin:10px;padding:20px}.contact-button{min-width:100px;font-size:0.8rem}.lm-botoes-fixos{padding:10px !important}.lm-botoes-fixos a, .lm-botoes-fixos button{padding:10px 15px !important;font-size:0.8rem !important}}
+        .sched-calendar{background:#f0f9ff;border:2px solid #3b82f6;border-radius:16px;padding:16px;margin:10px 0;max-width:100%}
+        .sched-calendar h4{color:#1e40af;margin:0 0 12px 0;font-size:1rem;text-align:center}
+        .sched-days{display:flex;gap:6px;overflow-x:auto;padding:4px 0;margin-bottom:12px}
+        .sched-day-btn{background:#e0e7ff;color:#3730a3;border:2px solid transparent;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:0.8rem;font-weight:600;white-space:nowrap;transition:all .2s;min-width:70px;text-align:center}
+        .sched-day-btn:hover{background:#c7d2fe;transform:translateY(-1px)}
+        .sched-day-btn.active{background:#3b82f6;color:white;border-color:#1d4ed8;box-shadow:0 2px 8px rgba(59,130,246,0.4)}
+        .sched-times{display:flex;flex-wrap:wrap;gap:6px}
+        .sched-time-btn{background:white;color:#1e40af;border:1px solid #93c5fd;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:0.85rem;font-weight:500;transition:all .2s}
+        .sched-time-btn:hover{background:#3b82f6;color:white;transform:translateY(-1px);box-shadow:0 2px 6px rgba(59,130,246,0.3)}
+        .sched-confirm{background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:10px;padding:12px 24px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:12px;width:100%;transition:all .2s}
+        .sched-confirm:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,185,129,0.4)}
+        .sched-confirm:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+        .sched-selected{background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:8px 12px;margin-top:8px;color:#065f46;font-size:0.9rem;text-align:center}
+        .sched-loading{text-align:center;color:#64748b;padding:20px;font-size:0.9rem}
+        @media (max-width:768px){.chat-container{height:100vh;border-radius:0}.chat-message{max-width:85%}.lead-form{margin:10px;padding:20px}.contact-button{min-width:100px;font-size:0.8rem}.lm-botoes-fixos{padding:10px !important}.lm-botoes-fixos a, .lm-botoes-fixos button{padding:10px 15px !important;font-size:0.8rem !important}.sched-day-btn{min-width:60px;padding:6px 8px;font-size:0.75rem}}
     </style>
 </head>
 <body>
@@ -5389,12 +5396,132 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         let leadId = null;
         const currentApiKey = "${apiKey || ''}";
         let agendamentoAtivo = false;
+        let schedSlots = null;
+        let schedSelectedDate = null;
+        let schedSelectedTime = null;
 
-        // Função para iniciar agendamento
+        // SAFE PATCH - SCHED-010: Função para criar calendário visual
         function iniciarAgendamento() {
-            const mensagem = "Gostaria de agendar uma reunião";
-            messageInput.value = mensagem;
-            sendMessage();
+            // Injetar calendário diretamente na conversa
+            addCalendarWidget();
+        }
+
+        async function addCalendarWidget() {
+            const calDiv = document.createElement('div');
+            calDiv.className = 'chat-message bot';
+            calDiv.innerHTML = '<div class="sched-calendar"><div class="sched-loading">📅 Carregando horários disponíveis...</div></div>';
+            chatMessages.appendChild(calDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                // Buscar slots disponíveis
+                const calHash = await getCalendarHash();
+                let slotsData;
+                if (calHash) {
+                    const resp = await fetch('/api/public/availability/' + calHash);
+                    slotsData = await resp.json();
+                }
+                if (!slotsData || !slotsData.success || !slotsData.slots || slotsData.slots.length === 0) {
+                    // Fallback: enviar mensagem de texto como antes
+                    calDiv.querySelector('.sched-calendar').innerHTML = '<div class="sched-loading">📅 Nenhum horário configurado. Entre em contato diretamente.</div>';
+                    return;
+                }
+                schedSlots = slotsData.slots;
+                renderCalendarWidget(calDiv.querySelector('.sched-calendar'));
+            } catch (e) {
+                calDiv.querySelector('.sched-calendar').innerHTML = '<div class="sched-loading">⚠️ Erro ao carregar calendário. Tente novamente.</div>';
+            }
+        }
+
+        async function getCalendarHash() {
+            try {
+                const resp = await fetch('/api/availability?apiKey=' + encodeURIComponent(currentApiKey));
+                const data = await resp.json();
+                return data.publicHash || null;
+            } catch(e) { return null; }
+        }
+
+        function renderCalendarWidget(container) {
+            if (!schedSlots || schedSlots.length === 0) {
+                container.innerHTML = '<div class="sched-loading">Nenhum horário disponível</div>';
+                return;
+            }
+            let html = '<h4>📅 Escolha um dia</h4>';
+            html += '<div class="sched-days">';
+            schedSlots.forEach(function(day, i) {
+                var dateObj = new Date(day.date + 'T12:00:00');
+                var shortDate = String(dateObj.getDate()).padStart(2,'0') + '/' + String(dateObj.getMonth()+1).padStart(2,'0');
+                html += '<button class="sched-day-btn" data-idx="' + i + '" onclick="selectSchedDay(' + i + ')">' + day.dayName.substring(0,3) + '<br>' + shortDate + '</button>';
+            });
+            html += '</div>';
+            html += '<div id="sched-times-area"></div>';
+            html += '<div id="sched-selection"></div>';
+            html += '<button class="sched-confirm" id="sched-confirm-btn" disabled onclick="confirmScheduling()">✅ Confirmar Agendamento</button>';
+            container.innerHTML = html;
+        }
+
+        function selectSchedDay(idx) {
+            schedSelectedDate = schedSlots[idx];
+            schedSelectedTime = null;
+            // Highlight day button
+            document.querySelectorAll('.sched-day-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.querySelector('.sched-day-btn[data-idx="' + idx + '"]').classList.add('active');
+            // Show times
+            var area = document.getElementById('sched-times-area');
+            var html = '<div class="sched-times">';
+            schedSelectedDate.times.forEach(function(time) {
+                html += '<button class="sched-time-btn" onclick="selectSchedTime(this, \'' + time + '\')">' + time + '</button>';
+            });
+            html += '</div>';
+            area.innerHTML = html;
+            document.getElementById('sched-selection').innerHTML = '';
+            document.getElementById('sched-confirm-btn').disabled = true;
+        }
+
+        function selectSchedTime(btn, time) {
+            schedSelectedTime = time;
+            document.querySelectorAll('.sched-time-btn').forEach(function(b) { b.style.background = 'white'; b.style.color = '#1e40af'; });
+            btn.style.background = '#3b82f6';
+            btn.style.color = 'white';
+            document.getElementById('sched-selection').innerHTML = '<div class="sched-selected">📅 ' + schedSelectedDate.dayName + ' ' + schedSelectedDate.date.split('-').reverse().join('/') + ' às ' + time + '</div>';
+            document.getElementById('sched-confirm-btn').disabled = false;
+        }
+
+        async function confirmScheduling() {
+            if (!schedSelectedDate || !schedSelectedTime) return;
+            var btn = document.getElementById('sched-confirm-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Confirmando...';
+            try {
+                var calHash = await getCalendarHash();
+                var leadName = document.getElementById('leadName') ? document.getElementById('leadName').value : '';
+                var leadEmail = document.getElementById('leadEmail') ? document.getElementById('leadEmail').value : '';
+                var leadPhone = document.getElementById('leadPhone') ? document.getElementById('leadPhone').value : '';
+                var resp = await fetch('/api/public/book/' + calHash, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        name: leadName,
+                        email: leadEmail,
+                        phone: leadPhone,
+                        date: schedSelectedDate.date,
+                        time: schedSelectedTime,
+                        notes: 'Agendado via calendário do chatbot'
+                    })
+                });
+                var data = await resp.json();
+                if (data.success) {
+                    btn.textContent = '✅ Agendamento Confirmado!';
+                    btn.style.background = '#059669';
+                    addMessage('✅ **Agendamento confirmado!** ' + schedSelectedDate.dayName + ' ' + schedSelectedDate.date.split('-').reverse().join('/') + ' às ' + schedSelectedTime + '. Nossa equipe entrará em contato para confirmar. 🎉', false);
+                } else {
+                    btn.textContent = '❌ Erro - Tente novamente';
+                    btn.disabled = false;
+                }
+            } catch(e) {
+                btn.textContent = '❌ Erro - Tente novamente';
+                btn.disabled = false;
+            }
         }
 
         // Capturar lead
@@ -5443,6 +5570,15 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             if (isUser) {
                 messageDiv.textContent = text;
             } else {
+                // SAFE PATCH - SCHED-011: Detectar marcador de calendário
+                if (text && text.indexOf('[CALENDAR_WIDGET]') !== -1) {
+                    var textPart = text.replace('[CALENDAR_WIDGET]', '');
+                    messageDiv.innerHTML = processMessageContent(textPart);
+                    chatMessages.appendChild(messageDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    addCalendarWidget();
+                    return;
+                }
                 messageDiv.innerHTML = processMessageContent(text);
             }
             chatMessages.appendChild(messageDiv);
