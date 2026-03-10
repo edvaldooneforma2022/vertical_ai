@@ -5506,6 +5506,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         name: leadName,
                         email: leadEmail,
                         phone: leadPhone,
+                        leadId: leadId,
                         date: schedSelectedDate.date,
                         time: schedSelectedTime,
                         notes: 'Agendado via calendário do chatbot'
@@ -6102,6 +6103,7 @@ try {
                 // Usar o sistema de agendamento existente
                 const leadSystem = getLeadSystem(apiKey);
                 const appointment = leadSystem.addAppointment({
+                    leadId: req.body.leadId || null,
                     leadName: name || 'Não informado',
                     leadEmail: email || 'Não informado',
                     leadPhone: phone || '',
