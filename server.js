@@ -5250,10 +5250,11 @@ const PROCESS_MESSAGE_CONTENT_JS = [
     'function processMessageContent(text) {',
     '    if (!text) return text;',
     '    var urlRegex = /(https?:\\/\\/[^\\s<>"\x27]+)/gi;',
-    '    return text.replace(urlRegex, function(url) {',
+    '    return text.replace(urlRegex, function(rawUrl) {',
+    '        var url = rawUrl.replace(/[.,;:!?)\\]]+$/, \'\');',
     '        var displayText = url.replace(/^https?:\\/\\/(www\\.)?/, \'\').split(\'/\')[0];',
     '        if (displayText.length > 30) displayText = displayText.substring(0, 30) + \'...\';',
-    '        return \'<a href="\' + url + \'" target="_blank" rel="noopener noreferrer" class="cta-link">🔗 \' + displayText + \'</a>\';',
+    '        var trailing = rawUrl.substring(url.length); return \'<a href="\' + url + \'" target="_blank" rel="noopener noreferrer" class="cta-link">🔗 \' + displayText + \'</a>\' + trailing;',
     '    });',
     '}'
 ].join('\n');
