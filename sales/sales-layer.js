@@ -4,12 +4,12 @@
  * Camada de pós-processamento EXCLUSIVAMENTE aditiva.
  * NUNCA altera o conteúdo base da resposta da IA.
  * NUNCA inventa informações, contexto ou produtos.
- * APENAS adiciona complementos persuasivos no final da resposta.
+ * APENAS adiciona copy de condução de venda no final da resposta base.
  *
  * Integração: chamada APÓS generateAIResponse(), protegida por FEATURE_SALES_LAYER.
- * Comportamento controlado por PRESETS (sales/presets.js).
+ * Comportamento controlado por PRESETS com copy real por estágio.
  *
- * @version 2.0.0 — com suporte a presets multi-nicho
+ * @version 3.0.0 — copy real por estágio via presets.js
  */
 
 'use strict';
@@ -17,112 +17,25 @@
 const { getPreset } = require('./presets');
 
 // ─────────────────────────────────────────────────────────────────
-// MAPEAMENTO DE JORNADA (sistema usa: descoberta, negociacao, fidelizacao)
+// MAPEAMENTO DE ESTÁGIO → CHAVE DE COPY
 // ─────────────────────────────────────────────────────────────────
-const VALID_STAGES = new Set(['descoberta', 'negociacao', 'fidelizacao']);
-
-// ─────────────────────────────────────────────────────────────────
-// BANCO DE COMPLEMENTOS — indexados por pressão e objective
-// ─────────────────────────────────────────────────────────────────
-
-const COMPLEMENTS = {
-
-  // ── pressure: low ─────────────────────────────────────────────
-  low: {
-    assist: [
-      '\n\nTem mais alguma dúvida que posso esclarecer?',
-      '\n\nIsso faz sentido para você até aqui?'
-    ],
-    lead: [
-      '\n\nSe quiser receber mais detalhes, posso te ajudar a dar o primeiro passo.',
-      '\n\nQuer que eu te mostre como acessar isso sem compromisso?'
-    ],
-    educativo: [
-      '\n\nIsso é mais comum do que parece — posso explicar melhor se quiser.',
-      '\n\nFique à vontade para perguntar qualquer coisa.'
-    ]
-  },
-
-  // ── pressure: medium ──────────────────────────────────────────
-  medium: {
-    assist: [
-      '\n\nFaz sentido para o seu caso? Posso continuar explicando.',
-      '\n\nO que você achou até aqui?'
-    ],
-    schedule: [
-      '\n\nPosso te ajudar a dar o próximo passo agora — quer que eu te guie?',
-      '\n\nMuita gente na mesma situação que você resolveu agendando uma conversa rápida. Quer tentar?'
-    ],
-    conversion: [
-      '\n\nPelo que você descreveu, isso resolve exatamente o que você precisa. O que te impede de avançar?',
-      '\n\nMuita gente que estava na mesma dúvida tomou essa decisão e não se arrependeu. Faz sentido para você?'
-    ]
-  },
-
-  // ── pressure: high ────────────────────────────────────────────
-  high: {
-    conversion: [
-      '\n\nVocê já viu o valor. A única diferença agora é começar — ou continuar como está.',
-      '\n\nQuem tomou essa decisão hoje não perdeu tempo. Quer garantir sua vaga agora?',
-      '\n\nEssa oferta não fica aberta para sempre. Se faz sentido, o momento é esse.'
-    ],
-    schedule: [
-      '\n\nSe você quer resolver isso hoje, o próximo passo é simples. Quer que eu te guie?',
-      '\n\nUma conversa rápida já resolve o que você precisa — quer agendar agora?'
-    ]
-  },
-
-  // ── urgência detectada (sobrepõe pressão) ─────────────────────
-  urgency: [
-    '\n\nSe você precisa resolver isso agora, eu posso te ajudar a dar o próximo passo hoje mesmo.',
-    '\n\nEntendo a urgência — vamos resolver isso direto.'
-  ],
-
-  // ── dúvida detectada (complemento especial) ───────────────────
-  duvida: [
-    '\n\nIsso é mais comum do que parece — posso explicar exatamente como isso funciona no seu caso.',
-    '\n\nFaz todo sentido ter essa dúvida. Deixa eu te mostrar como funciona na prática.'
-  ],
-
-  // ── fidelização — suporte pós-compra ─────────────────────────
-  fidelizacao: [
-    '\n\nSe tiver mais alguma dúvida sobre o uso, pode perguntar à vontade.',
-    '\n\nEstou aqui para garantir que você aproveite o máximo disso.'
-  ]
+const STAGE_TO_COPY_KEY = {
+  descoberta:  'discovery',
+  engajamento: 'engagement',
+  objecao:     'objection',
+  negociacao:  'closing',
+  fidelizacao: 'engagement'  // pós-compra usa tom de suporte/engajamento
 };
 
 // ─────────────────────────────────────────────────────────────────
-// RESOLVER COMPORTAMENTO A PARTIR DO PRESET
+// FALLBACK DE COMPLEMENTOS GENÉRICOS
+// (usado quando o preset não tem copy para o estágio ou ocorre erro)
 // ─────────────────────────────────────────────────────────────────
-
-/**
- * Retorna o behavior config ativo com base no modo e preset.
- * @param {object} opts
- * @param {string} opts.mode         — 'auto' | 'manual' | 'off'
- * @param {string} [opts.userPreset] — preset escolhido manualmente
- * @param {string} [opts.autoPreset] — preset detectado automaticamente
- * @returns {{ pressure, style, goal, urgency } | null}
- */
-function getBehaviorConfig({ mode, userPreset, autoPreset }) {
-  try {
-    if (mode === 'off') return null;
-
-    if (mode === 'manual' && userPreset) {
-      return getPreset(userPreset).behavior;
-    }
-
-    if (mode === 'auto' || !mode) {
-      const key = autoPreset || 'default';
-      return getPreset(key).behavior;
-    }
-
-    return getPreset('default').behavior;
-
-  } catch (err) {
-    console.warn('⚠️ [SALES-LAYER] getBehaviorConfig falhou (fallback default):', err.message);
-    return getPreset('default').behavior;
-  }
-}
+const FALLBACK_COMPLEMENTS = {
+  low:    ['Tem mais alguma dúvida que posso esclarecer?', 'Faz sentido para você até aqui?'],
+  medium: ['O que você achou? Posso continuar explicando.', 'Faz sentido para o seu caso?'],
+  high:   ['Você já viu o valor. A única diferença agora é começar.', 'Faz mais sentido começar agora ou continuar do jeito que está?']
+};
 
 // ─────────────────────────────────────────────────────────────────
 // HELPERS
@@ -134,60 +47,91 @@ function pick(arr) {
 }
 
 /**
+ * Seleciona frase de copy baseada no preset e estágio.
+ * Fallback seguro em cada nível.
+ *
+ * @param {object} presetData — objeto do preset (inclui .copy)
+ * @param {string} journeyStage — estágio atual da jornada
+ * @param {string} pressure — nível de pressão do behavior
+ * @returns {string}
+ */
+function getCopyByStage(presetData, journeyStage, pressure) {
+  try {
+    const copyKey = STAGE_TO_COPY_KEY[journeyStage] || 'engagement';
+
+    // Tenta copy do preset
+    if (presetData && presetData.copy && Array.isArray(presetData.copy[copyKey]) && presetData.copy[copyKey].length > 0) {
+      return pick(presetData.copy[copyKey]);
+    }
+
+    // Fallback 1: outro bloco de copy do mesmo preset
+    if (presetData && presetData.copy) {
+      const fallbackKey = Object.keys(presetData.copy).find(k => Array.isArray(presetData.copy[k]) && presetData.copy[k].length > 0);
+      if (fallbackKey) return pick(presetData.copy[fallbackKey]);
+    }
+
+    // Fallback 2: complementos genéricos por pressão
+    const level = pressure || 'medium';
+    return pick(FALLBACK_COMPLEMENTS[level] || FALLBACK_COMPLEMENTS.medium);
+
+  } catch (err) {
+    console.warn('⚠️ [SALES-LAYER] getCopyByStage falhou (fallback genérico):', err.message);
+    return pick(FALLBACK_COMPLEMENTS.medium);
+  }
+}
+
+/**
  * Retorna false se a resposta base não deve receber complemento.
+ * Garante que a camada de venda nunca interfere em respostas inabilitadas.
  */
 function shouldApplyComplement(responseBase) {
   const base = String(responseBase || '');
   if (base.length < 20)   return false;
   if (base.length > 2000) return false;
-  const lastChars = base.slice(-100).toLowerCase();
-  if (lastChars.includes('?'))       return false;
-  if (lastChars.includes('clique'))  return false;
-  if (lastChars.includes('acesse'))  return false;
-  if (lastChars.includes('compre'))  return false;
+  const lastChars = base.slice(-120).toLowerCase();
+  if (lastChars.includes('?'))      return false;  // resposta já termina em pergunta
+  if (lastChars.includes('clique')) return false;  // já tem CTA
+  if (lastChars.includes('acesse')) return false;
+  if (lastChars.includes('compre')) return false;
   return true;
 }
 
 // ─────────────────────────────────────────────────────────────────
-// SELEÇÃO DE COMPLEMENTO
+// RESOLVER COMPORTAMENTO A PARTIR DO PRESET
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Escolhe o complemento mais adequado baseado no behavior e estado emocional.
+ * Retorna behavior config ativo com base no modo e preset.
+ * @returns {{ pressure, style, goal, urgency } | null}
  */
-function chooseComplement({ behavior, journeyStage, estadoEmocional }) {
-  const emotion  = (estadoEmocional.emocaoPrimaria || '').toLowerCase();
-  const urgencia = Boolean(estadoEmocional.urgencia || behavior.urgency);
-  const pressure = behavior.pressure || 'medium';
-  const goal     = behavior.goal     || 'assist';
+function getBehaviorConfig({ mode, userPreset, autoPreset }) {
+  try {
+    if (mode === 'off') return null;
 
-  // Fidelização → sempre suporte, sem pressão
-  if (journeyStage === 'fidelizacao') {
-    return pick(COMPLEMENTS.fidelizacao);
+    if (mode === 'manual' && userPreset) {
+      return getPreset(userPreset).behavior;
+    }
+
+    const key = autoPreset || 'default';
+    return getPreset(key).behavior;
+
+  } catch (err) {
+    console.warn('⚠️ [SALES-LAYER] getBehaviorConfig falhou (fallback default):', err.message);
+    return getPreset('default').behavior;
   }
+}
 
-  // Urgência → complemento de urgência (sobrepõe pressão)
-  if (urgencia && journeyStage !== 'descoberta') {
-    return pick(COMPLEMENTS.urgency);
+/**
+ * Retorna dados completos do preset ativo (behavior + copy).
+ */
+function getActivePresetData({ mode, userPreset, autoPreset }) {
+  try {
+    if (mode === 'off') return getPreset('default');
+    if (mode === 'manual' && userPreset) return getPreset(userPreset);
+    return getPreset(autoPreset || 'default');
+  } catch (err) {
+    return getPreset('default');
   }
-
-  // Dúvida → complemento de esclarecimento
-  if (emotion === 'duvida' && journeyStage === 'descoberta') {
-    return pick(COMPLEMENTS.duvida);
-  }
-
-  // Selecionar de acordo com pressão + goal
-  const pressureBank = COMPLEMENTS[pressure];
-  if (!pressureBank) return pick(COMPLEMENTS.low.assist);
-
-  const goalBank = pressureBank[goal] || pressureBank.assist || pressureBank.conversion;
-  if (!goalBank) {
-    // fallback: pegar qualquer array disponível nessa pressão
-    const fallbackArr = Object.values(pressureBank)[0];
-    return pick(fallbackArr);
-  }
-
-  return pick(goalBank);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -199,20 +143,20 @@ function chooseComplement({ behavior, journeyStage, estadoEmocional }) {
  *
  * @param {object} params
  * @param {string}  params.responseBase    — Resposta original da IA (NUNCA alterada)
- * @param {string}  params.journeyStage    — "descoberta" | "negociacao" | "fidelizacao"
+ * @param {string}  params.journeyStage    — "descoberta" | "negociacao" | "fidelizacao" | "objecao"
  * @param {object}  params.estadoEmocional — { emocaoPrimaria, sarcasmo, urgencia, ... }
  * @param {string}  [params.mode]          — "auto" | "manual" | "off" (default: "auto")
  * @param {string}  [params.userPreset]    — preset selecionado manualmente
  * @param {string}  [params.autoPreset]    — preset detectado automaticamente
- * @returns {string} Resposta final ou responseBase em caso de erro/fallback
+ * @returns {string} Resposta final (responseBase + copy) ou responseBase em caso de erro
  */
 function applySalesLayer({
   responseBase,
-  journeyStage     = 'descoberta',
-  estadoEmocional  = {},
-  mode             = 'auto',
-  userPreset       = null,
-  autoPreset       = null
+  journeyStage    = 'descoberta',
+  estadoEmocional = {},
+  mode            = 'auto',
+  userPreset      = null,
+  autoPreset      = null
 }) {
   try {
     // ── GUARD: modo desligado ────────────────────────────────────
@@ -221,37 +165,40 @@ function applySalesLayer({
     // ── GUARD: modo manual sem preset ────────────────────────────
     if (mode === 'manual' && !userPreset) return responseBase;
 
-    // ── GUARD: resposta não apta para complemento ────────────────
-    if (!shouldApplyComplement(responseBase)) return responseBase;
-
     // ── GUARD: sarcasmo → não forçar venda ───────────────────────
     if (estadoEmocional.sarcasmo) return responseBase;
 
-    // ── Resolver comportamento via preset ─────────────────────────
+    // ── GUARD: resposta não apta para complemento ────────────────
+    if (!shouldApplyComplement(responseBase)) return responseBase;
+
+    // ── Resolver behavior ─────────────────────────────────────────
     const behavior = getBehaviorConfig({ mode, userPreset, autoPreset });
-    if (!behavior) return responseBase; // mode === 'off'
+    if (!behavior) return responseBase;
 
-    const stage = VALID_STAGES.has(journeyStage) ? journeyStage : 'descoberta';
+    // ── Obter dados completos do preset (inclui .copy) ────────────
+    const presetData = getActivePresetData({ mode, userPreset, autoPreset });
 
-    // ── Selecionar complemento ───────────────────────────────────
-    const complement = chooseComplement({ behavior, journeyStage: stage, estadoEmocional });
+    // ── Selecionar copy baseado em estágio ────────────────────────
+    const validStages = new Set(['descoberta','negociacao','fidelizacao','engajamento','objecao']);
+    const stage = validStages.has(journeyStage) ? journeyStage : 'descoberta';
+    const copyPhrase = getCopyByStage(presetData, stage, behavior.pressure);
 
-    const activePreset = mode === 'manual'
-      ? (userPreset || 'default')
-      : (autoPreset || 'default');
+    const activePresetKey = mode === 'manual'
+      ? (userPreset  || 'default')
+      : (autoPreset  || 'default');
 
     console.log(
-      `⚔️ [SALES-LAYER v2] preset=${activePreset} | stage=${stage} | ` +
+      `⚔️ [SALES-LAYER v3] preset=${activePresetKey} | stage=${stage} | ` +
       `pressure=${behavior.pressure} | goal=${behavior.goal} | mode=${mode}`
     );
 
-    return complement
-      ? String(responseBase) + complement
+    return copyPhrase
+      ? String(responseBase) + '\n\n' + copyPhrase
       : responseBase;
 
   } catch (err) {
     console.error('⚠️ [SALES-LAYER] Erro no pós-processamento (fallback):', err.message || err);
-    return responseBase;
+    return responseBase; // fallback absoluto: retorna resposta original intacta
   }
 }
 
