@@ -4621,7 +4621,8 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
             (typeof featureFlags !== 'undefined' && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_SALES_LAYER'));
         if (_salesLayerActive && _applySalesLayer) {
             try {
-                const _salesMode = process.env.SALES_LAYER_MODE || 'auto';
+                // [SALESMODE-FLOW-PATCH] Prioriza modo vindo do widget/req sobre env var global
+                const _salesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
                 const _userPreset = (pageData && pageData.salesPreset) || null;
                 _finalToReturn = _applySalesLayer({
                     responseBase:    finalResponse,
@@ -4936,6 +4937,22 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
     try {
         const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
 
+        // [SALESMODE-FLOW-PATCH] Extrair salesMode e salesPreset do req.body de forma isolada
+        let _reqSalesMode   = 'auto';
+        let _reqSalesPreset = null;
+        try {
+            _reqSalesMode   = req.body?.salesMode   || req.body?.sales_mode   || process.env.SALES_LAYER_MODE || 'auto';
+            _reqSalesPreset = req.body?.salesPreset || req.body?.sales_preset || req.body?.preset || null;
+            // Sanitizar: apenas valores conhecidos
+            const _validModes    = ['auto','manual','off'];
+            const _validPresets  = ['default','produto_digital','afiliado','servico','lead','ecommerce','local_business','institucional'];
+            if (!_validModes.includes(_reqSalesMode))     _reqSalesMode   = 'auto';
+            if (_reqSalesPreset && !_validPresets.includes(_reqSalesPreset)) _reqSalesPreset = null;
+            console.log(`🎛️ [SALESMODE-FLOW] endpoint=chat-universal mode=${_reqSalesMode} preset=${_reqSalesPreset || 'auto'}`);
+        } catch (_smErr) {
+            console.warn('[SALESMODE-FLOW] Erro ao extrair salesMode (fallback: auto):', _smErr.message);
+        }
+
         if (!message) {
             return res.status(400).json({
                 success: false,
@@ -4967,6 +4984,14 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         }
 
         // 🎯 FEATURE_CLEAN_CHAT_V2: Passar robotName como chatbotId para busca de FAQs
+        
+        // [SALESMODE-FLOW-PATCH] Garantir salesMode e salesPreset em processedPageData
+        try {
+            if (processedPageData) {
+                processedPageData.salesMode   = _reqSalesMode   || 'auto';
+                processedPageData.salesPreset = _reqSalesPreset || null;
+            }
+        } catch(_spErr) { console.warn('[SALESMODE-FLOW] Erro ao injetar em processedPageData:', _spErr.message); }
         const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR

@@ -1383,6 +1383,18 @@
                         <input type="hidden" id="selectedSalesPreset" value="">
                     </div>
                     <!-- /SALES-MODE-UI -->
+                    <!-- SALES-MODE-BADGE: Feedback visual do modo ativo -->
+                    <div id="salesModeBadge" style="display:none; margin-top:10px;">
+                        <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); border-radius:20px; padding:5px 12px; font-size:0.78rem; color:#a5b4fc;">
+                            <span style="width:7px;height:7px;background:#6366f1;border-radius:50%;display:inline-block;animation:lmPulse 2s infinite;"></span>
+                            <span>Modo ativo: <b id="salesModeBadgeText">Automático</b></span>
+                        </div>
+                    </div>
+                    <style>
+                        @keyframes lmPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+                    </style>
+                    <!-- /SALES-MODE-BADGE -->
+
 
                     <p class="input-hint">Dica: peça respostas curtas (2-3 frases), objetivas e sem repetições.</p>
                     </div>
@@ -1677,6 +1689,7 @@
 
                 // Regenerar código do widget ao mudar modo
                 if (typeof regenerateWidgetCode === 'function') regenerateWidgetCode();
+                updateSalesModeBadge();
             } catch(e) {
                 console.warn('[SALES-MODE-UI] Erro em setSalesMode:', e.message);
             }
@@ -1698,10 +1711,46 @@
 
                 // Regenerar código do widget
                 if (typeof regenerateWidgetCode === 'function') regenerateWidgetCode();
+                updateSalesModeBadge();
             } catch(e) {
                 console.warn('[SALES-MODE-UI] Erro em selectPresetBtn:', e.message);
             }
         }
+
+
+        // SALES-MODE-BADGE: Função de atualização do badge visual
+        var PRESET_LABELS_MAP = {"default":"Padrão","produto_digital":"Produto Digital","afiliado":"Afiliado","servico":"Serviço","lead":"Captura de Leads","ecommerce":"E-commerce","local_business":"Negócio Local","institucional":"Institucional"};
+
+        function updateSalesModeBadge() {
+            try {
+                var badge    = document.getElementById('salesModeBadge');
+                var badgeTxt = document.getElementById('salesModeBadgeText');
+                if (!badge || !badgeTxt) return;
+                var mode   = getSalesMode()   || 'auto';
+                var preset = getSalesPreset() || '';
+
+                var modeLabel = { auto: 'Auto', manual: 'Manual', off: 'Desligado' }[mode] || 'Auto';
+
+                if (mode === 'off') {
+                    badge.style.display = 'block';
+                    badgeTxt.innerHTML = '⚫ Desligada';
+                    return;
+                }
+
+                if (mode === 'manual' && preset) {
+                    var pl = PRESET_LABELS_MAP[preset] || preset;
+                    badgeTxt.innerHTML = '🎛️ ' + pl + ' <span style="opacity:0.7;font-weight:400;">(Manual)</span>';
+                } else if (mode === 'auto') {
+                    badgeTxt.innerHTML = '⚡ Automático';
+                } else {
+                    badgeTxt.innerHTML = modeLabel;
+                }
+                badge.style.display = 'block';
+            } catch(e) {
+                console.warn('[SALES-MODE-BADGE] Erro ao atualizar badge:', e.message);
+            }
+        }
+        // /SALES-MODE-BADGE
 
         function getSalesMode()   { try { return document.getElementById('selectedSalesMode')?.value   || 'auto'; } catch(e) { return 'auto'; } }
         function getSalesPreset() { try { return document.getElementById('selectedSalesPreset')?.value || '';     } catch(e) { return '';     } }
