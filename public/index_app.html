@@ -1322,7 +1322,69 @@
                             Personalizadas (opcional):</label>
                         <textarea id="customInstructions" class="form-input form-textarea"
                             placeholder="Ex: Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva">Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva</textarea>
-                        <p class="input-hint">Dica: peça respostas curtas (2-3 frases), objetivas e sem repetições.</p>
+                        
+                    <!-- SALES-MODE-UI: Seleção de modo da camada de venda -->
+                    <div class="form-group" id="salesModeGroup" style="margin-top:1rem;">
+                        <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-robot"></i> Comportamento de Vendas da IA:
+                        </label>
+                        <!-- Botões de modo -->
+                        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" id="salesModeButtons">
+                            <button type="button" onclick="setSalesMode('auto')" id="salesModeAuto"
+                                style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #6366f1;background:#6366f1;color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                                ⚡ Automático
+                            </button>
+                            <button type="button" onclick="setSalesMode('manual')" id="salesModeManual"
+                                style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                                🎛️ Manual
+                            </button>
+                            <button type="button" onclick="setSalesMode('off')" id="salesModeOff"
+                                style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                                ⚫ Desligado
+                            </button>
+                        </div>
+                        <p class="input-hint" id="salesModeHint" style="margin-top:6px;">
+                            ⚡ <b>Automático</b>: a IA detecta o tipo da página e calibra o comportamento sozinha.
+                        </p>
+
+                        <!-- Grid de presets (visível só no modo manual) -->
+                        <div id="salesPresetGrid" style="display:none;margin-top:10px;">
+                            <label class="form-label" style="font-size:0.82rem;margin-bottom:6px;">Perfil de vendas:</label>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                                <button type="button" class="preset-btn" onclick="selectPresetBtn('produto_digital')" data-preset="produto_digital"
+                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                    🛍️ Produto Digital
+                                </button>
+                                <button type="button" class="preset-btn" onclick="selectPresetBtn('afiliado')" data-preset="afiliado"
+                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                    🔗 Afiliado
+                                </button>
+                                <button type="button" class="preset-btn" onclick="selectPresetBtn('servico')" data-preset="servico"
+                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                    🛠️ Serviço
+                                </button>
+                                <button type="button" class="preset-btn" onclick="selectPresetBtn('lead')" data-preset="lead"
+                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                    📋 Captura de Leads
+                                </button>
+                                <button type="button" class="preset-btn" onclick="selectPresetBtn('ecommerce')" data-preset="ecommerce"
+                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                    🛒 E-commerce
+                                </button>
+                                <button type="button" class="preset-btn" onclick="selectPresetBtn('local_business')" data-preset="local_business"
+                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                    📍 Negócio Local
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Campos hidden que guardam os valores selecionados -->
+                        <input type="hidden" id="selectedSalesMode" value="auto">
+                        <input type="hidden" id="selectedSalesPreset" value="">
+                    </div>
+                    <!-- /SALES-MODE-UI -->
+
+                    <p class="input-hint">Dica: peça respostas curtas (2-3 frases), objetivas e sem repetições.</p>
                     </div>
                     <div class="form-group">
                         <label for="apiKeyInput" class="form-label"><i class="fas fa-key"></i> API Key (para
@@ -1578,6 +1640,73 @@
     </div>
 
     <script>
+        
+        // ─── SALES-MODE-UI: Funções de controle ───────────────────────
+        var _currentSalesMode   = 'auto';
+        var _currentSalesPreset = null;
+
+        var SALES_MODE_HINTS = {
+            auto:   '⚡ <b>Automático</b>: a IA detecta o tipo da página e calibra o comportamento sozinha.',
+            manual: '🎛️ <b>Manual</b>: escolha abaixo o perfil mais adequado ao seu negócio.',
+            off:    '⚫ <b>Desligado</b>: a IA responde normalmente, sem camada de venda.'
+        };
+
+        function setSalesMode(mode) {
+            try {
+                _currentSalesMode = mode;
+                var hiddenMode = document.getElementById('selectedSalesMode');
+                if (hiddenMode) hiddenMode.value = mode;
+
+                // Atualizar visual dos botões de modo
+                ['auto','manual','off'].forEach(function(m) {
+                    var btn = document.getElementById('salesMode' + m.charAt(0).toUpperCase() + m.slice(1));
+                    if (!btn) return;
+                    var isActive = m === mode;
+                    btn.style.background    = isActive ? '#6366f1' : 'transparent';
+                    btn.style.borderColor   = isActive ? '#6366f1' : '#475569';
+                    btn.style.color         = isActive ? '#fff'    : '#94a3b8';
+                });
+
+                // Mostrar/ocultar grid de presets
+                var grid = document.getElementById('salesPresetGrid');
+                if (grid) grid.style.display = mode === 'manual' ? 'block' : 'none';
+
+                // Atualizar hint
+                var hint = document.getElementById('salesModeHint');
+                if (hint) hint.innerHTML = SALES_MODE_HINTS[mode] || '';
+
+                // Regenerar código do widget ao mudar modo
+                if (typeof regenerateWidgetCode === 'function') regenerateWidgetCode();
+            } catch(e) {
+                console.warn('[SALES-MODE-UI] Erro em setSalesMode:', e.message);
+            }
+        }
+
+        function selectPresetBtn(presetKey) {
+            try {
+                _currentSalesPreset = presetKey;
+                var hiddenPreset = document.getElementById('selectedSalesPreset');
+                if (hiddenPreset) hiddenPreset.value = presetKey;
+
+                // Atualizar visual dos botões de preset
+                document.querySelectorAll('.preset-btn').forEach(function(btn) {
+                    var isActive = btn.dataset.preset === presetKey;
+                    btn.style.background  = isActive ? '#6366f1' : 'transparent';
+                    btn.style.borderColor = isActive ? '#6366f1' : '#475569';
+                    btn.style.color       = isActive ? '#fff'    : '#94a3b8';
+                });
+
+                // Regenerar código do widget
+                if (typeof regenerateWidgetCode === 'function') regenerateWidgetCode();
+            } catch(e) {
+                console.warn('[SALES-MODE-UI] Erro em selectPresetBtn:', e.message);
+            }
+        }
+
+        function getSalesMode()   { try { return document.getElementById('selectedSalesMode')?.value   || 'auto'; } catch(e) { return 'auto'; } }
+        function getSalesPreset() { try { return document.getElementById('selectedSalesPreset')?.value || '';     } catch(e) { return '';     } }
+        // ─── /SALES-MODE-UI ───────────────────────────────────────────
+
         function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -2117,7 +2246,7 @@
                 .replace(/\t/g, '\\t');    // Escapa tabs
         }
 
-        function generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, primaryColor) {
+        function generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, primaryColor, salesMode, salesPreset) {
             const greetingMessage = 'Oi! Posso ajudar?';
             const welcomeMessage = 'Olá 👋 Muito bom ter você aqui!';
             const secondMessage = 'Como posso ajudar você hoje?';
@@ -2133,6 +2262,10 @@
             const safeWelcome = escapeForJS(welcomeMessage);
             const safeSecond = escapeForJS(secondMessage);
 
+            
+            // [SALES-MODE-UI] Sanitização dos parâmetros de modo/preset
+            const safeMode   = (salesMode   || 'auto').replace(/[^a-z_]/gi, '');
+            const safePreset = (salesPreset || '').replace(/[^a-z_]/gi, '');
             return `<!-- LinkMágico Chatbot Widget v2.0 - Design Moderno -->
 <script>
 (function() {
@@ -2145,7 +2278,9 @@
         apiKey: "${key}",
         greetingMessage: "${safeGreeting}",
         welcomeMessage: "${safeWelcome}",
-        secondMessage: "${safeSecond}"
+        secondMessage: "${safeSecond}",
+        salesMode: "${safeMode || 'auto'}",
+        salesPreset: "${safePreset || ''}"
     };
 
     var apiBase = "${apiBase}";
@@ -3419,7 +3554,7 @@
                     const apiKey = document.getElementById('apiKeyInput')?.value?.trim() || localStorage.getItem('linkmagico_api_key') || '';
                     const wlColor = document.getElementById('wl-primary')?.value || '#3b82f6';
                     if (name && salesUrl && typeof generateModernWidgetScript === 'function') {
-                        const widgetCode = generateModernWidgetScript(name, salesUrl, instructions, apiKey, wlColor);
+                        const widgetCode = generateModernWidgetScript(name, salesUrl, instructions, apiKey, wlColor, getSalesMode(), getSalesPreset());
                         const mainDisplay = document.getElementById('widgetCodeDisplay');
                         if (mainDisplay) mainDisplay.textContent = widgetCode;
                         const tabDisplay = document.getElementById('widget-code-output');
@@ -3513,7 +3648,7 @@
             }
 
             // Gerar novo código com configurações personalizadas
-            const widgetCode = generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, color);
+            const widgetCode = generateModernWidgetScript(robotName, salesUrl, instructions, apiKey, color, getSalesMode(), getSalesPreset());
             document.getElementById('widget-code-output').textContent = widgetCode;
 
             // Atualizar também o código principal na página inicial
