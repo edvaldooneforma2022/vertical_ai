@@ -610,14 +610,14 @@
             msgDiv.className = 'lm-message ' + (isUser ? 'lm-user' : 'lm-bot');
             if (isUser) {
                 msgDiv.textContent = text;
-            } else if (/https?:\/\//i.test(text)) {
-                var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                msgDiv.innerHTML = escaped.replace(/(https?:\/\/[^\s<>"']+)/gi, function (rawUrl) {
-                    var url = rawUrl.replace(/[.,;:!?)\]]+$/, '');
-                    var trailing = rawUrl.substring(url.length); return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:white;padding:6px 14px;border-radius:16px;text-decoration:none;font-size:13px;font-weight:600;margin:4px 0;">🔗 Acessar agora</a>' + trailing;
-                });
-            } else {
-                msgDiv.textContent = text;
+                        } else {
+                // [WIDGET-HTML-RENDER] — Renderiza HTML do servidor (botões, links)
+                // O servidor já sanitizou e gerou os botões — renderizamos diretamente
+                if (/<a\s/i.test(text) || /<button/i.test(text)) {
+                    msgDiv.innerHTML = text;
+                } else {
+                    msgDiv.textContent = text;
+                }
             }
             messages.appendChild(msgDiv);
             messages.scrollTop = messages.scrollHeight;

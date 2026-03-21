@@ -1,3 +1,55 @@
+
+// [SALES-LAYER-INTEGRATED] — pós-processamento persuasivo + URL→Botões
+let _applySalesLayer = null;
+try {
+  _applySalesLayer = require('./sales/sales-layer');
+  console.log('⚔️ [SALES-LAYER] Módulo carregado com sucesso.');
+} catch (e) {
+  console.warn('⚠️ [SALES-LAYER] Módulo não encontrado — funcionalidade desativada.', e.message);
+}
+
+/**
+ * Converte URLs brutas em botões HTML clicáveis.
+ * Aplica-se a TODOS os chats, de forma universal.
+ * Links de redes sociais e qualquer outra URL são tratados da mesma forma.
+ */
+function convertUrlsToButtons(text) {
+  try {
+    if (!text || typeof text !== 'string') return text;
+    // Regex para detectar URLs (http/https), incluindo redes sociais
+    const urlRegex = /(https?:\/\/[^\s"'<>()\[\]{}]+[^\s"'<>()\[\]{}.,;:!?])/gi;
+    return text.replace(urlRegex, (url) => {
+      // Gera label legível baseado no domínio
+      let label = 'Acessar';
+      try {
+        const host = new URL(url).hostname.replace(/^www\./, '');
+        const knownLabels = {
+          'instagram.com': '📷 Ver no Instagram',
+          'facebook.com':  '👍 Ver no Facebook',
+          'youtube.com':   '▶️ Assistir no YouTube',
+          'youtu.be':      '▶️ Assistir no YouTube',
+          'tiktok.com':    '🎵 Ver no TikTok',
+          'twitter.com':   '🐦 Ver no Twitter',
+          'x.com':         '🐦 Ver no X',
+          'linkedin.com':  '💼 Ver no LinkedIn',
+          'wa.me':         '💬 Abrir WhatsApp',
+          'api.whatsapp.com': '💬 Abrir WhatsApp',
+          'hotmart.com':   '🛒 Acessar Hotmart',
+          'kiwify.com.br': '🛒 Acessar Kiwify',
+          'pay.herospark.com': '🛒 Comprar Agora',
+          'mercadopago.com': '💳 Pagar agora',
+          'mercadolivre.com.br': '🛒 Ver no Mercado Livre',
+        };
+        label = knownLabels[host] || ('🔗 ' + host);
+      } catch (_) {}
+      return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:6px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:8px;text-decoration:none;font-size:0.9em;font-weight:600;margin:4px 2px;box-shadow:0 2px 6px rgba(99,102,241,0.35);">' + label + '</a>';
+    });
+  } catch (err) {
+    console.warn('⚠️ [URL→BUTTON] Erro na conversão (fallback para texto):', err.message);
+    return text;
+  }
+}
+
 require("dotenv").config();
 
 // ===== SISTEMA DE SEGURANÇA AVANÇADO =====
@@ -4533,7 +4585,36 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         console.log(`   Provedor: ${usedProvider}, Tempo: ${responseTime}ms`);
 
         logger.info(`AI response generated in ${responseTime}ms using ${usedProvider}`);
-        return finalResponse;
+        
+        // ⚔️ [SALES-LAYER] Pós-processamento persuasivo (isolado, feature-flagged, fallback automático)
+        let _finalToReturn = finalResponse;
+        const _salesLayerActive = process.env.FEATURE_SALES_LAYER === 'true' ||
+            (typeof featureFlags !== 'undefined' && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_SALES_LAYER'));
+        if (_salesLayerActive && _applySalesLayer) {
+            try {
+                const _salesMode = process.env.SALES_LAYER_MODE || 'auto';
+                _finalToReturn = _applySalesLayer({
+                    responseBase:    finalResponse,
+                    journeyStage:    journeyStage,
+                    estadoEmocional: estadoEmocional,
+                    mode:            _salesMode,
+                    preset:          null
+                });
+            } catch (_salesErr) {
+                console.warn('⚠️ [SALES-LAYER] Erro ao aplicar (fallback):', _salesErr.message);
+                _finalToReturn = finalResponse;
+            }
+        }
+
+        // 🔗 [URL→BUTTONS] Conversão universal de URLs em botões (todos os chats)
+        try {
+            _finalToReturn = convertUrlsToButtons(_finalToReturn);
+        } catch (_btnErr) {
+            console.warn('⚠️ [URL→BUTTONS] Erro na conversão (fallback):', _btnErr.message);
+        }
+
+        return _finalToReturn;
+
 
     } catch (error) {
         logger.error("AI response generation failed:", error.message || error);
