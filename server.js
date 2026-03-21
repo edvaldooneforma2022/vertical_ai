@@ -1,4 +1,13 @@
 
+// [PRESET-INTEGRATED] — Auto-seleção de preset multi-nicho
+let _selectPreset = null;
+try {
+  _selectPreset = require('./sales/preset-selector');
+  console.log('🎯 [PRESET-SELECTOR] Módulo carregado com sucesso.');
+} catch (e) {
+  console.warn('⚠️ [PRESET-SELECTOR] Módulo não encontrado — autoPreset será "default".', e.message);
+}
+
 // [SALES-LAYER-INTEGRATED] — pós-processamento persuasivo + URL→Botões
 let _applySalesLayer = null;
 try {
@@ -4586,6 +4595,26 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
 
         logger.info(`AI response generated in ${responseTime}ms using ${usedProvider}`);
         
+        
+        // 🎯 [PRESET-INTEGRATED] Auto-seleção de preset por conteúdo/URL
+        let _autoPreset = 'default';
+        const _presetsActive = process.env.FEATURE_PRESETS !== 'false' &&
+            (typeof featureFlags === 'undefined' || !featureFlags.isEnabled || featureFlags.isEnabled('FEATURE_PRESETS'));
+        if (_presetsActive && _selectPreset) {
+            try {
+                _autoPreset = _selectPreset({
+                    url:         pageData && pageData.url         || '',
+                    content:     pageData && pageData.cleanText   || '',
+                    title:       pageData && pageData.title       || '',
+                    description: pageData && pageData.description || '',
+                    linkType:    pageData && pageData.linkType    || null
+                });
+            } catch (_presetErr) {
+                console.warn('⚠️ [PRESET-SELECTOR] Erro na auto-seleção (fallback: default):', _presetErr.message);
+                _autoPreset = 'default';
+            }
+        }
+
         // ⚔️ [SALES-LAYER] Pós-processamento persuasivo (isolado, feature-flagged, fallback automático)
         let _finalToReturn = finalResponse;
         const _salesLayerActive = process.env.FEATURE_SALES_LAYER === 'true' ||
@@ -4593,12 +4622,14 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         if (_salesLayerActive && _applySalesLayer) {
             try {
                 const _salesMode = process.env.SALES_LAYER_MODE || 'auto';
+                const _userPreset = (pageData && pageData.salesPreset) || null;
                 _finalToReturn = _applySalesLayer({
                     responseBase:    finalResponse,
                     journeyStage:    journeyStage,
                     estadoEmocional: estadoEmocional,
                     mode:            _salesMode,
-                    preset:          null
+                    userPreset:      _userPreset,
+                    autoPreset:      _autoPreset
                 });
             } catch (_salesErr) {
                 console.warn('⚠️ [SALES-LAYER] Erro ao aplicar (fallback):', _salesErr.message);
