@@ -4644,13 +4644,9 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
             }
         }
 
-        // 🔗 [URL→BUTTONS] Conversão universal de URLs em botões (todos os chats)
-        try {
-            _finalToReturn = convertUrlsToButtons(_finalToReturn);
-        } catch (_btnErr) {
-            console.warn('⚠️ [URL→BUTTONS] Erro na conversão (fallback):', _btnErr.message);
-        }
-
+        // 🔗 [URL→BUTTONS] — DESATIVADO no servidor
+        // A conversão é feita no client-side (widget/chatbot page) para compatibilidade.
+        // O servidor retorna texto puro para que cada renderer trate adequadamente.
         return _finalToReturn;
 
 
