@@ -4599,7 +4599,7 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         // 🎯 [PRESET-INTEGRATED] Auto-seleção de preset por conteúdo/URL
         let _autoPreset = 'default';
         const _presetsActive = process.env.FEATURE_PRESETS !== 'false' &&
-            (typeof featureFlags === 'undefined' || !featureFlags.isEnabled || featureFlags.isEnabled('FEATURE_PRESETS'));
+            (!featureFlags || typeof featureFlags.isEnabled !== 'function' || featureFlags.isEnabled('FEATURE_PRESETS'));
         if (_presetsActive && _selectPreset) {
             try {
                 _autoPreset = _selectPreset({
@@ -4618,7 +4618,7 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         // ⚔️ [SALES-LAYER] Pós-processamento persuasivo (isolado, feature-flagged, fallback automático)
         let _finalToReturn = finalResponse;
         const _salesLayerActive = process.env.FEATURE_SALES_LAYER === 'true' ||
-            (typeof featureFlags !== 'undefined' && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_SALES_LAYER'));
+            (featureFlags && typeof featureFlags.isEnabled === 'function' && featureFlags.isEnabled('FEATURE_SALES_LAYER'));
         if (_salesLayerActive && _applySalesLayer) {
             try {
                 // [SALESMODE-FLOW-PATCH] Prioriza modo vindo do widget/req sobre env var global
