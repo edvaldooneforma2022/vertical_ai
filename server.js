@@ -4624,13 +4624,19 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
                 // [SALESMODE-FLOW-PATCH] Prioriza modo vindo do widget/req sobre env var global
                 const _salesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
                 const _userPreset = (pageData && pageData.salesPreset) || null;
+                // [SALESV4-CALLPATCH] Passa userMessage, messageCount e conversationId para F1-F8
+                const _msgCount    = (Array.isArray(conversationHistory) ? conversationHistory.length : 0) + 1;
+                const _convId      = (pageData && pageData.conversationId) || null;
                 _finalToReturn = _applySalesLayer({
                     responseBase:    finalResponse,
                     journeyStage:    journeyStage,
                     estadoEmocional: estadoEmocional,
                     mode:            _salesMode,
                     userPreset:      _userPreset,
-                    autoPreset:      _autoPreset
+                    autoPreset:      _autoPreset,
+                    userMessage:     userMessage     || '',
+                    messageCount:    _msgCount,
+                    conversationId:  _convId
                 });
             } catch (_salesErr) {
                 console.warn('⚠️ [SALES-LAYER] Erro ao aplicar (fallback):', _salesErr.message);
