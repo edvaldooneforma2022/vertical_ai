@@ -17,6 +17,15 @@ try {
   console.warn('⚠️ [SALES-LAYER] Módulo não encontrado — funcionalidade desativada.', e.message);
 }
 
+// [NORMALIZE-LINKS] — converte telefones brutos em links wa.me (pré-botão)
+let _normalizeLinks = null;
+try {
+  _normalizeLinks = require('./utils/normalize-links');
+  console.log('🔗 [NORMALIZE-LINKS] Módulo carregado com sucesso.');
+} catch (e) {
+  console.warn('⚠️ [NORMALIZE-LINKS] Módulo não encontrado — funcionalidade desativada.', e.message);
+}
+
 /**
  * Converte URLs brutas em botões HTML clicáveis.
  * Aplica-se a TODOS os chats, de forma universal.
@@ -4679,6 +4688,14 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         // 🔗 [URL→BUTTONS] — DESATIVADO no servidor
         // A conversão é feita no client-side (widget/chatbot page) para compatibilidade.
         // O servidor retorna texto puro para que cada renderer trate adequadamente.
+
+        // 🔗 [NORMALIZE-LINKS] Converte telefones brutos em links wa.me (antes do return)
+        try {
+          if (_normalizeLinks) _finalToReturn = _normalizeLinks(_finalToReturn);
+        } catch (_nlErr) {
+          // fallback silencioso — nunca quebra a resposta
+        }
+
         return _finalToReturn;
 
 

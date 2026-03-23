@@ -254,6 +254,91 @@ function addLossAversion(journeyStage, urgency) {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// [F11] INTERCEPTADOR DE SAÍDA — impede despedida prematura
+// ─────────────────────────────────────────────────────────────────
+
+const EXIT_PATTERNS = [
+  'até logo', 'tchau', 'depois vemos', 'qualquer coisa',
+  'fico à disposição', 'fico a disposição', 'bom dia pra você',
+  'boa sorte', 'sucesso pra você', 'estou aqui se precisar'
+];
+
+function isExitResponse(text) {
+  try {
+    if (!text || typeof text !== 'string') return false;
+    const lower = text.toLowerCase();
+    return EXIT_PATTERNS.some(e => lower.includes(e));
+  } catch (_) { return false; }
+}
+
+const REENGAGEMENT_PHRASES = [
+  'Antes de sair, deixa eu te mostrar uma coisa rápida que pode mudar isso pra você.',
+  'Só um segundo — tem algo aqui que talvez você não tenha visto ainda.',
+  'Espera, antes de ir: isso aqui pode ser exatamente o que você precisa.'
+];
+
+function injectReengagement(response, profile, stage) {
+  try {
+    // Só aplica para perfil distraído ou respostas genéricas de saída
+    if (profile !== 'distraido' && profile !== 'normal') return response;
+    const phrase = REENGAGEMENT_PHRASES[Math.floor(Math.random() * REENGAGEMENT_PHRASES.length)];
+    console.log('🔄 [SALES-LAYER][F11] Reengajamento de saída aplicado');
+    return String(response) + '\n\n' + phrase;
+  } catch (_) { return response; }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// [F12] ENFORCE LINK FORMAT — garante que WhatsApp vira link
+// ─────────────────────────────────────────────────────────────────
+
+function enforceLinkFormat(response) {
+  try {
+    if (!response || typeof response !== 'string') return response;
+    // Se menciona WhatsApp mas não tem link wa.me nem https://
+    const lower = response.toLowerCase();
+    if (
+      (lower.includes('whatsapp') || lower.includes('zap')) &&
+      !lower.includes('wa.me') &&
+      !lower.includes('api.whatsapp.com')
+    ) {
+      // Tentar extrair número da resposta
+      const phoneMatch = response.match(/(\+?\d{1,3}[\s.-]?)?\(?\d{2}\)?[\s.-]?\d{4,5}[\s.-]?\d{4}/);
+      if (phoneMatch) {
+        const digits = phoneMatch[0].replace(/\D/g, '');
+        if (digits.length >= 10) {
+          const normalized = digits.startsWith('55') ? digits : '55' + digits;
+          console.log('📱 [SALES-LAYER][F12] Link WhatsApp enforced');
+          // Substituir o número bruto por link
+          return response.replace(phoneMatch[0], 'https://wa.me/' + normalized);
+        }
+      }
+    }
+    return response;
+  } catch (_) { return response; }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// [F13] WRAPPER FINAL — aplica F11+F12 em qualquer saída
+// ─────────────────────────────────────────────────────────────────
+
+function applyFinalGuards(response, userMessage) {
+  try {
+    let result = response;
+
+    // [F11] Exit guard — interceptar despedidas
+    if (isExitResponse(result)) {
+      const profile = detectUserProfile(userMessage);
+      result = injectReengagement(result, profile, 'descoberta');
+    }
+
+    // [F12] Enforce link format
+    result = enforceLinkFormat(result);
+
+    return result;
+  } catch (_) { return response; }
+}
+
+// ─────────────────────────────────────────────────────────────────
 // HELPERS INTERNOS
 // ─────────────────────────────────────────────────────────────────
 
@@ -319,6 +404,8 @@ function applySalesLayer({
   userPreset      = null,
   autoPreset      = null
 }) {
+  // [F13] Guardar userMessage para applyFinalGuards
+  const _userMsg = userMessage;
   // [F10] Safe wrapper global
   try {
 
@@ -421,9 +508,12 @@ function applySalesLayer({
       `pressure=${activePressure} | mode=${mode} | msgs=${count}`
     );
 
-    return copyPhrase
+    const _preReturn = copyPhrase
       ? String(responseBase) + '\n\n' + copyPhrase
       : responseBase;
+
+    // [F13] WRAPPER FINAL — aplica F11 (exit guard) + F12 (enforce links)
+    return applyFinalGuards(_preReturn, _userMsg);
 
   } catch (err) {
     // [F10] Safe wrapper global — nunca perde a resposta original
