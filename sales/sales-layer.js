@@ -263,12 +263,59 @@ const EXIT_PATTERNS = [
   'boa sorte', 'sucesso pra você', 'estou aqui se precisar'
 ];
 
+// Frases de recusa forte — não reengajar
+const STRONG_REFUSAL = [
+  'não quero', 'nao quero', 'não tenho interesse', 'nao tenho interesse',
+  'para de me', 'não me interessa', 'cancela', 'sai fora'
+];
+
 function isExitResponse(text) {
   try {
     if (!text || typeof text !== 'string') return false;
     const lower = text.toLowerCase();
     return EXIT_PATTERNS.some(e => lower.includes(e));
   } catch (_) { return false; }
+}
+
+// [FASE 1] Filtro contextual — só reengaja quando faz sentido
+function shouldReengage(response, userMessage, messageCount) {
+  try {
+    if (!response) return false;
+
+    // Só se for saída real da IA
+    if (!isExitResponse(response)) return false;
+
+    // Não aplicar se usuário demonstrou desinteresse forte
+    if (userMessage) {
+      const lowerUser = userMessage.toLowerCase();
+      if (STRONG_REFUSAL.some(r => lowerUser.includes(r))) return false;
+    }
+
+    // Só aplicar após mínimo de interação (evita parecer insistente)
+    if (messageCount < 2) return false;
+
+    return true;
+  } catch (_) { return false; }
+}
+
+// [FASE 2] Memória anti-repetição de reengajamento
+const _reengagementMemory = new Map();
+
+function alreadyReengaged(conversationId) {
+  if (!conversationId) return false;
+  return _reengagementMemory.has(conversationId);
+}
+
+function markReengaged(conversationId) {
+  if (!conversationId) return;
+  _reengagementMemory.set(conversationId, Date.now());
+  // Limpar memória antiga (> 1h) para evitar memory leak
+  if (_reengagementMemory.size > 500) {
+    const oneHourAgo = Date.now() - 3600000;
+    for (const [key, ts] of _reengagementMemory) {
+      if (ts < oneHourAgo) _reengagementMemory.delete(key);
+    }
+  }
 }
 
 const REENGAGEMENT_PHRASES = [
@@ -282,56 +329,72 @@ function injectReengagement(response, profile, stage) {
     // Só aplica para perfil distraído ou respostas genéricas de saída
     if (profile !== 'distraido' && profile !== 'normal') return response;
     const phrase = REENGAGEMENT_PHRASES[Math.floor(Math.random() * REENGAGEMENT_PHRASES.length)];
-    console.log('🔄 [SALES-LAYER][F11] Reengajamento de saída aplicado');
+    if (process.env.DEBUG_SALES === 'true') {
+      console.log('🔄 [SALES-LAYER][F11] Reengajamento de saída aplicado');
+    }
     return String(response) + '\n\n' + phrase;
   } catch (_) { return response; }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// [F12] ENFORCE LINK FORMAT — garante que WhatsApp vira link
+// [F12] ENFORCE LINK FORMAT — apenas DETECÇÃO (transformação no server)
 // ─────────────────────────────────────────────────────────────────
+// [FASE 4] A transformação real é feita pelo normalizeLinks no server.js
+// Aqui apenas detectamos e logamos para debug
 
 function enforceLinkFormat(response) {
   try {
     if (!response || typeof response !== 'string') return response;
-    // Se menciona WhatsApp mas não tem link wa.me nem https://
+    // Já tem link — não duplicar
+    if (response.includes('wa.me')) return response;
+    if (response.includes('<a ')) return response;
+
+    // [FASE 4] Só logar detecção — normalizeLinks no server faz a conversão
     const lower = response.toLowerCase();
     if (
       (lower.includes('whatsapp') || lower.includes('zap')) &&
       !lower.includes('wa.me') &&
       !lower.includes('api.whatsapp.com')
     ) {
-      // Tentar extrair número da resposta
-      const phoneMatch = response.match(/(\+?\d{1,3}[\s.-]?)?\(?\d{2}\)?[\s.-]?\d{4,5}[\s.-]?\d{4}/);
-      if (phoneMatch) {
-        const digits = phoneMatch[0].replace(/\D/g, '');
-        if (digits.length >= 10) {
-          const normalized = digits.startsWith('55') ? digits : '55' + digits;
-          console.log('📱 [SALES-LAYER][F12] Link WhatsApp enforced');
-          // Substituir o número bruto por link
-          return response.replace(phoneMatch[0], 'https://wa.me/' + normalized);
-        }
+      if (process.env.DEBUG_SALES === 'true') {
+        console.log('📱 [SALES-LAYER][F12] WhatsApp detectado sem link — normalizeLinks fará conversão');
       }
     }
+    // Retorna SEM modificar — única fonte de verdade é normalizeLinks
     return response;
   } catch (_) { return response; }
+}
+
+// [FASE 5] Proteção contra CTA duplicado
+function hasCTA(response) {
+  try {
+    if (!response) return false;
+    const lower = response.toLowerCase();
+    return (
+      lower.includes('http') ||
+      lower.includes('clique') ||
+      lower.includes('acesse') ||
+      lower.includes('wa.me')
+    );
+  } catch (_) { return false; }
 }
 
 // ─────────────────────────────────────────────────────────────────
 // [F13] WRAPPER FINAL — aplica F11+F12 em qualquer saída
 // ─────────────────────────────────────────────────────────────────
 
-function applyFinalGuards(response, userMessage) {
+function applyFinalGuards(response, userMessage, messageCount, conversationId) {
   try {
     let result = response;
 
-    // [F11] Exit guard — interceptar despedidas
-    if (isExitResponse(result)) {
+    // [F11] Exit guard — intercepcar despedidas com filtro contextual
+    if (shouldReengage(result, userMessage, messageCount) && !alreadyReengaged(conversationId)) {
       const profile = detectUserProfile(userMessage);
       result = injectReengagement(result, profile, 'descoberta');
+      markReengaged(conversationId);
     }
 
-    // [F12] Enforce link format
+    // [F12] Enforce link format (apenas detecção/log)
     result = enforceLinkFormat(result);
 
     return result;
@@ -503,17 +566,19 @@ function applySalesLayer({
 
     const copyPhrase = getCopyByStage(presetData, stage, activePressure, conversationId);
 
-    console.log(
-      `⚔️ [SALES-LAYER v4] preset=${activePresetKey} | stage=${stage} | ` +
-      `pressure=${activePressure} | mode=${mode} | msgs=${count}`
-    );
+    if (process.env.DEBUG_SALES === 'true') {
+      console.log(
+        `⚔️ [SALES-LAYER v4] preset=${activePresetKey} | stage=${stage} | ` +
+        `pressure=${activePressure} | mode=${mode} | msgs=${count}`
+      );
+    }
 
     const _preReturn = copyPhrase
       ? String(responseBase) + '\n\n' + copyPhrase
       : responseBase;
 
     // [F13] WRAPPER FINAL — aplica F11 (exit guard) + F12 (enforce links)
-    return applyFinalGuards(_preReturn, _userMsg);
+    return applyFinalGuards(_preReturn, _userMsg, count, conversationId);
 
   } catch (err) {
     // [F10] Safe wrapper global — nunca perde a resposta original
