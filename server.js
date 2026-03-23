@@ -3761,6 +3761,24 @@ function extractBonuses(text) {
     return Array.from(new Set(bonuses));
 }
 
+// 🎯 NOVO: FUNÇÃO MODULAR PARA EXTRAIR PREÇOS (BUG-FIX-PRECO)
+function extractPrices(text) {
+    if (!text) return [];
+    const pricePatterns = [
+        /R\$\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?/gi,
+        /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?\s*reais/gi,
+        /R\$\s*\d+(?:[.,]\d+)?(?:\/(?:mês|ano|mes|dia))?/gi
+    ];
+    const detectedPrices = new Set();
+    pricePatterns.forEach(pattern => {
+        const matches = String(text).match(pattern);
+        if (matches) {
+            matches.forEach(price => detectedPrices.add(price.trim()));
+        }
+    });
+    return Array.from(detectedPrices).slice(0, 10);
+}
+
 // ===== Content extraction =====
 function extractCleanTextFromHTML(html) {
     try {
@@ -3954,22 +3972,10 @@ async function extractPageData(url) {
 
                 extractedData.bonuses_detected = extractBonuses(bodyText);
 
-                // 🎯 NOVO: EXTRAIR PREÇOS DA PÁGINA
-                const pricePatterns = [
-                    /R\$\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?/gi,  // R$ 49,90 ou R$ 1.299,00
-                    /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?\s*reais/gi, // 49,90 reais
-                    /R\$\s*\d+(?:[.,]\d+)?(?:\/(?:mês|ano|mes|dia))?/gi // R$ 49/ano
-                ];
-                const detectedPrices = new Set();
-                pricePatterns.forEach(pattern => {
-                    const matches = bodyText.match(pattern);
-                    if (matches) {
-                        matches.forEach(price => detectedPrices.add(price.trim()));
-                    }
-                });
-                extractedData.price_detected = Array.from(detectedPrices).slice(0, 10);
+                // 🎯 [BUG-FIX-PRECO] Usar função modular
+                extractedData.price_detected = extractPrices(bodyText);
                 if (extractedData.price_detected.length > 0) {
-                    logger.info(`💰 Preços detectados: ${extractedData.price_detected.join(', ')}`);
+                    logger.info(`💰 Preços detectados (Cheerio): ${extractedData.price_detected.join(', ')}`);
                 }
 
                 // 🎯 EXTRAIR CONTATOS
@@ -4050,6 +4056,8 @@ async function extractPageData(url) {
                     const sents = finalText.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
                     if (!extractedData.summary && sents.length) extractedData.summary = sents.slice(0, 3).join(". ").substring(0, 400) + (sents.length > 3 ? "..." : "");
                     extractedData.bonuses_detected = extractBonuses(finalText);
+                    // 🎯 [BUG-FIX-PRECO] Atualizar preços no Puppeteer
+                    extractedData.price_detected = extractPrices(finalText);
                     analytics.successfulExtractions++;
                 }
 
@@ -4112,6 +4120,15 @@ async function extractPageData(url) {
                     processedImages: enhancedContent.processedImages || 0,
                     extractionTime: enhancedContent.extractionTime || 0
                 };
+
+                // 🎯 [BUG-FIX-PRECO] Atualizar preços nno Enhanced Extractor (OCR/Floating)
+                if (extractedData.cleanText) {
+                    const enhancedPrices = extractPrices(extractedData.cleanText);
+                    if (enhancedPrices.length > extractedData.price_detected.length) {
+                        extractedData.price_detected = enhancedPrices;
+                        logger.info(`💰 [ENHANCED] Preços atualizados via OCR/Dynamic: ${enhancedPrices.length} encontrados`);
+                    }
+                }
 
             } catch (enhancedError) {
                 logger.warn(`⚠️ [ENHANCED] Enhanced extraction failed, continuing with basic: ${enhancedError.message}`);
@@ -4570,8 +4587,23 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
             engajamento: analisarEngajamento(cleanUserMessage, response)
         });
 
-        // 🎯 CORREÇÃO FINAL: Limpar resposta de qualquer caractere especial
-        const finalResponse = String(response).replace(/<s>\s*\[OUT\]/g, '').replace(/<[^>]*>/g, '').replace(/\[.*?\]/g, '').trim();
+        // 🎯 [BUG-FIX-LINK] Diagnóstico de truncamento
+        if (response && (response.includes('http') || response.includes('arsenalsecre'))) {
+            console.log('🔗 [URL-DEBUG] Resposta Original da IA:', response);
+        }
+
+        // 🎯 CORREÇÃO FINAL: Limpar resposta (Regex de colchetes ajustada para evitar truncamento de links)
+        // [REF] BUG-FIX-LINK: O regex /\[.*?\]/g era muito agressivo. 
+        // Agora usamos um que evita limpar links markdown [texto](url)
+        const finalResponse = String(response)
+            .replace(/<s>\s*\[OUT\]/g, '')
+            .replace(/<[^>]*>/g, '')
+            .replace(/\[((?!http|https|www| arsenalsecre).+?)\]/gi, '') // Limpa colchetes APENAS se não parecer uma URL ou domínio
+            .trim();
+        
+        if (finalResponse !== response && (response.includes('http') || response.includes('arsenalsecre'))) {
+            console.log('🔗 [URL-DEBUG] Resposta Após Limpeza:', finalResponse);
+        }
         const responseTime = Date.now() - startTime;
 
         // SAFE PATCH - LLM-OPT-002: Salvar resposta no cache para futuras consultas
