@@ -6049,28 +6049,45 @@ url_origem: window.location.href,
 // ===== CONFIGURAR NOVAS ROTAS =====
 
 // ===== MIDDLEWARE DE AUTENTICAÇÃO PARA ROTAS V3.0 =====
-function requireApiKeyV3(req, res, next) {
-    let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+// FIX-SCHED-001: Corrigido para async/await (validateApiKey é async)
+async function requireApiKeyV3(req, res, next) {
+    try {
+        let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
 
-    if (apiKey) {
-        const validation = validateApiKey(apiKey);
-        if (validation.success) {
-            req.session.validatedApiKey = apiKey;
-            req.session.clientData = validation.client;
-            req.cliente = validation.client;
+        if (apiKey) {
+            const validation = await validateApiKey(apiKey);
+            if (validation.success) {
+                req.session.validatedApiKey = apiKey;
+                // FIX-SCHED-001b: validateApiKey retorna .tenant, não .client
+                const clientData = validation.client || validation.tenant;
+                req.session.clientData = clientData;
+                req.cliente = clientData;
+                return next();
+            }
+        }
+
+        // Fallback: sessão já validada (ex: painel admin)
+        if (req.session && req.session.validatedApiKey) {
+            req.cliente = req.session.clientData;
             return next();
         }
-    }
 
-    if (req.session && req.session.validatedApiKey) {
-        req.cliente = req.session.clientData;
-        return next();
+        return res.status(401).json({
+            success: false,
+            error: "API Key não fornecida ou inválida. Autenticação necessária."
+        });
+    } catch (error) {
+        console.error('❌ [requireApiKeyV3] Erro na autenticação:', error.message);
+        // Fallback seguro: se tem sessão válida, continua
+        if (req.session && req.session.validatedApiKey) {
+            req.cliente = req.session.clientData;
+            return next();
+        }
+        return res.status(401).json({
+            success: false,
+            error: "Erro interno na autenticação."
+        });
     }
-
-    return res.status(401).json({
-        success: false,
-        error: "API Key não fornecida ou inválida. Autenticação necessária."
-    });
 }
 
 // ===== MIDDLEWARE DE VALIDAÇÃO DE PROPRIEDADE DO CHATBOT =====
