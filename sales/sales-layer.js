@@ -465,7 +465,8 @@ function applySalesLayer({
   conversationId  = null,
   mode            = 'auto',
   userPreset      = null,
-  autoPreset      = null
+  autoPreset      = null,
+  decision        = null
 }) {
   // [F13] Guardar userMessage para applyFinalGuards
   const _userMsg = userMessage;
@@ -477,6 +478,55 @@ function applySalesLayer({
     if (mode === 'manual' && !userPreset) return responseBase;
     if (estadoEmocional.sarcasmo) return responseBase;
     if (!shouldApplyComplement(responseBase)) return responseBase;
+
+    // ── 🧠 [DECISION-ENGINE] Camada inteligente (APENAS modo auto) ──────
+    // Se decision existe e mode === 'auto', usa decisão estratégica.
+    // Se decision === null, fluxo F0-F13 original continua idêntico.
+    if (decision && mode === 'auto') {
+      try {
+        const { intent, action, urgency, nextStep, context } = decision;
+
+        // [FASE 7] REENGAJAMENTO INTELIGENTE: se intent === 'sair', NUNCA despedida neutra
+        if (intent === 'sair') {
+          const reengPhrases = [
+            'Antes de sair, deixa eu te mostrar algo rápido que pode mudar isso pra você.',
+            'Só um segundo — tem algo aqui que talvez você não tenha visto ainda.',
+            'Espera, antes de ir: isso aqui pode ser exatamente o que você precisa.'
+          ];
+          const reengPhrase = reengPhrases[Math.floor(Math.random() * reengPhrases.length)];
+          console.log('🧠 [DECISION-ENGINE] Intent=sair → reengajamento forçado');
+          return String(responseBase) + '\n\n' + reengPhrase;
+        }
+
+        // [FASE 6] PRIORIDADE CHECKOUT: se quer comprar e nextStep é checkout
+        if (intent === 'comprar' && nextStep === 'checkout') {
+          let closingMsg = 'Perfeito! Vou te mostrar como começar agora:';
+          // Adicionar contexto real se disponível (FASE 8)
+          if (context && context.price) {
+            closingMsg = `Ótimo! O investimento é ${context.price}. Vou te mostrar como garantir agora:`;
+          } else if (context && context.benefit) {
+            closingMsg = `Perfeito! ${context.benefit}. Vou te mostrar como começar:`;
+          }
+          console.log('🧠 [DECISION-ENGINE] Intent=comprar → fechamento com checkout');
+          return String(responseBase) + '\n\n' + closingMsg;
+        }
+
+        // [FASE 3] OBJEÇÃO INTELIGENTE: provar com contexto real
+        if (intent === 'objecao' && context && context.benefit) {
+          const proofMsg = `Entendo sua preocupação. Olha só: ${context.benefit}. Isso faz sentido pra você?`;
+          console.log('🧠 [DECISION-ENGINE] Intent=objecao → prova com contexto');
+          return String(responseBase) + '\n\n' + proofMsg;
+        }
+
+        if (process.env.DEBUG_SALES === 'true') {
+          console.log(`🧠 [DECISION-ENGINE] Passthrough → fluxo F0-F13 (intent=${intent}, action=${action})`);
+        }
+        // Se nenhum caso especial, cai no fluxo F0-F13 normalmente
+      } catch (_decisionErr) {
+        // Safe mode: qualquer erro no decision → fluxo original
+        console.warn('⚠️ [DECISION-ENGINE] Erro no sales-layer (fallback F0-F13):', _decisionErr.message);
+      }
+    }
 
     // ── [F3] BUY INTENT — bypass direto ao link ───────────────────
     try {
