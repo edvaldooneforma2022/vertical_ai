@@ -28,9 +28,12 @@ try {
 
 // [DECISION-ENGINE] — camada intermediária de decisão inteligente para modo automático
 let _decideStrategy = null;
+let _decideStrategyV2 = null;
 try {
-  _decideStrategy = require('./sales/decision-engine').decideStrategy;
-  console.log('🧠 [DECISION-ENGINE] Módulo carregado com sucesso.');
+  const _deModule = require('./sales/decision-engine');
+  _decideStrategy = _deModule.decideStrategy;
+  _decideStrategyV2 = _deModule.decideStrategyV2 || null;
+  console.log('🧠 [DECISION-ENGINE] Módulo carregado com sucesso.' + (_decideStrategyV2 ? ' (V2 disponível)' : ''));
 } catch (e) {
   console.warn('⚠️ [DECISION-ENGINE] Módulo não encontrado — decisão desativada.', e.message);
 }
@@ -4675,21 +4678,49 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         const _salesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
         const _decisionEngineActive = process.env.FEATURE_DECISION_ENGINE !== 'false' &&
             (!featureFlags || typeof featureFlags.isEnabled !== 'function' || featureFlags.isEnabled('FEATURE_DECISION_ENGINE'));
-        if (_decisionEngineActive && _decideStrategy && _salesMode === 'auto') {
-            try {
-                _decision = _decideStrategy({
-                    userMessage:    cleanUserMessage || '',
-                    journeyStage:   journeyStage,
-                    messageCount:   (Array.isArray(conversationHistory) ? conversationHistory.length : 0) + 1,
-                    conversationId: (pageData && pageData.conversationId) || null,
-                    extractedData:  pageData || {}
-                });
-                if (process.env.DEBUG_SALES === 'true' && _decision) {
-                    console.log('🧠 [DECISION-ENGINE] Decisão:', JSON.stringify(_decision));
+        if (_decisionEngineActive && _salesMode === 'auto') {
+            // 🧠 [V2] Tentar Decision Engine V2 primeiro (se flag ativa)
+            const _v2Active = process.env.FEATURE_DECISION_ENGINE_V2 === 'true' ||
+                (featureFlags && typeof featureFlags.isEnabled === 'function' && featureFlags.isEnabled('FEATURE_DECISION_ENGINE_V2'));
+            const _msgCount = (Array.isArray(conversationHistory) ? conversationHistory.length : 0) + 1;
+            const _convId   = (pageData && pageData.conversationId) || null;
+
+            if (_v2Active && _decideStrategyV2) {
+                try {
+                    _decision = _decideStrategyV2({
+                        userMessage:         cleanUserMessage || '',
+                        journeyStage:        journeyStage,
+                        messageCount:        _msgCount,
+                        conversationId:      _convId,
+                        extractedData:       pageData || {},
+                        conversationHistory: conversationHistory || []
+                    });
+                    if (process.env.DEBUG_SALES === 'true' && _decision) {
+                        console.log('🧠 [DECISION-ENGINE-V2] Decisão V2 ativa');
+                    }
+                } catch (_v2Err) {
+                    console.warn('⚠️ [DECISION-ENGINE-V2] Erro (fallback para V1):', _v2Err.message);
+                    _decision = null;
                 }
-            } catch (_decErr) {
-                console.warn('⚠️ [DECISION-ENGINE] Erro (fallback sem decisão):', _decErr.message);
-                _decision = null;
+            }
+
+            // Fallback para V1 se V2 retornou null ou não está ativo
+            if (!_decision && _decideStrategy) {
+                try {
+                    _decision = _decideStrategy({
+                        userMessage:    cleanUserMessage || '',
+                        journeyStage:   journeyStage,
+                        messageCount:   _msgCount,
+                        conversationId: _convId,
+                        extractedData:  pageData || {}
+                    });
+                    if (process.env.DEBUG_SALES === 'true' && _decision) {
+                        console.log('🧠 [DECISION-ENGINE-V1] Decisão V1 (fallback)');
+                    }
+                } catch (_decErr) {
+                    console.warn('⚠️ [DECISION-ENGINE] Erro (fallback sem decisão):', _decErr.message);
+                    _decision = null;
+                }
             }
         }
 
