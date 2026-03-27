@@ -484,42 +484,100 @@ function applySalesLayer({
     // Se decision === null, fluxo F0-F13 original continua idêntico.
     if (decision && mode === 'auto') {
       try {
+        const isV2 = decision._source === 'decision-engine-v2';
         const { intent, action, urgency, nextStep, context } = decision;
 
-        // [FASE 7] REENGAJAMENTO INTELIGENTE: se intent === 'sair', NUNCA despedida neutra
-        if (intent === 'sair') {
-          const reengPhrases = [
-            'Antes de sair, deixa eu te mostrar algo rápido que pode mudar isso pra você.',
-            'Só um segundo — tem algo aqui que talvez você não tenha visto ainda.',
-            'Espera, antes de ir: isso aqui pode ser exatamente o que você precisa.'
-          ];
-          const reengPhrase = reengPhrases[Math.floor(Math.random() * reengPhrases.length)];
-          console.log('🧠 [DECISION-ENGINE] Intent=sair → reengajamento forçado');
-          return String(responseBase) + '\n\n' + reengPhrase;
-        }
+        // ══════════════════════════════════════════════════════════
+        // 🧠 [V2] LÓGICA AVANÇADA — Strategy-based (quando V2 ativo)
+        // ══════════════════════════════════════════════════════════
+        if (isV2 && decision.strategy) {
+          const { strategy, pressure, confidence } = decision;
 
-        // [FASE 6] PRIORIDADE CHECKOUT: se quer comprar e nextStep é checkout
-        if (intent === 'comprar' && nextStep === 'checkout') {
-          let closingMsg = 'Perfeito! Vou te mostrar como começar agora:';
-          // Adicionar contexto real se disponível (FASE 8)
-          if (context && context.price) {
-            closingMsg = `Ótimo! O investimento é ${context.price}. Vou te mostrar como garantir agora:`;
-          } else if (context && context.benefit) {
-            closingMsg = `Perfeito! ${context.benefit}. Vou te mostrar como começar:`;
+          // [V2] FECHAR — intent=comprar OU strategy=fechar
+          if (strategy === 'fechar' || (intent === 'comprar' && confidence >= 0.6)) {
+            let closingMsg = 'Perfeito! Vou te mostrar como começar agora:';
+            if (context && context.price) {
+              closingMsg = `Ótimo! O investimento é ${context.price}. Vou te mostrar como garantir agora:`;
+            } else if (context && context.benefit) {
+              closingMsg = `Perfeito! ${context.benefit}. Vou te mostrar como começar:`;
+            }
+            console.log(`🧠 [DE-V2] strategy=fechar (confidence=${confidence}) → fechamento com checkout`);
+            return String(responseBase) + '\n\n' + closingMsg;
           }
-          console.log('🧠 [DECISION-ENGINE] Intent=comprar → fechamento com checkout');
-          return String(responseBase) + '\n\n' + closingMsg;
+
+          // [V2] RETER — intent=sair, strategy=reter
+          if (strategy === 'reter') {
+            const reengPhrases = [
+              'Antes de sair, deixa eu te mostrar algo rápido que pode mudar isso pra você.',
+              'Só um segundo — tem algo aqui que talvez você não tenha visto ainda.',
+              'Espera, antes de ir: isso aqui pode ser exatamente o que você precisa.'
+            ];
+            const reengPhrase = reengPhrases[Math.floor(Math.random() * reengPhrases.length)];
+            console.log(`🧠 [DE-V2] strategy=reter (pressure=${pressure}) → reengajamento`);
+            return String(responseBase) + '\n\n' + reengPhrase;
+          }
+
+          // [V2] QUEBRAR OBJEÇÃO — com contexto real
+          if (strategy === 'quebrar_objecao') {
+            if (context && context.benefit) {
+              const proofMsg = `Entendo sua preocupação. Olha só: ${context.benefit}. Isso faz sentido pra você?`;
+              console.log(`🧠 [DE-V2] strategy=quebrar_objecao → prova com contexto`);
+              return String(responseBase) + '\n\n' + proofMsg;
+            }
+            // Sem contexto → cai pro fluxo F0-F13
+          }
+
+          // [V2] ENGAJAR — pressão média, CTA suave
+          if (strategy === 'engajar' && decision.action === 'CTA') {
+            console.log(`🧠 [DE-V2] strategy=engajar + CTA → empurrando pra próximo passo`);
+            return String(responseBase) + '\n\nIsso faz sentido pra você? Posso te mostrar como funciona na prática.';
+          }
+
+          if (process.env.DEBUG_SALES === 'true') {
+            console.log(`🧠 [DE-V2] Passthrough → fluxo F0-F13 (strategy=${strategy}, action=${decision.action})`);
+          }
+          // Se nenhum caso V2 especial → cai no fluxo F0-F13 normalmente
         }
 
-        // [FASE 3] OBJEÇÃO INTELIGENTE: provar com contexto real
-        if (intent === 'objecao' && context && context.benefit) {
-          const proofMsg = `Entendo sua preocupação. Olha só: ${context.benefit}. Isso faz sentido pra você?`;
-          console.log('🧠 [DECISION-ENGINE] Intent=objecao → prova com contexto');
-          return String(responseBase) + '\n\n' + proofMsg;
-        }
+        // ══════════════════════════════════════════════════════════
+        // 🧠 [V1] LÓGICA ORIGINAL — Intent-based (fallback)
+        // ══════════════════════════════════════════════════════════
+        if (!isV2) {
 
-        if (process.env.DEBUG_SALES === 'true') {
-          console.log(`🧠 [DECISION-ENGINE] Passthrough → fluxo F0-F13 (intent=${intent}, action=${action})`);
+          // [FASE 7] REENGAJAMENTO INTELIGENTE: se intent === 'sair', NUNCA despedida neutra
+          if (intent === 'sair') {
+            const reengPhrases = [
+              'Antes de sair, deixa eu te mostrar algo rápido que pode mudar isso pra você.',
+              'Só um segundo — tem algo aqui que talvez você não tenha visto ainda.',
+              'Espera, antes de ir: isso aqui pode ser exatamente o que você precisa.'
+            ];
+            const reengPhrase = reengPhrases[Math.floor(Math.random() * reengPhrases.length)];
+            console.log('🧠 [DECISION-ENGINE] Intent=sair → reengajamento forçado');
+            return String(responseBase) + '\n\n' + reengPhrase;
+          }
+
+          // [FASE 6] PRIORIDADE CHECKOUT: se quer comprar e nextStep é checkout
+          if (intent === 'comprar' && nextStep === 'checkout') {
+            let closingMsg = 'Perfeito! Vou te mostrar como começar agora:';
+            if (context && context.price) {
+              closingMsg = `Ótimo! O investimento é ${context.price}. Vou te mostrar como garantir agora:`;
+            } else if (context && context.benefit) {
+              closingMsg = `Perfeito! ${context.benefit}. Vou te mostrar como começar:`;
+            }
+            console.log('🧠 [DECISION-ENGINE] Intent=comprar → fechamento com checkout');
+            return String(responseBase) + '\n\n' + closingMsg;
+          }
+
+          // [FASE 3] OBJEÇÃO INTELIGENTE: provar com contexto real
+          if (intent === 'objecao' && context && context.benefit) {
+            const proofMsg = `Entendo sua preocupação. Olha só: ${context.benefit}. Isso faz sentido pra você?`;
+            console.log('🧠 [DECISION-ENGINE] Intent=objecao → prova com contexto');
+            return String(responseBase) + '\n\n' + proofMsg;
+          }
+
+          if (process.env.DEBUG_SALES === 'true') {
+            console.log(`🧠 [DECISION-ENGINE] Passthrough → fluxo F0-F13 (intent=${intent}, action=${action})`);
+          }
         }
         // Se nenhum caso especial, cai no fluxo F0-F13 normalmente
       } catch (_decisionErr) {
