@@ -26,6 +26,15 @@ try {
   console.warn('⚠️ [NORMALIZE-LINKS] Módulo não encontrado — funcionalidade desativada.', e.message);
 }
 
+// [DECISION-ENGINE] — camada intermediária de decisão inteligente para modo automático
+let _decideStrategy = null;
+try {
+  _decideStrategy = require('./sales/decision-engine').decideStrategy;
+  console.log('🧠 [DECISION-ENGINE] Módulo carregado com sucesso.');
+} catch (e) {
+  console.warn('⚠️ [DECISION-ENGINE] Módulo não encontrado — decisão desativada.', e.message);
+}
+
 /**
  * Converte URLs brutas em botões HTML clicáveis.
  * Aplica-se a TODOS os chats, de forma universal.
@@ -4660,10 +4669,33 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         let _finalToReturn = finalResponse;
         const _salesLayerActive = process.env.FEATURE_SALES_LAYER === 'true' ||
             (featureFlags && typeof featureFlags.isEnabled === 'function' && featureFlags.isEnabled('FEATURE_SALES_LAYER'));
+
+        // 🧠 [DECISION-ENGINE] Decisão estratégica antes do sales-layer (modo auto only)
+        let _decision = null;
+        const _salesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
+        const _decisionEngineActive = process.env.FEATURE_DECISION_ENGINE !== 'false' &&
+            (!featureFlags || typeof featureFlags.isEnabled !== 'function' || featureFlags.isEnabled('FEATURE_DECISION_ENGINE'));
+        if (_decisionEngineActive && _decideStrategy && _salesMode === 'auto') {
+            try {
+                _decision = _decideStrategy({
+                    userMessage:    cleanUserMessage || '',
+                    journeyStage:   journeyStage,
+                    messageCount:   (Array.isArray(conversationHistory) ? conversationHistory.length : 0) + 1,
+                    conversationId: (pageData && pageData.conversationId) || null,
+                    extractedData:  pageData || {}
+                });
+                if (process.env.DEBUG_SALES === 'true' && _decision) {
+                    console.log('🧠 [DECISION-ENGINE] Decisão:', JSON.stringify(_decision));
+                }
+            } catch (_decErr) {
+                console.warn('⚠️ [DECISION-ENGINE] Erro (fallback sem decisão):', _decErr.message);
+                _decision = null;
+            }
+        }
+
         if (_salesLayerActive && _applySalesLayer) {
             try {
                 // [SALESMODE-FLOW-PATCH] Prioriza modo vindo do widget/req sobre env var global
-                const _salesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
                 const _userPreset = (pageData && pageData.salesPreset) || null;
                 // [SALESV4-CALLPATCH] Passa userMessage, messageCount e conversationId para F1-F8
                 const _msgCount    = (Array.isArray(conversationHistory) ? conversationHistory.length : 0) + 1;
@@ -4677,7 +4709,8 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
                     autoPreset:      _autoPreset,
                     userMessage:     userMessage     || '',
                     messageCount:    _msgCount,
-                    conversationId:  _convId
+                    conversationId:  _convId,
+                    decision:        _decision
                 });
             } catch (_salesErr) {
                 console.warn('⚠️ [SALES-LAYER] Erro ao aplicar (fallback):', _salesErr.message);
