@@ -2282,20 +2282,30 @@ class SuperInteligenciaEmocional {
     }
 
     // ===== SISTEMA DE AGENDAMENTO INTELIGENTE =====
+    // SAFE PATCH - KB-SCHED-001: Refinado para evitar falsos positivos
+    // Antes: palavras soltas como 'whatsapp', 'telefone', 'falar' disparavam agendamento
+    // Agora: exige frases explícitas de intenção de agendamento
     detectarAgendamento(mensagem) {
         const mensagemLower = mensagem.toLowerCase();
-        const palavrasAgendamento = [
-            'agendar', 'marcar', 'reunião', 'reuniao', 'encontro', 'consulta',
-            'horário', 'horario', 'data', 'hora', 'telefone', 'call', 'vídeo',
-            'video', 'encontro', 'conversar', 'falar', 'ligar', 'whatsapp'
+
+        // Frases explícitas de intenção de agendamento (exigem contexto claro)
+        const frasesAgendamento = [
+            'quero agendar', 'quero marcar', 'gostaria de agendar', 'gostaria de marcar',
+            'agendar reunião', 'agendar reuniao', 'marcar reunião', 'marcar reuniao',
+            'agendar consulta', 'marcar consulta', 'agendar horário', 'agendar horario',
+            'marcar horário', 'marcar horario', 'agendar uma', 'marcar uma',
+            'posso agendar', 'como agendar', 'como marcar', 'agendar call',
+            'marcar call', 'agendar video', 'agendar vídeo',
+            'escolher horário', 'escolher horario', 'ver horários', 'ver horarios',
+            'disponibilidade de horário', 'disponibilidade de horario'
         ];
 
-        const isAgendamento = palavrasAgendamento.some(palavra =>
-            mensagemLower.includes(palavra)
+        const isAgendamento = frasesAgendamento.some(frase =>
+            mensagemLower.includes(frase)
         );
 
         if (isAgendamento) {
-            console.log("📅 Solicitação de agendamento detectada");
+            console.log("📅 [KB-SCHED-001] Solicitação EXPLÍCITA de agendamento detectada");
             return this.gerarOpcoesAgendamento();
         }
 
@@ -2310,19 +2320,31 @@ class SuperInteligenciaEmocional {
         return resposta;
     }
 
+    // SAFE PATCH - KB-SCHED-002: Corrigido para não interpretar qualquer número como horário
+    // Antes: "R$ 30" → contém "3" → match no horário i=2 → agendamento falso
+    // Agora: exige que a mensagem seja EXATAMENTE um número (seleção de menu) ou contenha nome completo do horário
     processarAgendamento(mensagem) {
-        const mensagemLower = mensagem.toLowerCase();
+        const mensagemLower = mensagem.toLowerCase().trim();
 
         // Detectar seleção de horário
         for (let i = 0; i < this.horariosDisponiveis.length; i++) {
-            if (mensagemLower.includes((i + 1).toString()) ||
-                mensagemLower.includes(this.horariosDisponiveis[i].toLowerCase())) {
+            const numero = (i + 1).toString();
+            const horarioTexto = this.horariosDisponiveis[i].toLowerCase();
 
+            // Match por número: a mensagem INTEIRA deve ser apenas o número (ex: "3" e nada mais)
+            const isExactNumber = mensagemLower === numero;
+
+            // Match por texto: a mensagem deve conter o horário COMPLETO (ex: "segunda 14:00")
+            const isExactSchedule = mensagemLower.includes(horarioTexto);
+
+            if (isExactNumber || isExactSchedule) {
                 const horarioSelecionado = this.horariosDisponiveis[i];
                 const mensagemConfirmacao = `✅ **AGENDAMENTO CONFIRMADO!**\n\n` +
                     `📅 **Horário:** ${horarioSelecionado}\n` +
                     `🎯 **Próximo passo:** Nossa equipe entrará em contato para confirmar.\n` +
                     `📞 **Contato direto:** Veja nossos canais acima! ⬆️`;
+
+                console.log(`📅 [KB-SCHED-002] Agendamento confirmado: ${horarioSelecionado} (match: ${isExactNumber ? 'número exato' : 'texto do horário'})`);
 
                 // Retornar objeto estruturado para persistência
                 return {
@@ -5192,37 +5214,90 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);
 
-        // 🎯 NOVO: BUSCAR NA BASE DE CONHECIMENTO PRIMEIRO (Prioridade absoluta)
-        let kbMatch = null;
-        if (apiKey) {
-            try {
-                const results = knowledgeBaseManager.search(apiKey, message, 1);
-                if (results && results.length > 0 && results[0].score >= 1) {
-                    kbMatch = results[0];
-                    console.log(`📚 [KB MATCH] Score: ${kbMatch.score} para "${kbMatch.data?.question || kbMatch.data?.title}"`);
+        // ================================================================
+        // 📚 SAFE PATCH - KB-FIRST-001: Consultar Knowledge Base PRIMEIRO
+        // Antes: detectarAgendamento e capturarInteligencias rodavam ANTES do KB,
+        // sequestrando a resposta com outputs genéricos/agendamento falso.
+        // Agora: Se KB tem FAQ com match de score alto, retorna direto (bypass total).
+        // Se KB vazio ou sem match, fluxo original continua intacto.
+        // ================================================================
+        let kbDirectAnswer = null;
+        try {
+            // Usar searchSmart (tokenização por palavras) em vez de search (substring)
+            // Busca por: apiKey (identificador do tenant) E robotName/chatbotId
+            const kbSearchId = robotName || apiKey;
+            if (kbSearchId) {
+                const kbResults = knowledgeBaseManager.searchSmart(kbSearchId, message, 3);
+                
+                // Fallback: tentar também com apiKey se robotName não teve resultado
+                let allResults = kbResults;
+                if ((!kbResults || kbResults.length === 0) && robotName && apiKey && robotName !== apiKey) {
+                    const kbResultsFallback = knowledgeBaseManager.searchSmart(apiKey, message, 3);
+                    allResults = kbResultsFallback;
                 }
-            } catch (searchErr) {
-                console.error("⚠️ Erro na busca KB:", searchErr);
+
+                if (allResults && allResults.length > 0) {
+                    const bestMatch = allResults[0];
+                    // Score >= 3 = match forte → resposta direta da FAQ
+                    if (bestMatch.type === 'faq' && bestMatch.score >= 3) {
+                        kbDirectAnswer = bestMatch.data.answer;
+                        console.log(`📚 [KB-FIRST] FAQ DIRETA (score=${bestMatch.score}): "${bestMatch.data.question.substring(0, 60)}"`);
+                    } 
+                    // Score >= 2 = match médio → será injetado como contexto para IA
+                    else if (bestMatch.score >= 2) {
+                        console.log(`📚 [KB-FIRST] FAQ como CONTEXTO (score=${bestMatch.score}): "${bestMatch.data?.question?.substring(0, 60) || bestMatch.data?.title?.substring(0, 60)}"`);
+                    }
+                }
             }
+        } catch (kbFirstErr) {
+            console.warn('⚠️ [KB-FIRST] Erro na busca inteligente (fluxo original continua):', kbFirstErr.message);
+            // Não propaga erro — fluxo original é o fallback seguro
         }
+
+        // 📚 [KB-FIRST] Se encontrou FAQ com resposta direta → retorna sem chamar nenhum outro sistema
+        if (kbDirectAnswer) {
+            // Atualizar lead se existir (manter tracking)
+            let effectiveLeadId = leadId;
+            if (!effectiveLeadId && conversationId) {
+                try {
+                    const leadByConversation = leadSystem.findLeadByConversationId(conversationId);
+                    if (leadByConversation) effectiveLeadId = leadByConversation.id;
+                } catch (_) {}
+            }
+            if (effectiveLeadId) {
+                try {
+                    leadSystem.updateLeadConversation(effectiveLeadId, message, true);
+                    leadSystem.updateLeadConversation(effectiveLeadId, kbDirectAnswer, false);
+                } catch (_) {}
+            }
+
+            // Billing tracking
+            try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
+
+            console.log(`📚 [KB-FIRST] Resposta via FAQ direta — bypass total de agendamento/inteligências/IA`);
+            return res.json({
+                success: true,
+                response: kbDirectAnswer,
+                inteligenciasDetectadas: {},
+                analiseEmocional: analiseEmocional,
+                journeyStage: 'descoberta',
+                bonuses_detected: processedPageData?.bonuses_detected || [],
+                contatos: processedPageData?.contatos || {},
+                metadata: {
+                    hasPageData: !!processedPageData,
+                    contentLength: processedPageData?.cleanText?.length || 0,
+                    method: 'kb-direct-smart',
+                    sistema: 'kb-first-v1'
+                }
+            });
+        }
+
+        // ================================================================
+        // FLUXO ORIGINAL (inalterado) — executado quando KB não tem match
+        // ================================================================
 
         // 🎯 CAPTURA DE INTENÇÕES DO CLIENTE
         let inteligencias = sistemaInteligencias.capturarInteligencias(message);
-
-        // Se encontramos uma dúvida na KB, vamos desativar "inteligências" genéricas 
-        // para permitir que a IA responda usando o conhecimento específico.
-        if (kbMatch && !inteligencias.contatoDireto) {
-            console.log("📚 KB Match encontrado. Priorizando conhecimento específico sobre regras genéricas.");
-            // Desativa inteligências genéricas para não dar resposta duplicada ou genérica
-            inteligencias = {
-                contatoDireto: false,
-                linkSite: false,
-                bonus: false,
-                detalhesBonus: false,
-                experiencia: false,
-                suporte: false
-            };
-        }
 
         // 🎯 ANÁLISE DE JORNADA
         const journeyStage = journeyAnalyzer.analyzeJourneyStage(message);
