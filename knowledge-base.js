@@ -529,6 +529,177 @@ class KnowledgeBaseManager {
     }
 
     /**
+     * 🔍 SAFE PATCH - KB-SMART-001: Busca inteligente por tokenização de palavras
+     * Resolve o problema do search() original que usava .includes() com a frase inteira
+     * e falhava com frases naturais como "o que é o link mágico?"
+     * 
+     * Algoritmo:
+     * 1. Normaliza e tokeniza a mensagem do usuário em palavras individuais
+     * 2. Normaliza e tokeniza as palavras-chave de cada FAQ
+     * 3. Conta matches de palavras individuais
+     * 4. Calcula score ponderado (match exato = 2pts, parcial = 1pt)
+     * 5. Retorna resultados ordenados por score
+     * 
+     * @param {string} chatbotId
+     * @param {string} query - Mensagem do usuário
+     * @param {number} limit - Máximo de resultados
+     * @returns {Array} Resultados com { type, score, data }
+     */
+    searchSmart(chatbotId, query, limit = 3) {
+        try {
+            const kb = this.knowledgeBases.get(chatbotId);
+            if (!kb) return [];
+
+            const results = [];
+
+            // Normalizar: remover acentos, pontuação, lowercase
+            const normalize = (str) => {
+                return String(str || '')
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remover acentos
+                    .replace(/[^a-z0-9\s]/g, ' ') // remover pontuação
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+
+            // Tokenizar: separar em palavras, filtrar muito curtas
+            const tokenize = (str) => {
+                return normalize(str).split(' ').filter(w => w.length >= 2);
+            };
+
+            // Stop words em português (não contribuem para o match)
+            const stopWords = new Set([
+                'de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas',
+                'um', 'uma', 'uns', 'umas', 'ou', 'se', 'ao', 'os', 'as',
+                'por', 'para', 'com', 'que', 'me', 'te', 'eu', 'ele', 'ela',
+                'voce', 'isso', 'esse', 'essa', 'ola', 'oi', 'bom', 'boa'
+            ]);
+
+            const queryTokens = tokenize(query).filter(w => !stopWords.has(w));
+
+            if (queryTokens.length === 0) return [];
+
+            // Buscar em FAQs
+            for (const faq of kb.faqs) {
+                if (!faq.active) continue;
+
+                const questionTokens = tokenize(faq.question);
+                const answerTokens = tokenize(faq.answer);
+
+                let score = 0;
+                let matchedWords = 0;
+
+                for (const qToken of queryTokens) {
+                    // Match exato na pergunta da FAQ = 3 pontos
+                    if (questionTokens.includes(qToken)) {
+                        score += 3;
+                        matchedWords++;
+                    }
+                    // Match parcial na pergunta (token contém ou está contido) = 1.5 pontos
+                    else if (questionTokens.some(qt => qt.includes(qToken) || qToken.includes(qt))) {
+                        score += 1.5;
+                        matchedWords++;
+                    }
+                    // Match na resposta = 0.5 pontos (menor peso)
+                    else if (answerTokens.includes(qToken)) {
+                        score += 0.5;
+                    }
+                }
+
+                // Bonus: proporção de palavras do query que deram match
+                const matchRatio = matchedWords / queryTokens.length;
+                score = score * (0.5 + matchRatio * 0.5);
+
+                // Bonus de especificidade: se uma palavra específica (>= 5 chars) deu match,
+                // garante score mínimo de 3 (evita sub-pontuar "pagamento", "checkout", "whatsapp")
+                if (matchedWords > 0 && score < 3) {
+                    const hasSpecificMatch = queryTokens.some(qt => 
+                        qt.length >= 5 && questionTokens.includes(qt)
+                    );
+                    if (hasSpecificMatch) {
+                        score = Math.max(score, 3);
+                    }
+                }
+
+                // Bonus de bigram: se 2+ palavras adjacentes do query AMBAS estão na FAQ,
+                // isso indica intenção forte (ex: "link compra" → FAQ de checkout)
+                for (let bi = 0; bi < queryTokens.length - 1; bi++) {
+                    const w1InQ = questionTokens.includes(queryTokens[bi]) || 
+                                  questionTokens.some(qt => qt.includes(queryTokens[bi]) || queryTokens[bi].includes(qt));
+                    const w2InQ = questionTokens.includes(queryTokens[bi + 1]) || 
+                                  questionTokens.some(qt => qt.includes(queryTokens[bi + 1]) || queryTokens[bi + 1].includes(qt));
+                    if (w1InQ && w2InQ) {
+                        score += 2;
+                    }
+                }
+
+                if (score > 0) {
+                    results.push({
+                        type: 'faq',
+                        score: Math.round(score * 100) / 100,
+                        data: faq
+                    });
+                }
+            }
+
+            // Buscar em documentos
+            for (const doc of kb.documents) {
+                if (!doc.active) continue;
+
+                const titleTokens = tokenize(doc.title);
+                const contentTokens = tokenize(doc.content);
+
+                let score = 0;
+                for (const qToken of queryTokens) {
+                    if (titleTokens.includes(qToken)) score += 2;
+                    else if (contentTokens.includes(qToken)) score += 0.5;
+                }
+
+                if (score > 0) {
+                    results.push({
+                        type: 'document',
+                        score: Math.round(score * 100) / 100,
+                        data: doc
+                    });
+                }
+            }
+
+            // Buscar em entradas manuais
+            for (const entry of kb.manualEntries) {
+                if (!entry.active) continue;
+
+                const titleTokens = tokenize(entry.title);
+                const contentTokens = tokenize(entry.content);
+
+                let score = 0;
+                for (const qToken of queryTokens) {
+                    if (titleTokens.includes(qToken)) score += 2;
+                    else if (contentTokens.includes(qToken)) score += 0.5;
+                }
+
+                if (score > 0) {
+                    results.push({
+                        type: 'manual',
+                        score: Math.round(score * 100) / 100,
+                        data: entry
+                    });
+                }
+            }
+
+            // Ordenar por score decrescente
+            results.sort((a, b) => b.score - a.score);
+
+            console.log(`🔍 [KB-SMART] Query: "${query.substring(0, 50)}" → ${results.length} resultado(s), melhor score: ${results[0]?.score || 0}`);
+
+            return results.slice(0, limit);
+
+        } catch (err) {
+            console.warn('⚠️ [KB-SMART] Erro na busca inteligente (fallback vazio):', err.message);
+            return [];
+        }
+    }
+
+    /**
      * Calcular score de relevância (simplificado)
      */
     calculateRelevanceScore(query, text) {
