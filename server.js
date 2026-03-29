@@ -5215,6 +5215,58 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         const analiseEmocional = superInteligencia.analisarEmocao(message);
 
         // ================================================================
+        // 📅 SAFE PATCH - SCHED-PRIORITY-001: Agendamento tem prioridade ABSOLUTA
+        // Problema: KB-FIRST interceptava "quero agendar" porque "quero" matchava
+        // FAQs de compra (score >= 3 via bonus de especificidade).
+        // Fix: detectarAgendamento roda ANTES de KB-FIRST. Se detectado,
+        // retorna calendário visual e bypassa KB/inteligências/IA completamente.
+        // O sistema de calendário real já está ativo e implantado.
+        // ================================================================
+        try {
+            const respostaAgendamentoEarly = superInteligencia.detectarAgendamento(message);
+            if (respostaAgendamentoEarly) {
+                console.log(`📅 [SCHED-PRIORITY] Agendamento EXPLÍCITO detectado ANTES do KB-FIRST — bypass total`);
+                
+                // Manter tracking do lead
+                let effectiveLeadId = leadId;
+                if (!effectiveLeadId && conversationId) {
+                    try {
+                        const leadByConversation = leadSystem.findLeadByConversationId(conversationId);
+                        if (leadByConversation) effectiveLeadId = leadByConversation.id;
+                    } catch (_) {}
+                }
+                if (effectiveLeadId) {
+                    try {
+                        leadSystem.updateLeadConversation(effectiveLeadId, message, true);
+                        leadSystem.updateLeadConversation(effectiveLeadId, respostaAgendamentoEarly, false);
+                    } catch (_) {}
+                }
+
+                // Billing tracking
+                try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
+
+                return res.json({
+                    success: true,
+                    response: respostaAgendamentoEarly,
+                    inteligenciasDetectadas: {},
+                    analiseEmocional: analiseEmocional,
+                    journeyStage: 'agendamento',
+                    bonuses_detected: processedPageData?.bonuses_detected || [],
+                    contatos: processedPageData?.contatos || {},
+                    metadata: {
+                        hasPageData: !!processedPageData,
+                        contentLength: processedPageData?.cleanText?.length || 0,
+                        method: 'scheduling-priority',
+                        sistema: 'sched-priority-v1'
+                    }
+                });
+            }
+        } catch (schedErr) {
+            console.warn('⚠️ [SCHED-PRIORITY] Erro na detecção de agendamento (fluxo original continua):', schedErr.message);
+            // Não propaga — fluxo original é o fallback seguro
+        }
+
+        // ================================================================
         // 📚 SAFE PATCH - KB-FIRST-001: Consultar Knowledge Base PRIMEIRO
         // Antes: detectarAgendamento e capturarInteligencias rodavam ANTES do KB,
         // sequestrando a resposta com outputs genéricos/agendamento falso.
@@ -5325,26 +5377,11 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
 
         let finalResponse = "";
 
-        // 🎯 DETECTAR AGENDAMENTO
-        const respostaAgendamento = superInteligencia.detectarAgendamento(message);
-        if (respostaAgendamento) {
-            finalResponse = respostaAgendamento;
-            console.log("📅 Resposta de agendamento gerada");
-        }
-        // 🎯 PROCESSAR CONFIRMAÇÃO DE AGENDAMENTO
-        // SAFE PATCH - KB-SCHED-003: DESABILITADO no fluxo automático
-        // Problema: processarAgendamento era chamado em TODA mensagem, sem verificar
-        // se o usuário estava num fluxo de agendamento. Qualquer número isolado
-        // (ex: "3", "1") disparava confirmação de agendamento falsa.
-        // Solução: O calendário visual ([CALENDAR_WIDGET]) trata confirmações client-side.
-        // Este bloco será reativado quando o sistema de calendário real for implementado
-        // com estado de conversa server-side (tenant_availability + sessão).
-        // else if (superInteligencia.processarAgendamento(message)?.confirmed) {
-        //     ... (código preservado mas inativo)
-        // }
+        // 📅 [SCHED-PRIORITY-001] detectarAgendamento agora roda ANTES do KB-FIRST (linhas 5217-5267)
+        // Se chegou aqui, significa que NÃO é agendamento. Prosseguir com inteligências.
 
         // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES FORAM DETECTADAS
-        else if (Object.values(inteligencias).some(val => val === true)) {
+        if (Object.values(inteligencias).some(val => val === true)) {
             const contatos = processedPageData?.contatos || {};
 
             // Gerar resposta base com empatia
