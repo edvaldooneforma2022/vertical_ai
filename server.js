@@ -5332,27 +5332,16 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.log("📅 Resposta de agendamento gerada");
         }
         // 🎯 PROCESSAR CONFIRMAÇÃO DE AGENDAMENTO
-        else if (superInteligencia.processarAgendamento(message)?.confirmed) {
-            const agendamentoData = superInteligencia.processarAgendamento(message);
-            finalResponse = agendamentoData.message;
-
-            // 🎯 PERSISTIR AGENDAMENTO NO SISTEMA
-            if (effectiveLeadId) {
-                const lead = leadSystem.getLeadById(effectiveLeadId);
-                leadSystem.addAppointment({
-                    leadId: effectiveLeadId,
-                    leadName: lead?.nome || 'Não informado',
-                    leadEmail: lead?.email || 'Não informado',
-                    leadPhone: lead?.telefone || '',
-                    datetime: agendamentoData.datetime,
-                    robotName: robotName || 'Assistente IA',
-                    urlOrigem: url || '',
-                    notes: `Agendado via chat`
-                });
-                console.log(`📅 AGENDAMENTO SALVO para lead ${effectiveLeadId}`);
-            }
-            console.log("✅ Confirmação de agendamento processada");
-        }
+        // SAFE PATCH - KB-SCHED-003: DESABILITADO no fluxo automático
+        // Problema: processarAgendamento era chamado em TODA mensagem, sem verificar
+        // se o usuário estava num fluxo de agendamento. Qualquer número isolado
+        // (ex: "3", "1") disparava confirmação de agendamento falsa.
+        // Solução: O calendário visual ([CALENDAR_WIDGET]) trata confirmações client-side.
+        // Este bloco será reativado quando o sistema de calendário real for implementado
+        // com estado de conversa server-side (tenant_availability + sessão).
+        // else if (superInteligencia.processarAgendamento(message)?.confirmed) {
+        //     ... (código preservado mas inativo)
+        // }
 
         // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES FORAM DETECTADAS
         else if (Object.values(inteligencias).some(val => val === true)) {
