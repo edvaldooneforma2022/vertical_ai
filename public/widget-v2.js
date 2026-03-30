@@ -458,6 +458,26 @@
             30% { transform: translateY(-4px); }
         }
 
+        /* === SAFE PATCH - CALENDAR-V2-001: Estilos do calendário inline === */
+        .lm-cal-container { width:100%;max-height:260px;overflow-y:auto;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;margin-top:8px }
+        .lm-cal-container::-webkit-scrollbar { width:4px }
+        .lm-cal-container::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.15);border-radius:2px }
+        .lm-cal-loading { text-align:center;padding:16px;color:#64748b;font-size:13px }
+        .lm-cal-spinner { display:inline-block;width:18px;height:18px;border:2px solid rgba(59,130,246,0.25);border-top-color:${primaryColor};border-radius:50%;animation:lm-cal-spin 0.8s linear infinite;margin-bottom:6px }
+        @keyframes lm-cal-spin { to { transform:rotate(360deg) } }
+        .lm-cal-day { padding:10px 12px;border-bottom:1px solid #e2e8f0 }
+        .lm-cal-day:last-child { border-bottom:none }
+        .lm-cal-day-header { font-weight:600;font-size:12px;color:${primaryColor};margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px }
+        .lm-cal-slots { display:flex;flex-wrap:wrap;gap:6px }
+        .lm-cal-slot { padding:5px 10px;border:1px solid #cbd5e1;border-radius:16px;background:white;color:#334155;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s ease;font-family:inherit;line-height:1 }
+        .lm-cal-slot:hover { background:${primaryColor};color:white;border-color:${primaryColor};transform:scale(1.05) }
+        .lm-cal-slot.lm-cal-selected { background:${primaryColor};color:white;border-color:${primaryColor} }
+        .lm-cal-confirm { margin-top:10px;padding:8px 14px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:16px;font-size:13px;font-weight:600;cursor:pointer;width:100%;transition:all 0.2s ease;font-family:inherit }
+        .lm-cal-confirm:hover { opacity:0.9;transform:translateY(-1px) }
+        .lm-cal-confirm:disabled { opacity:0.5;cursor:not-allowed;transform:none }
+        .lm-cal-error { text-align:center;padding:14px;color:#64748b;font-size:13px }
+        .lm-cal-success { text-align:center;padding:14px;color:#059669;font-size:14px;font-weight:600 }
+
         /* Responsivo */
         @media (max-width: 480px) {
             .lm-chat-window {
@@ -564,6 +584,8 @@
     let leadId = null;
     let leadCaptured = false;
     let conversationId = 'lm_' + Date.now();
+    // SAFE PATCH - CALENDAR-V2-002: Hash do calendário
+    let calendarHash = null;
 
     // Elementos
     const chatWindow = document.getElementById('lmChatWindow');
@@ -610,7 +632,26 @@
             msgDiv.className = 'lm-message ' + (isUser ? 'lm-user' : 'lm-bot');
             if (isUser) {
                 msgDiv.textContent = text;
-                        } else {
+            // SAFE PATCH - CALENDAR-V2-003: Detectar [CALENDAR_WIDGET]
+            } else if (!isUser && text && text.indexOf('[CALENDAR_WIDGET]') !== -1) {
+                try {
+                    var textBefore = text.split('[CALENDAR_WIDGET]')[0].replace(/\*\*/g, '').trim();
+                    if (textBefore) {
+                        var textEl = document.createElement('div');
+                        textEl.style.marginBottom = '10px';
+                        textEl.style.fontWeight = '600';
+                        textEl.textContent = textBefore;
+                        msgDiv.appendChild(textEl);
+                    }
+                    var calContainer = window.LMWidget._renderCalendar();
+                    msgDiv.appendChild(calContainer);
+                    msgDiv.style.maxWidth = '95%';
+                    console.log('📅 [CALENDAR-V2-003] Calendário renderizado');
+                } catch (calErr) {
+                    console.warn('⚠️ [CALENDAR-V2-003] Fallback:', calErr.message);
+                    msgDiv.textContent = text.replace('[CALENDAR_WIDGET]', '(Calendário indisponível)');
+                }
+            } else {
                 // [WIDGET-HTML-RENDER] — Renderiza HTML do servidor (botões, links)
                 // O servidor já sanitizou e gerou os botões — renderizamos diretamente
                 if (/<a\s/i.test(text) || /<button/i.test(text)) {
@@ -738,6 +779,22 @@
                 typing.classList.remove('lm-active');
 
                 if (data.success && data.response) {
+                    // SAFE PATCH - CALENDAR-V2-004: Capturar calendarHash
+                    if (data.calendarHash) {
+                        calendarHash = data.calendarHash;
+                        console.log('📅 [CALENDAR-V2-004] calendarHash recebido:', calendarHash);
+                    }
+                    // SAFE PATCH - CALENDAR-V2-005: Buscar hash se necessário
+                    if (!calendarHash && data.response.indexOf('[CALENDAR_WIDGET]') !== -1 && apiKey) {
+                        try {
+                            var hashResp = await fetch(apiBase + '/api/availability?apiKey=' + encodeURIComponent(apiKey));
+                            var hashData = await hashResp.json();
+                            if (hashData.publicHash) {
+                                calendarHash = hashData.publicHash;
+                                console.log('📅 [CALENDAR-V2-005] Hash via /api/availability:', calendarHash);
+                            }
+                        } catch (hashErr) { console.warn('⚠️ [CALENDAR-V2-005]:', hashErr.message); }
+                    }
                     this.addMessage(data.response, false);
                 } else {
                     this.addMessage('Desculpe, tive um problema. Pode repetir?', false);
@@ -766,6 +823,82 @@
             greeting.style.opacity = '0.9';
         }
     }, 5000);
+
+    // ===== SAFE PATCH - CALENDAR-V2-006: Funções de calendário =====
+    function _escHtml(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    window.LMWidget._renderCalendar = function() {
+        var container = document.createElement('div');
+        container.className = 'lm-cal-container';
+        container.innerHTML = '<div class="lm-cal-loading"><div class="lm-cal-spinner"></div><br>Carregando horários...</div>';
+        var hash = calendarHash || null;
+        if (!hash && apiKey) {
+            try {
+                crypto.subtle.digest('SHA-256', new TextEncoder().encode('calendar_' + apiKey))
+                    .then(function(buf) {
+                        var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+                        calendarHash = hex.substring(0, 16);
+                        _fetchSlots(container, calendarHash);
+                    }).catch(function(e) {
+                        container.innerHTML = '<div class="lm-cal-error">📅 Para agendar, entre em contato diretamente.</div>';
+                    });
+                return container;
+            } catch(e) {
+                container.innerHTML = '<div class="lm-cal-error">📅 Para agendar, entre em contato diretamente.</div>';
+                return container;
+            }
+        }
+        if (!hash) { container.innerHTML = '<div class="lm-cal-error">📅 Para agendar, entre em contato diretamente.</div>'; return container; }
+        _fetchSlots(container, hash);
+        return container;
+    };
+
+    function _fetchSlots(container, hash) {
+        fetch(apiBase + '/api/public/availability/' + encodeURIComponent(hash))
+            .then(function(r) { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+            .then(function(data) {
+                if (!data.success || !data.slots || data.slots.length === 0) {
+                    container.innerHTML = '<div class="lm-cal-error">😕 Nenhum horário disponível.<br>Tente novamente mais tarde.</div>';
+                    return;
+                }
+                var html = '';
+                data.slots.slice(0,5).forEach(function(day) {
+                    var p = day.date.split('-');
+                    html += '<div class="lm-cal-day"><div class="lm-cal-day-header">📅 ' + _escHtml(day.dayName) + ' — ' + p[2]+'/'+p[1] + '</div><div class="lm-cal-slots">';
+                    day.times.slice(0,6).forEach(function(t) {
+                        html += '<button class="lm-cal-slot" data-date="'+_escHtml(day.date)+'" data-time="'+_escHtml(t)+'" data-dayname="'+_escHtml(day.dayName)+'">'+t+'</button>';
+                    });
+                    if (day.times.length > 6) html += '<span style="font-size:11px;color:#94a3b8;padding:4px;">+'+(day.times.length-6)+' mais</span>';
+                    html += '</div></div>';
+                });
+                html += '<button class="lm-cal-confirm" id="lmCalConfirm" disabled>Selecione um horário acima</button>';
+                container.innerHTML = html;
+                var selDate=null,selTime=null,selDay=null;
+                container.querySelectorAll('.lm-cal-slot').forEach(function(btn){
+                    btn.addEventListener('click',function(){
+                        var prev=container.querySelector('.lm-cal-selected'); if(prev) prev.classList.remove('lm-cal-selected');
+                        btn.classList.add('lm-cal-selected');
+                        selDate=btn.getAttribute('data-date'); selTime=btn.getAttribute('data-time'); selDay=btn.getAttribute('data-dayname');
+                        var c=container.querySelector('#lmCalConfirm'); if(c){c.disabled=false;c.textContent='✅ Confirmar '+selDay+' às '+selTime;}
+                    });
+                });
+                var cb=container.querySelector('#lmCalConfirm');
+                if(cb) cb.addEventListener('click',function(){ if(!selDate||!selTime)return; _bookSlot(hash,selDate,selTime,selDay,container); });
+                messages.scrollTop = messages.scrollHeight;
+            })
+            .catch(function(e) { container.innerHTML = '<div class="lm-cal-error">⚠️ Não foi possível carregar horários.</div>'; });
+    }
+
+    function _bookSlot(hash, date, time, dayName, container) {
+        var cb=container.querySelector('#lmCalConfirm'); if(cb){cb.disabled=true;cb.textContent='Agendando...';}
+        var payload = {date:date,time:time,name:'Visitante',email:'',phone:'',leadId:leadId||null,notes:'Agendado via widget v2.0'};
+        try { var n=document.getElementById('lmLeadName'),e=document.getElementById('lmLeadEmail'),p=document.getElementById('lmLeadPhone'); if(n&&n.value)payload.name=n.value.trim(); if(e&&e.value)payload.email=e.value.trim(); if(p&&p.value)payload.phone=p.value.trim(); } catch(x){}
+        fetch(apiBase+'/api/public/book/'+encodeURIComponent(hash),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+            .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+            .then(function(d){if(d.success){container.innerHTML='<div class="lm-cal-success">✅ Agendamento confirmado!<br>📅 '+_escHtml(dayName)+' às '+_escHtml(time)+'<br><br><span style="font-size:12px;color:#64748b;">Nossa equipe entrará em contato.</span></div>';messages.scrollTop=messages.scrollHeight;}else throw new Error(d.error||'Erro');})
+            .catch(function(e){if(cb){cb.disabled=false;cb.textContent='⚠️ Erro — Tente novamente';cb.style.background='#ef4444';}});
+    }
+    // ===== FIM CALENDAR-V2 =====
 
     console.log('✅ LinkMágico Widget v2.0 carregado!');
     console.log('🤖 Robot:', robotName);
