@@ -606,7 +606,9 @@
 
             // Primeira abertura - mostrar mensagens de boas-vindas
             if (messages.children.length === 0) {
-                this.addMessage(welcomeMessage, false);
+                // SAFE PATCH - WL-V4-002: Usar mensagem de whitelabel se carregada
+                var wlWelcome = window.LMWidget._wlWelcome || welcomeMessage;
+                this.addMessage(wlWelcome, false);
                 setTimeout(() => {
                     this.addMessage(secondMessage, false);
                     this.showQuickReplies();
@@ -632,10 +634,14 @@
             msgDiv.className = 'lm-message ' + (isUser ? 'lm-user' : 'lm-bot');
             if (isUser) {
                 msgDiv.textContent = text;
-            // SAFE PATCH - CALENDAR-V2-003: Detectar [CALENDAR_WIDGET]
-            } else if (!isUser && text && text.indexOf('[CALENDAR_WIDGET]') !== -1) {
+            // SAFE PATCH - CALENDAR-V3-005: Detectar [CALENDAR_WIDGET] (reforçado)
+            } else if (!isUser && text && typeof text === 'string' && (text.indexOf('[CALENDAR_WIDGET]') !== -1 || text.indexOf('CALENDAR_WIDGET') !== -1)) {
+                console.log('📅 [CALENDAR-V3-005] Marcador de calendário detectado no widget-v2');
                 try {
-                    var textBefore = text.split('[CALENDAR_WIDGET]')[0].replace(/\*\*/g, '').trim();
+                    var calMarker = '[CALENDAR_WIDGET]';
+                    var textBefore = text.split(calMarker)[0];
+                    if (textBefore === text) textBefore = text.split('CALENDAR_WIDGET')[0];
+                    textBefore = textBefore.replace(/\*\*/g, '').replace(/\n+/g, ' ').trim();
                     if (textBefore) {
                         var textEl = document.createElement('div');
                         textEl.style.marginBottom = '10px';
@@ -644,12 +650,14 @@
                         msgDiv.appendChild(textEl);
                     }
                     var calContainer = window.LMWidget._renderCalendar();
-                    msgDiv.appendChild(calContainer);
+                    if (calContainer) {
+                        msgDiv.appendChild(calContainer);
+                    }
                     msgDiv.style.maxWidth = '95%';
-                    console.log('📅 [CALENDAR-V2-003] Calendário renderizado');
+                    console.log('📅 [CALENDAR-V3-005] Calendário renderizado com sucesso');
                 } catch (calErr) {
-                    console.warn('⚠️ [CALENDAR-V2-003] Fallback:', calErr.message);
-                    msgDiv.textContent = text.replace('[CALENDAR_WIDGET]', '(Calendário indisponível)');
+                    console.error('⚠️ [CALENDAR-V3-005] Erro ao renderizar:', calErr);
+                    msgDiv.textContent = text.replace('[CALENDAR_WIDGET]', '').replace('CALENDAR_WIDGET', '').trim() || '📅 Para agendar, entre em contato diretamente.';
                 }
             } else {
                 // [WIDGET-HTML-RENDER] — Renderiza HTML do servidor (botões, links)
@@ -899,6 +907,73 @@
             .catch(function(e){if(cb){cb.disabled=false;cb.textContent='⚠️ Erro — Tente novamente';cb.style.background='#ef4444';}});
     }
     // ===== FIM CALENDAR-V2 =====
+
+    // ===== SAFE PATCH - WL-V4-002: Carregar Whitelabel do servidor =====
+    // Busca cores, logo e nome da empresa para aplicar ao widget
+    // Executa APÓS widget criado (não bloqueia renderização inicial)
+    // Fallback silencioso: se falhar, widget usa cores padrão do config
+    try {
+        fetch(apiBase + '/api/whitelabel-public/' + encodeURIComponent(apiKey))
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(data) {
+                if (!data || !data.success || !data.config) return;
+                var wl = data.config;
+                console.log('🎨 [WL-V4-002] Whitelabel carregado:', JSON.stringify(wl));
+
+                // Atualizar nome no header
+                if (wl.companyName) {
+                    var titleEl = document.querySelector('.lm-chat-header-title');
+                    if (titleEl) titleEl.textContent = wl.companyName;
+                    var avatarEl = document.getElementById('lmChatAvatar');
+                    if (avatarEl && !avatarEl.querySelector('img')) {
+                        avatarEl.textContent = wl.companyName.charAt(0).toUpperCase();
+                    }
+                }
+
+                // Atualizar logo no avatar e balão
+                if (wl.logoUrl) {
+                    var chatAvatar = document.getElementById('lmChatAvatar');
+                    if (chatAvatar) {
+                        chatAvatar.innerHTML = '<img src="' + wl.logoUrl + '" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+                    }
+                    var bubbleEl = document.getElementById('lmBubble');
+                    if (bubbleEl && !bubbleEl.querySelector('img')) {
+                        bubbleEl.innerHTML = '<img src="' + wl.logoUrl + '" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+                    }
+                }
+
+                // Sobrescrever cores via CSS adicional (incremental, reversível)
+                if (wl.primaryColor && wl.primaryColor !== primaryColor) {
+                    var p = wl.primaryColor;
+                    var s = wl.secondaryColor || wl.primaryColor;
+                    var overrideCSS = document.createElement('style');
+                    overrideCSS.id = 'lm-wl-override';
+                    overrideCSS.textContent =
+                        '.lm-bubble{background:linear-gradient(135deg,'+p+' 0%,'+s+' 100%)!important}' +
+                        '.lm-chat-avatar{background:linear-gradient(135deg,'+p+' 0%,'+s+' 100%)!important}' +
+                        '.lm-message.lm-user{background:linear-gradient(135deg,'+p+' 0%,'+s+' 100%)!important}' +
+                        '.lm-chat-input:focus{border-color:'+p+'!important}' +
+                        '.lm-send-btn{background:linear-gradient(135deg,'+p+' 0%,'+s+' 100%)!important}' +
+                        '.lm-quick-reply:hover{background:'+p+'!important;border-color:'+p+'!important;color:white!important}' +
+                        '.lm-lead-prompt button{background:linear-gradient(135deg,'+p+' 0%,'+s+' 100%)!important}' +
+                        '.lm-lead-prompt input:focus{border-color:'+p+'!important}' +
+                        '.lm-cal-day-header{color:'+p+'!important}' +
+                        '.lm-cal-slot:hover,.lm-cal-slot.lm-cal-selected{background:'+p+'!important;border-color:'+p+'!important}' +
+                        '.lm-cal-spinner{border-top-color:'+p+'!important}';
+                    document.head.appendChild(overrideCSS);
+                    console.log('🎨 [WL-V4-002] Cores CSS atualizadas:', p, s);
+                }
+
+                // Guardar welcome override para quando o chat abrir
+                if (wl.welcomeMessage) {
+                    window.LMWidget._wlWelcome = wl.welcomeMessage;
+                }
+            })
+            .catch(function(e) {
+                console.warn('⚠️ [WL-V4-002] Whitelabel fallback (cores padrão):', e.message);
+            });
+    } catch(e) { /* Fallback silencioso */ }
+    // ===== FIM WL-V4-002 =====
 
     console.log('✅ LinkMágico Widget v2.0 carregado!');
     console.log('🤖 Robot:', robotName);
