@@ -1322,81 +1322,100 @@
                             Personalizadas (opcional):</label>
                         <textarea id="customInstructions" class="form-input form-textarea"
                             placeholder="Ex: Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva">Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva</textarea>
-                        
-                    <!-- SALES-MODE-UI: Seleção de modo da camada de venda -->
-                    <div class="form-group" id="salesModeGroup" style="margin-top:1rem;">
-                        <label class="form-label" style="display:flex;align-items:center;gap:6px;">
-                            <i class="fas fa-robot"></i> Comportamento de Vendas da IA:
-                        </label>
-                        <!-- Botões de modo -->
-                        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" id="salesModeButtons">
-                            <button type="button" onclick="setSalesMode('auto')" id="salesModeAuto"
-                                style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #6366f1;background:#6366f1;color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                                ⚡ Automático
-                            </button>
-                            <button type="button" onclick="setSalesMode('manual')" id="salesModeManual"
-                                style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                                🎛️ Manual
-                            </button>
-                            <button type="button" onclick="setSalesMode('off')" id="salesModeOff"
-                                style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                                ⚫ Desligado
-                            </button>
-                        </div>
-                        <p class="input-hint" id="salesModeHint" style="margin-top:6px;">
-                            ⚡ <b>Automático</b>: a IA detecta o tipo da página e calibra o comportamento sozinha.
-                        </p>
 
-                        <!-- Grid de presets (visível só no modo manual) -->
-                        <div id="salesPresetGrid" style="display:none;margin-top:10px;">
-                            <label class="form-label" style="font-size:0.82rem;margin-bottom:6px;">Perfil de vendas:</label>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-                                <button type="button" class="preset-btn" onclick="selectPresetBtn('produto_digital')" data-preset="produto_digital"
-                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
-                                    🛍️ Produto Digital
+                        <!-- SALES-MODE-UI: Seleção de modo da camada de venda -->
+                        <div class="form-group" id="salesModeGroup" style="margin-top:1rem;">
+                            <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+                                <i class="fas fa-robot"></i> Comportamento de Vendas da IA:
+                            </label>
+                            <!-- Botões de modo -->
+                            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" id="salesModeButtons">
+                                <button type="button" onclick="setSalesMode('auto')" id="salesModeAuto"
+                                    style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #6366f1;background:#6366f1;color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                                    ⚡ Automático
                                 </button>
-                                <button type="button" class="preset-btn" onclick="selectPresetBtn('afiliado')" data-preset="afiliado"
-                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
-                                    🔗 Afiliado
+                                <button type="button" onclick="setSalesMode('manual')" id="salesModeManual"
+                                    style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                                    🎛️ Manual
                                 </button>
-                                <button type="button" class="preset-btn" onclick="selectPresetBtn('servico')" data-preset="servico"
-                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
-                                    🛠️ Serviço
-                                </button>
-                                <button type="button" class="preset-btn" onclick="selectPresetBtn('lead')" data-preset="lead"
-                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
-                                    📋 Captura de Leads
-                                </button>
-                                <button type="button" class="preset-btn" onclick="selectPresetBtn('ecommerce')" data-preset="ecommerce"
-                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
-                                    🛒 E-commerce
-                                </button>
-                                <button type="button" class="preset-btn" onclick="selectPresetBtn('local_business')" data-preset="local_business"
-                                    style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
-                                    📍 Negócio Local
+                                <button type="button" onclick="setSalesMode('off')" id="salesModeOff"
+                                    style="flex:1;min-width:90px;padding:8px 10px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                                    ⚫ Desligado
                                 </button>
                             </div>
+                            <p class="input-hint" id="salesModeHint" style="margin-top:6px;">
+                                ⚡ <b>Automático</b>: a IA detecta o tipo da página e calibra o comportamento sozinha.
+                            </p>
+
+                            <!-- Grid de presets (visível só no modo manual) -->
+                            <div id="salesPresetGrid" style="display:none;margin-top:10px;">
+                                <label class="form-label" style="font-size:0.82rem;margin-bottom:6px;">Perfil de
+                                    vendas:</label>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                                    <button type="button" class="preset-btn"
+                                        onclick="selectPresetBtn('produto_digital')" data-preset="produto_digital"
+                                        style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                        🛍️ Produto Digital
+                                    </button>
+                                    <button type="button" class="preset-btn" onclick="selectPresetBtn('afiliado')"
+                                        data-preset="afiliado"
+                                        style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                        🔗 Afiliado
+                                    </button>
+                                    <button type="button" class="preset-btn" onclick="selectPresetBtn('servico')"
+                                        data-preset="servico"
+                                        style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                        🛠️ Serviço
+                                    </button>
+                                    <button type="button" class="preset-btn" onclick="selectPresetBtn('lead')"
+                                        data-preset="lead"
+                                        style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                        📋 Captura de Leads
+                                    </button>
+                                    <button type="button" class="preset-btn" onclick="selectPresetBtn('ecommerce')"
+                                        data-preset="ecommerce"
+                                        style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                        🛒 E-commerce
+                                    </button>
+                                    <button type="button" class="preset-btn" onclick="selectPresetBtn('local_business')"
+                                        data-preset="local_business"
+                                        style="padding:8px;border-radius:8px;border:2px solid #475569;background:transparent;color:#94a3b8;font-size:0.78rem;cursor:pointer;transition:all 0.2s;text-align:left;">
+                                        📍 Negócio Local
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Campos hidden que guardam os valores selecionados -->
+                            <input type="hidden" id="selectedSalesMode" value="auto">
+                            <input type="hidden" id="selectedSalesPreset" value="">
                         </div>
-
-                        <!-- Campos hidden que guardam os valores selecionados -->
-                        <input type="hidden" id="selectedSalesMode" value="auto">
-                        <input type="hidden" id="selectedSalesPreset" value="">
-                    </div>
-                    <!-- /SALES-MODE-UI -->
-                    <!-- SALES-MODE-BADGE: Feedback visual do modo ativo -->
-                    <div id="salesModeBadge" style="display:none; margin-top:10px;">
-                        <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); border-radius:20px; padding:5px 12px; font-size:0.78rem; color:#a5b4fc;">
-                            <span style="width:7px;height:7px;background:#6366f1;border-radius:50%;display:inline-block;animation:lmPulse 2s infinite;"></span>
-                            <span>Modo ativo: <b id="salesModeBadgeText">Automático</b></span>
+                        <!-- /SALES-MODE-UI -->
+                        <!-- SALES-MODE-BADGE: Feedback visual do modo ativo -->
+                        <div id="salesModeBadge" style="display:none; margin-top:10px;">
+                            <div
+                                style="display:inline-flex; align-items:center; gap:6px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); border-radius:20px; padding:5px 12px; font-size:0.78rem; color:#a5b4fc;">
+                                <span
+                                    style="width:7px;height:7px;background:#6366f1;border-radius:50%;display:inline-block;animation:lmPulse 2s infinite;"></span>
+                                <span>Modo ativo: <b id="salesModeBadgeText">Automático</b></span>
+                            </div>
                         </div>
-                    </div>
-                    <style>
-                        @keyframes lmPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-                    </style>
-                    <!-- /SALES-MODE-BADGE -->
+                        <style>
+                            @keyframes lmPulse {
+
+                                0%,
+                                100% {
+                                    opacity: 1
+                                }
+
+                                50% {
+                                    opacity: .4
+                                }
+                            }
+                        </style>
+                        <!-- /SALES-MODE-BADGE -->
 
 
-                    <p class="input-hint">Dica: peça respostas curtas (2-3 frases), objetivas e sem repetições.</p>
+                        <p class="input-hint">Dica: peça respostas curtas (2-3 frases), objetivas e sem repetições.</p>
                     </div>
                     <div class="form-group">
                         <label for="apiKeyInput" class="form-label"><i class="fas fa-key"></i> API Key (para
@@ -1652,15 +1671,15 @@
     </div>
 
     <script>
-        
+
         // ─── SALES-MODE-UI: Funções de controle ───────────────────────
-        var _currentSalesMode   = 'auto';
+        var _currentSalesMode = 'auto';
         var _currentSalesPreset = null;
 
         var SALES_MODE_HINTS = {
-            auto:   '⚡ <b>Automático</b>: a IA detecta o tipo da página e calibra o comportamento sozinha.',
+            auto: '⚡ <b>Automático</b>: a IA detecta o tipo da página e calibra o comportamento sozinha.',
             manual: '🎛️ <b>Manual</b>: escolha abaixo o perfil mais adequado ao seu negócio.',
-            off:    '⚫ <b>Desligado</b>: a IA responde normalmente, sem camada de venda.'
+            off: '⚫ <b>Desligado</b>: a IA responde normalmente, sem camada de venda.'
         };
 
         function setSalesMode(mode) {
@@ -1670,13 +1689,13 @@
                 if (hiddenMode) hiddenMode.value = mode;
 
                 // Atualizar visual dos botões de modo
-                ['auto','manual','off'].forEach(function(m) {
+                ['auto', 'manual', 'off'].forEach(function (m) {
                     var btn = document.getElementById('salesMode' + m.charAt(0).toUpperCase() + m.slice(1));
                     if (!btn) return;
                     var isActive = m === mode;
-                    btn.style.background    = isActive ? '#6366f1' : 'transparent';
-                    btn.style.borderColor   = isActive ? '#6366f1' : '#475569';
-                    btn.style.color         = isActive ? '#fff'    : '#94a3b8';
+                    btn.style.background = isActive ? '#6366f1' : 'transparent';
+                    btn.style.borderColor = isActive ? '#6366f1' : '#475569';
+                    btn.style.color = isActive ? '#fff' : '#94a3b8';
                 });
 
                 // Mostrar/ocultar grid de presets
@@ -1690,7 +1709,7 @@
                 // Regenerar código do widget ao mudar modo
                 if (typeof regenerateWidgetCode === 'function') regenerateWidgetCode();
                 updateSalesModeBadge();
-            } catch(e) {
+            } catch (e) {
                 console.warn('[SALES-MODE-UI] Erro em setSalesMode:', e.message);
             }
         }
@@ -1702,31 +1721,31 @@
                 if (hiddenPreset) hiddenPreset.value = presetKey;
 
                 // Atualizar visual dos botões de preset
-                document.querySelectorAll('.preset-btn').forEach(function(btn) {
+                document.querySelectorAll('.preset-btn').forEach(function (btn) {
                     var isActive = btn.dataset.preset === presetKey;
-                    btn.style.background  = isActive ? '#6366f1' : 'transparent';
+                    btn.style.background = isActive ? '#6366f1' : 'transparent';
                     btn.style.borderColor = isActive ? '#6366f1' : '#475569';
-                    btn.style.color       = isActive ? '#fff'    : '#94a3b8';
+                    btn.style.color = isActive ? '#fff' : '#94a3b8';
                 });
 
                 // Regenerar código do widget
                 if (typeof regenerateWidgetCode === 'function') regenerateWidgetCode();
                 updateSalesModeBadge();
-            } catch(e) {
+            } catch (e) {
                 console.warn('[SALES-MODE-UI] Erro em selectPresetBtn:', e.message);
             }
         }
 
 
         // SALES-MODE-BADGE: Função de atualização do badge visual
-        var PRESET_LABELS_MAP = {"default":"Padrão","produto_digital":"Produto Digital","afiliado":"Afiliado","servico":"Serviço","lead":"Captura de Leads","ecommerce":"E-commerce","local_business":"Negócio Local","institucional":"Institucional"};
+        var PRESET_LABELS_MAP = { "default": "Padrão", "produto_digital": "Produto Digital", "afiliado": "Afiliado", "servico": "Serviço", "lead": "Captura de Leads", "ecommerce": "E-commerce", "local_business": "Negócio Local", "institucional": "Institucional" };
 
         function updateSalesModeBadge() {
             try {
-                var badge    = document.getElementById('salesModeBadge');
+                var badge = document.getElementById('salesModeBadge');
                 var badgeTxt = document.getElementById('salesModeBadgeText');
                 if (!badge || !badgeTxt) return;
-                var mode   = getSalesMode()   || 'auto';
+                var mode = getSalesMode() || 'auto';
                 var preset = getSalesPreset() || '';
 
                 var modeLabel = { auto: 'Auto', manual: 'Manual', off: 'Desligado' }[mode] || 'Auto';
@@ -1746,14 +1765,14 @@
                     badgeTxt.innerHTML = modeLabel;
                 }
                 badge.style.display = 'block';
-            } catch(e) {
+            } catch (e) {
                 console.warn('[SALES-MODE-BADGE] Erro ao atualizar badge:', e.message);
             }
         }
         // /SALES-MODE-BADGE
 
-        function getSalesMode()   { try { return document.getElementById('selectedSalesMode')?.value   || 'auto'; } catch(e) { return 'auto'; } }
-        function getSalesPreset() { try { return document.getElementById('selectedSalesPreset')?.value || '';     } catch(e) { return '';     } }
+        function getSalesMode() { try { return document.getElementById('selectedSalesMode')?.value || 'auto'; } catch (e) { return 'auto'; } }
+        function getSalesPreset() { try { return document.getElementById('selectedSalesPreset')?.value || ''; } catch (e) { return ''; } }
         // ─── /SALES-MODE-UI ───────────────────────────────────────────
 
         function showToast(message, type = 'info') {
@@ -2311,9 +2330,9 @@
             const safeWelcome = escapeForJS(welcomeMessage);
             const safeSecond = escapeForJS(secondMessage);
 
-            
+
             // [SALES-MODE-UI] Sanitização dos parâmetros de modo/preset
-            const safeMode   = (salesMode   || 'auto').replace(/[^a-z_]/gi, '');
+            const safeMode = (salesMode || 'auto').replace(/[^a-z_]/gi, '');
             const safePreset = (salesPreset || '').replace(/[^a-z_]/gi, '');
             return `<!-- LinkMágico Chatbot Widget v2.0 - Design Moderno -->
 <script>
@@ -2338,9 +2357,9 @@
         alert("⚠️ LinkMágico Widget: API Key não configurada! Verifique o script."); 
         return; 
     }
-    var isOpen = false, leadId = null, leadCaptured = false, conversationId = 'lm_' + Date.now();
+    var isOpen = false, leadId = null, leadCaptured = false, conversationId = 'lm_' + Date.now(), calendarHash = null;
     var styles = document.createElement('style');
-    styles.textContent = '.lm-widget-container *{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Inter,-apple-system,BlinkMacSystemFont,sans-serif}.lm-widget-container{position:fixed;bottom:20px;right:20px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;gap:12px}.lm-greeting-tooltip{background:#1f2937;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;font-weight:500;box-shadow:0 4px 15px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:lm-slideIn .3s ease;cursor:pointer;transition:all .2s ease}.lm-greeting-tooltip:hover{transform:scale(1.02);box-shadow:0 6px 20px rgba(0,0,0,.2)}.lm-greeting-tooltip .lm-online-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:lm-pulse 2s infinite}.lm-greeting-tooltip.lm-hidden{display:none}.lm-bubble{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(59,130,246,.4);transition:all .3s ease}.lm-bubble:hover{transform:scale(1.1);box-shadow:0 6px 25px rgba(59,130,246,.5)}.lm-bubble svg{width:28px;height:28px;fill:#fff}.lm-bubble.lm-hidden{display:none}.lm-chat-window{position:fixed;bottom:90px;right:20px;width:380px;height:520px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.15);display:none;flex-direction:column;overflow:hidden;animation:lm-scaleIn .3s ease;z-index:999998}.lm-chat-window.lm-open{display:flex}.lm-chat-header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px;display:flex;align-items:center;justify-content:space-between}.lm-chat-header-left{display:flex;align-items:center;gap:12px}.lm-chat-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#8b5cf6 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px}.lm-chat-header-info{display:flex;flex-direction:column}.lm-chat-header-subtitle{font-size:12px;color:#6b7280}.lm-chat-header-title{font-size:15px;font-weight:600;color:#1f2937}.lm-header-btn{width:36px;height:36px;border-radius:50%;border:none;background:#f3f4f6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease;color:#6b7280}.lm-header-btn:hover{background:#e5e7eb;color:#1f2937}.lm-chat-messages{flex:1;padding:16px;overflow-y:auto;background:#f9fafb;display:flex;flex-direction:column;gap:12px}.lm-message{max-width:80%;padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.5;animation:lm-fadeIn .3s ease}.lm-message.lm-bot{background:#fff;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb;border-bottom-left-radius:4px}.lm-message.lm-user{background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}.lm-typing{display:none;align-items:center;gap:4px;padding:12px 16px;background:#fff;border-radius:18px;border:1px solid #e5e7eb;align-self:flex-start;max-width:80px}.lm-typing.lm-active{display:flex}.lm-typing-dot{width:8px;height:8px;background:#9ca3af;border-radius:50%;animation:lm-typingBounce 1.4s infinite}.lm-typing-dot:nth-child(2){animation-delay:.2s}.lm-typing-dot:nth-child(3){animation-delay:.4s}.lm-chat-input-area{padding:16px;background:#fff;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:12px}.lm-chat-input{flex:1;border:1px solid #e5e7eb;border-radius:24px;padding:12px 20px;font-size:14px;outline:none;transition:all .2s ease;background:#f9fafb}.lm-chat-input:focus{border-color:'+config.primaryColor+';background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1)}.lm-chat-input::placeholder{color:#9ca3af}.lm-send-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease}.lm-send-btn:hover{transform:scale(1.05);box-shadow:0 4px 15px rgba(59,130,246,.4)}.lm-send-btn:disabled{opacity:.5;cursor:not-allowed}.lm-send-btn svg{width:20px;height:20px}.lm-lead-prompt{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:8px 0;align-self:flex-start;max-width:90%}.lm-lead-prompt input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:10px;outline:none;transition:all .2s ease}.lm-lead-prompt input:focus{border-color:'+config.primaryColor+'}.lm-lead-prompt button{width:100%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s ease}.lm-lead-prompt button:hover{opacity:.9}@keyframes lm-slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes lm-scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}@keyframes lm-fadeIn{from{opacity:0}to{opacity:1}}@keyframes lm-pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes lm-typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}@media (max-width:480px){.lm-chat-window{width:calc(100% - 20px);height:calc(100% - 100px);right:10px;bottom:80px;border-radius:20px}.lm-widget-container{right:10px;bottom:10px}.lm-bubble{width:55px;height:55px}.lm-greeting-tooltip{display:none}}';
+    styles.textContent = '.lm-cal-container{width:100%;max-height:280px;overflow-y:auto;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0}.lm-cal-container::-webkit-scrollbar{width:4px}.lm-cal-container::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:2px}.lm-cal-loading{text-align:center;padding:20px;color:#64748b;font-size:13px}.lm-cal-spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(59,130,246,.25);border-top-color:'+config.primaryColor+';border-radius:50%;animation:lm-calSpin .8s linear infinite;margin-bottom:8px}@keyframes lm-calSpin{to{transform:rotate(360deg)}}.lm-cal-day{padding:10px 12px;border-bottom:1px solid #e2e8f0}.lm-cal-day:last-child{border-bottom:none}.lm-cal-day-header{font-weight:600;font-size:12px;color:'+config.primaryColor+';margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}.lm-cal-slots{display:flex;flex-wrap:wrap;gap:6px}.lm-cal-slot{padding:6px 12px;border:1px solid #cbd5e1;border-radius:20px;background:#fff;color:#334155;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s ease;font-family:inherit;line-height:1}.lm-cal-slot:hover,.lm-cal-slot.lm-cal-selected{background:'+config.primaryColor+';color:#fff;border-color:'+config.primaryColor+';transform:scale(1.05)}.lm-cal-slot:active{transform:scale(.95)}.lm-cal-confirm{margin-top:12px;padding:10px 16px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;width:100%;transition:all .2s ease;font-family:inherit}.lm-cal-confirm:hover{transform:translateY(-1px)}.lm-cal-confirm:disabled{opacity:.5;cursor:not-allowed;transform:none}.lm-cal-error,.lm-cal-success{text-align:center;padding:16px;font-size:13px}.lm-widget-container *{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Inter,-apple-system,BlinkMacSystemFont,sans-serif}.lm-widget-container{position:fixed;bottom:20px;right:20px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;gap:12px}.lm-greeting-tooltip{background:#1f2937;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;font-weight:500;box-shadow:0 4px 15px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:lm-slideIn .3s ease;cursor:pointer;transition:all .2s ease}.lm-greeting-tooltip:hover{transform:scale(1.02);box-shadow:0 6px 20px rgba(0,0,0,.2)}.lm-greeting-tooltip .lm-online-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:lm-pulse 2s infinite}.lm-greeting-tooltip.lm-hidden{display:none}.lm-bubble{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(59,130,246,.4);transition:all .3s ease}.lm-bubble:hover{transform:scale(1.1);box-shadow:0 6px 25px rgba(59,130,246,.5)}.lm-bubble svg{width:28px;height:28px;fill:#fff}.lm-bubble.lm-hidden{display:none}.lm-chat-window{position:fixed;bottom:90px;right:20px;width:380px;height:520px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.15);display:none;flex-direction:column;overflow:hidden;animation:lm-scaleIn .3s ease;z-index:999998}.lm-chat-window.lm-open{display:flex}.lm-chat-header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px;display:flex;align-items:center;justify-content:space-between}.lm-chat-header-left{display:flex;align-items:center;gap:12px}.lm-chat-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#8b5cf6 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px}.lm-chat-header-info{display:flex;flex-direction:column}.lm-chat-header-subtitle{font-size:12px;color:#6b7280}.lm-chat-header-title{font-size:15px;font-weight:600;color:#1f2937}.lm-header-btn{width:36px;height:36px;border-radius:50%;border:none;background:#f3f4f6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease;color:#6b7280}.lm-header-btn:hover{background:#e5e7eb;color:#1f2937}.lm-chat-messages{flex:1;padding:16px;overflow-y:auto;background:#f9fafb;display:flex;flex-direction:column;gap:12px}.lm-message{max-width:80%;padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.5;animation:lm-fadeIn .3s ease}.lm-message.lm-bot{background:#fff;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb;border-bottom-left-radius:4px}.lm-message.lm-user{background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}.lm-typing{display:none;align-items:center;gap:4px;padding:12px 16px;background:#fff;border-radius:18px;border:1px solid #e5e7eb;align-self:flex-start;max-width:80px}.lm-typing.lm-active{display:flex}.lm-typing-dot{width:8px;height:8px;background:#9ca3af;border-radius:50%;animation:lm-typingBounce 1.4s infinite}.lm-typing-dot:nth-child(2){animation-delay:.2s}.lm-typing-dot:nth-child(3){animation-delay:.4s}.lm-chat-input-area{padding:16px;background:#fff;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:12px}.lm-chat-input{flex:1;border:1px solid #e5e7eb;border-radius:24px;padding:12px 20px;font-size:14px;outline:none;transition:all .2s ease;background:#f9fafb}.lm-chat-input:focus{border-color:'+config.primaryColor+';background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1)}.lm-chat-input::placeholder{color:#9ca3af}.lm-send-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease}.lm-send-btn:hover{transform:scale(1.05);box-shadow:0 4px 15px rgba(59,130,246,.4)}.lm-send-btn:disabled{opacity:.5;cursor:not-allowed}.lm-send-btn svg{width:20px;height:20px}.lm-lead-prompt{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:8px 0;align-self:flex-start;max-width:90%}.lm-lead-prompt input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:10px;outline:none;transition:all .2s ease}.lm-lead-prompt input:focus{border-color:'+config.primaryColor+'}.lm-lead-prompt button{width:100%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s ease}.lm-lead-prompt button:hover{opacity:.9}@keyframes lm-slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes lm-scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}@keyframes lm-fadeIn{from{opacity:0}to{opacity:1}}@keyframes lm-pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes lm-typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}@media (max-width:480px){.lm-chat-window{width:calc(100% - 20px);height:calc(100% - 100px);right:10px;bottom:80px;border-radius:20px}.lm-widget-container{right:10px;bottom:10px}.lm-bubble{width:55px;height:55px}.lm-greeting-tooltip{display:none}}';
     document.head.appendChild(styles);
     var container = document.createElement('div');
     container.className = 'lm-widget-container';
@@ -2360,6 +2379,17 @@
         msgDiv.className = 'lm-message ' + (isUser ? 'lm-user' : 'lm-bot');
         if (isUser) {
             msgDiv.textContent = text;
+        } else if (!isUser && text && typeof text === 'string' && (text.indexOf('[CALENDAR_WIDGET]') !== -1 || text.indexOf('CALENDAR_WIDGET') !== -1)) {
+            console.log('📅 [CAL-V4-005] Calendario detectado no widget inline');
+            try {
+                var calMarker = '[CALENDAR_WIDGET]';
+                var textBefore = text.split(calMarker)[0];
+                if (textBefore === text) textBefore = text.split('CALENDAR_WIDGET')[0];
+                textBefore = textBefore.replace(/\\*\\*/g, '').replace(/\\n+/g, ' ').trim();
+                if (textBefore) { var tEl = document.createElement('div'); tEl.style.cssText = 'margin-bottom:12px;font-weight:600;'; tEl.textContent = textBefore; msgDiv.appendChild(tEl); }
+                var calC = _renderCal(); if (calC) msgDiv.appendChild(calC);
+                msgDiv.style.cssText += 'padding:16px;max-width:95%;';
+            } catch (calErr) { console.error('⚠️ [CAL-V4-005] Erro:', calErr); msgDiv.textContent = '📅 Para agendar, entre em contato diretamente.'; }
         } else if (/https?:\\/\\//.test(text)) {
             var esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
             msgDiv.innerHTML = esc.replace(/(https?:\\/\\/[^\\s<>"']+)/gi, function(u) {
@@ -2370,6 +2400,55 @@
         }
         messages.appendChild(msgDiv);
         messages.scrollTop = messages.scrollHeight;
+    }
+    // SAFE PATCH - CAL-V4-005: Funcoes de calendario (incremental, isolado, com fallback)
+    function _renderCal() {
+        try {
+        var c = document.createElement('div'); c.className = 'lm-cal-container';
+        c.innerHTML = '<div class="lm-cal-loading"><div class="lm-cal-spinner"></div><br>Carregando horarios...</div>';
+        var h = calendarHash || null;
+        if (!h && config.apiKey) {
+            try { crypto.subtle.digest("SHA-256", new TextEncoder().encode("calendar_" + config.apiKey)).then(function(buf) { var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0")}).join(""); calendarHash = hex.substring(0,16); _fetchSl(c, calendarHash); }).catch(function(e) { c.innerHTML = '<div class="lm-cal-error">📅 Para agendar, entre em contato.</div>'; }); return c; } catch(e) { c.innerHTML = '<div class="lm-cal-error">📅 Para agendar, entre em contato.</div>'; return c; }
+        }
+        if (!h) { c.innerHTML = '<div class="lm-cal-error">📅 Para agendar, entre em contato.</div>'; return c; }
+        _fetchSl(c, h); return c;
+        } catch(e) { console.error('[CAL-V4-005] renderCal erro:', e); return null; }
+    }
+    function _fetchSl(c, h) {
+        fetch(apiBase + '/api/public/availability/' + encodeURIComponent(h)).then(function(r){return r.json()}).then(function(d) {
+            if (!d.success || !d.slots || d.slots.length === 0) { c.innerHTML = '<div class="lm-cal-error">😕 Nenhum horario disponivel.</div>'; return; }
+            _buildCal(c, d.slots, h);
+        }).catch(function(e) { c.innerHTML = '<div class="lm-cal-error">⚠️ Erro ao carregar horarios.</div>'; });
+    }
+    function _buildCal(c, slots, h) {
+        var html = ''; slots.slice(0,5).forEach(function(day) {
+            html += '<div class="lm-cal-day"><div class="lm-cal-day-header">📅 ' + day.dayName + ' — ' + (day.date||"").split("-").reverse().slice(0,2).join("/") + '</div><div class="lm-cal-slots">';
+            day.times.slice(0,6).forEach(function(t) { html += '<button class="lm-cal-slot" data-date="'+day.date+'" data-time="'+t+'" data-day="'+day.dayName+'">'+t+'</button>'; });
+            if (day.times.length > 6) html += '<span style="font-size:11px;color:#94a3b8;padding:4px;">+'+(day.times.length-6)+' mais</span>';
+            html += '</div></div>';
+        });
+        html += '<button class="lm-cal-confirm" id="lmCalCf" disabled>Selecione um horario</button>';
+        c.innerHTML = html;
+        var sD=null,sT=null,sN=null;
+        c.querySelectorAll('.lm-cal-slot').forEach(function(b) {
+            b.addEventListener('click', function() {
+                var p = c.querySelector('.lm-cal-selected'); if (p) p.classList.remove('lm-cal-selected');
+                b.classList.add('lm-cal-selected'); sD=b.getAttribute('data-date'); sT=b.getAttribute('data-time'); sN=b.getAttribute('data-day');
+                var cf = c.querySelector('#lmCalCf'); if (cf) { cf.disabled=false; cf.textContent='✅ Confirmar '+sN+' as '+sT; }
+            });
+        });
+        var cfB = c.querySelector('#lmCalCf'); if (cfB) { cfB.addEventListener('click', function() { if (sD && sT) _bookSl(h, sD, sT, sN, c); }); }
+        messages.scrollTop = messages.scrollHeight;
+    }
+    function _bookSl(h, date, time, dn, c) {
+        var cf = c.querySelector('#lmCalCf'); if (cf) { cf.disabled=true; cf.textContent='Agendando...'; }
+        var pl = { date: date, time: time, name: 'Visitante', email: '', phone: '', leadId: leadId, notes: 'Via widget' };
+        try { var n=document.getElementById('lmLeadName'); if(n&&n.value) pl.name=n.value.trim(); } catch(e){}
+        fetch(apiBase + '/api/public/book/' + encodeURIComponent(h), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pl) })
+        .then(function(r){return r.json()}).then(function(d) {
+            if (d.success) { c.innerHTML = '<div class="lm-cal-success" style="color:#10b981;font-weight:600;">✅ Agendamento confirmado!<br>📅 '+dn+' as '+time+'<br><br><span style="font-size:12px;color:#64748b;">Nossa equipe entrara em contato.</span></div>'; messages.scrollTop = messages.scrollHeight; }
+            else { throw new Error(d.error || 'Erro'); }
+        }).catch(function(e) { if (cf) { cf.disabled=false; cf.textContent='⚠️ Erro — Tente novamente'; cf.style.background='#ef4444'; } });
     }
     function showLeadForm() {
         var formDiv = document.createElement('div');
@@ -2410,7 +2489,11 @@
             body: JSON.stringify({ message: message, pageData: { url: config.salesUrl }, robotName: config.robotName, instructions: config.instructions, conversationId: conversationId, leadId: leadId, apiKey: config.apiKey })
         }).then(function (r) { return r.json(); }).then(function (data) {
             typing.classList.remove('lm-active');
-            if (data.success && data.response) { addMessage(data.response, false); }
+            if (data.success && data.response) {
+                // SAFE PATCH - CAL-V4-005: Capturar calendarHash da resposta do servidor
+                if (data.calendarHash) { calendarHash = data.calendarHash; console.log('📅 [CAL-V4-005] Hash recebido:', calendarHash); }
+                addMessage(data.response, false);
+            }
             else { addMessage('Desculpe, tive um problema. Pode repetir?', false); }
         }).catch(function (e) { typing.classList.remove('lm-active'); addMessage('Ops! Erro de conexão. Tente novamente.', false); console.error('Erro:', e); });
         sendBtn.disabled = false;
@@ -3180,15 +3263,19 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                         <div>
                             <h2 style="color:#10b981; margin:0;">📅 Configuração de Agendamentos</h2>
-                            <p style="color:#94a3b8; margin:0.5rem 0 0 0;">Defina seus horários disponíveis para que clientes agendem pelo calendário</p>
+                            <p style="color:#94a3b8; margin:0.5rem 0 0 0;">Defina seus horários disponíveis para que
+                                clientes agendem pelo calendário</p>
                         </div>
-                        <button onclick="saveScheduling()" style="background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; padding:0.7rem 1.5rem; border-radius:10px; cursor:pointer; font-weight:600;">💾 Salvar</button>
+                        <button onclick="saveScheduling()"
+                            style="background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; padding:0.7rem 1.5rem; border-radius:10px; cursor:pointer; font-weight:600;">💾
+                            Salvar</button>
                     </div>
 
                     <!-- Duração do Slot -->
                     <div style="margin-bottom:1.5rem;">
                         <label style="color:#e2e8f0; font-weight:600;">⏱️ Duração de cada horário</label>
-                        <select id="sched-slot-duration" style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; margin-left:1rem;">
+                        <select id="sched-slot-duration"
+                            style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; margin-left:1rem;">
                             <option value="30">30 minutos</option>
                             <option value="60" selected>1 hora</option>
                             <option value="90">1h30</option>
@@ -3197,15 +3284,21 @@
                     </div>
 
                     <!-- Grid de Dias -->
-                    <div id="sched-days-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
+                    <div id="sched-days-grid"
+                        style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
                     </div>
 
                     <!-- Link Público -->
-                    <div id="sched-public-link" style="margin-top:1.5rem; padding:1rem; background:#0f172a; border-radius:10px; display:none;">
+                    <div id="sched-public-link"
+                        style="margin-top:1.5rem; padding:1rem; background:#0f172a; border-radius:10px; display:none;">
                         <label style="color:#10b981; font-weight:600;">🔗 Link do Calendário Público</label>
                         <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-                            <input id="sched-public-url" readonly style="flex:1; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; font-family:monospace;">
-                            <button onclick="navigator.clipboard.writeText(document.getElementById('sched-public-url').value); this.textContent='✅ Copiado!'; setTimeout(()=>this.textContent='📋 Copiar',2000)" style="background:#334155; color:#e2e8f0; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;">📋 Copiar</button>
+                            <input id="sched-public-url" readonly
+                                style="flex:1; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; font-family:monospace;">
+                            <button
+                                onclick="navigator.clipboard.writeText(document.getElementById('sched-public-url').value); this.textContent='✅ Copiado!'; setTimeout(()=>this.textContent='📋 Copiar',2000)"
+                                style="background:#334155; color:#e2e8f0; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;">📋
+                                Copiar</button>
                         </div>
                     </div>
                 </div>
@@ -3213,11 +3306,16 @@
                 <!-- Datas Bloqueadas -->
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
                     <h3 style="color:#f59e0b; margin:0 0 1rem 0;">🚫 Datas Bloqueadas</h3>
-                    <p style="color:#94a3b8; margin:0 0 1rem 0;">Bloqueie feriados, férias ou dias que não estará disponível</p>
+                    <p style="color:#94a3b8; margin:0 0 1rem 0;">Bloqueie feriados, férias ou dias que não estará
+                        disponível</p>
                     <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-                        <input type="date" id="sched-block-date" style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px;">
-                        <input type="text" id="sched-block-reason" placeholder="Motivo (opcional)" style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; flex:1; min-width:150px;">
-                        <button onclick="addBlockedDate()" style="background:#f59e0b; color:#0f172a; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">+ Bloquear</button>
+                        <input type="date" id="sched-block-date"
+                            style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px;">
+                        <input type="text" id="sched-block-reason" placeholder="Motivo (opcional)"
+                            style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; padding:0.5rem 1rem; border-radius:8px; flex:1; min-width:150px;">
+                        <button onclick="addBlockedDate()"
+                            style="background:#f59e0b; color:#0f172a; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600;">+
+                            Bloquear</button>
                     </div>
                     <div id="sched-blocked-list" style="display:flex; flex-wrap:wrap; gap:0.5rem;"></div>
                 </div>
