@@ -115,6 +115,21 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-
 
 .btn-restart{margin-top:16px}
 
+/* V2.0 — Micro-commitment Buttons */
+.mc-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;animation:fadeUp .4s ease}
+.mc-btn{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);color:var(--purple-light);border-radius:20px;padding:8px 16px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+.mc-btn:hover{background:rgba(124,58,237,.2);border-color:var(--purple-light);transform:translateY(-1px)}
+
+/* V2.0 — Action Buttons (checkout/link) */
+.action-btn{display:inline-block;background:linear-gradient(135deg,#059669,var(--green-light));color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;font-family:inherit;margin-top:6px}
+.action-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(16,185,129,.35)}
+
+/* V2.0 — Guided Conversion Card */
+.gc-card{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(16,185,129,.08));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:20px;text-align:center;animation:fadeUp .5s ease;margin-top:8px}
+.gc-card h4{font-size:1rem;font-weight:700;margin-bottom:6px;background:linear-gradient(135deg,var(--purple-light),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gc-card p{font-size:.82rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5}
+.gc-card .action-btn{display:block;width:100%}
+
 /* PERSONALIZE STEPS */
 .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
 .type-btn{background:var(--surface2);border:2px solid var(--border);color:var(--text);border-radius:14px;padding:16px 14px;font-size:.88rem;cursor:pointer;transition:border-color .25s,background .25s,transform .15s;font-family:inherit;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -502,6 +517,7 @@ footer a{color:var(--text-muted)}
 <footer>
   <p>O Link Mágico é uma plataforma em produção utilizada por empreendedores para automatizar o atendimento de clientes.</p>
   <br>
+  <p style="margin-bottom:10px"><a href="/criar-link?ref=demo_footer" style="color:var(--purple-light);font-weight:600;text-decoration:none">✨ Criar meu LinkMágico →</a></p>
   <p>© 2025 Link Mágico · <a href="/public/politica-de-privacidade.html">Privacidade</a> · <a href="/public/termos-de-uso.html">Termos</a></p>
 </footer>
 
@@ -637,6 +653,11 @@ const EXEMPLOS = {
 };
 
 // =====================================================
+// V2.0 FEATURE FLAG (segurança: desativar = volta ao original)
+// =====================================================
+const ENABLE_V2 = true;
+
+// =====================================================
 // ESTADO
 // =====================================================
 let nichoAtual = 'infoproduto';
@@ -648,6 +669,8 @@ let ofertaMostrada = false;
 let chatInterval = null;
 let clienteIdx = 0;
 let toastInterval = null;
+let messageCount = 0; // V2.0: contador de interações para fases progressivas
+let gcShown = false;  // V2.0: guided conversion já exibido
 
 // =====================================================
 // UTILS
@@ -804,6 +827,8 @@ function iniciarChat() {
   document.getElementById('chat-name').textContent = negocioNome || ('Atendimento — ' + nichoData.nome);
   clienteCount = 0;
   clienteIdx = 0;
+  messageCount = 0; // V2.0: reset
+  gcShown = false;   // V2.0: reset
   ofertaMostrada = false;
   document.getElementById('client-count').textContent = '0';
   document.getElementById('offer-section').style.display = 'none';
@@ -837,6 +862,15 @@ function simularProximoCliente() {
   if ((clienteIdx === 1 || clienteIdx === 3) && negocioNome) {
     resposta = personalizarResposta(resposta);
   }
+  // V2.0: Venda embutida sutil nas respostas intermediárias
+  try {
+    if (ENABLE_V2 && clienteIdx === 3) {
+      resposta += ' Essa resposta que você está vendo acontece automaticamente sempre que alguém visita seu link.';
+    }
+    if (ENABLE_V2 && clienteIdx === 4) {
+      resposta += ' Se você tivesse isso no seu negócio, quantas oportunidades estaria aproveitando agora?';
+    }
+  } catch(e) { /* V2 fallback: keep original response */ }
   clienteIdx++;
   addClientMsg(cliente.nome, cliente.origem, cliente.pergunta);
   clienteCount++;
@@ -907,11 +941,74 @@ function simularInstagram() {
   nextIg();
 }
 
+// =====================================================
+// V2.0: Split response into multiple bubbles with delay
+// =====================================================
+function splitResponse(texto) {
+  try {
+    if (!ENABLE_V2) return [texto];
+    // Split by double newline or period followed by space (max 3 bubbles)
+    const parts = texto.split(/\n\n|(?<=\.)\s+(?=[A-Z])/).filter(p => p.trim());
+    return parts.length > 1 ? parts.slice(0, 3) : [texto];
+  } catch(e) { return [texto]; }
+}
+
 function addMsg(tipo, texto) {
-  const wrap=document.getElementById('messages-wrap');
+  try {
+    const wrap=document.getElementById('messages-wrap');
+    if (ENABLE_V2 && tipo === 'bot') {
+      // V2.0: Split bot messages into multiple bubbles with typing delay
+      const parts = splitResponse(texto);
+      if (parts.length > 1) {
+        _addSingleMsg(wrap, tipo, parts[0]);
+        parts.slice(1).forEach((part, i) => {
+          setTimeout(() => {
+            mostrarTyping(600 + Math.random() * 400, () => {
+              _addSingleMsg(wrap, tipo, part);
+            });
+          }, (i + 1) * 900);
+        });
+        messageCount++;
+        // V2.0: Show micro-commitments after first bot response
+        if (messageCount === 1) setTimeout(showMicroCommitments, (parts.length) * 900 + 500);
+        // V2.0: Show guided conversion card at message 10
+        if (messageCount >= 10 && !gcShown) { gcShown = true; setTimeout(showGuidedConversion, (parts.length) * 900 + 800); }
+        return;
+      }
+      messageCount++;
+      if (messageCount === 1) setTimeout(showMicroCommitments, 1200);
+      if (messageCount >= 10 && !gcShown) { gcShown = true; setTimeout(showGuidedConversion, 1500); }
+    }
+    _addSingleMsg(wrap, tipo, texto);
+  } catch(e) {
+    // Fallback: original behavior
+    const wrap=document.getElementById('messages-wrap');
+    const div=document.createElement('div');
+    div.className = tipo==='bot' ? 'msg msg-bot' : 'msg msg-client';
+    div.innerHTML = texto.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    wrap.appendChild(div);
+    wrap.scrollTop=wrap.scrollHeight;
+  }
+}
+
+function _addSingleMsg(wrap, tipo, texto) {
   const div=document.createElement('div');
   div.className = tipo==='bot' ? 'msg msg-bot' : 'msg msg-client';
-  div.innerHTML = texto.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  // V2.0: Detect URLs and convert to action buttons
+  let html = texto.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  if (ENABLE_V2 && tipo === 'bot') {
+    try {
+      const urlRegex = /(https?:\/\/[^\s<>"']+)/g;
+      const urls = html.match(urlRegex);
+      if (urls && urls.length > 0) {
+        urls.forEach(url => {
+          html = html.replace(url, '');
+        });
+        html += '<br><a href="' + urls[0] + '" target="_blank" class="action-btn">👉 Acessar agora</a>';
+      }
+    } catch(e) { /* fallback: keep original html */ }
+  }
+  div.innerHTML = html;
   wrap.appendChild(div);
   wrap.scrollTop=wrap.scrollHeight;
 }
@@ -932,6 +1029,57 @@ function mostrarTyping(duracao, callback) {
   t.innerHTML='<div class="dots"><span></span><span></span><span></span></div>';
   wrap.appendChild(t);wrap.scrollTop=wrap.scrollHeight;
   setTimeout(()=>{const el=document.getElementById('typing-indicator');if(el)el.remove();callback()},duracao);
+}
+
+// =====================================================
+// V2.0: Micro-commitment Buttons
+// =====================================================
+function showMicroCommitments() {
+  try {
+    if (!ENABLE_V2) return;
+    const wrap = document.getElementById('messages-wrap');
+    const btns = document.createElement('div');
+    btns.className = 'mc-buttons';
+    btns.id = 'mc-buttons';
+    btns.innerHTML = '<button class="mc-btn" onclick="handleMicroCommit(\'vendas\')">🚀 Aumentar Vendas</button>' +
+                     '<button class="mc-btn" onclick="handleMicroCommit(\'atendimento\')">🤖 Automatizar Atendimento</button>';
+    wrap.appendChild(btns);
+    wrap.scrollTop = wrap.scrollHeight;
+  } catch(e) { console.log('[V2] MC buttons fallback:', e); }
+}
+
+function handleMicroCommit(choice) {
+  try {
+    const btns = document.getElementById('mc-buttons');
+    if (btns) btns.remove();
+    const label = choice === 'vendas' ? '🚀 Aumentar Vendas' : '🤖 Automatizar Atendimento';
+    addClientMsg('Você', 'Escolha', label);
+    setTimeout(() => {
+      mostrarTyping(800, () => {
+        const resp = choice === 'vendas'
+          ? 'Ótima escolha! O sistema identifica automaticamente oportunidades de venda e responde com foco em conversão. Isso faz sentido pra você até aqui?'
+          : 'Perfeito! O atendimento automático responde 24h com base nas informações do seu negócio. Isso faz sentido pra você até aqui?';
+        addMsg('bot', resp);
+      });
+    }, 600);
+  } catch(e) { console.log('[V2] MC handler fallback:', e); }
+}
+
+// =====================================================
+// V2.0: Guided Conversion Card
+// =====================================================
+function showGuidedConversion() {
+  try {
+    if (!ENABLE_V2) return;
+    const wrap = document.getElementById('messages-wrap');
+    const card = document.createElement('div');
+    card.className = 'gc-card';
+    card.innerHTML = '<h4>✨ Criar meu primeiro LinkMágico</h4>' +
+                     '<p>Essa experiência que você está tendo acontece automaticamente com cada visitante do seu negócio.</p>' +
+                     '<a href="/criar-link?ref=demo_chat" class="action-btn" target="_blank">Criar meu LinkMágico →</a>';
+    wrap.appendChild(card);
+    wrap.scrollTop = wrap.scrollHeight;
+  } catch(e) { console.log('[V2] GC card fallback:', e); }
 }
 
 function mostrarOferta() {
