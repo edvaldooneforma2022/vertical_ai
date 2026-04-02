@@ -5245,9 +5245,20 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 // Billing tracking
                 try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
 
+                // SAFE PATCH - CALENDAR-001: Incluir calendarHash para o widget renderizar calendário
+                let calendarHash = null;
+                try {
+                    if (schedulingManager) {
+                        calendarHash = schedulingManager.generatePublicHash(apiKey);
+                    }
+                } catch (hashErr) {
+                    console.warn('⚠️ [CALENDAR] Erro ao gerar hash público:', hashErr.message);
+                }
+
                 return res.json({
                     success: true,
                     response: respostaAgendamentoEarly,
+                    calendarHash: calendarHash,
                     inteligenciasDetectadas: {},
                     analiseEmocional: analiseEmocional,
                     journeyStage: 'agendamento',
@@ -5431,9 +5442,24 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
 
+        // SAFE PATCH - CALENDAR-006: Incluir calendarHash quando resposta contém [CALENDAR_WIDGET]
+        // Problema: Apenas o SCHED-PRIORITY path retornava calendarHash. Se o fluxo principal
+        // gerar [CALENDAR_WIDGET] via inteligências/IA, o widget não recebia o hash e
+        // mostrava texto bruto em vez do calendário interativo.
+        let mainFlowCalendarHash = null;
+        try {
+            if (finalResponse && finalResponse.indexOf('[CALENDAR_WIDGET]') !== -1 && schedulingManager) {
+                mainFlowCalendarHash = schedulingManager.generatePublicHash(apiKey);
+                console.log('📅 [CALENDAR-006] calendarHash injetado no fluxo principal:', mainFlowCalendarHash ? 'OK' : 'null');
+            }
+        } catch (hashErr) {
+            console.warn('⚠️ [CALENDAR-006] Erro ao gerar calendarHash (não bloqueia resposta):', hashErr.message);
+        }
+
         return res.json({
             success: true,
             response: finalResponse,
+            calendarHash: mainFlowCalendarHash,
             inteligenciasDetectadas: inteligencias,
             analiseEmocional: analiseEmocional,
             personalidadeSelecionada: personalidade,
