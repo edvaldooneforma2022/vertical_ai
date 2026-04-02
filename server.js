@@ -7040,6 +7040,29 @@ try {
         console.log('⚠️ Admin routes não carregadas (não crítico):', error.message);
     }
 
+    // ===== V2.0 GROWTH LOOP: /criar-link (ADITIVO, try/catch + fallback) =====
+    try {
+        const criarLinkPath = path.join(__dirname, 'public', 'criar-link.html');
+        app.get('/criar-link', (req, res) => {
+            try {
+                const fs = require('fs');
+                if (fs.existsSync(criarLinkPath)) {
+                    console.log(`[V2.0 Growth] /criar-link acessado — ref=${req.query.ref || 'direct'}`);
+                    res.sendFile(criarLinkPath);
+                } else {
+                    console.warn('[V2.0 Growth] criar-link.html não encontrado, fallback para demo');
+                    res.redirect('/public/demo.html');
+                }
+            } catch (routeErr) {
+                console.error('[V2.0 Growth] Erro na rota /criar-link:', routeErr.message);
+                res.redirect('/public/demo.html');
+            }
+        });
+        console.log('✅ [V2.0] Rota /criar-link configurada (Growth Loop)');
+    } catch (e) {
+        console.warn('⚠️ [V2.0] Rota /criar-link não disponível:', e.message);
+    }
+
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 

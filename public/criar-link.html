@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Criar meu LinkMágico — Atendimento Automático para seu Negócio</title>
+<meta name="description" content="Crie seu atendimento automático em menos de 2 minutos. Sem código, sem complicação. O sistema responde seus clientes 24h por dia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;
+  --purple:#7c3aed;--purple-light:#9f67ff;--green:#10b981;--green-light:#34d399;
+  --text:#f1f0ff;--text-muted:#8b8aa0;--radius:14px;--yellow:#fbbf24;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+/* HEADER */
+.header{text-align:center;padding:16px 20px;border-bottom:1px solid var(--border);background:rgba(10,10,15,.92);position:sticky;top:0;z-index:100;backdrop-filter:blur(14px)}
+.logo{font-size:1.25rem;font-weight:800;background:linear-gradient(135deg,var(--purple-light),var(--green-light));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+
+/* HERO */
+.hero{text-align:center;padding:56px 20px 40px;position:relative}
+.hero::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:600px;height:350px;background:radial-gradient(ellipse,rgba(124,58,237,.18) 0%,transparent 70%);pointer-events:none}
+.badge{display:inline-block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--green-light);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:999px;margin-bottom:18px}
+.hero h1{font-size:clamp(1.7rem,4vw,2.8rem);font-weight:900;line-height:1.15;max-width:680px;margin:0 auto 16px}
+.hero h1 span{background:linear-gradient(135deg,var(--purple-light),var(--green-light));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1rem;color:var(--text-muted);max-width:500px;margin:0 auto}
+
+/* STEPS VISUAL */
+.steps-row{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;max-width:700px;margin:32px auto 0}
+.step-pill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:.85rem;color:var(--text-muted)}
+.step-pill .step-num{background:linear-gradient(135deg,var(--purple),var(--green));color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+
+/* FORM SECTION */
+.form-section{max-width:560px;margin:48px auto;padding:0 20px}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:36px 32px;position:relative;overflow:hidden}
+.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--green))}
+.form-card h2{font-size:1.3rem;font-weight:800;margin-bottom:6px;text-align:center}
+.form-card .form-sub{text-align:center;color:var(--text-muted);font-size:.88rem;margin-bottom:28px}
+
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--surface2);border:2px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:.92rem;color:var(--text);font-family:inherit;transition:border-color .25s;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--purple)}
+.form-group input::placeholder,.form-group textarea::placeholder{color:var(--text-muted)}
+.form-group select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b8aa0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.form-group select option{background:var(--surface2);color:var(--text)}
+.form-group textarea{resize:none;min-height:80px}
+.form-error{color:#f87171;font-size:.8rem;margin-top:4px;display:none}
+
+/* BUTTONS */
+.btn-primary{display:block;width:100%;background:linear-gradient(135deg,var(--purple),var(--purple-light));color:#fff;border:none;border-radius:var(--radius);padding:16px 24px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;letter-spacing:.01em}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(124,58,237,.4)}
+.btn-primary:active{transform:translateY(0)}
+.btn-green{background:linear-gradient(135deg,#059669,var(--green-light));animation:pulse-green 2.5s infinite}
+@keyframes pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.35)}50%{box-shadow:0 0 0 12px rgba(16,185,129,0)}}
+
+.disclaimer{text-align:center;color:var(--text-muted);font-size:.78rem;margin-top:10px}
+
+/* RESULT */
+.result-section{display:none;text-align:center;animation:fadeUp .5s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.result-icon{font-size:3rem;margin-bottom:14px}
+.result-title{font-size:1.3rem;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,var(--green),var(--green-light));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.result-text{color:var(--text-muted);font-size:.9rem;margin-bottom:24px;line-height:1.7}
+
+/* BENEFITS */
+.benefits{max-width:560px;margin:0 auto 48px;padding:0 20px}
+.benefits-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px}
+.benefits-card h3{font-size:1.05rem;font-weight:700;margin-bottom:16px;text-align:center}
+.benefit-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.benefit-list li{display:flex;align-items:center;gap:10px;font-size:.88rem;color:var(--text-muted)}
+.benefit-list li::before{content:'✅';font-size:.9rem;flex-shrink:0}
+
+/* FOOTER */
+footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 20px;text-align:center;font-size:.78rem;color:var(--text-muted)}
+footer a{color:var(--text-muted)}
+.footer-links{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.footer-links a{color:var(--purple-light);font-weight:600;text-decoration:none;font-size:.85rem;transition:color .2s}
+.footer-links a:hover{color:var(--green-light)}
+
+@media(max-width:600px){
+  .form-card{padding:24px 18px}
+  .steps-row{gap:10px}
+  .step-pill{padding:8px 12px;font-size:.78rem}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header"><div class="logo">⚡ Link Mágico</div></header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">Growth Loop — Crie em 2 minutos</div>
+  <h1>Crie seu <span>atendimento automático</span> agora mesmo</h1>
+  <p>Preencha as informações do seu negócio e ative um sistema que responde clientes 24h por dia — sem código, sem complicação.</p>
+
+  <div class="steps-row">
+    <div class="step-pill"><span class="step-num">1</span> Descreva seu negócio</div>
+    <div class="step-pill"><span class="step-num">2</span> Personalize</div>
+    <div class="step-pill"><span class="step-num">3</span> Ative o atendimento</div>
+  </div>
+</section>
+
+<!-- FORM -->
+<section class="form-section">
+  <div class="form-card" id="form-card">
+    <h2>Configure seu LinkMágico ⚡</h2>
+    <p class="form-sub">Suas informações são usadas para personalizar o atendimento automático.</p>
+
+    <form id="criar-form" onsubmit="return handleSubmit(event)">
+      <div class="form-group">
+        <label for="negocio-nome">Nome do seu negócio</label>
+        <input type="text" id="negocio-nome" placeholder="Ex: Clínica Bella Estética" required maxlength="60" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label for="negocio-tipo">Tipo de negócio</label>
+        <select id="negocio-tipo" required>
+          <option value="" disabled selected>Selecione...</option>
+          <option value="infoproduto">📚 Curso / Infoproduto</option>
+          <option value="negocio_local">🏥 Negócio Local</option>
+          <option value="ecommerce">🛍️ E-commerce / Loja Virtual</option>
+          <option value="marketing">📢 Afiliado / Marketing Digital</option>
+          <option value="servicos">💼 Serviços / Consultoria</option>
+          <option value="emagrecimento">💪 Saúde / Fitness</option>
+          <option value="outro">🔧 Outro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="negocio-url">URL do site ou rede social <span style="color:var(--text-muted);font-weight:400;text-transform:none">(opcional)</span></label>
+        <input type="text" id="negocio-url" placeholder="Ex: https://meusite.com ou @meuperfil" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label for="negocio-desc">Descreva brevemente o que você vende <span style="color:var(--text-muted);font-weight:400;text-transform:none">(opcional)</span></label>
+        <textarea id="negocio-desc" placeholder="Ex: Curso de marketing digital para iniciantes com acesso vitalício..." maxlength="300"></textarea>
+      </div>
+
+      <div id="form-error" class="form-error"></div>
+
+      <button type="submit" class="btn-primary" id="btn-submit">CRIAR MEU LINKMAGICO →</button>
+      <p class="disclaimer">🛡️ Sem spam · Seus dados estão seguros</p>
+    </form>
+
+    <!-- RESULTADO -->
+    <div class="result-section" id="result-section">
+      <div class="result-icon">🎉</div>
+      <div class="result-title">Seu LinkMágico está quase pronto!</div>
+      <p class="result-text">
+        Para ativar o atendimento automático completo para <strong id="result-name">seu negócio</strong>,
+        finalize a ativação abaixo. O sistema será treinado com as informações do seu negócio em minutos.
+      </p>
+      <button class="btn-primary btn-green" onclick="irParaCheckout()" id="btn-ativar">
+        ATIVAR MEU ATENDIMENTO AUTOMÁTICO →
+      </button>
+      <p class="disclaimer">🛡️ Garantia de 7 dias · R$97/ano · Cancele quando quiser</p>
+      <br>
+      <button class="btn-secondary" onclick="testarDemo()" style="background:none;border:2px solid var(--border);color:var(--text);border-radius:var(--radius);padding:12px 20px;font-size:.88rem;font-weight:600;cursor:pointer;transition:border-color .2s;font-family:inherit;width:100%">
+        🎯 Testar demonstração antes
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- BENEFITS -->
+<section class="benefits">
+  <div class="benefits-card">
+    <h3>O que você recebe ao ativar 🚀</h3>
+    <ul class="benefit-list">
+      <li>Sistema de IA treinado nas informações do seu negócio</li>
+      <li>Atendimento automático 24h por dia, 7 dias por semana</li>
+      <li>Captura automática de leads (nome, email, telefone)</li>
+      <li>Funciona em site, WhatsApp, Instagram e bio de link</li>
+      <li>Painel de analytics e CRM integrado</li>
+      <li>Widget 100% personalizável com sua marca</li>
+      <li>Acesso completo por 12 meses + atualizações</li>
+    </ul>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>O Link Mágico é uma plataforma em produção utilizada por empreendedores para automatizar o atendimento.</p>
+  <br>
+  <div class="footer-links">
+    <a href="/public/demo.html">🎯 Ver Demonstração</a>
+    <a href="/criar-link">✨ Criar meu LinkMágico</a>
+  </div>
+  <p>© 2025 Link Mágico · <a href="/public/politica-de-privacidade.html">Privacidade</a> · <a href="/public/termos-de-uso.html">Termos</a></p>
+</footer>
+
+<script>
+// =====================================================
+// CONFIG
+// =====================================================
+const CHECKOUT_URL = 'https://pay.hotmart.com/G103177435I';
+const DEMO_URL = '/public/demo.html';
+
+// Capturar ref de tracking
+const urlParams = new URLSearchParams(window.location.search);
+const refSource = urlParams.get('ref') || 'direct';
+
+// Log de tracking (seguro, não-bloqueante)
+try {
+  console.log('[Growth Loop] Página carregada — ref:', refSource);
+} catch(e) {}
+
+// =====================================================
+// FORM HANDLER
+// =====================================================
+function handleSubmit(e) {
+  e.preventDefault();
+  try {
+    const nome = document.getElementById('negocio-nome').value.trim();
+    const tipo = document.getElementById('negocio-tipo').value;
+    const url = document.getElementById('negocio-url').value.trim();
+    const desc = document.getElementById('negocio-desc').value.trim();
+    const errorEl = document.getElementById('form-error');
+
+    errorEl.style.display = 'none';
+
+    if (!nome) {
+      errorEl.textContent = 'Por favor, informe o nome do seu negócio.';
+      errorEl.style.display = 'block';
+      document.getElementById('negocio-nome').focus();
+      return false;
+    }
+
+    if (!tipo) {
+      errorEl.textContent = 'Por favor, selecione o tipo de negócio.';
+      errorEl.style.display = 'block';
+      document.getElementById('negocio-tipo').focus();
+      return false;
+    }
+
+    // Salvar dados no sessionStorage para uso futuro (não impacta nada existente)
+    try {
+      sessionStorage.setItem('lm_growth_data', JSON.stringify({
+        nome, tipo, url, desc, ref: refSource, ts: Date.now()
+      }));
+    } catch(e) {}
+
+    // Esconder form, mostrar resultado
+    document.getElementById('criar-form').style.display = 'none';
+    document.getElementById('result-section').style.display = 'block';
+    document.getElementById('result-name').textContent = nome;
+
+    // Log de conversão
+    console.log('[Growth Loop] Form submitted:', { nome, tipo, ref: refSource });
+
+  } catch(err) {
+    console.error('[Growth Loop] Erro no submit:', err);
+  }
+  return false;
+}
+
+// =====================================================
+// AÇÕES
+// =====================================================
+function irParaCheckout() {
+  try {
+    // Tentar passar dados para o checkout via URL params
+    const data = JSON.parse(sessionStorage.getItem('lm_growth_data') || '{}');
+    const params = new URLSearchParams();
+    if (data.nome) params.set('sck', data.nome.substring(0, 30));
+    if (refSource) params.set('src', refSource);
+    
+    const sep = CHECKOUT_URL.includes('?') ? '&' : '?';
+    window.open(CHECKOUT_URL + sep + params.toString(), '_blank');
+    console.log('[Growth Loop] Checkout opened — ref:', refSource);
+  } catch(e) {
+    // Fallback: abrir checkout direto
+    window.open(CHECKOUT_URL, '_blank');
+  }
+}
+
+function testarDemo() {
+  try {
+    const data = JSON.parse(sessionStorage.getItem('lm_growth_data') || '{}');
+    if (data.nome) {
+      window.location.href = DEMO_URL + '?nome=' + encodeURIComponent(data.nome);
+    } else {
+      window.location.href = DEMO_URL;
+    }
+  } catch(e) {
+    window.location.href = DEMO_URL;
+  }
+}
+</script>
+</body>
+</html>

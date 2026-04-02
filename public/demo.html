@@ -240,10 +240,28 @@ footer a{color:var(--text-muted)}
 .btn-chat{display:inline-block;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:var(--radius);padding:16px 32px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;text-decoration:none}
 .btn-chat:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(37,211,102,.35)}
 
+/* V2.0 — Intent Sensor Floating Bar */
+.intent-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,15,.96);border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:12px;z-index:150;transform:translateY(100%);transition:transform .5s cubic-bezier(.22,1,.36,1);backdrop-filter:blur(16px)}
+.intent-bar.visible{transform:translateY(0)}
+.intent-bar .intent-text{color:var(--text-muted);font-size:.85rem;font-weight:500}
+.intent-bar .intent-text strong{color:var(--green-light)}
+.intent-bar .intent-btn{background:linear-gradient(135deg,var(--purple),var(--purple-light));color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:.85rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;white-space:nowrap}
+.intent-bar .intent-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(124,58,237,.4)}
+.intent-bar .intent-btn-green{background:linear-gradient(135deg,#059669,var(--green-light))}
+.intent-bar .intent-close{background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;padding:4px 8px;transition:color .2s}
+.intent-bar .intent-close:hover{color:var(--text)}
+
+/* Footer Links */
+.footer-links{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.footer-links a{color:var(--purple-light);font-weight:600;text-decoration:none;font-size:.85rem;transition:color .2s}
+.footer-links a:hover{color:var(--green-light)}
+
 @media(max-width:600px){
   .demo-container{padding:24px 18px}
   .examples-grid{grid-template-columns:1fr}
   .channels-grid{grid-template-columns:repeat(3,1fr)}
+  .intent-bar{flex-direction:column;gap:8px;padding:12px 16px}
+  .intent-bar .intent-text{text-align:center;font-size:.8rem}
 }
 </style>
 </head>
@@ -517,7 +535,10 @@ footer a{color:var(--text-muted)}
 <footer>
   <p>O Link Mágico é uma plataforma em produção utilizada por empreendedores para automatizar o atendimento de clientes.</p>
   <br>
-  <p style="margin-bottom:10px"><a href="/criar-link?ref=demo_footer" style="color:var(--purple-light);font-weight:600;text-decoration:none">✨ Criar meu LinkMágico →</a></p>
+  <div class="footer-links">
+    <a href="/criar-link?ref=demo_footer">✨ Criar meu LinkMágico</a>
+    <a href="/public/demo.html">🎯 Ver Demonstração</a>
+  </div>
   <p>© 2025 Link Mágico · <a href="/public/politica-de-privacidade.html">Privacidade</a> · <a href="/public/termos-de-uso.html">Termos</a></p>
 </footer>
 
@@ -1193,6 +1214,54 @@ document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key===
       container.style.height='auto';
       container.innerHTML='<a href="https://youtu.be/u6p9LwvLHgQ" target="_blank" class="vsl-fallback" style="display:block;position:relative"><img src="https://img.youtube.com/vi/u6p9LwvLHgQ/maxresdefault.jpg" alt="Assistir vídeo" style="width:100%;border-radius:16px"><div class="vsl-play-btn"></div></a>';
     });
+  }
+})();
+
+// =====================================================
+// V2.0: SENSOR DE INTENÇÃO (scroll + tempo → floating CTA)
+// Incremental, isolado, protegido por try/catch + ENABLE_V2
+// =====================================================
+(function(){
+  try {
+    if (!ENABLE_V2) return;
+    let intentShown = false;
+    let intentDismissed = false;
+    const SCROLL_THRESHOLD = 0.6;
+    const TIME_THRESHOLD = 30000;
+
+    // Criar barra flutuante (não impacta DOM existente)
+    const bar = document.createElement('div');
+    bar.className = 'intent-bar';
+    bar.id = 'intent-bar';
+    bar.innerHTML = '<span class="intent-text">⚡ <strong>Gostou do que viu?</strong> Crie seu atendimento automático agora</span>' +
+      '<a href="/criar-link?ref=intent_sensor" class="intent-btn intent-btn-green">Criar meu LinkMágico →</a>' +
+      '<button class="intent-btn" onclick="document.getElementById(\'demo-zone\').scrollIntoView({behavior:\'smooth\'})">Testar Grátis</button>' +
+      '<button class="intent-close" onclick="this.parentElement.classList.remove(\'visible\');" title="Fechar">✕</button>';
+    document.body.appendChild(bar);
+
+    function showIntent() {
+      if (intentShown || intentDismissed) return;
+      intentShown = true;
+      bar.classList.add('visible');
+      console.log('[V2.0] Intent sensor triggered');
+    }
+
+    // Trigger 1: scroll 60%+
+    window.addEventListener('scroll', function() {
+      try {
+        const scrollPct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+        if (scrollPct >= SCROLL_THRESHOLD) showIntent();
+      } catch(e) { /* fallback silencioso */ }
+    }, { passive: true });
+
+    // Trigger 2: 30 segundos na página
+    setTimeout(function() {
+      try { showIntent(); } catch(e) { /* fallback silencioso */ }
+    }, TIME_THRESHOLD);
+
+    console.log('[V2.0] Sensor de intenção inicializado');
+  } catch(e) {
+    console.log('[V2.0] Intent sensor fallback:', e.message);
   }
 })();
 </script>
