@@ -3038,7 +3038,8 @@ async function requireApiKey(req, res, next) {
         "/api/webhooks/hotmart/status",
         "/api/capture-lead",
         "/api/process-chat-inteligente",
-        "/api/chat-universal"
+        "/api/chat-universal",
+        "/api/track-event"
     ];
 
     if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/")) {
