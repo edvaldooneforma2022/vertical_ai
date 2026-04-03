@@ -216,7 +216,69 @@ async function initializeDatabase() {
 
         // SAFE PATCH - SCHED-003: Índices para performance
         `CREATE INDEX IF NOT EXISTS idx_tenant_availability_tenant ON tenant_availability(tenant_id)`,
-        `CREATE INDEX IF NOT EXISTS idx_tenant_blocked_dates_tenant ON tenant_blocked_dates(tenant_id)`
+        `CREATE INDEX IF NOT EXISTS idx_tenant_blocked_dates_tenant ON tenant_blocked_dates(tenant_id)`,
+
+        // ========================================
+        // SAFE PATCH - AUTO-LEARNING V2.0: Persistência em banco de dados
+        // Substitui armazenamento em JSON no filesystem (que era perdido a cada restart no Render)
+        // Controlado por: FEATURE_LEARNING_DB_PERSISTENCE
+        // ========================================
+
+        // Tabela de interações de conversa para auto-learning (substitui conversations.json)
+        `CREATE TABLE IF NOT EXISTS learning_conversations (
+            id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            conversation_id ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'},
+            user_message ${USE_POSTGRES ? 'TEXT' : 'TEXT'},
+            ai_response ${USE_POSTGRES ? 'TEXT' : 'TEXT'},
+            detected_intent ${USE_POSTGRES ? 'VARCHAR(100)' : 'TEXT'},
+            journey_stage ${USE_POSTGRES ? 'VARCHAR(100)' : 'TEXT'},
+            profile ${USE_POSTGRES ? 'VARCHAR(100)' : 'TEXT'},
+            has_cta ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
+            links ${USE_POSTGRES ? 'JSONB DEFAULT \'[]\'' : 'TEXT DEFAULT \'[]\''},
+            emotional_state ${USE_POSTGRES ? 'VARCHAR(50)' : 'TEXT'},
+            api_key ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'},
+            robot_name ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'},
+            action_clicked ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
+            action_scheduled ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
+            action_lead_captured ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
+            action_whatsapp_opened ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de scores de performance por padrão (substitui scores.json)
+        `CREATE TABLE IF NOT EXISTS learning_scores (
+            pattern_key ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            intent ${USE_POSTGRES ? 'VARCHAR(100)' : 'TEXT'},
+            journey_stage ${USE_POSTGRES ? 'VARCHAR(100)' : 'TEXT'},
+            has_cta ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
+            success_rate ${USE_POSTGRES ? 'REAL' : 'REAL'} DEFAULT 0,
+            attempts ${USE_POSTGRES ? 'INTEGER' : 'INTEGER'} DEFAULT 0,
+            conversions ${USE_POSTGRES ? 'INTEGER' : 'INTEGER'} DEFAULT 0,
+            breakdown ${USE_POSTGRES ? 'JSONB DEFAULT \'{}\'' : 'TEXT DEFAULT \'{}\''},
+            top_responses ${USE_POSTGRES ? 'JSONB DEFAULT \'[]\'' : 'TEXT DEFAULT \'[]\''},
+            updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Tabela de padrões aprendidos com LRU (substitui patterns.json)
+        `CREATE TABLE IF NOT EXISTS learning_patterns (
+            pattern_key ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            intent ${USE_POSTGRES ? 'VARCHAR(100)' : 'TEXT'},
+            profile ${USE_POSTGRES ? 'VARCHAR(100)' : 'TEXT'},
+            journey_stage ${USE_POSTGRES ? 'VARCHAR(100)' : 'TEXT'},
+            success_rate ${USE_POSTGRES ? 'REAL' : 'REAL'} DEFAULT 0,
+            top_responses ${USE_POSTGRES ? 'JSONB DEFAULT \'[]\'' : 'TEXT DEFAULT \'[]\''},
+            attempts ${USE_POSTGRES ? 'INTEGER' : 'INTEGER'} DEFAULT 0,
+            conversions ${USE_POSTGRES ? 'INTEGER' : 'INTEGER'} DEFAULT 0,
+            access_count ${USE_POSTGRES ? 'INTEGER' : 'INTEGER'} DEFAULT 0,
+            updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Índices para performance do auto-learning
+        `CREATE INDEX IF NOT EXISTS idx_learning_conv_conversation ON learning_conversations(conversation_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_learning_conv_api_key ON learning_conversations(api_key)`,
+        `CREATE INDEX IF NOT EXISTS idx_learning_conv_created ON learning_conversations(created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_learning_scores_intent ON learning_scores(intent)`,
+        `CREATE INDEX IF NOT EXISTS idx_learning_patterns_intent ON learning_patterns(intent)`
     ];
 
     for (const migration of migrations) {

@@ -1,13 +1,18 @@
 /**
- * 💾 MEMORY STORE — Auto-Learning V1.0
+ * 💾 MEMORY STORE — Auto-Learning V2.0
  * 
  * Armazenamento leve das melhores respostas por padrão.
- * Usa JSON local com política LRU para limpeza automática.
+ * Usa banco de dados com política LRU para limpeza automática.
+ * 
+ * V2.0: Persistência em banco de dados (PostgreSQL/SQLite)
+ *       com fallback automático para JSON no filesystem.
+ * 
+ * NÃO IMPACTA: fluxo de vendas (⚡/🎛️/⚫), billing, auth, CRM
  * 
  * Controlado por: FEATURE_AUTO_LEARNING
  * Debug: DEBUG_LEARNING=true
  * 
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const fs = require('fs');
@@ -30,6 +35,7 @@ class MemoryStore {
         this.store = new Map();
         this.accessOrder = []; // Para LRU
         this.initialized = false;
+        this.dbAdapter = null; // V2.0: Injetado pelo index.js
 
         try {
             this._load();
@@ -41,11 +47,25 @@ class MemoryStore {
     }
 
     /**
+     * V2.0: Injetar DB adapter para persistência em banco
+     */
+    setDbAdapter(adapter) {
+        try {
+            this.dbAdapter = adapter;
+            if (adapter && adapter.isAvailable()) {
+                debugLog('DB Adapter injetado — persistência em banco ativa');
+                // Carregar do banco se store está vazio
+                if (this.store.size === 0) {
+                    this._loadFromDb();
+                }
+            }
+        } catch (err) {
+            debugLog('Erro ao configurar DB adapter:', err.message);
+        }
+    }
+
+    /**
      * Armazenar dados aprendidos para um padrão
-     * @param {string} intent 
-     * @param {string} profile 
-     * @param {string} journeyStage 
-     * @param {Object} data - { successRate, topResponses, metadata }
      */
     store_pattern(intent, profile, journeyStage, data) {
         try {
@@ -87,12 +107,6 @@ class MemoryStore {
 
     /**
      * Obter dados aprendidos para um contexto
-     * Retorna null se não houver dados suficientes
-     * 
-     * @param {string} intent 
-     * @param {string} profile 
-     * @param {string} journeyStage 
-     * @returns {Object|null}
      */
     getLearnedData(intent, profile, journeyStage) {
         try {
@@ -131,7 +145,6 @@ class MemoryStore {
 
     /**
      * Atualizar store com dados do performance engine
-     * @param {Array} scores - Lista de scores do PerformanceEngine
      */
     updateFromScores(scores) {
         try {
@@ -142,7 +155,7 @@ class MemoryStore {
                 if (score.successRate > 0 && score.attempts >= 5) {
                     this.store_pattern(
                         score.intent,
-                        'unknown', // Profile genérico
+                        'unknown',
                         score.journeyStage,
                         {
                             successRate: score.successRate,
@@ -178,7 +191,8 @@ class MemoryStore {
                 totalAccesses: entries.reduce((s, e) => s + e.accessCount, 0),
                 mostAccessed: entries.length > 0
                     ? entries.sort((a, b) => b.accessCount - a.accessCount)[0]?.key
-                    : null
+                    : null,
+                dbPersistence: !!(this.dbAdapter && this.dbAdapter.isAvailable())
             };
         } catch (err) {
             return { totalPatterns: 0, maxEntries: MAX_ENTRIES };
@@ -203,7 +217,6 @@ class MemoryStore {
     }
 
     _touchLRU(key) {
-        // Mover para o final (mais recente)
         const idx = this.accessOrder.indexOf(key);
         if (idx !== -1) {
             this.accessOrder.splice(idx, 1);
@@ -241,7 +254,59 @@ class MemoryStore {
         }
     }
 
+    /**
+     * V2.0: Carregar padrões do banco de dados (assíncrono)
+     */
+    _loadFromDb() {
+        if (!this.dbAdapter || !this.dbAdapter.isAvailable()) return;
+
+        setImmediate(async () => {
+            try {
+                const { store: dbStore, accessOrder: dbOrder } = await this.dbAdapter.loadPatterns();
+                if (dbStore && dbStore.size > 0) {
+                    // Mesclar: banco tem prioridade
+                    for (const [key, value] of dbStore) {
+                        if (!this.store.has(key)) {
+                            this.store.set(key, value);
+                        }
+                    }
+                    // Mesclar accessOrder
+                    if (dbOrder && dbOrder.length > 0) {
+                        const existingSet = new Set(this.accessOrder);
+                        for (const key of dbOrder) {
+                            if (!existingSet.has(key)) {
+                                this.accessOrder.push(key);
+                            }
+                        }
+                    }
+                    debugLog(`Mesclados ${dbStore.size} padrões do banco`);
+                }
+            } catch (err) {
+                debugLog('Erro ao carregar padrões do banco (não crítico):', err.message);
+            }
+        });
+    }
+
     _save() {
+        // V2.0: Salvar no banco (prioridade)
+        if (this.dbAdapter && this.dbAdapter.isAvailable()) {
+            this.dbAdapter.savePatterns(this.store, this.accessOrder).then(saved => {
+                if (saved) {
+                    debugLog('Padrões salvos no banco');
+                }
+            }).catch(err => {
+                debugLog('Erro ao salvar padrões no banco, fallback JSON:', err.message);
+                this._saveToJson();
+            });
+        } else {
+            this._saveToJson();
+        }
+    }
+
+    /**
+     * Fallback: salvar em JSON
+     */
+    _saveToJson() {
         try {
             if (!fs.existsSync(DATA_DIR)) {
                 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -258,7 +323,7 @@ class MemoryStore {
             }
 
             fs.writeFileSync(PATTERNS_FILE, JSON.stringify(obj, null, 2));
-            debugLog('Padrões salvos em disco');
+            debugLog('Padrões salvos em disco (JSON)');
         } catch (err) {
             console.warn('⚠️ [MEMORY-STORE] Erro ao salvar:', err.message);
         }

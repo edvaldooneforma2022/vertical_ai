@@ -5501,12 +5501,13 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                     try {
                         autoLearning.recordInteraction({
                             conversationId: conversationId || 'unknown',
-                            message: message,
-                            response: finalResponse,
-                            intent: inteligencias?.intencao_compra ? 'purchase' : 'general',
+                            userMessage: message,
+                            aiResponse: finalResponse,
+                            detectedIntent: inteligencias?.intencao_compra ? 'purchase' : 'general',
                             journeyStage: journeyStage || 'descoberta',
-                            emotion: analiseEmocional?.emocao || 'neutro',
-                            apiKey: apiKey
+                            emotionalState: analiseEmocional?.emocao || 'neutro',
+                            apiKey: apiKey,
+                            robotName: robotName || null
                         });
                     } catch (recErr) {
                         console.warn('⚠️ [AUTO-LEARNING] Erro ao registrar (não crítico):', recErr.message);
@@ -5543,6 +5544,52 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             success: false,
             error: "Erro interno ao gerar resposta inteligente: " + (error.message || "Erro desconhecido"),
             details: error.message
+        });
+    }
+});
+
+// ===== 🧠 AUTO-LEARNING: ENDPOINT DE TRACKING DE EVENTOS =====
+// Recebe eventos de conversão do frontend (cliques, whatsapp, agendamento, leads)
+app.post("/api/track-event", async (req, res) => {
+    try {
+        const { conversationId, eventType, apiKey: bodyApiKey } = req.body || {};
+
+        if (!conversationId || !eventType) {
+            return res.status(400).json({
+                success: false,
+                error: "conversationId e eventType são obrigatórios"
+            });
+        }
+
+        // Validar tipo de evento
+        const validEvents = ['click_link', 'open_whatsapp', 'schedule_created', 'lead_submitted'];
+        if (!validEvents.includes(eventType)) {
+            return res.status(400).json({
+                success: false,
+                error: `eventType inválido. Válidos: ${validEvents.join(', ')}`
+            });
+        }
+
+        let tracked = false;
+        if (autoLearning && (process.env.FEATURE_AUTO_LEARNING === 'true' ||
+            (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_AUTO_LEARNING')))) {
+            tracked = autoLearning.trackConversion(conversationId, eventType);
+            console.log(`🎯 [AUTO-LEARNING] Evento tracked: ${eventType} para ${conversationId} → ${tracked ? 'OK' : 'não encontrado'}`);
+        } else {
+            console.log(`⚠️ [AUTO-LEARNING] Track-event recebido mas auto-learning desativado`);
+        }
+
+        return res.json({
+            success: true,
+            tracked: tracked,
+            eventType: eventType,
+            conversationId: conversationId
+        });
+    } catch (error) {
+        console.warn('⚠️ [AUTO-LEARNING] Erro no track-event:', error.message);
+        return res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 });

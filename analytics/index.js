@@ -4,6 +4,11 @@
  * Barrel export para o sistema de auto-learning.
  * Coordena: Tracker → Performance Engine → Memory Store → Optimizer
  * 
+ * V2.0: Injeta DB adapter para persistência em banco de dados,
+ *       resolvendo perda de dados no filesystem efêmero do Render.
+ * 
+ * NÃO IMPACTA: fluxo de vendas (⚡/🎛️/⚫), billing, auth, CRM
+ * 
  * Uso no server.js:
  *   const autoLearning = require('./analytics');
  *   autoLearning.tracker.record({...});
@@ -11,7 +16,7 @@
  * 
  * Controlado por: FEATURE_AUTO_LEARNING
  * 
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const { conversationTracker } = require('./conversation-tracker');
@@ -26,6 +31,40 @@ function debugLog(...args) {
         console.log('🧠 [AUTO-LEARNING]', ...args);
     }
 }
+
+// ========================================
+// V2.0: INJEÇÃO DO DB ADAPTER
+// ========================================
+// Executado de forma assíncrona para não bloquear o require()
+// Se falhar, tudo funciona normalmente com JSON (fallback)
+setImmediate(() => {
+    try {
+        // Importar banco — mesmo pattern usado pelo server.js
+        const { db, USE_POSTGRES } = require('../database');
+        const { LearningDbAdapter } = require('./db-adapter');
+
+        if (db) {
+            const adapter = new LearningDbAdapter(db, USE_POSTGRES);
+            
+            if (adapter.isAvailable()) {
+                // Injetar nos 3 módulos
+                conversationTracker.setDbAdapter(adapter);
+                performanceEngine.setDbAdapter(adapter);
+                memoryStore.setDbAdapter(adapter);
+
+                console.log('✅ [AUTO-LEARNING V2.0] Persistência em banco ativada (' + 
+                    (USE_POSTGRES ? 'PostgreSQL' : 'SQLite') + ')');
+            } else {
+                debugLog('DB Adapter não disponível — usando fallback JSON');
+            }
+        } else {
+            debugLog('Instância db não disponível — usando fallback JSON');
+        }
+    } catch (err) {
+        // Fallback silencioso: sistema funciona com JSON
+        console.log('⚠️ [AUTO-LEARNING V2.0] DB Adapter não carregado (fallback JSON):', err.message);
+    }
+});
 
 /**
  * Registrar interação completa (chamado pós-resposta da IA)

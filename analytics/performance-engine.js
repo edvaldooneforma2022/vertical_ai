@@ -1,13 +1,18 @@
 /**
- * 📊 PERFORMANCE ENGINE — Auto-Learning V1.0
+ * 📊 PERFORMANCE ENGINE — Auto-Learning V2.0
  * 
  * Analisa padrões de conversão e gera scores de performance.
  * Execução assíncrona/lazy — NUNCA bloqueia o fluxo principal.
  * 
+ * V2.0: Persistência em banco de dados (PostgreSQL/SQLite)
+ *       com fallback automático para JSON no filesystem.
+ * 
+ * NÃO IMPACTA: fluxo de vendas (⚡/🎛️/⚫), billing, auth, CRM
+ * 
  * Controlado por: FEATURE_AUTO_LEARNING
  * Debug: DEBUG_LEARNING=true
  * 
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const fs = require('fs');
@@ -17,9 +22,9 @@ const DATA_DIR = path.join(__dirname, '..', 'data', 'learning');
 const SCORES_FILE = path.join(DATA_DIR, 'scores.json');
 const MAX_PATTERNS = 1000;
 const TEST_MODE = process.env.AUTO_LEARNING_TEST_MODE === 'true';
-const RECALC_THRESHOLD = TEST_MODE ? 5 : 100; // Test mode: recálculo a cada 5 eventos
-const RECALC_INTERVAL_MS = TEST_MODE ? 60000 : 3600000; // Test mode: 1 min; prod: 1 hora
-const MIN_SAMPLES_FOR_SCORE = TEST_MODE ? 1 : 3; // Test mode: 1 amostra basta
+const RECALC_THRESHOLD = TEST_MODE ? 5 : 100;
+const RECALC_INTERVAL_MS = TEST_MODE ? 60000 : 3600000;
+const MIN_SAMPLES_FOR_SCORE = TEST_MODE ? 1 : 3;
 const DEBUG = process.env.DEBUG_LEARNING === 'true';
 
 function debugLog(...args) {
@@ -35,6 +40,7 @@ class PerformanceEngine {
         this.eventsSinceRecalc = 0;
         this.initialized = false;
         this.recalcTimer = null;
+        this.dbAdapter = null; // V2.0: Injetado pelo index.js
 
         try {
             this._loadScores();
@@ -43,6 +49,24 @@ class PerformanceEngine {
             debugLog('Inicializado com', this.patterns.size, 'padrões');
         } catch (err) {
             console.warn('⚠️ [PERFORMANCE-ENGINE] Falha ao inicializar:', err.message);
+        }
+    }
+
+    /**
+     * V2.0: Injetar DB adapter para persistência em banco
+     */
+    setDbAdapter(adapter) {
+        try {
+            this.dbAdapter = adapter;
+            if (adapter && adapter.isAvailable()) {
+                debugLog('DB Adapter injetado — persistência em banco ativa');
+                // Carregar do banco se ainda vazio
+                if (this.patterns.size === 0) {
+                    this._loadFromDb();
+                }
+            }
+        } catch (err) {
+            debugLog('Erro ao configurar DB adapter:', err.message);
         }
     }
 
@@ -139,30 +163,18 @@ class PerformanceEngine {
         }
     }
 
-    /**
-     * Notificar novo evento (para saber quando recalcular)
-     */
     notifyEvent() {
         this.eventsSinceRecalc++;
     }
 
-    /**
-     * Verificar se precisa recalcular
-     */
     needsRecalc() {
         return this.eventsSinceRecalc >= RECALC_THRESHOLD;
     }
 
-    /**
-     * Resetar contador de recálculo
-     */
     resetRecalcCounter() {
         this.eventsSinceRecalc = 0;
     }
 
-    /**
-     * Obter score de um padrão específico
-     */
     getScore(intent, journeyStage) {
         try {
             const key = `${intent || 'unknown'}::${journeyStage || 'unknown'}`;
@@ -172,9 +184,6 @@ class PerformanceEngine {
         }
     }
 
-    /**
-     * Obter os top N padrões com melhor performance
-     */
     getTopPatterns(n = 10) {
         try {
             const sorted = Array.from(this.patterns.values())
@@ -186,9 +195,6 @@ class PerformanceEngine {
         }
     }
 
-    /**
-     * Obter estatísticas gerais
-     */
     getStats() {
         try {
             const patterns = Array.from(this.patterns.values());
@@ -205,7 +211,8 @@ class PerformanceEngine {
                 eventsSinceRecalc: this.eventsSinceRecalc,
                 topPattern: patterns.length > 0
                     ? patterns.sort((a, b) => b.successRate - a.successRate)[0]
-                    : null
+                    : null,
+                dbPersistence: !!(this.dbAdapter && this.dbAdapter.isAvailable())
             };
         } catch (err) {
             return { totalPatterns: 0, totalAttempts: 0, totalConversions: 0 };
@@ -227,7 +234,6 @@ class PerformanceEngine {
     _enforceLimit() {
         if (this.patterns.size <= MAX_PATTERNS) return;
 
-        // Remover padrões com menos amostras
         const sorted = Array.from(this.patterns.entries())
             .sort((a, b) => a[1].attempts - b[1].attempts);
 
@@ -259,7 +265,50 @@ class PerformanceEngine {
         }
     }
 
+    /**
+     * V2.0: Carregar scores do banco (assíncrono)
+     */
+    _loadFromDb() {
+        if (!this.dbAdapter || !this.dbAdapter.isAvailable()) return;
+
+        setImmediate(async () => {
+            try {
+                const dbPatterns = await this.dbAdapter.loadScores();
+                if (dbPatterns && dbPatterns.size > 0) {
+                    // Mesclar: banco tem prioridade
+                    for (const [key, value] of dbPatterns) {
+                        if (!this.patterns.has(key)) {
+                            this.patterns.set(key, value);
+                        }
+                    }
+                    debugLog(`Mesclados ${dbPatterns.size} scores do banco`);
+                }
+            } catch (err) {
+                debugLog('Erro ao carregar scores do banco (não crítico):', err.message);
+            }
+        });
+    }
+
     _saveScores() {
+        // V2.0: Salvar no banco (prioridade)
+        if (this.dbAdapter && this.dbAdapter.isAvailable()) {
+            this.dbAdapter.saveScores(this.patterns).then(saved => {
+                if (saved) {
+                    debugLog('Scores salvos no banco');
+                }
+            }).catch(err => {
+                debugLog('Erro ao salvar scores no banco, fallback JSON:', err.message);
+                this._saveScoresToJson();
+            });
+        } else {
+            this._saveScoresToJson();
+        }
+    }
+
+    /**
+     * Fallback: salvar scores em JSON
+     */
+    _saveScoresToJson() {
         try {
             if (!fs.existsSync(DATA_DIR)) {
                 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -271,7 +320,7 @@ class PerformanceEngine {
             }
 
             fs.writeFileSync(SCORES_FILE, JSON.stringify(obj, null, 2));
-            debugLog('Scores salvos em disco');
+            debugLog('Scores salvos em disco (JSON)');
         } catch (err) {
             console.warn('⚠️ [PERFORMANCE-ENGINE] Erro ao salvar scores:', err.message);
         }
@@ -281,7 +330,6 @@ class PerformanceEngine {
         this.recalcTimer = setInterval(() => {
             if (this.eventsSinceRecalc > 0) {
                 debugLog('Recálculo periódico agendado');
-                // O recálculo em si será chamado pelo index.js
             }
         }, RECALC_INTERVAL_MS);
 

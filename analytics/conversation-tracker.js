@@ -1,13 +1,18 @@
 /**
- * 🧠 CONVERSATION TRACKER — Auto-Learning V1.0
+ * 🧠 CONVERSATION TRACKER — Auto-Learning V2.0
  * 
  * Coleta PASSIVA de dados de conversação para aprendizado.
  * NÃO bloqueia respostas da IA. Falhas são silenciosas.
  * 
+ * V2.0: Persistência em banco de dados (PostgreSQL/SQLite)
+ *       com fallback automático para JSON no filesystem.
+ * 
+ * NÃO IMPACTA: fluxo de vendas (⚡/🎛️/⚫), billing, auth, CRM
+ * 
  * Controlado por: FEATURE_AUTO_LEARNING
  * Debug: DEBUG_LEARNING=true
  * 
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const fs = require('fs');
@@ -33,6 +38,7 @@ class ConversationTracker {
         this.pendingWrites = [];
         this.initialized = false;
         this.flushTimer = null;
+        this.dbAdapter = null; // V2.0: Injetado pelo index.js
 
         try {
             this._ensureDataDir();
@@ -42,6 +48,25 @@ class ConversationTracker {
             debugLog('Inicializado com', this.records.length, 'registros existentes');
         } catch (err) {
             console.warn('⚠️ [LEARNING-TRACKER] Falha ao inicializar (modo degradado):', err.message);
+        }
+    }
+
+    /**
+     * V2.0: Injetar DB adapter para persistência em banco
+     * Chamado pelo index.js após inicialização do banco
+     */
+    setDbAdapter(adapter) {
+        try {
+            this.dbAdapter = adapter;
+            if (adapter && adapter.isAvailable()) {
+                debugLog('DB Adapter injetado — persistência em banco ativa');
+                // Tentar carregar dados do banco se records está vazio
+                if (this.records.length === 0) {
+                    this._loadFromDb();
+                }
+            }
+        } catch (err) {
+            debugLog('Erro ao configurar DB adapter:', err.message);
         }
     }
 
@@ -149,7 +174,7 @@ class ConversationTracker {
      */
     getAllRecords() {
         try {
-            return [...this.records];
+            return [...this.records, ...this.pendingWrites];
         } catch (err) {
             return [];
         }
@@ -168,7 +193,8 @@ class ConversationTracker {
                 conversionRate: total > 0 ? (converted / total).toFixed(4) : 0,
                 pendingWrites: this.pendingWrites.length,
                 oldestRecord: this.records.length > 0 ? this.records[0].timestamp : null,
-                newestRecord: this.records.length > 0 ? this.records[this.records.length - 1].timestamp : null
+                newestRecord: this.records.length > 0 ? this.records[this.records.length - 1].timestamp : null,
+                dbPersistence: !!(this.dbAdapter && this.dbAdapter.isAvailable())
             };
         } catch (err) {
             return { totalRecords: 0, convertedRecords: 0, conversionRate: 0 };
@@ -178,7 +204,10 @@ class ConversationTracker {
     // ===== MÉTODOS PRIVADOS =====
 
     _findByConversationId(conversationId) {
-        return this.records.filter(r => r.conversationId === conversationId);
+        // Buscar tanto em records já salvos quanto em pendingWrites
+        const fromRecords = this.records.filter(r => r.conversationId === conversationId);
+        const fromPending = this.pendingWrites.filter(r => r.conversationId === conversationId);
+        return [...fromRecords, ...fromPending];
     }
 
     _detectCTA(text) {
@@ -237,6 +266,36 @@ class ConversationTracker {
         }
     }
 
+    /**
+     * V2.0: Carregar dados do banco de dados (assíncrono, fire-and-forget)
+     */
+    _loadFromDb() {
+        if (!this.dbAdapter || !this.dbAdapter.isAvailable()) return;
+
+        // Executar de forma assíncrona para não bloquear
+        setImmediate(async () => {
+            try {
+                const dbRecords = await this.dbAdapter.loadConversations(MAX_RECORDS);
+                if (dbRecords && dbRecords.length > 0) {
+                    // Mesclar: banco tem prioridade, mas não duplicar
+                    const existingIds = new Set(this.records.map(r => r.id));
+                    const newRecords = dbRecords.filter(r => r && r.id && !existingIds.has(r.id));
+                    
+                    if (newRecords.length > 0) {
+                        this.records = [...this.records, ...newRecords];
+                        // Limitar tamanho
+                        if (this.records.length > MAX_RECORDS) {
+                            this.records = this.records.slice(-MAX_RECORDS);
+                        }
+                        debugLog(`Mesclados ${newRecords.length} registros do banco`);
+                    }
+                }
+            } catch (err) {
+                debugLog('Erro ao carregar do banco (não crítico):', err.message);
+            }
+        });
+    }
+
     _startFlushTimer() {
         this.flushTimer = setInterval(() => {
             this._flush();
@@ -257,7 +316,8 @@ class ConversationTracker {
             if (this.pendingWrites.length === 0) return;
 
             // Mover pending para records
-            this.records.push(...this.pendingWrites);
+            const flushed = [...this.pendingWrites];
+            this.records.push(...flushed);
             this.pendingWrites = [];
 
             // Limitar tamanho (rotação)
@@ -267,12 +327,36 @@ class ConversationTracker {
                 debugLog(`Rotação: ${excess} registros antigos removidos`);
             }
 
-            // Salvar em disco
-            this._ensureDataDir();
-            fs.writeFileSync(CONVERSATIONS_FILE, JSON.stringify(this.records, null, 2));
-            debugLog(`Flush: ${this.records.length} registros salvos em disco`);
+            // V2.0: Salvar no banco de dados (prioridade)
+            if (this.dbAdapter && this.dbAdapter.isAvailable()) {
+                // Async fire-and-forget — nunca bloqueia
+                this.dbAdapter.saveConversations(flushed).then(saved => {
+                    if (saved) {
+                        debugLog(`Flush DB: ${flushed.length} registros salvos no banco`);
+                    }
+                }).catch(err => {
+                    debugLog('Erro no flush DB (fallback JSON):', err.message);
+                    this._saveToJson(); // Fallback
+                });
+            } else {
+                // Fallback: salvar em JSON
+                this._saveToJson();
+            }
         } catch (err) {
             console.warn('⚠️ [LEARNING-TRACKER] Erro no flush:', err.message);
+        }
+    }
+
+    /**
+     * Salvar em JSON (fallback quando banco não disponível)
+     */
+    _saveToJson() {
+        try {
+            this._ensureDataDir();
+            fs.writeFileSync(CONVERSATIONS_FILE, JSON.stringify(this.records, null, 2));
+            debugLog(`Flush JSON: ${this.records.length} registros salvos em disco`);
+        } catch (err) {
+            console.warn('⚠️ [LEARNING-TRACKER] Erro ao salvar JSON:', err.message);
         }
     }
 
