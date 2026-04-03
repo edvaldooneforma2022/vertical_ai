@@ -158,6 +158,15 @@ try {
     console.log('⚠️ [V8.0] Feature Flags não disponível:', e.message);
 }
 
+// ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
+let autoLearning = null;
+try {
+    autoLearning = require('./analytics/index');
+    console.log('✅ [V2.0] Auto-Learning System carregado');
+} catch (e) {
+    console.log('⚠️ [V2.0] Auto-Learning não disponível (não crítico):', e.message);
+}
+
 try {
     const alModule = require('./lib/audit-logger');
     auditLogger = alModule.auditLogger;
@@ -5454,6 +5463,45 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
         } catch (hashErr) {
             console.warn('⚠️ [CALENDAR-006] Erro ao gerar calendarHash (não bloqueia resposta):', hashErr.message);
+        }
+
+        // 🧠 V2.0 AUTO-LEARNING: Otimizar resposta com dados aprendidos (ADITIVO, fire-and-forget)
+        // Se auto-learning não está disponível ou falha, finalResponse fica inalterada
+        try {
+            if (autoLearning && (process.env.FEATURE_AUTO_LEARNING === 'true' ||
+                (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_AUTO_LEARNING')))) {
+                // 1) Otimizar resposta com dados aprendidos (retorna original se sem dados)
+                const optimized = autoLearning.optimizeResponse(
+                    finalResponse,
+                    inteligencias?.intencao_compra ? 'purchase' : (inteligencias?.preco ? 'pricing' : 'general'),
+                    analiseEmocional?.emocao || 'neutro',
+                    journeyStage || 'descoberta'
+                );
+                if (optimized && typeof optimized === 'string' && optimized.length > 0) {
+                    finalResponse = optimized;
+                    console.log('🧠 [AUTO-LEARNING] Resposta otimizada com dados aprendidos');
+                }
+
+                // 2) Registrar interação (fire-and-forget, NUNCA bloqueia)
+                setImmediate(() => {
+                    try {
+                        autoLearning.recordInteraction({
+                            conversationId: conversationId || 'unknown',
+                            message: message,
+                            response: finalResponse,
+                            intent: inteligencias?.intencao_compra ? 'purchase' : 'general',
+                            journeyStage: journeyStage || 'descoberta',
+                            emotion: analiseEmocional?.emocao || 'neutro',
+                            apiKey: apiKey
+                        });
+                    } catch (recErr) {
+                        console.warn('⚠️ [AUTO-LEARNING] Erro ao registrar (não crítico):', recErr.message);
+                    }
+                });
+            }
+        } catch (alErr) {
+            console.warn('⚠️ [AUTO-LEARNING] Erro na otimização (resposta original mantida):', alErr.message);
+            // Fallback: finalResponse fica inalterada, zero impacto
         }
 
         return res.json({
