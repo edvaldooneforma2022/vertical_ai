@@ -16,9 +16,10 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, '..', 'data', 'learning');
 const SCORES_FILE = path.join(DATA_DIR, 'scores.json');
 const MAX_PATTERNS = 1000;
-const RECALC_THRESHOLD = 100; // Recalcular a cada 100 novos eventos
-const RECALC_INTERVAL_MS = 3600000; // Ou a cada 1 hora
-const MIN_SAMPLES_FOR_SCORE = 3; // Mínimo de amostras para gerar score confiável
+const TEST_MODE = process.env.AUTO_LEARNING_TEST_MODE === 'true';
+const RECALC_THRESHOLD = TEST_MODE ? 5 : 100; // Test mode: recálculo a cada 5 eventos
+const RECALC_INTERVAL_MS = TEST_MODE ? 60000 : 3600000; // Test mode: 1 min; prod: 1 hora
+const MIN_SAMPLES_FOR_SCORE = TEST_MODE ? 1 : 3; // Test mode: 1 amostra basta
 const DEBUG = process.env.DEBUG_LEARNING === 'true';
 
 function debugLog(...args) {

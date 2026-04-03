@@ -159,6 +159,20 @@ try {
 }
 
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
+// Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
+if (!process.env.FEATURE_AUTO_LEARNING) {
+    process.env.FEATURE_AUTO_LEARNING = 'true';
+    console.log('🧠 [AUTO-LEARNING] FEATURE_AUTO_LEARNING ativado por default');
+}
+if (!process.env.AUTO_LEARNING_TEST_MODE) {
+    process.env.AUTO_LEARNING_TEST_MODE = 'true';
+    console.log('🧪 [AUTO-LEARNING] TEST_MODE ativado (limiares reduzidos)');
+}
+if (!process.env.DEBUG_LEARNING) {
+    process.env.DEBUG_LEARNING = 'true';
+    console.log('🔍 [AUTO-LEARNING] DEBUG_LEARNING ativado');
+}
+
 let autoLearning = null;
 try {
     autoLearning = require('./analytics/index');

@@ -15,8 +15,9 @@ const DEBUG = process.env.DEBUG_LEARNING === 'true';
 
 // Limiar mínimo para ativar otimização
 const MIN_SUCCESS_RATE = 0.3;
-const MIN_ATTEMPTS = 10;
-const MIN_PATTERNS_TO_OPTIMIZE = 50; // Precisa de 50+ padrões antes de otimizar
+const TEST_MODE = process.env.AUTO_LEARNING_TEST_MODE === 'true';
+const MIN_ATTEMPTS = TEST_MODE ? 2 : 10; // Test mode: 2 tentativas; prod: 10
+const MIN_PATTERNS_TO_OPTIMIZE = TEST_MODE ? 3 : 50; // Em test mode: 3 padrões; prod: 50
 
 function debugLog(...args) {
     if (DEBUG) {
