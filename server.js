@@ -38,6 +38,16 @@ try {
   console.warn('⚠️ [DECISION-ENGINE] Módulo não encontrado — decisão desativada.', e.message);
 }
 
+// [AUTO-INSTRUCTIONS] — geração dinâmica de instruções comportamentais por URL (modo auto only)
+let _autoInstructionsGenerator = null;
+try {
+  const _aiModule = require('./sales/auto-instructions');
+  _autoInstructionsGenerator = _aiModule.generateAutoInstructions;
+  console.log('⚡ [AUTO-INSTRUCTIONS] Módulo carregado com sucesso.');
+} catch (e) {
+  console.warn('⚠️ [AUTO-INSTRUCTIONS] Módulo não encontrado — auto-instruções desativadas.', e.message);
+}
+
 /**
  * Converte URLs brutas em botões HTML clicáveis.
  * Aplica-se a TODOS os chats, de forma universal.
@@ -4670,8 +4680,37 @@ USE estas informações para calibrar sua resposta: se ação=fechar → CTA dir
                 }
             }
 
-            // ─── BLOCO 5 — AUTO-INSTRUCTIONS (futuro, placeholder seguro) ───
-            const _autoInstructions = ''; // Reservado para Prompt 3 (auto-learning instructions)
+            // ─── BLOCO 5 — AUTO-INSTRUCTIONS (Prompt 3 — geração dinâmica por URL) ───
+            let _autoInstructions = '';
+            const _autoInstructionsActive = _promptSalesMode === 'auto' &&
+                process.env.FEATURE_AUTO_INSTRUCTIONS !== 'false' &&
+                (!featureFlags || typeof featureFlags.isEnabled !== 'function' || featureFlags.isEnabled('FEATURE_AUTO_INSTRUCTIONS'));
+
+            if (_autoInstructionsActive && _autoInstructionsGenerator) {
+                try {
+                    // Função wrapper para chamar LLM (mesma chain: Groq → OpenRouter → OpenAI)
+                    const _callLLMForInstructions = async (messages, temperature, maxTokens) => {
+                        if (process.env.GROQ_API_KEY) {
+                            try { return await callGroq(messages, temperature, maxTokens); } catch (_) {}
+                        }
+                        if (process.env.OPENROUTER_API_KEY) {
+                            try { return await callOpenRouter(messages, temperature, maxTokens); } catch (_) {}
+                        }
+                        if (process.env.OPENAI_API_KEY) {
+                            try { return await callOpenAI(messages, temperature, maxTokens); } catch (_) {}
+                        }
+                        throw new Error('Nenhum provider LLM disponível');
+                    };
+
+                    _autoInstructions = await _autoInstructionsGenerator(pageData, _callLLMForInstructions);
+                    if (_autoInstructions) {
+                        console.log(`⚡ [AUTO-INSTRUCTIONS] Instruções geradas (${_autoInstructions.length} chars)`);
+                    }
+                } catch (_aiErr) {
+                    console.warn('⚠️ [AUTO-INSTRUCTIONS] Erro na geração (prompt sem auto-instruções):', _aiErr.message);
+                    _autoInstructions = '';
+                }
+            }
 
             // ─── MONTAGEM FINAL DO SYSTEM PROMPT POR MODO ───
             if (_promptSalesMode === 'auto') {
