@@ -4465,12 +4465,244 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             ocrInfo = `📸 TEXTO DE IMAGENS: ${pageData.imagesText.slice(0, 2).join(' | ')}`;
         }
 
-        // 🎯 PROMPT: Escolher entre limpo (V2) ou superinteligente (original)
+        // ═══════════════════════════════════════════════════════════════════
+        // 🧠 PROMPT UNIVERSAL — Link Mágico (FEATURE_UNIVERSAL_PROMPT)
+        // Ordem obrigatória:
+        //   AUTO:   FULL PROMPT → DECISION → AUTO-INSTRUCTIONS → CONTEXTO
+        //   MANUAL: LIGHT PROMPT → USER INSTRUCTIONS → CONTEXTO
+        //   OFF:    CONTEXTO (sem prompt de vendas)
+        // ═══════════════════════════════════════════════════════════════════
+
+        const _useUniversalPrompt = process.env.FEATURE_UNIVERSAL_PROMPT !== 'false' &&
+            (!featureFlags || typeof featureFlags.isEnabled !== 'function' || featureFlags.isEnabled('FEATURE_UNIVERSAL_PROMPT'));
+
         let systemPrompt;
 
-        if (useCleanChat) {
-            // ===== PROMPT LIMPO V2 — Instruções Personalizadas no TOPO =====
-            systemPrompt = `${instructions ? instructions + '\n\n' : ''}CONTEXTO DA PÁGINA:
+        if (_useUniversalPrompt) {
+            // ─── Determinar salesMode da requisição ───
+            const _promptSalesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
+
+            // ─── BLOCO 1 — PROMPT UNIVERSAL FULL (modo auto) ───
+            const PROMPT_UNIVERSAL_FULL = `Você é um vendedor consultivo de alta performance.
+
+Seu objetivo:
+- Entender o usuário
+- Responder com clareza
+- Conduzir até a ação (compra, clique, contato)
+
+REGRA ABSOLUTA (ANTI-DRIFT):
+Você opera dentro de UM único contexto.
+- Existe apenas UM produto
+- Existe apenas UMA oferta
+- Existe apenas UM objetivo
+PROIBIDO: misturar produtos, inventar informações, fugir do contexto da página.
+Se faltar informação: simplifique. NUNCA invente.
+
+COMPORTAMENTO:
+- Natural, humano, direto
+- Sem linguagem robótica
+- Sem enrolação
+- Sempre com intenção de avanço
+
+ESTRATÉGIA POR INTENÇÃO:
+DÚVIDA → explicar simples, reduzir complexidade, usar exemplo prático
+INTERESSE → reforçar benefício, mostrar valor, conduzir
+OBJEÇÃO → quebrar com lógica + segurança, usar prova / garantia
+COMPRA → parar de explicar, CTA direto
+SAÍDA → segurar com curiosidade, mostrar algo que ele não viu
+
+ANTI-GENÉRICO:
+PROIBIDO: "ótima pergunta", respostas vagas, respostas padrão
+OBRIGATÓRIO: ser específico, responder direto
+
+ANTI-REPETIÇÃO:
+- Nunca repetir CTA igual
+- Variar linguagem
+- Não repetir frases
+
+PREÇO:
+Nunca responder seco. Sempre contextualizar.
+Ex: "É R$97/ano. Mas pensa: isso substitui um vendedor 24h..."
+
+CTA:
+- Se intenção de compra → CTA direto
+- Priorizar checkout
+- Nunca confundir com múltiplos caminhos
+
+ADAPTAÇÃO:
+Leigo → simples
+Avançado → direto
+
+CONTROLE DE QUALIDADE (antes de responder):
+- Está dentro do contexto?
+- Resolve a dúvida?
+- Move a conversa?
+Se não → corrija.
+
+REGRA FINAL:
+Cada resposta deve: 1) Resolver 2) Avançar 3) Aproximar da conversão
+
+NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação.
+Responda sempre em português do Brasil.`;
+
+            // ─── BLOCO 2 — PROMPT UNIVERSAL LIGHT (modo manual) ───
+            const PROMPT_UNIVERSAL_LIGHT = `Você é um assistente que respeita totalmente as instruções do usuário.
+
+REGRA PRINCIPAL:
+O usuário define o comportamento. Você NÃO deve sobrescrever isso.
+
+FUNÇÃO:
+- Evitar respostas incorretas
+- Manter coerência
+- Garantir clareza
+
+PROIBIDO:
+- Forçar venda
+- Inserir CTA agressivo
+- Mudar estratégia definida pelo usuário
+
+PERMITIDO:
+- Melhorar clareza
+- Corrigir incoerências
+- Manter contexto correto
+
+ANTI-DRIFT:
+- Nunca inventar informações
+- Nunca sair do contexto da página
+- Nunca misturar produtos
+
+ESTILO:
+- Natural
+- Objetivo
+- Sem exagero
+
+REGRA FINAL:
+Responder exatamente o que o usuário precisa SEM interferir na estratégia definida por ele.
+
+NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação.
+Responda sempre em português do Brasil.`;
+
+            // ─── BLOCO 3 — CONTEXTO SCRAPING (comum a todos os modos) ───
+            const _scrapedContext = `
+CONTEXTO DA PÁGINA:
+Título: ${pageData.title || 'Não disponível'}
+Descrição: ${pageData.description || 'Não disponível'}
+${priceInfo ? priceInfo : ''}
+${bonusInfo ? bonusInfo : ''}
+${contactInfo ? contactInfo : ''}
+${ocrInfo ? ocrInfo : ''}
+URL: ${pageData.url || 'Não disponível'}
+
+CONTEÚDO DO PRODUTO/SERVIÇO:
+${pageContentSummary || 'Conteúdo não disponível'}
+
+CONHECIMENTO ESPECÍFICO (BASE DE CONHECIMENTO):
+${kbContext || 'Nenhum dado específico cadastrado na base de conhecimento.'}
+${faqContext ? '\nINFORMAÇÕES FAQ:\n' + faqContext : ''}`;
+
+            // ─── BLOCO 4 — DECISION ENGINE (modo auto only) ───
+            let _decisionContextStr = '';
+            if (_promptSalesMode === 'auto') {
+                try {
+                    const _deActive = process.env.FEATURE_DECISION_ENGINE !== 'false' &&
+                        (!featureFlags || typeof featureFlags.isEnabled !== 'function' || featureFlags.isEnabled('FEATURE_DECISION_ENGINE'));
+
+                    if (_deActive) {
+                        const _msgCount = (Array.isArray(conversationHistory) ? conversationHistory.length : 0) + 1;
+                        const _convId   = (pageData && pageData.conversationId) || null;
+                        let _promptDecision = null;
+
+                        // Tentar V2 primeiro
+                        const _v2Active = process.env.FEATURE_DECISION_ENGINE_V2 === 'true' ||
+                            (featureFlags && typeof featureFlags.isEnabled === 'function' && featureFlags.isEnabled('FEATURE_DECISION_ENGINE_V2'));
+
+                        if (_v2Active && _decideStrategyV2) {
+                            try {
+                                _promptDecision = _decideStrategyV2({
+                                    userMessage:         cleanUserMessage || '',
+                                    journeyStage:        journeyStage,
+                                    messageCount:        _msgCount,
+                                    conversationId:      _convId,
+                                    extractedData:       pageData || {},
+                                    conversationHistory: conversationHistory || []
+                                });
+                            } catch (_v2Err) {
+                                console.warn('⚠️ [UNIVERSAL-PROMPT] Decision Engine V2 erro (fallback V1):', _v2Err.message);
+                                _promptDecision = null;
+                            }
+                        }
+
+                        // Fallback V1
+                        if (!_promptDecision && _decideStrategy) {
+                            try {
+                                _promptDecision = _decideStrategy({
+                                    userMessage:    cleanUserMessage || '',
+                                    journeyStage:   journeyStage,
+                                    messageCount:   _msgCount,
+                                    conversationId: _convId,
+                                    extractedData:  pageData || {}
+                                });
+                            } catch (_v1Err) {
+                                console.warn('⚠️ [UNIVERSAL-PROMPT] Decision Engine V1 erro:', _v1Err.message);
+                                _promptDecision = null;
+                            }
+                        }
+
+                        // Formatar decisão como string para o prompt
+                        if (_promptDecision) {
+                            _decisionContextStr = `
+DECISÃO ESTRATÉGICA (automática):
+- Intenção detectada: ${_promptDecision.intent || 'indefinida'}
+- Ação recomendada: ${_promptDecision.action || _promptDecision.strategy || 'educar'}
+- Urgência: ${_promptDecision.urgency || _promptDecision.pressure || 'low'}
+- Próximo passo: ${_promptDecision.nextStep || 'pergunta'}
+${_promptDecision.context && _promptDecision.context.benefit ? '- Benefício-chave: ' + _promptDecision.context.benefit : ''}
+${_promptDecision.context && _promptDecision.context.price ? '- Preço detectado: ' + _promptDecision.context.price : ''}
+${_promptDecision.context && _promptDecision.context.productName ? '- Produto: ' + _promptDecision.context.productName : ''}
+USE estas informações para calibrar sua resposta: se ação=fechar → CTA direto. Se ação=educar → explicar. Se ação=quebrar_objecao → usar prova/garantia. Se ação=reengajar → curiosidade.`;
+
+                            console.log(`🧠 [UNIVERSAL-PROMPT] Decision Engine: intent=${_promptDecision.intent} action=${_promptDecision.action || _promptDecision.strategy} urgency=${_promptDecision.urgency || _promptDecision.pressure}`);
+                        }
+                    }
+                } catch (_deErr) {
+                    console.warn('⚠️ [UNIVERSAL-PROMPT] Erro geral no Decision Engine (prompt sem decisão):', _deErr.message);
+                    _decisionContextStr = '';
+                }
+            }
+
+            // ─── BLOCO 5 — AUTO-INSTRUCTIONS (futuro, placeholder seguro) ───
+            const _autoInstructions = ''; // Reservado para Prompt 3 (auto-learning instructions)
+
+            // ─── MONTAGEM FINAL DO SYSTEM PROMPT POR MODO ───
+            if (_promptSalesMode === 'auto') {
+                // ORDEM: FULL PROMPT → DECISION → AUTO-INSTRUCTIONS → CONTEXTO
+                systemPrompt = PROMPT_UNIVERSAL_FULL +
+                    '\n' + _decisionContextStr +
+                    (_autoInstructions ? '\n' + _autoInstructions : '') +
+                    '\n' + _scrapedContext;
+
+                console.log(`🧠 [UNIVERSAL-PROMPT] Modo AUTO ativado (${systemPrompt.length} chars, decision=${_decisionContextStr ? 'SIM' : 'NÃO'})`);
+
+            } else if (_promptSalesMode === 'manual') {
+                // ORDEM: LIGHT PROMPT → USER INSTRUCTIONS → CONTEXTO
+                const _userInstructions = instructions || '';
+                systemPrompt = PROMPT_UNIVERSAL_LIGHT +
+                    (_userInstructions ? '\n\nINSTRUÇÕES DO USUÁRIO:\n' + _userInstructions : '') +
+                    '\n' + _scrapedContext;
+
+                console.log(`🎛️ [UNIVERSAL-PROMPT] Modo MANUAL ativado (${systemPrompt.length} chars, userInstructions=${_userInstructions ? 'SIM' : 'NÃO'})`);
+
+            } else {
+                // MODO OFF — ORDEM: CONTEXTO (sem prompt de vendas)
+                systemPrompt = _scrapedContext.trim();
+
+                console.log(`⚫ [UNIVERSAL-PROMPT] Modo OFF ativado (${systemPrompt.length} chars)`);
+            }
+
+        } else {
+            // ═══ FALLBACK: Comportamento anterior (CLEAN_CHAT_V2 vs Superinteligente) ═══
+            if (useCleanChat) {
+                systemPrompt = `${instructions ? instructions + '\n\n' : ''}CONTEXTO DA PÁGINA:
 Título: ${pageData.title || 'Não disponível'}
 Descrição: ${pageData.description || 'Não disponível'}
 ${bonusInfo}
@@ -4485,88 +4717,39 @@ REGRAS OBRIGATÓRIAS:
 - Vá direto ao ponto sem floreio
 - NUNCA repita informação já dada na conversa
 - NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
-            console.log(`🧹 [CLEAN_CHAT_V2] Prompt limpo ativado (${systemPrompt.length} chars)`);
-        } else {
-            // ===== PROMPT ORIGINAL SUPERINTELIGENTE (fallback) =====
-            systemPrompt = `Você é um assistente de vendas SUPERINTELIGENTE com capacidades humanas avançadas.
-
+                console.log(`🧹 [CLEAN_CHAT_V2] Prompt limpo ativado (fallback, ${systemPrompt.length} chars)`);
+            } else {
+                systemPrompt = `Você é um assistente de vendas SUPERINTELIGENTE com capacidades humanas avançadas.
 🧠 CAPACIDADES COGNITIVAS AVANÇADAS:
 - Detecção de sarcasmo, ironia e nuances emocionais
-- Compreensão de múltiplas intenções em uma única mensagem  
+- Compreensão de múltiplas intenções em uma única mensagem
 - Memória conversacional de longo prazo
 - Adaptação de personalidade conforme contexto
 - Respostas empáticas e contextualizadas
-
-🎭 ESTADO EMOCIONAL DETECTADO: ${estadoEmocional.emocaoPrimaria.toUpperCase()} 
+🎭 ESTADO EMOCIONAL DETECTADO: ${estadoEmocional.emocaoPrimaria.toUpperCase()}
 ${estadoEmocional.emocaoSecundaria ? `+ ${estadoEmocional.emocaoSecundaria.toUpperCase()}` : ''}
-${estadoEmocional.sarcasmo ? '🎭 SARCASMO DETECTADO' : ''}
-${estadoEmocional.urgencia ? '🚨 URGÊNCIA IDENTIFICADA' : ''}
-
 🎯 JORNADA DO CLIENTE: ${journeyStage.toUpperCase()}
-
-DESCOBERTA: Cliente buscando informações básicas
-
-NEGOCIAÇÃO: Cliente interessado em preços e condições
-
-FIDELIZAÇÃO: Cliente com dúvidas sobre suporte e uso
-
 📊 CONTEXTO DA PÁGINA:
-
 Título: ${pageData.title || 'Não disponível'}
-
 Descrição: ${pageData.description || 'Não disponível'}
-
 ${priceInfo}
-
 ${bonusInfo}
-
 ${contactInfo}
-
 ${ocrInfo}
-
 URL: ${pageData.url || 'Não disponível'}
-
 📄 CONTEÚDO COMPLETO DO PRODUTO/SERVIÇO:
 ${pageContentSummary || 'Conteúdo não disponível'}
-
 📚 CONHECIMENTO ESPECÍFICO (BASE DE CONHECIMENTO):
 ${kbContext || 'Nenhum dado específico cadastrado na base de conhecimento.'}
-
 🧩 INTENÇÕES IDENTIFICADAS: ${estadoEmocional.intencoesMultiplas.join(', ') || 'Nenhuma específica'}
-
-🎨 DIRETRIZES DE RESPOSTA SUPERINTELIGENTE:
-
-Adapte sua personalidade ao estado emocional (${estadoEmocional.emocaoPrimaria})
-
-Responda às ${estadoEmocional.intencoesMultiplas.length} intenções detectadas
-
-Use linguagem natural com elementos conversacionais ("hmm", "veja bem", "então")
-
-Seja genuíno e humano - admita limitações quando necessário
-
-Mantenha coerência com histórico conversacional
-
-Use humor contextual quando apropriado (${estadoEmocional.sarcasmo ? 'especial cuidado com sarcasmo' : 'discreto'})
-
-${estadoEmocional.urgencia ? 'PRIORIDADE MÁXIMA - resposta rápida e direta' : 'Ritmo natural de conversa'}
-
 Instruções personalizadas: ${instructions}
-
-🧠 RESPONDA em português como um humano superinteligente, mostrando:
-
-Empatia contextualizada
-
-Personalidade consistente
-
-Memória de interações
-
-Naturalidade conversacional
-
-Inteligência emocional
-
+🧠 RESPONDA em português do Brasil.
 NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
+                console.log(`🤖 [SUPERINTELIGENTE] Prompt original ativado (fallback, ${systemPrompt.length} chars)`);
+            }
         }
 
+        // ─── MONTAGEM DO ARRAY DE MESSAGES (user message SEMPRE no final) ───
         const messages = [
             {
                 role: "system",
