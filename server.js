@@ -246,6 +246,25 @@ try {
 
 console.log('✅ Módulos V8.0 carregados (com fallbacks)');
 
+// ===== CAMADA DE OTIMIZAÇÃO DE CONVERSÃO V1.0 (OPT-IN via env vars) =====
+// Controle granular: cada módulo ativado APENAS quando env var = 'true' no Render
+const FEATURE_SMART_CTA = process.env.FEATURE_SMART_CTA === 'true';
+const FEATURE_ANTI_DROPOFF = process.env.FEATURE_ANTI_DROPOFF === 'true';
+const FEATURE_CONVERSION_OPTIMIZER = process.env.FEATURE_CONVERSION_OPTIMIZER === 'true';
+const FEATURE_CLOSING_SCRIPTS = process.env.FEATURE_CLOSING_SCRIPTS === 'true';
+
+let _ctaEngine = null;
+let _conversionOptimizer = null;
+let _closingScripts = null;
+let _antiDropoff = null;
+
+try { _ctaEngine = require('./sales/cta-engine'); } catch (_) { /* silencioso */ }
+try { _conversionOptimizer = require('./sales/conversion-optimizer'); } catch (_) { /* silencioso */ }
+try { _closingScripts = require('./sales/closing-scripts'); } catch (_) { /* silencioso */ }
+try { _antiDropoff = require('./sales/anti-dropoff'); } catch (_) { /* silencioso */ }
+
+console.log(`✅ [CONVERSION-LAYER] Módulos carregados | CTA=${FEATURE_SMART_CTA} DROPOFF=${FEATURE_ANTI_DROPOFF} OPTIMIZER=${FEATURE_CONVERSION_OPTIMIZER} CLOSING=${FEATURE_CLOSING_SCRIPTS}`);
+
 // ===== MÓDULOS V8.0 REFATORADOS (Feature Flag: FEATURE_MODULAR_AI) =====
 let aiSystemsModular = null;
 let leadsModular = null;
@@ -5384,6 +5403,78 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
 
         let finalResponse = aiResponse;
 
+        // 🔥 [CONVERSION-LAYER] Pipeline de Otimização — SOMENTE modo auto + feature flags
+        try {
+            if (_reqSalesMode === 'auto') {
+
+                // 1. CTA Engine — selecionar CTA contextual
+                if (FEATURE_SMART_CTA && _ctaEngine) {
+                    try {
+                        const _ctaResult = _ctaEngine.getCTA({
+                            intent: '',
+                            action: '',
+                            context: processedPageData || {},
+                            conversationId: conversationId || null
+                        });
+                        if (_ctaResult) {
+                            finalResponse = _ctaEngine.applyCTA(finalResponse, _ctaResult) || finalResponse;
+                            console.log(`[CTA_ENGINE] Aplicado: type=${_ctaResult.type} intent=${_ctaResult.intent}`);
+                        }
+                    } catch (_ctaErr) {
+                        console.warn('[CTA_ENGINE] Erro (fallback):', _ctaErr.message);
+                    }
+                }
+
+                // 2. Conversion Optimizer — otimizar estrutura da resposta
+                if (FEATURE_CONVERSION_OPTIMIZER && _conversionOptimizer) {
+                    try {
+                        const _optimized = _conversionOptimizer.optimizeByPerformance({
+                            response: finalResponse,
+                            intent: '',
+                            historicalData: {}
+                        });
+                        finalResponse = _optimized || finalResponse;
+                        if (_optimized && _optimized !== aiResponse) {
+                            console.log('[CONVERSION_OPTIMIZER] Resposta otimizada');
+                        }
+                    } catch (_optErr) {
+                        console.warn('[CONVERSION_OPTIMIZER] Erro (fallback):', _optErr.message);
+                    }
+                }
+
+                // 3. Closing Scripts — frases de fechamento naturais
+                if (FEATURE_CLOSING_SCRIPTS && _closingScripts) {
+                    try {
+                        const _closed = _closingScripts.applyClosingLayer({
+                            response: finalResponse,
+                            intent: '',
+                            action: '',
+                            conversationId: conversationId || null
+                        });
+                        finalResponse = _closed || finalResponse;
+                        if (_closed && _closed !== finalResponse) {
+                            console.log('[CLOSING] Script de fechamento aplicado');
+                        }
+                    } catch (_clsErr) {
+                        console.warn('[CLOSING] Erro (fallback):', _clsErr.message);
+                    }
+                }
+
+                // 4. Anti-Dropoff — retenção leve (SEMPRE ÚLTIMO)
+                if (FEATURE_ANTI_DROPOFF && _antiDropoff) {
+                    try {
+                        const _retained = _antiDropoff.applyAntiDropoff(finalResponse, message, conversationId || null);
+                        finalResponse = _retained || finalResponse;
+                    } catch (_adErr) {
+                        console.warn('[ANTI_DROPOFF] Erro (fallback):', _adErr.message);
+                    }
+                }
+
+            }
+        } catch (_colErr) {
+            console.warn('⚠️ [CONVERSION-LAYER] Erro geral (resposta original mantida):', _colErr.message);
+        }
+
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
 
@@ -5740,6 +5831,89 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         } catch (alErr) {
             console.warn('⚠️ [AUTO-LEARNING] Erro na otimização (resposta original mantida):', alErr.message);
             // Fallback: finalResponse fica inalterada, zero impacto
+        }
+
+        // 🔥 [CONVERSION-LAYER] Pipeline de Otimização — SOMENTE modo auto + feature flags
+        try {
+            const _intSalesMode = (processedPageData && processedPageData.salesMode) ||
+                req.body?.salesMode || req.body?.sales_mode || process.env.SALES_LAYER_MODE || 'auto';
+
+            if (_intSalesMode === 'auto') {
+
+                // Extrair intent/action do contexto do endpoint inteligente
+                const _intIntent = inteligencias?.intencao_compra ? 'comprar' :
+                    (inteligencias?.objecao ? 'objecao' :
+                    (inteligencias?.sair ? 'sair' :
+                    (inteligencias?.curioso ? 'curioso' : '')));
+
+                // 1. CTA Engine — selecionar CTA contextual
+                if (FEATURE_SMART_CTA && _ctaEngine) {
+                    try {
+                        const _ctaResult = _ctaEngine.getCTA({
+                            intent: _intIntent,
+                            action: '',
+                            context: processedPageData || {},
+                            conversationId: conversationId || null
+                        });
+                        if (_ctaResult) {
+                            finalResponse = _ctaEngine.applyCTA(finalResponse, _ctaResult) || finalResponse;
+                            console.log(`[CTA_ENGINE] Aplicado: type=${_ctaResult.type} intent=${_ctaResult.intent}`);
+                        }
+                    } catch (_ctaErr) {
+                        console.warn('[CTA_ENGINE] Erro (fallback):', _ctaErr.message);
+                    }
+                }
+
+                // 2. Conversion Optimizer — otimizar estrutura da resposta
+                if (FEATURE_CONVERSION_OPTIMIZER && _conversionOptimizer) {
+                    try {
+                        const _preOptimized = finalResponse;
+                        const _optimized = _conversionOptimizer.optimizeByPerformance({
+                            response: finalResponse,
+                            intent: _intIntent,
+                            historicalData: {}
+                        });
+                        finalResponse = _optimized || finalResponse;
+                        if (_optimized && _optimized !== _preOptimized) {
+                            console.log('[CONVERSION_OPTIMIZER] Resposta otimizada');
+                        }
+                    } catch (_optErr) {
+                        console.warn('[CONVERSION_OPTIMIZER] Erro (fallback):', _optErr.message);
+                    }
+                }
+
+                // 3. Closing Scripts — frases de fechamento naturais
+                if (FEATURE_CLOSING_SCRIPTS && _closingScripts) {
+                    try {
+                        const _preClosed = finalResponse;
+                        const _closed = _closingScripts.applyClosingLayer({
+                            response: finalResponse,
+                            intent: _intIntent,
+                            action: '',
+                            conversationId: conversationId || null
+                        });
+                        finalResponse = _closed || finalResponse;
+                        if (_closed && _closed !== _preClosed) {
+                            console.log('[CLOSING] Script de fechamento aplicado');
+                        }
+                    } catch (_clsErr) {
+                        console.warn('[CLOSING] Erro (fallback):', _clsErr.message);
+                    }
+                }
+
+                // 4. Anti-Dropoff — retenção leve (SEMPRE ÚLTIMO)
+                if (FEATURE_ANTI_DROPOFF && _antiDropoff) {
+                    try {
+                        const _retained = _antiDropoff.applyAntiDropoff(finalResponse, message, conversationId || null);
+                        finalResponse = _retained || finalResponse;
+                    } catch (_adErr) {
+                        console.warn('[ANTI_DROPOFF] Erro (fallback):', _adErr.message);
+                    }
+                }
+
+            }
+        } catch (_colErr) {
+            console.warn('⚠️ [CONVERSION-LAYER] Erro geral (resposta original mantida):', _colErr.message);
         }
 
         return res.json({
