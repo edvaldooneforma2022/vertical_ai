@@ -265,6 +265,18 @@ try { _antiDropoff = require('./sales/anti-dropoff'); } catch (_) { /* silencios
 
 console.log(`✅ [CONVERSION-LAYER] Módulos carregados | CTA=${FEATURE_SMART_CTA} DROPOFF=${FEATURE_ANTI_DROPOFF} OPTIMIZER=${FEATURE_CONVERSION_OPTIMIZER} CLOSING=${FEATURE_CLOSING_SCRIPTS}`);
 
+// ===== 🔒 CONTEXT LOCK SYSTEM + 🧠 V2 BEHAVIOR ENGINE (FEATURE_CONTEXT_LOCK) =====
+// Ativado por padrão (opt-out via FEATURE_CONTEXT_LOCK=false)
+const FEATURE_CONTEXT_LOCK = process.env.FEATURE_CONTEXT_LOCK !== 'false';
+
+let _contextLock = null;
+let _behaviorEngineV2 = null;
+
+try { _contextLock = require('./sales/context-lock'); } catch (_) { /* silencioso */ }
+try { _behaviorEngineV2 = require('./sales/behavior-engine-v2'); } catch (_) { /* silencioso */ }
+
+console.log(`✅ [CONTEXT-LOCK] Módulo carregado=${!!_contextLock} | BehaviorV2=${!!_behaviorEngineV2} | Flag=${FEATURE_CONTEXT_LOCK}`);
+
 // ===== MÓDULOS V8.0 REFATORADOS (Feature Flag: FEATURE_MODULAR_AI) =====
 let aiSystemsModular = null;
 let leadsModular = null;
@@ -4731,18 +4743,71 @@ USE estas informações para calibrar sua resposta: se ação=fechar → CTA dir
                 }
             }
 
+            // ─── 🔒 CONTEXT LOCK + 🧠 BEHAVIOR ENGINE V2 (modo auto only) ───
+            let _contextLockBlock = '';
+            let _contextHierarchyBlock = '';
+            let _behaviorV2Block = '';
+            let _contextStateBlock = '';
+            let _antiContradictionBlock = '';
+
+            if (FEATURE_CONTEXT_LOCK && _promptSalesMode === 'auto') {
+                try {
+                    // 🔒 Context Lock — Identidade fixa do produto
+                    if (_contextLock) {
+                        const _identity = _contextLock.extractContextIdentity(pageData);
+                        _contextLockBlock = _contextLock.buildContextLockBlock(_identity);
+                        _contextHierarchyBlock = _contextLock.buildContextHierarchyBlock();
+                        _antiContradictionBlock = _contextLock.buildAntiContradictionBlock();
+
+                        // 🧠 Estado do usuário
+                        const _userState = _contextLock.detectUserState(cleanUserMessage);
+                        _contextStateBlock = _contextLock.buildContextStateBlock(_userState);
+
+                        console.log(`🔒 [CONTEXT-LOCK] Ativado | Produto=${_identity.productName ? _identity.productName.substring(0, 40) : 'N/A'} | Estado=${_userState} | Confiança=${Math.round(_identity.confidence * 100)}%`);
+                    }
+
+                    // 🧠 Behavior Engine V2 — Motor de conversão ativo
+                    if (_behaviorEngineV2) {
+                        _behaviorV2Block = _behaviorEngineV2.getBehaviorEngineV2();
+                        console.log(`🧠 [BEHAVIOR-ENGINE-V2] Ativado (${_behaviorV2Block.length} chars)`);
+                    }
+                } catch (_clErr) {
+                    console.warn('⚠️ [CONTEXT-LOCK] Erro geral (fallback sem context lock):', _clErr.message);
+                    _contextLockBlock = '';
+                    _contextHierarchyBlock = '';
+                    _behaviorV2Block = '';
+                    _contextStateBlock = '';
+                    _antiContradictionBlock = '';
+                }
+            }
+
             // ─── MONTAGEM FINAL DO SYSTEM PROMPT POR MODO ───
             if (_promptSalesMode === 'auto') {
-                // ORDEM: FULL PROMPT → DECISION → AUTO-INSTRUCTIONS → CONTEXTO
+                // ORDEM OTIMIZADA (V2 FINAL):
+                // 1. FULL PROMPT (quem sou)
+                // 2. CONTEXT LOCK (identidade do produto — CRÍTICO primeiro)
+                // 3. HIERARCHY (prioridade de contexto)
+                // 4. BEHAVIOR ENGINE V2 (como me comporto)
+                // 5. STATE (estado do usuário)
+                // 6. DECISION (estratégia)
+                // 7. AUTO-INSTRUCTIONS (adaptação por nicho)
+                // 8. ANTI-CONTRADICTION (proteção final)
+                // 9. SCRAPED CONTEXT (dados brutos por último)
                 systemPrompt = PROMPT_UNIVERSAL_FULL +
+                    (_contextLockBlock ? '\n' + _contextLockBlock : '') +
+                    (_contextHierarchyBlock ? '\n' + _contextHierarchyBlock : '') +
+                    (_behaviorV2Block ? '\n' + _behaviorV2Block : '') +
+                    (_contextStateBlock ? '\n' + _contextStateBlock : '') +
                     '\n' + _decisionContextStr +
                     (_autoInstructions ? '\n' + _autoInstructions : '') +
+                    (_antiContradictionBlock ? '\n' + _antiContradictionBlock : '') +
                     '\n' + _scrapedContext;
 
-                console.log(`🧠 [UNIVERSAL-PROMPT] Modo AUTO ativado (${systemPrompt.length} chars, decision=${_decisionContextStr ? 'SIM' : 'NÃO'})`);
+                console.log(`🧠 [UNIVERSAL-PROMPT] Modo AUTO ativado (${systemPrompt.length} chars, decision=${_decisionContextStr ? 'SIM' : 'NÃO'}, contextLock=${_contextLockBlock ? 'SIM' : 'NÃO'}, behaviorV2=${_behaviorV2Block ? 'SIM' : 'NÃO'})`);
 
             } else if (_promptSalesMode === 'manual') {
                 // ORDEM: LIGHT PROMPT → USER INSTRUCTIONS → CONTEXTO
+                // ⚠️ SEM V2, SEM Context Lock agressivo
                 const _userInstructions = instructions || '';
                 systemPrompt = PROMPT_UNIVERSAL_LIGHT +
                     (_userInstructions ? '\n\nINSTRUÇÕES DO USUÁRIO:\n' + _userInstructions : '') +
@@ -4752,6 +4817,7 @@ USE estas informações para calibrar sua resposta: se ação=fechar → CTA dir
 
             } else {
                 // MODO OFF — ORDEM: CONTEXTO (sem prompt de vendas)
+                // ⚠️ SEM V2, SEM Context Lock, SEM prompts
                 systemPrompt = _scrapedContext.trim();
 
                 console.log(`⚫ [UNIVERSAL-PROMPT] Modo OFF ativado (${systemPrompt.length} chars)`);
