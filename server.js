@@ -3075,7 +3075,7 @@ async function requireApiKey(req, res, next) {
     // 1. Rotas Públicas (Bypass)
     const publicPaths = [
         "/", "/validate-api-key", "/chat.html", "/chatbot",
-        "/api/system/status", "/health", "/api/webhooks/hotmart",
+        "/api/system/status", "/health", "/healthz", "/api/webhooks/hotmart",
         "/api/webhooks/hotmart/status",
         "/api/capture-lead",
         "/api/process-chat-inteligente",
@@ -3133,6 +3133,116 @@ app.get("/health", (req, res) => {
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     });
+});
+
+// ===== V9 BLINDADA: Health Check Profissional (/healthz) =====
+app.get("/healthz", async (req, res) => {
+    try {
+        const { db, USE_POSTGRES } = require('./database');
+        
+        // 1. DB Latency
+        let dbStatus = { status: 'unknown', latencyMs: -1 };
+        try {
+            const dbStart = Date.now();
+            await db.query('SELECT 1');
+            dbStatus = { status: 'up', latencyMs: Date.now() - dbStart, type: USE_POSTGRES ? 'postgresql' : 'sqlite' };
+        } catch (dbErr) {
+            dbStatus = { status: 'down', error: dbErr.message };
+        }
+
+        // 2. Memória do processo
+        const memUsage = process.memoryUsage();
+        const memory = {
+            rss: Math.round(memUsage.rss / 1024 / 1024) + 'MB',
+            heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB',
+            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB',
+            external: Math.round(memUsage.external / 1024 / 1024) + 'MB'
+        };
+
+        // 3. Event loop lag
+        let eventLoopLag = -1;
+        try {
+            const lagStart = Date.now();
+            await new Promise(resolve => setImmediate(resolve));
+            eventLoopLag = Date.now() - lagStart;
+        } catch (_) {}
+
+        // 4. Cache stats
+        let cacheStatus = { status: 'unknown' };
+        try {
+            const { CacheManager } = require('./cache');
+            const stats = await CacheManager.getCacheStats();
+            cacheStatus = { status: 'up', ...stats };
+        } catch (_) {
+            cacheStatus = { status: 'not-available' };
+        }
+
+        // 5. LLM Cache stats
+        let llmCacheStatus = { status: 'unknown' };
+        try {
+            const { llmOptimizer } = require('./llm-optimizer');
+            llmCacheStatus = { status: 'up', ...llmOptimizer.getCacheStats() };
+        } catch (_) {
+            llmCacheStatus = { status: 'not-available' };
+        }
+
+        // 6. Rate Limiter stats
+        let rateLimiterStats = { status: 'unknown' };
+        try {
+            if (rateLimiterAdvanced) {
+                rateLimiterStats = { status: 'up', ...rateLimiterAdvanced.getStats() };
+            }
+        } catch (_) {}
+
+        // 7. Feature flags
+        let activeFlags = [];
+        try {
+            if (featureFlags) {
+                activeFlags = featureFlags.getEnabledFlags();
+            }
+        } catch (_) {}
+
+        // 8. Circuit Breaker stats
+        let circuitBreakerStats = {};
+        try {
+            const cb = require('./lib/circuit-breaker');
+            circuitBreakerStats = {
+                llm: cb.llmCircuitBreaker.stats(),
+                extraction: cb.extractionCircuitBreaker.stats(),
+                puppeteer: cb.puppeteerCircuitBreaker.stats()
+            };
+        } catch (_) {}
+
+        const overallStatus = dbStatus.status === 'up' ? 'ok' : 'degraded';
+
+        res.status(overallStatus === 'ok' ? 200 : 503).json({
+            status: overallStatus,
+            version: 'v9',
+            uptime: Math.round(process.uptime()),
+            uptimeHuman: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m`,
+            timestamp: new Date().toISOString(),
+            node: process.version,
+            memory,
+            eventLoopLagMs: eventLoopLag,
+            services: {
+                database: dbStatus,
+                cache: cacheStatus,
+                llmCache: llmCacheStatus,
+                rateLimiter: rateLimiterStats,
+                circuitBreakers: circuitBreakerStats
+            },
+            featureFlags: activeFlags
+        });
+    } catch (err) {
+        // Fallback: nunca falhar no healthz
+        res.status(500).json({
+            status: 'error',
+            version: 'v9',
+            error: err.message,
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
 // ===== Static Files with API Key Protection =====
@@ -7677,5 +7787,18 @@ try {
         console.log('───────────────────────────────────────────');
         console.log(`  🛠️ Admin V8.0: /admin/v8/status`);
         console.log('═══════════════════════════════════════════');
+
+        // ===== V9.0 BLINDADA =====
+        console.log('');
+        console.log('═══════════════════════════════════════════');
+        console.log('  🚀 LINK MÁGICO V9.0 — BLINDADA');
+        console.log('═══════════════════════════════════════════');
+        console.log('  🏥 Health V9: /healthz (DB, Mem, EventLoop)');
+        console.log('  🚦 Rate Limiter V9: whitelist + stress + tiers');
+        console.log('  ⚡ Circuit Breaker: LLM/Puppeteer/Extração');
+        console.log('  🧠 Cache LLM V9: TTL 5min + normalização');
+        console.log('  📊 Logs: JSON estruturado');
+        console.log('═══════════════════════════════════════════');
     });
+
 })();

@@ -1,12 +1,14 @@
 /**
- * 🎯 SISTEMA DE OTIMIZAÇÃO DE CUSTOS LLM - Link Mágico
+ * 🎯 SISTEMA DE OTIMIZAÇÃO DE CUSTOS LLM - Link Mágico V9
  * Gerencia chamadas de API para minimizar custos
  * 
  * Estratégias:
- * - Cache de respostas similares
+ * - Cache de respostas similares (V9: TTL 5min + normalização)
  * - Fallback inteligente entre provedores
  * - Modelos menores para perguntas simples
  * - Monitoramento de tokens
+ * - V9: Log estruturado [CACHE_HIT] [CACHE_MISS]
+ * - V9: Normalização de mensagem/intenção para melhor hit rate
  */
 
 const crypto = require('crypto');
@@ -148,13 +150,34 @@ class ResponseCache {
         this.cache = new Map();
         this.maxCacheSize = 1000;
         this.similarityThreshold = 0.85;
+        // V9: TTL de 5 minutos (configurável via ENV)
+        this.ttlMs = parseInt(process.env.LLM_CACHE_TTL_MS || String(5 * 60 * 1000), 10);
+        this.stats = { hits: 0, misses: 0 };
+
+        // V9: Cleanup automático a cada 2 minutos
+        this._cleanupInterval = setInterval(() => this._cleanupExpired(), 2 * 60 * 1000);
+        if (this._cleanupInterval.unref) this._cleanupInterval.unref();
     }
 
     /**
-     * Gerar hash da pergunta
+     * V9: Normalizar mensagem para melhor hit rate
+     * Remove acentos, pontuação extra, espaços duplicados
+     */
+    _normalizeMessage(text) {
+        return text
+            .toLowerCase()
+            .trim()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+            .replace(/[^a-z0-9\s]/g, ' ')  // remove pontuação
+            .replace(/\s+/g, ' ')           // colapsa espaços
+            .trim();
+    }
+
+    /**
+     * Gerar hash da pergunta (V9: com normalização avançada)
      */
     generateHash(question) {
-        const normalized = question.toLowerCase().trim();
+        const normalized = this._normalizeMessage(question);
         return crypto.createHash('md5').update(normalized).digest('hex');
     }
 
@@ -206,33 +229,48 @@ class ResponseCache {
      * Buscar resposta similar no cache
      */
     findSimilar(question, chatbotId) {
-        const normalizedQuestion = question.toLowerCase().trim();
+        const normalizedQuestion = this._normalizeMessage(question);
         
         // Busca exata primeiro
         const exactHash = this.generateHash(question);
-        const exactMatch = this.cache.get(`${chatbotId}:${exactHash}`);
+        const exactKey = `${chatbotId}:${exactHash}`;
+        const exactMatch = this.cache.get(exactKey);
         
         if (exactMatch) {
-            console.log('✅ Cache HIT (exato)');
-            return exactMatch.response;
+            // V9: Verificar TTL
+            if (Date.now() - exactMatch.timestamp > this.ttlMs) {
+                this.cache.delete(exactKey);
+                // Expirado, continua busca
+            } else {
+                this.stats.hits++;
+                exactMatch.hits++;
+                this._logCacheEvent('CACHE_HIT', { type: 'exact', chatbotId, questionLength: question.length });
+                return exactMatch.response;
+            }
         }
 
-        // Busca por similaridade
+        // Busca por similaridade (V9: com normalização)
         for (const [key, value] of this.cache.entries()) {
             if (!key.startsWith(`${chatbotId}:`)) continue;
             
+            // V9: Verificar TTL antes de comparar
+            if (Date.now() - value.timestamp > this.ttlMs) continue;
+            
             const similarity = this.calculateSimilarity(
                 normalizedQuestion,
-                value.question.toLowerCase().trim()
+                this._normalizeMessage(value.question)
             );
 
             if (similarity >= this.similarityThreshold) {
-                console.log(`✅ Cache HIT (similaridade: ${(similarity * 100).toFixed(1)}%)`);
+                this.stats.hits++;
+                value.hits++;
+                this._logCacheEvent('CACHE_HIT', { type: 'similar', similarity: (similarity * 100).toFixed(1), chatbotId });
                 return value.response;
             }
         }
 
-        console.log('❌ Cache MISS');
+        this.stats.misses++;
+        this._logCacheEvent('CACHE_MISS', { chatbotId, questionLength: question.length });
         return null;
     }
 
@@ -263,9 +301,16 @@ class ResponseCache {
      */
     getStats() {
         return {
+            version: 'v9',
             size: this.cache.size,
             maxSize: this.maxCacheSize,
-            utilizationPercent: (this.cache.size / this.maxCacheSize * 100).toFixed(1)
+            ttlMs: this.ttlMs,
+            utilizationPercent: (this.cache.size / this.maxCacheSize * 100).toFixed(1),
+            hits: this.stats.hits,
+            misses: this.stats.misses,
+            hitRate: (this.stats.hits + this.stats.misses) > 0
+                ? ((this.stats.hits / (this.stats.hits + this.stats.misses)) * 100).toFixed(1)
+                : '0.0'
         };
     }
 
@@ -274,6 +319,37 @@ class ResponseCache {
      */
     clear() {
         this.cache.clear();
+        this.stats = { hits: 0, misses: 0 };
+    }
+
+    /**
+     * V9: Cleanup de entries expirados
+     */
+    _cleanupExpired() {
+        const now = Date.now();
+        let cleaned = 0;
+        for (const [key, value] of this.cache.entries()) {
+            if (now - value.timestamp > this.ttlMs) {
+                this.cache.delete(key);
+                cleaned++;
+            }
+        }
+        if (cleaned > 0) {
+            this._logCacheEvent('CACHE_CLEANUP', { cleaned, remaining: this.cache.size });
+        }
+    }
+
+    /**
+     * V9: Log estruturado JSON para cache
+     */
+    _logCacheEvent(event, data) {
+        try {
+            console.log(JSON.stringify({
+                event: `[${event}]`,
+                ...data,
+                timestamp: new Date().toISOString()
+            }));
+        } catch (_) { /* nunca quebrar por log */ }
     }
 }
 

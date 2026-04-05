@@ -290,7 +290,13 @@ async function initializeDatabase() {
         `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS status ${USE_POSTGRES ? 'TEXT' : 'TEXT'} DEFAULT 'novo'`,
         `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS metadata ${USE_POSTGRES ? 'JSONB DEFAULT \'{}\'': 'TEXT DEFAULT \'{}\''} `,
         `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS conversations ${USE_POSTGRES ? 'JSONB DEFAULT \'[]\'': 'TEXT DEFAULT \'[]\''} `,
-        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP`
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP`,
+
+        // ═══════════════════════════════════════════════════════
+        // V9 BLINDADA — ÍNDICES DE PERFORMANCE ADICIONAIS
+        // ═══════════════════════════════════════════════════════
+        `CREATE INDEX IF NOT EXISTS idx_tenant_leads_created ON tenant_leads(created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_tenant_leads_status ON tenant_leads(status)`,
     ];
 
     for (const migration of migrations) {
