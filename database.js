@@ -278,7 +278,19 @@ async function initializeDatabase() {
         `CREATE INDEX IF NOT EXISTS idx_learning_conv_api_key ON learning_conversations(api_key)`,
         `CREATE INDEX IF NOT EXISTS idx_learning_conv_created ON learning_conversations(created_at)`,
         `CREATE INDEX IF NOT EXISTS idx_learning_scores_intent ON learning_scores(intent)`,
-        `CREATE INDEX IF NOT EXISTS idx_learning_patterns_intent ON learning_patterns(intent)`
+        `CREATE INDEX IF NOT EXISTS idx_learning_patterns_intent ON learning_patterns(intent)`,
+
+        // ========================================
+        // 🛠️ AUTO-HEAL: Colunas que podem não existir em bancos antigos
+        // Corrige: "column X of relation tenant_leads does not exist"
+        // ========================================
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS message ${USE_POSTGRES ? 'TEXT' : 'TEXT'}`,
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS url_origem ${USE_POSTGRES ? 'TEXT' : 'TEXT'}`,
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS source ${USE_POSTGRES ? 'TEXT' : 'TEXT'} DEFAULT 'widget'`,
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS status ${USE_POSTGRES ? 'TEXT' : 'TEXT'} DEFAULT 'novo'`,
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS metadata ${USE_POSTGRES ? 'JSONB DEFAULT \'{}\'': 'TEXT DEFAULT \'{}\''} `,
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS conversations ${USE_POSTGRES ? 'JSONB DEFAULT \'[]\'': 'TEXT DEFAULT \'[]\''} `,
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP`
     ];
 
     for (const migration of migrations) {
