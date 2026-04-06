@@ -170,6 +170,18 @@ try {
     console.log('⚠️ [V8.0] Feature Flags não disponível:', e.message);
 }
 
+// ═══════════════════════════════════════════════════════
+// 🧠 V10 ORCHESTRATOR — Camada Única de Decisão Final
+// ═══════════════════════════════════════════════════════
+let orchestrator = null;
+try {
+    const Orchestrator = require('./lib/orchestrator');
+    orchestrator = new Orchestrator({ featureFlags });
+    console.log('✅ [V10.0] Orchestrator carregado');
+} catch (e) {
+    console.log('⚠️ [V10.0] Orchestrator não disponível (não crítico):', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
 if (!process.env.FEATURE_AUTO_LEARNING) {
@@ -5581,6 +5593,24 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
 
         let finalResponse = aiResponse;
 
+        // 🧠 [V10 DECISION-CORE] Detectar intenção para o Orchestrator (ADITIVO, try/catch)
+        let _chatUniversalDecision = null;
+        try {
+            if (_reqSalesMode === 'auto' && typeof buildDecision === 'function') {
+                _chatUniversalDecision = buildDecision(message);
+                if (_chatUniversalDecision) {
+                    console.log(`🧠 [DECISION_CORE@chat-universal] intent="${_chatUniversalDecision.intent}" override=${_chatUniversalDecision.shouldOverride}`);
+                }
+            }
+        } catch (_dcErr) {
+            console.warn('⚠️ [DECISION_CORE@chat-universal] Erro (sem impacto):', _dcErr.message);
+            _chatUniversalDecision = null;
+        }
+
+        // Coletar dados de CTA e Closing para o Orchestrator
+        let _cuCtaData = null;
+        let _cuClosingData = null;
+
         // 🔥 [CONVERSION-LAYER] Pipeline de Otimização — SOMENTE modo auto + feature flags
         try {
             if (_reqSalesMode === 'auto') {
@@ -5589,12 +5619,13 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                 if (FEATURE_SMART_CTA && _ctaEngine) {
                     try {
                         const _ctaResult = _ctaEngine.getCTA({
-                            intent: '',
+                            intent: _chatUniversalDecision?.intent || '',
                             action: '',
                             context: processedPageData || {},
                             conversationId: conversationId || null
                         });
                         if (_ctaResult) {
+                            _cuCtaData = _ctaResult; // Guardar para Orchestrator
                             finalResponse = _ctaEngine.applyCTA(finalResponse, _ctaResult) || finalResponse;
                             console.log(`[CTA_ENGINE] Aplicado: type=${_ctaResult.type} intent=${_ctaResult.intent}`);
                         }
@@ -5608,7 +5639,7 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                     try {
                         const _optimized = _conversionOptimizer.optimizeByPerformance({
                             response: finalResponse,
-                            intent: '',
+                            intent: _chatUniversalDecision?.intent || '',
                             historicalData: {}
                         });
                         finalResponse = _optimized || finalResponse;
@@ -5625,10 +5656,13 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                     try {
                         const _closed = _closingScripts.applyClosingLayer({
                             response: finalResponse,
-                            intent: '',
+                            intent: _chatUniversalDecision?.intent || '',
                             action: '',
                             conversationId: conversationId || null
                         });
+                        if (_closed && _closed !== finalResponse) {
+                            _cuClosingData = { text: _closed }; // Guardar para Orchestrator
+                        }
                         finalResponse = _closed || finalResponse;
                         if (_closed && _closed !== finalResponse) {
                             console.log('[CLOSING] Script de fechamento aplicado');
@@ -5651,6 +5685,28 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             }
         } catch (_colErr) {
             console.warn('⚠️ [CONVERSION-LAYER] Erro geral (resposta original mantida):', _colErr.message);
+        }
+
+        // 🧠 [V10 ORCHESTRATOR] — Decisão Final Unificada
+        try {
+            if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
+                const orchResult = orchestrator.apply({
+                    response: aiResponse,  // resposta IA ORIGINAL (pré-camadas)
+                    context: processedPageData || {},
+                    decision: _chatUniversalDecision,
+                    ctaData: _cuCtaData,
+                    closingData: _cuClosingData,
+                    mode: _reqSalesMode
+                });
+
+                if (orchResult && orchResult.orchestrated) {
+                    finalResponse = orchResult.text;
+                    console.log(`🧠 [ORCHESTRATOR_V10@chat-universal] Aplicado: reason=${orchResult.reason}`);
+                }
+            }
+        } catch (_orchErr) {
+            console.error('⚠️ [ORCHESTRATOR_V10@chat-universal] Erro (resposta mantida):', _orchErr.message);
+            // Fallback: finalResponse fica inalterada
         }
 
         // 💳 Billing: registrar uso de mensagem
@@ -6159,15 +6215,23 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
 
         // 🧠 [DECISION-CORE-V9] — Orquestração Determinística Final
         // Garante que links de checkout e passos de suporte nunca faltem em momentos críticos.
+        let _intDecision = null;
         try {
+            const _intSalesModeDC = (processedPageData && processedPageData.salesMode) || 
+                          req.body?.salesMode || req.body?.sales_mode || 
+                          process.env.SALES_LAYER_MODE || 'auto';
+
+            // Extrair decision para uso pelo Orchestrator
+            if (typeof buildDecision === 'function') {
+                _intDecision = buildDecision(message);
+            }
+
             const decisionResult = applyDecisionCoreSafe({
                 message: message, // user input
                 response: finalResponse, // base processed response
                 context: processedPageData,
                 tenantConfig: req.cliente,
-                salesMode: (processedPageData && processedPageData.salesMode) || 
-                          req.body?.salesMode || req.body?.sales_mode || 
-                          process.env.SALES_LAYER_MODE || 'auto'
+                salesMode: _intSalesModeDC
             });
             
             if (decisionResult.overridden) {
@@ -6176,6 +6240,34 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
         } catch (decErr) {
             console.error('⚠️ [DECISION_CORE_FAILSAFE] Erro na aplicação:', decErr.message);
+        }
+
+        // 🧠 [V10 ORCHESTRATOR] — Decisão Final Unificada
+        try {
+            if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
+                const _intSalesModeOrch = (processedPageData && processedPageData.salesMode) || 
+                          req.body?.salesMode || req.body?.sales_mode || 
+                          process.env.SALES_LAYER_MODE || 'auto';
+
+                // Coletar resposta IA original (antes das camadas)
+                // A variável 'respostaIA' ou 'finalResponse' original está disponível no escopo
+                const orchResult = orchestrator.apply({
+                    response: finalResponse,  // resposta processada por todas as camadas
+                    context: processedPageData || {},
+                    decision: _intDecision,
+                    ctaData: null,   // CTA já foi aplicado inline no finalResponse
+                    closingData: null, // Closing já foi aplicado inline no finalResponse
+                    mode: _intSalesModeOrch
+                });
+
+                if (orchResult && orchResult.orchestrated) {
+                    finalResponse = orchResult.text;
+                    console.log(`🧠 [ORCHESTRATOR_V10@inteligente] Aplicado: reason=${orchResult.reason}`);
+                }
+            }
+        } catch (_orchErr) {
+            console.error('⚠️ [ORCHESTRATOR_V10@inteligente] Erro (resposta mantida):', _orchErr.message);
+            // Fallback: finalResponse fica inalterada
         }
 
         return res.json({
