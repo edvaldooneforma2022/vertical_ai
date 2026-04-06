@@ -1688,7 +1688,7 @@
                 var keywordsLow    = ['saiba', 'detalhes', 'ver mais', 'sobre', 'contato', 'blog'];
 
                 // Domínios de plataformas de pagamento (bonus alto)
-                var paymentDomains = ['hotmart', 'kiwify', 'eduzz', 'monetizze', 'pay.', 'checkout.', 'mercadopago', 'pagar.me', 'stripe', 'paypal'];
+                var paymentDomains = ['hotmart', 'kiwify', 'eduzz', 'monetizze', 'pay.', 'checkout.', 'mercadopago', 'pagar.me', 'stripe', 'paypal', 'braip', 'herospark'];
 
                 function scoreElement(el) {
                     var score = 0;

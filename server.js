@@ -4747,7 +4747,8 @@ Ex: "É R$97/ano. Mas pensa: isso substitui um vendedor 24h..."
 
 CTA:
 - Se intenção de compra → CTA direto
-- Se existe LINK DE CHECKOUT/COMPRA no contexto, use ESSE link (NÃO use a URL da página como link de compra)
+- Se existe LINK DE CHECKOUT/COMPRA no contexto, use OBRIGATORIAMENTE ESSE link exato nas respostas (NÃO use a URL da página como link de compra — ela é apenas referência, NÃO é link de pagamento)
+- Quando o cliente pedir link de pagamento, compra, checkout: responda com o LINK DE CHECKOUT/COMPRA exatamente como fornecido
 - Nunca confundir com múltiplos caminhos
 
 ADAPTAÇÃO:
@@ -4812,8 +4813,9 @@ ${priceInfo ? priceInfo : ''}
 ${bonusInfo ? bonusInfo : ''}
 ${contactInfo ? contactInfo : ''}
 ${ocrInfo ? ocrInfo : ''}
-URL: ${pageData.url || 'Não disponível'}
-${pageData.checkoutLink ? `🔗 LINK DE CHECKOUT/COMPRA: ${pageData.checkoutLink}` : ''}
+URL da página: ${pageData.url || 'Não disponível'}
+${pageData.checkoutLink ? `🔗🔗🔗 LINK DE CHECKOUT/COMPRA (USE ESTE PARA VENDA): ${pageData.checkoutLink}
+⚠️ REGRA OBRIGATÓRIA: Quando o cliente quiser comprar ou pedir link de pagamento, use EXCLUSIVAMENTE o link acima. A URL da página NÃO é link de pagamento.` : ''}
 
 CONTEÚDO DO PRODUTO/SERVIÇO:
 ${pageContentSummary || 'Conteúdo não disponível'}
@@ -5069,8 +5071,10 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         let llmCacheHit = false;
 
         // SAFE PATCH - LLM-OPT-001: Verificar cache antes de chamar IA
+        // 🔗 [V9.3.2] Bypass cache quando checkoutLink disponível — garante resposta fresca com link correto
+        const _hasCheckoutForCache = pageData && pageData.checkoutLink;
         try {
-            if (llmOptimizer && (chatbotId || apiKey)) {
+            if (!_hasCheckoutForCache && llmOptimizer && (chatbotId || apiKey)) {
                 const cacheKey = chatbotId || apiKey;
                 const cached = llmOptimizer.responseCache.findSimilar(cleanUserMessage, cacheKey);
                 if (cached) {
@@ -5080,6 +5084,8 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
                     llmOptimizer.trackUsage(cacheKey, 'cache', 0, 0);
                     console.log(`⚡ [LLM-OPT] Cache HIT para: "${cleanUserMessage.substring(0, 40)}..."`);
                 }
+            } else if (_hasCheckoutForCache) {
+                console.log(`🔗 [LLM-OPT] Cache BYPASS — checkoutLink presente, forçando resposta fresca`);
             }
         } catch (cacheErr) {
             console.warn('⚠️ [LLM-OPT] Erro no cache check (ignorado):', cacheErr.message);
@@ -5904,9 +5910,16 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         if (!hasContent && targetUrl) {
             console.log(`🔄 [WIDGET FIX] PageData incompleto detectado. Iniciando extração para: ${targetUrl}`);
             try {
+                // 🔒 V9.3.2 FIX-1: Salvar checkoutLink do widget ANTES do spread
+                const _widgetCheckoutPreserve = processedPageData?.checkoutLink || null;
                 const extractionResult = await extractPageData(targetUrl);
-                // Mesclar com o que já vein (ex: instructions, robotName)
-                processedPageData = { ...processedPageData, ...extractionResult };
+                // Mesclar: extraction como base, widget como override (preserva campos do widget)
+                processedPageData = { ...extractionResult, ...processedPageData };
+                // 🔒 V9.3.2: Garantir restauração do checkoutLink do widget (prioridade máxima)
+                if (_widgetCheckoutPreserve) {
+                    processedPageData.checkoutLink = _widgetCheckoutPreserve;
+                    console.log('[V9.3.2-FIX1] ✅ checkoutLink do widget preservado após merge:', _widgetCheckoutPreserve.substring(0, 80));
+                }
             } catch (extractErr) {
                 console.error("❌ Erro na extração automática do widget:", extractErr);
                 // Continua com o que tem para não quebrar
@@ -5922,10 +5935,9 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             if (_autoCheckoutEnabled2) {
                 const _intWidgetCheckout = req.body?.pageData?.checkoutLink || req.body?.context?.checkoutLink || null;
                 if (_intWidgetCheckout && processedPageData) {
-                    if (!processedPageData.checkoutLink) {
-                        processedPageData.checkoutLink = _intWidgetCheckout;
-                        console.log('[AUTO-CHECKOUT@inteligente] ✅ Link recebido do widget:', _intWidgetCheckout.substring(0, 80));
-                    }
+                    // 🔒 V9.3.2 FIX-2: Widget SEMPRE tem prioridade máxima (conforme link-resolver.js)
+                    processedPageData.checkoutLink = _intWidgetCheckout;
+                    console.log('[AUTO-CHECKOUT@inteligente] ✅ Link do widget (prioridade máx):', _intWidgetCheckout.substring(0, 80));
                 }
             }
         } catch(_ckErr) { console.warn('[AUTO-CHECKOUT@inteligente] Erro (silencioso):', _ckErr.message); }
