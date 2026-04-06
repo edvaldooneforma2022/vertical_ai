@@ -768,13 +768,41 @@
             sendBtn.disabled = true;
             typing.classList.add('lm-active');
 
+            // 🔍 V9.1: Auto-detect checkout link from page
+            var _detectedCheckout = null;
+            try {
+                var _allEls = Array.from(document.querySelectorAll('a, button'));
+                var _kwHigh = ['comprar','buy','checkout','pagar','finalizar','adquirir','assinar'];
+                var _kwMed  = ['carrinho','cart','quero','garantir','inscrever'];
+                var _kwLow  = ['saiba','detalhes','ver mais','sobre','contato','blog'];
+                var _payDom = ['hotmart','kiwify','eduzz','monetizze','pay.','checkout.','mercadopago','pagar.me','stripe','paypal'];
+                var _scored = _allEls.map(function(el) {
+                    var sc = 0, t = (el.innerText||'').toLowerCase(), h = (el.href||'').toLowerCase();
+                    _kwHigh.forEach(function(k){if(t.includes(k)||h.includes(k))sc+=50;});
+                    _kwMed.forEach(function(k){if(t.includes(k)||h.includes(k))sc+=20;});
+                    _kwLow.forEach(function(k){if(t.includes(k))sc-=10;});
+                    _payDom.forEach(function(d){if(h.includes(d))sc+=60;});
+                    if(h.startsWith('http'))sc+=10;
+                    if(h.includes('#')&&!h.includes('http'))sc-=30;
+                    if(!h||h==='javascript:void(0)')sc-=50;
+                    return {score:sc, href:el.href||null};
+                }).filter(function(i){return i.href&&i.score>0;}).sort(function(a,b){return b.score-a.score;});
+                if (_scored.length) {
+                    _detectedCheckout = _scored[0].href;
+                    console.log('[SMART-CHECKOUT-V2] Melhor link:', _detectedCheckout, 'score:', _scored[0].score);
+                }
+            } catch(_chkErr) { console.warn('[SMART-CHECKOUT-V2] erro:', _chkErr.message); }
+
             try {
                 const response = await fetch(apiBase + '/api/process-chat-inteligente', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: message,
-                        pageData: { url: salesUrl },
+                        pageData: {
+                            url: salesUrl,
+                            checkoutLink: _detectedCheckout  // 🔥 V9.1
+                        },
                         robotName: robotName,
                         instructions: instructions,
                         conversationId: conversationId,

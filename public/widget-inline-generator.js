@@ -619,7 +619,7 @@ function generateModernWidgetScript(config) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: message,
-                    pageData: { url: config.salesUrl },
+                    pageData: { url: config.salesUrl, checkoutLink: (function(){try{var els=Array.from(document.querySelectorAll('a,button'));var kH=['comprar','buy','checkout','pagar','finalizar'];var pD=['hotmart','kiwify','eduzz','monetizze','pay.','checkout.','mercadopago','stripe','paypal'];var sc=els.map(function(e){var s=0,t=(e.innerText||'').toLowerCase(),h=(e.href||'').toLowerCase();kH.forEach(function(k){if(t.includes(k)||h.includes(k))s+=50;});pD.forEach(function(d){if(h.includes(d))s+=60;});if(h.startsWith('http'))s+=10;return{score:s,href:e.href||null};}).filter(function(i){return i.href&&i.score>0;}).sort(function(a,b){return b.score-a.score;});return sc.length?sc[0].href:null;}catch(_){return null;}})() },
                     robotName: config.robotName,
                     instructions: config.instructions,
                     conversationId: conversationId,

@@ -5584,6 +5584,19 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                 processedPageData.salesPreset = _reqSalesPreset || null;
             }
         } catch(_spErr) { console.warn('[SALESMODE-FLOW] Erro ao injetar em processedPageData:', _spErr.message); }
+
+        // 🔍 [V9.1 AUTO-CHECKOUT] Preservar checkoutLink do widget no processedPageData
+        // Protegido por feature flag FEATURE_AUTO_CHECKOUT_DETECTION
+        try {
+            const _autoCheckoutEnabled = featureFlags && featureFlags.isEnabled('FEATURE_AUTO_CHECKOUT_DETECTION');
+            if (_autoCheckoutEnabled) {
+                const _widgetCheckout = req.body?.pageData?.checkoutLink || req.body?.context?.checkoutLink || null;
+                if (_widgetCheckout && processedPageData) {
+                    processedPageData.checkoutLink = _widgetCheckout;
+                    console.log('[AUTO-CHECKOUT] ✅ Link recebido do widget:', _widgetCheckout.substring(0, 80));
+                }
+            }
+        } catch(_ckErr) { console.warn('[AUTO-CHECKOUT] Erro (silencioso):', _ckErr.message); }
         const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
 
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
@@ -5844,6 +5857,21 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         } else if (!processedPageData && targetUrl) {
             processedPageData = await extractPageData(targetUrl);
         }
+
+        // 🔍 [V9.1 AUTO-CHECKOUT] Preservar checkoutLink do widget no processedPageData
+        // Protegido por feature flag FEATURE_AUTO_CHECKOUT_DETECTION
+        try {
+            const _autoCheckoutEnabled2 = featureFlags && featureFlags.isEnabled('FEATURE_AUTO_CHECKOUT_DETECTION');
+            if (_autoCheckoutEnabled2) {
+                const _intWidgetCheckout = req.body?.pageData?.checkoutLink || req.body?.context?.checkoutLink || null;
+                if (_intWidgetCheckout && processedPageData) {
+                    if (!processedPageData.checkoutLink) {
+                        processedPageData.checkoutLink = _intWidgetCheckout;
+                        console.log('[AUTO-CHECKOUT@inteligente] ✅ Link recebido do widget:', _intWidgetCheckout.substring(0, 80));
+                    }
+                }
+            }
+        } catch(_ckErr) { console.warn('[AUTO-CHECKOUT@inteligente] Erro (silencioso):', _ckErr.message); }
 
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);

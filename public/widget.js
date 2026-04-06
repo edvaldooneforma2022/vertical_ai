@@ -1673,10 +1673,99 @@
             }
         },
 
+        // ═══════════════════════════════════════════════════════
+        // 🔍 V9.1/V9.2 — SMART CHECKOUT DETECTION
+        // Analisa todos os links/botões da página e retorna o melhor candidato a checkout
+        // ═══════════════════════════════════════════════════════
+        extractBestCheckoutLink: function () {
+            try {
+                var elements = [];
+                try { elements = Array.from(document.querySelectorAll('a, button')); } catch(_) { return null; }
+                if (!elements.length) return null;
+
+                var keywordsHigh   = ['comprar', 'buy', 'checkout', 'pagar', 'finalizar', 'adquirir', 'assinar'];
+                var keywordsMedium = ['carrinho', 'cart', 'quero', 'garantir', 'inscrever', 'matricular'];
+                var keywordsLow    = ['saiba', 'detalhes', 'ver mais', 'sobre', 'contato', 'blog'];
+
+                // Domínios de plataformas de pagamento (bonus alto)
+                var paymentDomains = ['hotmart', 'kiwify', 'eduzz', 'monetizze', 'pay.', 'checkout.', 'mercadopago', 'pagar.me', 'stripe', 'paypal'];
+
+                function scoreElement(el) {
+                    var score = 0;
+                    var text = (el.innerText || el.textContent || '').toLowerCase().trim();
+                    var href = (el.href || '').toLowerCase();
+
+                    // Peso por palavra-chave no texto/href
+                    keywordsHigh.forEach(function(k) { if (text.includes(k) || href.includes(k)) score += 50; });
+                    keywordsMedium.forEach(function(k) { if (text.includes(k) || href.includes(k)) score += 20; });
+                    keywordsLow.forEach(function(k) { if (text.includes(k)) score -= 10; });
+
+                    // Bonus: link para plataforma de pagamento
+                    paymentDomains.forEach(function(d) { if (href.includes(d)) score += 60; });
+
+                    // Link válido HTTP
+                    if (href.startsWith('http')) score += 10;
+
+                    // Penalizar anchors internos
+                    if (href.includes('#') && !href.includes('http')) score -= 30;
+
+                    // Penalizar links vazios ou auto-referentes
+                    if (!href || href === 'javascript:void(0)') score -= 50;
+                    try { if (href === window.location.href) score -= 30; } catch(_) {}
+
+                    // Bonus: botão com atributo data-checkout
+                    try { if (el.getAttribute('data-checkout')) score += 40; } catch(_) {}
+
+                    // Bonus: onclick com URL de pagamento
+                    try {
+                        var onclick = el.getAttribute('onclick') || '';
+                        if (onclick) {
+                            paymentDomains.forEach(function(d) { if (onclick.includes(d)) score += 50; });
+                        }
+                    } catch(_) {}
+
+                    return score;
+                }
+
+                var scored = elements.map(function(el) {
+                    var href = el.href || null;
+                    // Tentar extrair URL de onclick se não tem href
+                    if (!href) {
+                        try {
+                            var onclick = el.getAttribute('onclick') || '';
+                            var match = onclick.match(/https?:\/\/[^\s'"]+/);
+                            if (match) href = match[0];
+                        } catch(_) {}
+                    }
+                    return { el: el, score: scoreElement(el), href: href };
+                }).filter(function(item) { return item.href && item.score > 0; });
+
+                if (!scored.length) return null;
+
+                scored.sort(function(a, b) { return b.score - a.score; });
+
+                var best = scored[0];
+                console.log('[SMART-CHECKOUT] Melhor link:', best.href, 'score:', best.score);
+                if (scored.length > 1) {
+                    console.log('[SMART-CHECKOUT] Top 3:', scored.slice(0, 3).map(function(s) { return s.href + ' (' + s.score + ')'; }));
+                }
+
+                return best.href;
+
+            } catch (err) {
+                console.warn('[SMART-CHECKOUT] Erro na detecção (fallback: null):', err.message || err);
+                return null;
+            }
+        },
+
         // Enhanced API call with retry logic
         callAPI: function (message, retryCount) {
             var self = this;
             retryCount = retryCount || 0;
+
+            // 🔍 V9.1: Auto-detect checkout link from page
+            var detectedCheckoutLink = null;
+            try { detectedCheckoutLink = this.extractBestCheckoutLink(); } catch(_) {}
 
             var payload = {
                 message: message,
@@ -1686,7 +1775,10 @@
                 // SAFE PATCH - CAL-V4-001: Adicionar pageData para que o servidor detecte contexto
                 // corretamente (incluindo intent de agendamento). Sem pageData, o Decision Engine
                 // não injeta [CALENDAR_WIDGET] na resposta. Widget-v2 e link curto já enviam isso.
-                pageData: { url: this.config.salesUrl },
+                pageData: {
+                    url: this.config.salesUrl,
+                    checkoutLink: detectedCheckoutLink  // 🔥 V9.1: checkout auto-detectado
+                },
                 conversationId: this.conversationId,
                 // SAFE PATCH - LEAD-005: Include lead data in API call
                 leadId: this.leadId || null,
