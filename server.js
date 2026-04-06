@@ -162,6 +162,8 @@ let enhancedSentiment = null;
 
 try {
     const ffModule = require('./lib/feature-flags');
+    const { buildDecision } = require('./lib/decision-core');
+    const { resolveCheckoutLink } = require('./lib/link-resolver');
     featureFlags = ffModule.featureFlags;
     console.log('✅ [V8.0] Feature Flags carregado');
 } catch (e) {
@@ -5678,6 +5680,69 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
 });
 
 // ===== 🎯 ENDPOINT SUPERINTELIGENTE - /api/process-chat-inteligente =====
+/**
+ * 💣 applyDecisionCoreSafe — V9 SAAS SAFE
+ * Interceptador determinístico para garantir ações críticas.
+ * REFORÇA a IA com o elemento de ação correto (Link/Suporte).
+ */
+function applyDecisionCoreSafe({
+  message,
+  response,
+  context,
+  tenantConfig,
+  salesMode
+}) {
+  try {
+    // 1. Respeitar modo de vendas (bypass se não for auto)
+    if (salesMode === 'manual' || salesMode === 'off') {
+      return { text: response, overridden: false };
+    }
+
+    // 2. Feature flag
+    if (!featureFlags || !featureFlags.isEnabled('FEATURE_DECISION_CORE')) {
+      return { text: response, overridden: false };
+    }
+
+    // 3. Detecção de intenção
+    const decision = buildDecision(message);
+    
+    if (!decision.shouldOverride) {
+      return { text: response, overridden: false };
+    }
+
+    console.log(`🧠 [DECISION_CORE] Intent="${decision.intent}" detected. Applying override logic...`);
+
+    // 🎯 COMPRA: Injetar link se necessário
+    if (decision.intent === 'buy') {
+      const link = resolveCheckoutLink({ context, tenantConfig });
+
+      if (link && !response.includes(link)) {
+        return {
+          text: `${response}\n\n👉 Para finalizar com segurança, use este link:\n${link}`,
+          overridden: true
+        };
+      }
+    }
+
+    // 🎯 PÓS-VENDA: Injetar guia de suporte
+    if (decision.intent === 'post_sale') {
+      const supportMsg = "Perfeito, como você já comprou, me diga o que você já recebeu que eu te guio no próximo passo.";
+      if (!response.includes("já comprou") && !response.includes("guio no próximo")) {
+        return {
+          text: `${response}\n\n👉 ${supportMsg}`,
+          overridden: true
+        };
+      }
+    }
+
+    return { text: response, overridden: false };
+
+  } catch (err) {
+    console.error('⚠️ [DECISION_CORE_ERROR]', err.message);
+    return { text: response, overridden: false };
+  }
+}
+
 app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].filter(Boolean), async (req, res) => {
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
@@ -6090,6 +6155,27 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
         } catch (_colErr) {
             console.warn('⚠️ [CONVERSION-LAYER] Erro geral (resposta original mantida):', _colErr.message);
+        }
+
+        // 🧠 [DECISION-CORE-V9] — Orquestração Determinística Final
+        // Garante que links de checkout e passos de suporte nunca faltem em momentos críticos.
+        try {
+            const decisionResult = applyDecisionCoreSafe({
+                message: message, // user input
+                response: finalResponse, // base processed response
+                context: processedPageData,
+                tenantConfig: req.cliente,
+                salesMode: (processedPageData && processedPageData.salesMode) || 
+                          req.body?.salesMode || req.body?.sales_mode || 
+                          process.env.SALES_LAYER_MODE || 'auto'
+            });
+            
+            if (decisionResult.overridden) {
+                finalResponse = decisionResult.text;
+                console.log(`🛡️ [DECISION_CORE] Resposta reforçada com decisão determinística.`);
+            }
+        } catch (decErr) {
+            console.error('⚠️ [DECISION_CORE_FAILSAFE] Erro na aplicação:', decErr.message);
         }
 
         return res.json({
