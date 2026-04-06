@@ -4213,6 +4213,45 @@ async function extractPageData(url) {
                 // 🎯 EXTRAIR CONTATOS
                 extractedData.contatos = sistemaContatosAprimorado.extrairContatosAprimorado($);
 
+                // 🔗 [V9.3 CHECKOUT-SERVER] Extração server-side de checkout link via heurística
+                // Protegido por feature flag + try/catch — zero impacto se falhar
+                try {
+                    const _ckServerEnabled = !featureFlags || !featureFlags.isEnabled || featureFlags.isEnabled('FEATURE_AUTO_CHECKOUT_DETECTION');
+                    if (_ckServerEnabled) {
+                        const _ckKeywordsHigh = ['comprar', 'buy', 'checkout', 'pagar', 'finalizar', 'adquirir', 'assinar'];
+                        const _ckKeywordsMed  = ['carrinho', 'cart', 'quero', 'garantir', 'inscrever', 'matricular'];
+                        const _ckPayDomains   = ['hotmart', 'kiwify', 'eduzz', 'monetizze', 'pay.', 'checkout.', 'mercadopago', 'pagar.me', 'stripe', 'paypal'];
+
+                        let _ckBestLink = null;
+                        let _ckBestScore = 0;
+
+                        $('a[href]').each((_, el) => {
+                            const _href = ($(el).attr('href') || '').trim();
+                            const _text = ($(el).text() || '').toLowerCase().trim();
+                            if (!_href.startsWith('http')) return;
+                            const _hrefLower = _href.toLowerCase();
+
+                            let _sc = 0;
+                            _ckKeywordsHigh.forEach(k => { if (_text.includes(k) || _hrefLower.includes(k)) _sc += 50; });
+                            _ckKeywordsMed.forEach(k =>  { if (_text.includes(k) || _hrefLower.includes(k)) _sc += 20; });
+                            _ckPayDomains.forEach(d =>   { if (_hrefLower.includes(d)) _sc += 60; });
+
+                            // Penalizar links internos/âncora
+                            if (_hrefLower.includes('#') && !_hrefLower.startsWith('http')) _sc -= 30;
+                            try { if (_href === url) _sc -= 30; } catch(_) {}
+
+                            if (_sc > _ckBestScore) { _ckBestScore = _sc; _ckBestLink = _href; }
+                        });
+
+                        if (_ckBestLink && _ckBestScore >= 50) {
+                            extractedData.checkoutLink = _ckBestLink;
+                            logger.info(`🔗 [CHECKOUT-SERVER] Link detectado server-side: ${_ckBestLink.substring(0, 80)} (score: ${_ckBestScore})`);
+                        }
+                    }
+                } catch (_ckServerErr) {
+                    logger.warn('⚠️ [CHECKOUT-SERVER] Erro na detecção (sem impacto):', _ckServerErr.message);
+                }
+
                 logger.info(`Cheerio extraction completed for ${url}`);
                 analytics.successfulExtractions++;
             } catch (cheerioError) {
@@ -4630,6 +4669,23 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             ocrInfo = `📸 TEXTO DE IMAGENS: ${pageData.imagesText.slice(0, 2).join(' | ')}`;
         }
 
+        // 🔗 [V9.3 CHECKOUT-PRE-PROMPT] Resolver checkout link ANTES da montagem do prompt
+        // Se o pageData já tem checkoutLink (do widget ou extração server-side), mantém.
+        // Senão, tenta resolver via link-resolver (configuração do tenant, env var, etc).
+        // Protegido por feature flag + try/catch — zero impacto se falhar.
+        try {
+            const _ckPreEnabled = !featureFlags || !featureFlags.isEnabled || featureFlags.isEnabled('FEATURE_AUTO_CHECKOUT_DETECTION');
+            if (_ckPreEnabled && pageData && !pageData.checkoutLink) {
+                const _resolved = typeof resolveCheckoutLink === 'function' 
+                    ? resolveCheckoutLink({ context: pageData, tenantConfig: null }) 
+                    : null;
+                if (_resolved) {
+                    pageData.checkoutLink = _resolved;
+                    console.log('[CHECKOUT-PRE-PROMPT] ✅ Link resolvido antes do prompt:', _resolved.substring(0, 80));
+                }
+            }
+        } catch (_ckPreErr) { console.warn('[CHECKOUT-PRE-PROMPT] Erro (sem impacto):', _ckPreErr.message); }
+
         // ═══════════════════════════════════════════════════════════════════
         // 🧠 PROMPT UNIVERSAL — Link Mágico (FEATURE_UNIVERSAL_PROMPT)
         // Ordem obrigatória:
@@ -4691,7 +4747,7 @@ Ex: "É R$97/ano. Mas pensa: isso substitui um vendedor 24h..."
 
 CTA:
 - Se intenção de compra → CTA direto
-- Priorizar checkout
+- Se existe LINK DE CHECKOUT/COMPRA no contexto, use ESSE link (NÃO use a URL da página como link de compra)
 - Nunca confundir com múltiplos caminhos
 
 ADAPTAÇÃO:
@@ -4757,6 +4813,7 @@ ${bonusInfo ? bonusInfo : ''}
 ${contactInfo ? contactInfo : ''}
 ${ocrInfo ? ocrInfo : ''}
 URL: ${pageData.url || 'Não disponível'}
+${pageData.checkoutLink ? `🔗 LINK DE CHECKOUT/COMPRA: ${pageData.checkoutLink}` : ''}
 
 CONTEÚDO DO PRODUTO/SERVIÇO:
 ${pageContentSummary || 'Conteúdo não disponível'}
