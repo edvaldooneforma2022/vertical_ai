@@ -4146,6 +4146,35 @@ async function extractPageData(url) {
             }
         };
 
+        // 🔥 [V9.5] Resolver redirects (Hotmart, Kiwify, etc)
+        // Se a URL é de plataforma de pagamento, usar como checkout direto
+        try {
+            const _v95Url = (url || '').toLowerCase();
+            if (_v95Url.includes('hotmart.com') || _v95Url.includes('go.hotmart.com')) {
+                extractedData.checkoutLink = url;
+                extractedData.checkoutSource = 'hotmart-direct';
+                console.log('[CHECKOUT] 🔥 Hotmart direto detectado:', url.substring(0, 80));
+            } else if (_v95Url.includes('kiwify.com.br')) {
+                extractedData.checkoutLink = url;
+                extractedData.checkoutSource = 'kiwify-direct';
+                console.log('[CHECKOUT] 🔥 Kiwify direto detectado:', url.substring(0, 80));
+            } else if (_v95Url.includes('eduzz.com')) {
+                extractedData.checkoutLink = url;
+                extractedData.checkoutSource = 'eduzz-direct';
+                console.log('[CHECKOUT] 🔥 Eduzz direto detectado:', url.substring(0, 80));
+            } else if (_v95Url.includes('monetizze.com.br')) {
+                extractedData.checkoutLink = url;
+                extractedData.checkoutSource = 'monetizze-direct';
+                console.log('[CHECKOUT] 🔥 Monetizze direto detectado:', url.substring(0, 80));
+            } else if (_v95Url.includes('braip.com')) {
+                extractedData.checkoutLink = url;
+                extractedData.checkoutSource = 'braip-direct';
+                console.log('[CHECKOUT] 🔥 Braip direto detectado:', url.substring(0, 80));
+            }
+        } catch (_v95DetectErr) {
+            console.warn('[CHECKOUT] Erro na detecção direta (sem impacto):', _v95DetectErr.message);
+        }
+
         let html = "";
         try {
             logger.info("Attempting Axios + Cheerio extraction...");
@@ -4161,7 +4190,11 @@ async function extractPageData(url) {
             });
             html = response.data || "";
             const finalUrl = response.request?.res?.responseUrl || url;
-            if (finalUrl && finalUrl !== url) extractedData.url = finalUrl;
+            if (finalUrl && finalUrl !== url) {
+                extractedData.url = finalUrl;
+                // 🔥 [V9.6] Preservar URL original como fallback para checkout
+                extractedData._originalUrl = url;
+            }
             extractedData.method = "axios-cheerio";
             logger.info(`Axios extraction successful, HTML length: ${String(html).length}`);
         } catch (axiosError) {
@@ -4244,8 +4277,13 @@ async function extractPageData(url) {
                         });
 
                         if (_ckBestLink && _ckBestScore >= 50) {
-                            extractedData.checkoutLink = _ckBestLink;
-                            logger.info(`🔗 [CHECKOUT-SERVER] Link detectado server-side: ${_ckBestLink.substring(0, 80)} (score: ${_ckBestScore})`);
+                            // 🔥 [V9.6] NÃO sobrescrever se V9.5 já detectou checkout direto (Braip/Hotmart/etc)
+                            if (extractedData.checkoutLink && extractedData.checkoutSource) {
+                                logger.info(`🔗 [CHECKOUT-SERVER] Heurística ignorada — V9.5 direto já definiu: ${extractedData.checkoutLink.substring(0, 80)} (source: ${extractedData.checkoutSource})`);
+                            } else {
+                                extractedData.checkoutLink = _ckBestLink;
+                                logger.info(`🔗 [CHECKOUT-SERVER] Link detectado server-side: ${_ckBestLink.substring(0, 80)} (score: ${_ckBestScore})`);
+                            }
                         }
                     }
                 } catch (_ckServerErr) {
@@ -5785,6 +5823,57 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             // Fallback: finalResponse fica inalterada
         }
 
+        // 🧠 [V9.5] CHECKOUT AUTHORITY — HARD OVERRIDE FINAL (chat-universal)
+        try {
+            if (_reqSalesMode === 'auto' && featureFlags && featureFlags.isEnabled('FEATURE_CHECKOUT_AUTHORITY')) {
+
+                const _v95Msg = (message || '').toLowerCase();
+                const _v95BuyIntent = /(comprar|compr[ae]r|quero comprar|quero comp|pagar|checkout|finalizar|adquirir|assinar|garantir|onde compro|como compro|link de compra|quero esse|quero o produto|me manda o link|quero adquirir|quanto custa|qual o pre[cç]o|como fa[cç]o pra comprar|quero pagar|bora fechar|fechar negocio|vou levar|quero contratar)/i.test(_v95Msg);
+
+                if (_v95BuyIntent) {
+
+                    let _v95CheckoutUrl = processedPageData?.checkoutLink;
+
+                    // fallback: resolver novamente via link-resolver
+                    if (!_v95CheckoutUrl) {
+                        try {
+                            _v95CheckoutUrl = resolveCheckoutLink({ context: processedPageData, tenantConfig: req.cliente });
+                        } catch (_) {}
+                    }
+
+                    if (_v95CheckoutUrl && !finalResponse.includes(_v95CheckoutUrl)) {
+                        console.log('[CHECKOUT_AUTHORITY@chat-universal] 🔥 FORÇANDO CHECKOUT:', _v95CheckoutUrl);
+                        finalResponse = `${finalResponse}\n\n👉 Para finalizar sua compra com segurança, use este link oficial:\n${_v95CheckoutUrl}`.trim();
+                    }
+
+                    // 🔥 [V9.6] FAILSAFE ABSOLUTO (com fallback para URL original)
+                    if (!finalResponse.includes('http')) {
+                        const _v95Fallback = processedPageData?._originalUrl || processedPageData?.url || '';
+                        if (_v95Fallback) {
+                            finalResponse += `\n\n👉 Para comprar agora, acesse o link oficial:\n${_v95Fallback}`;
+                        }
+                    }
+                }
+            }
+        } catch (_v95Err) {
+            console.warn('[CHECKOUT_AUTHORITY@chat-universal] fallback seguro:', _v95Err.message);
+        }
+
+        // 🧹 [V9.6] LIMPEZA FINAL DE SPAM EXPANDIDA (chat-universal)
+        try {
+            finalResponse = finalResponse
+                .replace(/Isso aqui é só a superfície[^\n]*/gi, '')
+                .replace(/O mais interessante ainda não apareceu[^\n]*/gi, '')
+                .replace(/Quer ver\??/gi, '')
+                .replace(/Posso te mostrar rapidamente como isso funciona[^\n]*/gi, '')
+                .replace(/Tem um detalhe que normalmente surpreende[^\n]*/gi, '')
+                .replace(/Quer que eu te mostre o que mais chama aten[çc][aã]o[^\n]*/gi, '')
+                .replace(/Tem bastante coisa legal aqui[^\n]*/gi, '')
+                .replace(/Quer saber mais sobre isso\??/gi, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        } catch (_) {}
+
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
 
@@ -6367,6 +6456,61 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             // Fallback: finalResponse fica inalterada
         }
 
+        // 🧠 [V9.5] CHECKOUT AUTHORITY — HARD OVERRIDE FINAL (process-chat-inteligente)
+        try {
+            const _v95SalesMode = (processedPageData && processedPageData.salesMode) ||
+                req.body?.salesMode || req.body?.sales_mode ||
+                process.env.SALES_LAYER_MODE || 'auto';
+
+            if (_v95SalesMode === 'auto' && featureFlags && featureFlags.isEnabled('FEATURE_CHECKOUT_AUTHORITY')) {
+
+                const _v95Msg = (message || '').toLowerCase();
+                const _v95BuyIntent = /(comprar|compr[ae]r|quero comprar|quero comp|pagar|checkout|finalizar|adquirir|assinar|garantir|onde compro|como compro|link de compra|quero esse|quero o produto|me manda o link|quero adquirir|quanto custa|qual o pre[cç]o|como fa[cç]o pra comprar|quero pagar|bora fechar|fechar negocio|vou levar|quero contratar)/i.test(_v95Msg);
+
+                if (_v95BuyIntent) {
+
+                    let _v95CheckoutUrl = processedPageData?.checkoutLink;
+
+                    // fallback: resolver novamente via link-resolver
+                    if (!_v95CheckoutUrl) {
+                        try {
+                            _v95CheckoutUrl = resolveCheckoutLink({ context: processedPageData, tenantConfig: req.cliente });
+                        } catch (_) {}
+                    }
+
+                    if (_v95CheckoutUrl && !finalResponse.includes(_v95CheckoutUrl)) {
+                        console.log('[CHECKOUT_AUTHORITY@inteligente] 🔥 FORÇANDO CHECKOUT:', _v95CheckoutUrl);
+                        finalResponse = `${finalResponse}\n\n👉 Para finalizar sua compra com segurança, use este link oficial:\n${_v95CheckoutUrl}`.trim();
+                    }
+
+                    // 🔥 [V9.6] FAILSAFE ABSOLUTO (com fallback para URL original)
+                    if (!finalResponse.includes('http')) {
+                        const _v95Fallback = processedPageData?._originalUrl || processedPageData?.url || '';
+                        if (_v95Fallback) {
+                            finalResponse += `\n\n👉 Para comprar agora, acesse o link oficial:\n${_v95Fallback}`;
+                        }
+                    }
+                }
+            }
+        } catch (_v95Err) {
+            console.warn('[CHECKOUT_AUTHORITY@inteligente] fallback seguro:', _v95Err.message);
+        }
+
+        // 🧹 [V9.6] LIMPEZA FINAL DE SPAM EXPANDIDA (process-chat-inteligente)
+        try {
+            finalResponse = finalResponse
+                .replace(/Isso aqui é só a superfície[^\n]*/gi, '')
+                .replace(/O mais interessante ainda não apareceu[^\n]*/gi, '')
+                .replace(/Quer ver\??/gi, '')
+                .replace(/Posso te mostrar rapidamente como isso funciona[^\n]*/gi, '')
+                .replace(/Tem um detalhe que normalmente surpreende[^\n]*/gi, '')
+                .replace(/Quer que eu te mostre o que mais chama aten[çc][aã]o[^\n]*/gi, '')
+                .replace(/Tem bastante coisa legal aqui[^\n]*/gi, '')
+                .replace(/Quer saber mais sobre isso\??/gi, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        } catch (_) {}
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -6732,6 +6876,8 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         const startChatBtn = document.getElementById('startChat');
         let leadId = null;
         const currentApiKey = "${apiKey || ''}";
+        // 🔥 [V9.6] conversationId FIXO por sessão (antes era Date.now() por mensagem, quebrando contexto)
+        const sessionConversationId = 'chatbot_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
         let agendamentoAtivo = false;
         let schedSlots = null;
         let schedSelectedDate = null;
@@ -6941,7 +7087,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                         pageData: pageData,
                         robotName: robotName,
                         instructions: customInstructions,
-                        conversationId: 'chatbot_' + Date.now(),
+                        conversationId: sessionConversationId,
                         leadId: leadId,
                         apiKey: currentApiKey
                     })
