@@ -4220,7 +4220,7 @@ async function extractPageData(url) {
                     if (_ckServerEnabled) {
                         const _ckKeywordsHigh = ['comprar', 'buy', 'checkout', 'pagar', 'finalizar', 'adquirir', 'assinar'];
                         const _ckKeywordsMed  = ['carrinho', 'cart', 'quero', 'garantir', 'inscrever', 'matricular'];
-                        const _ckPayDomains   = ['hotmart', 'kiwify', 'eduzz', 'monetizze', 'pay.', 'checkout.', 'mercadopago', 'pagar.me', 'stripe', 'paypal'];
+                        const _ckPayDomains   = ['hotmart', 'kiwify', 'eduzz', 'monetizze', 'pay.', 'checkout.', 'mercadopago', 'pagar.me', 'stripe', 'paypal', 'braip', 'herospark'];
 
                         let _ckBestLink = null;
                         let _ckBestScore = 0;
