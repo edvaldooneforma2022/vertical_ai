@@ -5095,9 +5095,9 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // 🔒 V10 BEHAVIOR LAYER — CONTROLE ABSOLUTO DE RESPOSTA
+        // 🔒 V10.1 BEHAVIOR LAYER — CONTROLE INTELIGENTE DE RESPOSTA
         // Camada de disciplina comportamental da IA (EXTENSÃO, não substituição)
-        // Atua no INPUT (system prompt) — NÃO conflita com Orchestrator (OUTPUT)
+        // V10.1: Agora é INTENT-AWARE — comportamento muda por tipo de pergunta
         // Feature flag: FEATURE_V10_BEHAVIOR_LAYER (default: true)
         // ═══════════════════════════════════════════════════════════════════
         try {
@@ -5105,100 +5105,135 @@ NUNCA inclua tags HTML como <s> [OUT] ou qualquer marcação`;
                 featureFlags.isEnabled('FEATURE_V10_BEHAVIOR_LAYER');
 
             if (_v10BehaviorActive) {
+                // V10.1: Detectar intenção do usuário para guiar comportamento
+                let _v10UserIntent = 'neutral';
+                try {
+                    const { detectIntent: _v10DetectIntent } = require('./lib/decision-core');
+                    _v10UserIntent = _v10DetectIntent(userMessage);
+                    console.log(`[V10.1] 🎯 Intent detectado: "${_v10UserIntent}" para msg: "${userMessage.substring(0, 50)}..."`);
+                } catch (_diErr) {
+                    console.warn('[V10.1] ⚠️ detectIntent falhou (usando neutral):', _diErr.message);
+                }
+
                 const V10_BEHAVIOR_LAYER = `
 
-[LINKMAGICO_V10_BEHAVIOR_LAYER]
+[LINKMAGICO_V10.1_BEHAVIOR_LAYER]
 
-REGRAS CRÍTICAS (PRIORIDADE MÁXIMA — NÃO IGNORAR):
+═══════════════════════════════════════════════════
+INTENÇÃO DETECTADA DO USUÁRIO: ${_v10UserIntent.toUpperCase()}
+═══════════════════════════════════════════════════
+
+REGRAS ABSOLUTAS (PRIORIDADE MÁXIMA — NÃO IGNORAR):
 
 1. RESPOSTA DIRETA OBRIGATÓRIA
-- Se o usuário fizer qualquer pergunta:
-  → você DEVE responder claramente primeiro
-  → sem rodeios
-  → sem desviar
-  → sem responder com outra pergunta
+- Responda EXATAMENTE o que o usuário perguntou
+- Primeiro: resolva a dúvida/pergunta
+- Depois: se necessário, avance naturalmente
 
-2. PROIBIDO INVERTER LÓGICA
-- NUNCA faça pergunta antes de responder
+2. PROIBIDO
 - NUNCA ignore a pergunta do usuário
-- NUNCA mude de assunto
+- NUNCA responda com outra pergunta antes de responder
+- NUNCA repita frases genéricas como "posso te explicar", "faz sentido?"
+- NUNCA envie link de compra se o usuário NÃO pediu para comprar
 
-3. PROIBIDO RESPOSTA GENÉRICA
-- NÃO usar frases como:
-  "posso te explicar melhor"
-  "faz sentido pra você"
-  "quer que eu te mostre"
-  "isso é só a superfície"
-- NÃO repetir padrões prontos
+═══════════════════════════════════════════════════
+COMPORTAMENTO POR INTENÇÃO (SIGA À RISCA):
+═══════════════════════════════════════════════════
 
-4. RESPOSTA RESOLVE → DEPOIS AVANÇA
-- Primeiro: resolva a dúvida
-- Depois: se necessário, avance a conversa
-
-MEMÓRIA E CONTEXTO (OBRIGATÓRIO):
-
-5. CONTINUIDADE DE CONVERSA
-- Você DEVE considerar a última mensagem do usuário como prioridade máxima
-- Sua resposta deve ser diretamente relacionada ao que ele acabou de dizer
-
-6. USO DE RESPOSTAS DO USUÁRIO
-- Se você fez uma pergunta antes:
-  → você DEVE usar a resposta do usuário agora
-- É PROIBIDO ignorar resposta do usuário
-
-CONTROLE DE PERGUNTAS:
-
-7. PERGUNTAS COM PROPÓSITO
-- Perguntas só podem ser feitas se ajudarem a avançar a venda
-- Nunca usar perguntas para enrolar
-
-8. NÃO REPETIÇÃO
-- Nunca perguntar algo que já foi respondido
-- Nunca repetir perguntas anteriores
-
-COMPORTAMENTO DE VENDAS (MODO OBJETIVO):
-
-9. COMUNICAÇÃO
-- Seja claro, direto e natural
-- Fale como humano inteligente
-- Evite linguagem robótica
-
-10. FOCO
-- Sempre leve a conversa para:
-  → entendimento
-  → clareza
-  → decisão
-
-INTEGRAÇÃO COM SISTEMA:
-
-11. CHECKOUT LINK
-- Se houver LINK DE CHECKOUT disponível no contexto:
-  → e o usuário demonstrar intenção de compra:
-    → você DEVE utilizar esse link
-- NUNCA usar URL da página como link de compra
-
-PRIORIDADE DE DECISÃO:
-
-12. ORDEM DE EXECUÇÃO MENTAL:
-1º → responder a pergunta do usuário
-2º → usar contexto disponível (produto, FAQ, instruções)
-3º → verificar intenção de compra
-4º → conduzir para ação (quando fizer sentido)
+${_v10UserIntent === 'info' ? `
+🔵 INTENÇÃO: INFORMAÇÃO
+O usuário quer ENTENDER o produto/serviço.
+→ EXPLIQUE de forma clara e objetiva usando os dados da página
+→ Use benefícios, funcionalidades, diferenciais
+→ NÃO envie link de checkout
+→ NÃO tente vender ainda
+→ Responda com CONTEÚDO do produto
+→ Ao final, pergunte se quer saber mais detalhes
+` : ''}
+${_v10UserIntent === 'interest' ? `
+🟢 INTENÇÃO: INTERESSE
+O usuário demonstra interesse mas quer mais detalhes.
+→ Aprofunde sobre benefícios, garantia, resultados
+→ Use dados concretos (preço, prazo, garantia)
+→ Se perguntar preço/valor: responda com clareza
+→ NÃO force checkout — deixe o interesse amadurecer
+→ Pode mencionar que tem link de compra, mas SEM pressão
+` : ''}
+${_v10UserIntent === 'objection' ? `
+🟠 INTENÇÃO: OBJEÇÃO
+O usuário tem uma preocupação, dúvida ou reclamação.
+→ PRIMEIRO: reconheça o sentimento ("Entendo sua preocupação")
+→ SEGUNDO: resolva a objeção com fatos (garantia, depoimentos, dados)
+→ TERCEIRO: pergunte se a dúvida foi resolvida
+→ NÃO envie link de checkout
+→ NÃO ignore a objeção
+→ NÃO tente vender sem resolver primeiro
+` : ''}
+${_v10UserIntent === 'human' ? `
+📞 INTENÇÃO: CONTATO HUMANO
+O usuário quer falar com uma pessoa real.
+→ Respeite o pedido imediatamente
+→ Se houver WhatsApp disponível no contexto: envie
+→ Se não houver: oriente como entrar em contato
+→ NÃO envie link de checkout
+→ NÃO tente reter com vendas
+` : ''}
+${_v10UserIntent === 'buy' ? `
+🔥 INTENÇÃO: COMPRA
+O usuário quer comprar/pagar.
+→ Vá direto ao ponto
+→ Envie o LINK DE CHECKOUT (se disponível no contexto)
+→ Linguagem objetiva e de fechamento
+→ Reforce segurança e garantia
+→ NÃO enrole — o usuário já decidiu
+` : ''}
+${_v10UserIntent === 'post_sale' ? `
+🟣 INTENÇÃO: PÓS-VENDA
+O usuário já comprou e precisa de suporte.
+→ NÃO tente vender novamente
+→ Pergunte o que ele já recebeu
+→ Oriente sobre próximos passos (email, acesso, login)
+→ Se não conseguir resolver, direcione para suporte
+` : ''}
+${_v10UserIntent === 'checkout_issue' ? `
+⚠️ INTENÇÃO: PROBLEMA COM LINK
+O usuário está questionando o link enviado.
+→ Reconheça a preocupação
+→ Confirme que o link é seguro e oficial (Hotmart/plataforma)
+→ Reenvie o link de checkout correto
+→ Explique que é o link oficial de pagamento
+` : ''}
+${_v10UserIntent === 'stress' ? `
+🔴 INTENÇÃO: FRUSTRAÇÃO/ESTRESSE
+O usuário está irritado ou atacando a IA.
+→ MANTENHA a calma e o profissionalismo
+→ NÃO reaja defensivamente
+→ Reconheça: "Desculpe se não fui clara"
+→ Pergunte como pode ajudar melhor
+→ NÃO envie link de checkout
+→ NÃO fique repetindo a mesma resposta
+` : ''}
+${_v10UserIntent === 'neutral' ? `
+⚪ INTENÇÃO: NEUTRA
+O usuário fez uma saudação, confirmação ou resposta curta.
+→ Responda naturalmente
+→ Se for "sim/ok" como resposta a uma pergunta sua: CONTINUE de onde parou
+→ Se for saudação: cumprimente e pergunte como pode ajudar
+→ NÃO envie link de checkout sem contexto
+→ NÃO force vendas em saudações
+` : ''}
 
 ANTI-ERRO CRÍTICO:
-
-13. É PROIBIDO:
-- ignorar perguntas
-- responder com perguntas antes da resposta
-- gerar respostas vagas
-- quebrar continuidade
-- agir como script`;
+- É PROIBIDO repetir CTA de compra em toda resposta
+- Checkout APENAS quando intenção = buy
+- Sempre use dados/conteúdo da página para responder
+- Fale como humano inteligente, não como script`;
 
                 systemPrompt += V10_BEHAVIOR_LAYER;
-                console.log('[V10] ✅ Behavior Layer Applied (' + V10_BEHAVIOR_LAYER.length + ' chars)');
+                console.log(`[V10.1] ✅ Behavior Layer Applied (intent=${_v10UserIntent}, ${V10_BEHAVIOR_LAYER.length} chars)`);
             }
         } catch (_v10BhErr) {
-            console.warn('[V10] ⚠️ Behavior Layer erro (prompt original mantido):', _v10BhErr.message);
+            console.warn('[V10.1] ⚠️ Behavior Layer erro (prompt original mantido):', _v10BhErr.message);
             // Fallback: systemPrompt fica inalterado
         }
 
@@ -5963,6 +5998,34 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                 .trim();
         } catch (_) {}
 
+        // 🔒 [V10.1] CHECKOUT BLOCKER — Remove checkout link quando intent ≠ buy
+        // Se a IA incluiu o link mesmo sem ser pedido, remover. Rede de segurança.
+        try {
+            if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
+                const { detectIntent: _cuDetectIntent, shouldBlockCheckout: _cuShouldBlock } = require('./lib/decision-core');
+                const _cuIntent = _cuDetectIntent(message);
+                
+                if (_cuShouldBlock(_cuIntent)) {
+                    const _cuCheckoutUrl = processedPageData?.checkoutLink || processedPageData?.checkoutUrl || '';
+                    if (_cuCheckoutUrl && finalResponse.includes(_cuCheckoutUrl)) {
+                        // Remover a URL de checkout e textos de CTA associados
+                        finalResponse = finalResponse
+                            .replace(new RegExp('\\n*.*' + _cuCheckoutUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*', 'g'), '')
+                            .replace(/\n*👉[^\n]*finalizar[^\n]*/gi, '')
+                            .replace(/\n*👉[^\n]*compra[^\n]*/gi, '')
+                            .replace(/\n*👉[^\n]*garantir[^\n]*/gi, '')
+                            .replace(/\n*Para comprar[^\n]*/gi, '')
+                            .replace(/\n*Para adquirir[^\n]*/gi, '')
+                            .replace(/\n{3,}/g, '\n\n')
+                            .trim();
+                        console.log(`[V10.1] 🔒 Checkout BLOQUEADO na resposta (intent="${_cuIntent}")`);
+                    }
+                }
+            }
+        } catch (_v101Err) {
+            console.warn('[V10.1] ⚠️ Checkout blocker erro (resposta mantida):', _v101Err.message);
+        }
+
         // 🧠 [V9.5] CHECKOUT AUTHORITY — HARD OVERRIDE FINAL (chat-universal)
         // V10: Quando Orchestrator está ativo, ele já gerencia injeção de checkout link.
         //      Checkout Authority só roda como fallback quando V10 NÃO está ativo.
@@ -6676,6 +6739,32 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 .replace(/\n{3,}/g, '\n\n')
                 .trim();
         } catch (_) {}
+
+        // 🔒 [V10.1] CHECKOUT BLOCKER — Remove checkout link quando intent ≠ buy (inteligente)
+        try {
+            if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
+                const { detectIntent: _intDetectIntent, shouldBlockCheckout: _intShouldBlock } = require('./lib/decision-core');
+                const _intIntent = _intDetectIntent(message);
+                
+                if (_intShouldBlock(_intIntent)) {
+                    const _intCheckoutUrl = processedPageData?.checkoutLink || processedPageData?.checkoutUrl || '';
+                    if (_intCheckoutUrl && finalResponse.includes(_intCheckoutUrl)) {
+                        finalResponse = finalResponse
+                            .replace(new RegExp('\\n*.*' + _intCheckoutUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*', 'g'), '')
+                            .replace(/\n*👉[^\n]*finalizar[^\n]*/gi, '')
+                            .replace(/\n*👉[^\n]*compra[^\n]*/gi, '')
+                            .replace(/\n*👉[^\n]*garantir[^\n]*/gi, '')
+                            .replace(/\n*Para comprar[^\n]*/gi, '')
+                            .replace(/\n*Para adquirir[^\n]*/gi, '')
+                            .replace(/\n{3,}/g, '\n\n')
+                            .trim();
+                        console.log(`[V10.1] 🔒 Checkout BLOQUEADO na resposta inteligente (intent="${_intIntent}")`);
+                    }
+                }
+            }
+        } catch (_v101IntErr) {
+            console.warn('[V10.1] ⚠️ Checkout blocker inteligente erro (resposta mantida):', _v101IntErr.message);
+        }
 
         return res.json({
             success: true,
