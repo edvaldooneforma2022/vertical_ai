@@ -5740,8 +5740,12 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                         });
                         if (_ctaResult) {
                             _cuCtaData = _ctaResult; // Guardar para Orchestrator
-                            finalResponse = _ctaEngine.applyCTA(finalResponse, _ctaResult) || finalResponse;
-                            console.log(`[CTA_ENGINE] Aplicado: type=${_ctaResult.type} intent=${_ctaResult.intent}`);
+                            // V10: Se Orchestrator ativo, NÃO aplicar CTA inline (Orchestrator decide)
+                            const _v10OrchestratorActive = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
+                            if (!_v10OrchestratorActive) {
+                                finalResponse = _ctaEngine.applyCTA(finalResponse, _ctaResult) || finalResponse;
+                            }
+                            console.log(`[CTA_ENGINE] Coletado: type=${_ctaResult.type} intent=${_ctaResult.intent} applied=${!_v10OrchestratorActive}`);
                         }
                     } catch (_ctaErr) {
                         console.warn('[CTA_ENGINE] Erro (fallback):', _ctaErr.message);
@@ -5777,9 +5781,13 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                         if (_closed && _closed !== finalResponse) {
                             _cuClosingData = { text: _closed }; // Guardar para Orchestrator
                         }
-                        finalResponse = _closed || finalResponse;
+                        // V10: Se Orchestrator ativo, NÃO aplicar Closing inline (Orchestrator decide)
+                        const _v10OrchClosing = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
+                        if (!_v10OrchClosing) {
+                            finalResponse = _closed || finalResponse;
+                        }
                         if (_closed && _closed !== finalResponse) {
-                            console.log('[CLOSING] Script de fechamento aplicado');
+                            console.log(`[CLOSING] Coletado: applied=${!_v10OrchClosing}`);
                         }
                     } catch (_clsErr) {
                         console.warn('[CLOSING] Erro (fallback):', _clsErr.message);
@@ -6317,6 +6325,10 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         }
 
         // 🔥 [CONVERSION-LAYER] Pipeline de Otimização — SOMENTE modo auto + feature flags
+        // V10: Coletar dados de CTA e Closing para o Orchestrator
+        let _intCtaData = null;
+        let _intClosingData = null;
+        const _intAiResponseOriginal = finalResponse; // Guardar resposta IA original pré-camadas
         try {
             const _intSalesMode = (processedPageData && processedPageData.salesMode) ||
                 req.body?.salesMode || req.body?.sales_mode || process.env.SALES_LAYER_MODE || 'auto';
@@ -6339,8 +6351,13 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                             conversationId: conversationId || null
                         });
                         if (_ctaResult) {
-                            finalResponse = _ctaEngine.applyCTA(finalResponse, _ctaResult) || finalResponse;
-                            console.log(`[CTA_ENGINE] Aplicado: type=${_ctaResult.type} intent=${_ctaResult.intent}`);
+                            _intCtaData = _ctaResult; // Guardar para Orchestrator
+                            // V10: Se Orchestrator ativo, NÃO aplicar CTA inline (Orchestrator decide)
+                            const _v10OrchCTAInt = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
+                            if (!_v10OrchCTAInt) {
+                                finalResponse = _ctaEngine.applyCTA(finalResponse, _ctaResult) || finalResponse;
+                            }
+                            console.log(`[CTA_ENGINE@inteligente] Coletado: type=${_ctaResult.type} applied=${!_v10OrchCTAInt}`);
                         }
                     } catch (_ctaErr) {
                         console.warn('[CTA_ENGINE] Erro (fallback):', _ctaErr.message);
@@ -6375,9 +6392,16 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                             action: '',
                             conversationId: conversationId || null
                         });
-                        finalResponse = _closed || finalResponse;
                         if (_closed && _closed !== _preClosed) {
-                            console.log('[CLOSING] Script de fechamento aplicado');
+                            _intClosingData = { text: _closed }; // Guardar para Orchestrator
+                        }
+                        // V10: Se Orchestrator ativo, NÃO aplicar Closing inline (Orchestrator decide)
+                        const _v10OrchClsInt = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
+                        if (!_v10OrchClsInt) {
+                            finalResponse = _closed || finalResponse;
+                        }
+                        if (_closed && _closed !== _preClosed) {
+                            console.log(`[CLOSING@inteligente] Coletado: applied=${!_v10OrchClsInt}`);
                         }
                     } catch (_clsErr) {
                         console.warn('[CLOSING] Erro (fallback):', _clsErr.message);
@@ -6435,14 +6459,13 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                           req.body?.salesMode || req.body?.sales_mode || 
                           process.env.SALES_LAYER_MODE || 'auto';
 
-                // Coletar resposta IA original (antes das camadas)
-                // A variável 'respostaIA' ou 'finalResponse' original está disponível no escopo
+                // V10: Usar resposta IA original (antes das camadas) + dados reais de CTA/Closing
                 const orchResult = orchestrator.apply({
-                    response: finalResponse,  // resposta processada por todas as camadas
+                    response: _intAiResponseOriginal || finalResponse,  // resposta IA ORIGINAL (pré-camadas)
                     context: processedPageData || {},
                     decision: _intDecision,
-                    ctaData: null,   // CTA já foi aplicado inline no finalResponse
-                    closingData: null, // Closing já foi aplicado inline no finalResponse
+                    ctaData: _intCtaData,      // V10: dados reais de CTA (não mais null)
+                    closingData: _intClosingData, // V10: dados reais de Closing (não mais null)
                     mode: _intSalesModeOrch
                 });
 
