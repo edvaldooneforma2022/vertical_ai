@@ -5887,7 +5887,12 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                             conversationId: conversationId || null
                         });
                         if (_closed && _closed !== finalResponse) {
-                            _cuClosingData = { text: _closed }; // Guardar para Orchestrator
+                            // V10 FIX: Guardar APENAS o fragmento de closing (não a resposta inteira)
+                            // _closed contém "resposta + closing", precisamos só do "closing"
+                            const _closingFragment = _closed.startsWith(finalResponse)
+                                ? _closed.substring(finalResponse.length).trim()
+                                : _closed; // fallback: se não conseguir extrair, usa tudo
+                            _cuClosingData = _closingFragment ? { text: _closingFragment } : null;
                         }
                         // V10: Se Orchestrator ativo, NÃO aplicar Closing inline (Orchestrator decide)
                         const _v10OrchClosing = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
@@ -6511,7 +6516,12 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                             conversationId: conversationId || null
                         });
                         if (_closed && _closed !== _preClosed) {
-                            _intClosingData = { text: _closed }; // Guardar para Orchestrator
+                            // V10 FIX: Guardar APENAS o fragmento de closing (não a resposta inteira)
+                            // _closed contém "resposta + closing", precisamos só do "closing"
+                            const _closingFragmentInt = _closed.startsWith(_preClosed)
+                                ? _closed.substring(_preClosed.length).trim()
+                                : _closed; // fallback: se não conseguir extrair, usa tudo
+                            _intClosingData = _closingFragmentInt ? { text: _closingFragmentInt } : null;
                         }
                         // V10: Se Orchestrator ativo, NÃO aplicar Closing inline (Orchestrator decide)
                         const _v10OrchClsInt = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
