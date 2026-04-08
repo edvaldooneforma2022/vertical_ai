@@ -5939,9 +5939,31 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             // Fallback: finalResponse fica inalterada
         }
 
-        // 🧠 [V9.5] CHECKOUT AUTHORITY — HARD OVERRIDE FINAL (chat-universal)
+        // 🧹 [V9.6 + V10] LIMPEZA FINAL DE SPAM EXPANDIDA (chat-universal)
+        // Inclui frases proibidas pela V10 Behavior Layer
         try {
-            if (_reqSalesMode === 'auto' && featureFlags && featureFlags.isEnabled('FEATURE_CHECKOUT_AUTHORITY')) {
+            finalResponse = finalResponse
+                .replace(/Isso aqui é só a superfície[^\n]*/gi, '')
+                .replace(/O mais interessante ainda não apareceu[^\n]*/gi, '')
+                .replace(/Quer ver\??/gi, '')
+                .replace(/Posso te mostrar rapidamente como isso funciona[^\n]*/gi, '')
+                .replace(/Tem um detalhe que normalmente surpreende[^\n]*/gi, '')
+                .replace(/Quer que eu te mostre o que mais chama aten[çc][aã]o[^\n]*/gi, '')
+                .replace(/Tem bastante coisa legal aqui[^\n]*/gi, '')
+                .replace(/Quer saber mais sobre isso\??/gi, '')
+                .replace(/Quer que eu te mostre[^\n]*/gi, '')
+                .replace(/Posso te explicar melhor[^\n]*/gi, '')
+                .replace(/Faz sentido pra voc[eê]\??[^\n]*/gi, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        } catch (_) {}
+
+        // 🧠 [V9.5] CHECKOUT AUTHORITY — HARD OVERRIDE FINAL (chat-universal)
+        // V10: Quando Orchestrator está ativo, ele já gerencia injeção de checkout link.
+        //      Checkout Authority só roda como fallback quando V10 NÃO está ativo.
+        try {
+            const _v95OrchActive = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
+            if (!_v95OrchActive && _reqSalesMode === 'auto' && featureFlags && featureFlags.isEnabled('FEATURE_CHECKOUT_AUTHORITY')) {
 
                 const _v95Msg = (message || '').toLowerCase();
                 const _v95BuyIntent = /(comprar|compr[ae]r|quero comprar|quero comp|pagar|checkout|finalizar|adquirir|assinar|garantir|onde compro|como compro|link de compra|quero esse|quero o produto|me manda o link|quero adquirir|quanto custa|qual o pre[cç]o|como fa[cç]o pra comprar|quero pagar|bora fechar|fechar negocio|vou levar|quero contratar)/i.test(_v95Msg);
@@ -5970,25 +5992,13 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                         }
                     }
                 }
+            } else if (_v95OrchActive) {
+                console.log('[CHECKOUT_AUTHORITY@chat-universal] ⏭️ Bypass — Orchestrator V10 ativo');
             }
         } catch (_v95Err) {
             console.warn('[CHECKOUT_AUTHORITY@chat-universal] fallback seguro:', _v95Err.message);
         }
 
-        // 🧹 [V9.6] LIMPEZA FINAL DE SPAM EXPANDIDA (chat-universal)
-        try {
-            finalResponse = finalResponse
-                .replace(/Isso aqui é só a superfície[^\n]*/gi, '')
-                .replace(/O mais interessante ainda não apareceu[^\n]*/gi, '')
-                .replace(/Quer ver\??/gi, '')
-                .replace(/Posso te mostrar rapidamente como isso funciona[^\n]*/gi, '')
-                .replace(/Tem um detalhe que normalmente surpreende[^\n]*/gi, '')
-                .replace(/Quer que eu te mostre o que mais chama aten[çc][aã]o[^\n]*/gi, '')
-                .replace(/Tem bastante coisa legal aqui[^\n]*/gi, '')
-                .replace(/Quer saber mais sobre isso\??/gi, '')
-                .replace(/\n{3,}/g, '\n\n')
-                .trim();
-        } catch (_) {}
 
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
@@ -6532,29 +6542,36 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         }
 
         // 🧠 [DECISION-CORE-V9] — Orquestração Determinística Final
-        // Garante que links de checkout e passos de suporte nunca faltem em momentos críticos.
+        // V10: Quando Orchestrator ativo, Decision Core Safe NÃO aplica override inline
+        //      (Orchestrator já gerencia buy/post_sale). Apenas extrai _intDecision.
         let _intDecision = null;
         try {
             const _intSalesModeDC = (processedPageData && processedPageData.salesMode) || 
                           req.body?.salesMode || req.body?.sales_mode || 
                           process.env.SALES_LAYER_MODE || 'auto';
 
-            // Extrair decision para uso pelo Orchestrator
+            // Extrair decision para uso pelo Orchestrator (SEMPRE)
             if (typeof buildDecision === 'function') {
                 _intDecision = buildDecision(message);
             }
 
-            const decisionResult = applyDecisionCoreSafe({
-                message: message, // user input
-                response: finalResponse, // base processed response
-                context: processedPageData,
-                tenantConfig: req.cliente,
-                salesMode: _intSalesModeDC
-            });
-            
-            if (decisionResult.overridden) {
-                finalResponse = decisionResult.text;
-                console.log(`🛡️ [DECISION_CORE] Resposta reforçada com decisão determinística.`);
+            // V10: Se Orchestrator ativo, pular applyDecisionCoreSafe (Orchestrator decide)
+            const _dcOrchActive = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
+            if (!_dcOrchActive) {
+                const decisionResult = applyDecisionCoreSafe({
+                    message: message,
+                    response: finalResponse,
+                    context: processedPageData,
+                    tenantConfig: req.cliente,
+                    salesMode: _intSalesModeDC
+                });
+                
+                if (decisionResult.overridden) {
+                    finalResponse = decisionResult.text;
+                    console.log(`🛡️ [DECISION_CORE] Resposta reforçada com decisão determinística.`);
+                }
+            } else {
+                console.log(`🧠 [DECISION_CORE@inteligente] ⏭️ Bypass applyDecisionCoreSafe — Orchestrator V10 ativo (intent=${_intDecision?.intent || 'N/A'})`);
             }
         } catch (decErr) {
             console.error('⚠️ [DECISION_CORE_FAILSAFE] Erro na aplicação:', decErr.message);
@@ -6588,12 +6605,14 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         }
 
         // 🧠 [V9.5] CHECKOUT AUTHORITY — HARD OVERRIDE FINAL (process-chat-inteligente)
+        // V10: Quando Orchestrator ativo, Checkout Authority é bypass (Orchestrator já gerencia links)
         try {
+            const _v95OrchActiveInt = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
             const _v95SalesMode = (processedPageData && processedPageData.salesMode) ||
                 req.body?.salesMode || req.body?.sales_mode ||
                 process.env.SALES_LAYER_MODE || 'auto';
 
-            if (_v95SalesMode === 'auto' && featureFlags && featureFlags.isEnabled('FEATURE_CHECKOUT_AUTHORITY')) {
+            if (!_v95OrchActiveInt && _v95SalesMode === 'auto' && featureFlags && featureFlags.isEnabled('FEATURE_CHECKOUT_AUTHORITY')) {
 
                 const _v95Msg = (message || '').toLowerCase();
                 const _v95BuyIntent = /(comprar|compr[ae]r|quero comprar|quero comp|pagar|checkout|finalizar|adquirir|assinar|garantir|onde compro|como compro|link de compra|quero esse|quero o produto|me manda o link|quero adquirir|quanto custa|qual o pre[cç]o|como fa[cç]o pra comprar|quero pagar|bora fechar|fechar negocio|vou levar|quero contratar)/i.test(_v95Msg);
@@ -6622,12 +6641,15 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                         }
                     }
                 }
+            } else if (_v95OrchActiveInt) {
+                console.log('[CHECKOUT_AUTHORITY@inteligente] ⏭️ Bypass — Orchestrator V10 ativo');
             }
         } catch (_v95Err) {
             console.warn('[CHECKOUT_AUTHORITY@inteligente] fallback seguro:', _v95Err.message);
         }
 
-        // 🧹 [V9.6] LIMPEZA FINAL DE SPAM EXPANDIDA (process-chat-inteligente)
+        // 🧹 [V9.6 + V10] LIMPEZA FINAL DE SPAM EXPANDIDA (process-chat-inteligente)
+        // Inclui frases proibidas pela V10 Behavior Layer
         try {
             finalResponse = finalResponse
                 .replace(/Isso aqui é só a superfície[^\n]*/gi, '')
@@ -6635,9 +6657,12 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 .replace(/Quer ver\??/gi, '')
                 .replace(/Posso te mostrar rapidamente como isso funciona[^\n]*/gi, '')
                 .replace(/Tem um detalhe que normalmente surpreende[^\n]*/gi, '')
-                .replace(/Quer que eu te mostre o que mais chama aten[çc][aã]o[^\n]*/gi, '')
+                .replace(/Quer que eu te mostre o que mais chama aten[\u00e7c][a\u00e3]o[^\n]*/gi, '')
                 .replace(/Tem bastante coisa legal aqui[^\n]*/gi, '')
                 .replace(/Quer saber mais sobre isso\??/gi, '')
+                .replace(/Quer que eu te mostre[^\n]*/gi, '')
+                .replace(/Posso te explicar melhor[^\n]*/gi, '')
+                .replace(/Faz sentido pra voc[e\u00ea]\??[^\n]*/gi, '')
                 .replace(/\n{3,}/g, '\n\n')
                 .trim();
         } catch (_) {}
