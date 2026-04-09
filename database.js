@@ -297,6 +297,18 @@ async function initializeDatabase() {
         // ═══════════════════════════════════════════════════════
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_created ON tenant_leads(created_at)`,
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_status ON tenant_leads(status)`,
+
+        // ═══════════════════════════════════════════════════════
+        // V11.3 — FALLBACK INVISÍVEL: Checkout links por tenant
+        // ═══════════════════════════════════════════════════════
+        `CREATE TABLE IF NOT EXISTS tenant_checkout_links (
+            api_key ${USE_POSTGRES ? 'VARCHAR(255)' : 'TEXT'} PRIMARY KEY,
+            checkout_url ${USE_POSTGRES ? 'TEXT' : 'TEXT'} NOT NULL,
+            source ${USE_POSTGRES ? 'VARCHAR(50)' : 'TEXT'} DEFAULT 'auto_v112',
+            confirmed ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP,
+            updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`
     ];
 
     for (const migration of migrations) {
