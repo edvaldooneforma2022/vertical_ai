@@ -182,7 +182,44 @@ try {
     console.log('⚠️ [V10.0] Orchestrator não disponível (não crítico):', e.message);
 }
 
+// ═══════════════════════════════════════════════════════
+// 🔥 V11 ENGINE — Checkout Discovery + Links Map + Action Resolver + State
+// ═══════════════════════════════════════════════════════
+let _v11DiscoverCheckout = null;
+let _v11BuildLinksMap = null;
+let _v11ResolveAction = null;
+let _v11ConversationState = null;
+
+try {
+    const _ckDiscovery = require('./lib/checkout-discovery');
+    _v11DiscoverCheckout = _ckDiscovery.discoverCheckout;
+    console.log('✅ [V11.0] Checkout Discovery carregado');
+} catch (e) {
+    console.log('⚠️ [V11.0] Checkout Discovery não disponível (não crítico):', e.message);
+}
+try {
+    const _lm = require('./lib/links-map');
+    _v11BuildLinksMap = _lm.buildLinksMap;
+    console.log('✅ [V11.0] Links Map carregado');
+} catch (e) {
+    console.log('⚠️ [V11.0] Links Map não disponível (não crítico):', e.message);
+}
+try {
+    const _ar = require('./lib/action-resolver');
+    _v11ResolveAction = _ar.resolveAction;
+    console.log('✅ [V11.0] Action Resolver carregado');
+} catch (e) {
+    console.log('⚠️ [V11.0] Action Resolver não disponível (não crítico):', e.message);
+}
+try {
+    _v11ConversationState = require('./lib/conversation-state');
+    console.log('✅ [V11.0] Conversation State carregado');
+} catch (e) {
+    console.log('⚠️ [V11.0] Conversation State não disponível (não crítico):', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
+
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
 if (!process.env.FEATURE_AUTO_LEARNING) {
     process.env.FEATURE_AUTO_LEARNING = 'true';
@@ -4707,6 +4744,28 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             ocrInfo = `📸 TEXTO DE IMAGENS: ${pageData.imagesText.slice(0, 2).join(' | ')}`;
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 [V11] CHECKOUT DISCOVERY — Puppeteer (ANTES do pré-prompt)
+        // Tenta descobrir checkout via navegação real se não houver checkoutLink
+        // Protegido por FEATURE_V11_ENGINE + ENABLE_V11_DISCOVERY + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v11Enabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V11_ENGINE');
+            const _v11DiscoveryEnv = process.env.ENABLE_V11_DISCOVERY === 'true';
+            if (_v11Enabled && _v11DiscoveryEnv && _v11DiscoverCheckout && pageData && !pageData.checkoutLink && pageData.url) {
+                console.log('[V11] 🔍 Iniciando Checkout Discovery para:', (pageData.url || '').substring(0, 80));
+                const _v11Detected = await _v11DiscoverCheckout(pageData.url);
+                if (_v11Detected) {
+                    pageData.checkoutLink = _v11Detected;
+                    console.log('[V11] ✅ Checkout descoberto via Puppeteer:', _v11Detected.substring(0, 100));
+                } else {
+                    console.log('[V11] ℹ️ Nenhum checkout descoberto via Puppeteer');
+                }
+            }
+        } catch (_v11DiscErr) {
+            console.warn('[V11] ⚠️ Checkout Discovery erro (sem impacto):', _v11DiscErr.message);
+        }
+
         // 🔗 [V9.3 CHECKOUT-PRE-PROMPT] Resolver checkout link ANTES da montagem do prompt
         // Se o pageData já tem checkoutLink (do widget ou extração server-side), mantém.
         // Senão, tenta resolver via link-resolver (configuração do tenant, env var, etc).
@@ -5235,6 +5294,38 @@ ANTI-ERRO CRÍTICO:
         } catch (_v10BhErr) {
             console.warn('[V10.1] ⚠️ Behavior Layer erro (prompt original mantido):', _v10BhErr.message);
             // Fallback: systemPrompt fica inalterado
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 [V11] LINKS MAP + CONVERSATION STATE — Contexto para Prompt
+        // Injeta mapa de links (fonte única) e estado conversacional
+        // Protegido por FEATURE_V11_ENGINE + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v11EngineActive = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V11_ENGINE');
+            if (_v11EngineActive) {
+                // V11 Links Map — fonte única de verdade
+                let _v11LinksContext = '';
+                if (_v11BuildLinksMap && pageData) {
+                    const _v11Links = _v11BuildLinksMap(pageData);
+                    _v11LinksContext = `\n\n[V11_LINKS_MAP]\nLINKS DISPONÍVEIS (FONTE ÚNICA — NÃO INVENTAR):\n- checkout: ${_v11Links.checkout || 'não disponível'}\n- whatsapp: ${_v11Links.whatsapp || 'não disponível'}\n- instagram: ${_v11Links.instagram || 'não disponível'}\n- site: ${_v11Links.site || 'não disponível'}\n\nREGRA ABSOLUTA:\n- NUNCA inventar links\n- NUNCA usar URL da página como checkout\n- Use APENAS os links acima quando solicitado`;
+                    console.log(`[V11] 🔗 Links Map injetado: checkout=${!!_v11Links.checkout}`);
+                }
+
+                // V11 Conversation State — memória anti-burrice
+                let _v11StateContext = '';
+                if (_v11ConversationState && (leadId || chatbotId)) {
+                    const _v11ConvId = leadId || chatbotId || 'unknown';
+                    const _v11State = _v11ConversationState.getState(_v11ConvId);
+                    _v11StateContext = _v11ConversationState.buildStateContext(_v11State);
+                }
+
+                // Injetar no prompt
+                if (_v11LinksContext) systemPrompt += _v11LinksContext;
+                if (_v11StateContext) systemPrompt += _v11StateContext;
+            }
+        } catch (_v11PromptErr) {
+            console.warn('[V11] ⚠️ Links Map / State erro no prompt (sem impacto):', _v11PromptErr.message);
         }
 
         // ─── MONTAGEM DO ARRAY DE MESSAGES (user message SEMPRE no final) ───
@@ -5979,6 +6070,36 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             // Fallback: finalResponse fica inalterada
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 [V11] ACTION RESOLVER + STATE UPDATE (chat-universal)
+        // Injeção forçada do link correto + atualização de estado
+        // Protegido por FEATURE_V11_ENGINE + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v11Active = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V11_ENGINE');
+            if (_v11Active) {
+                const _v11Intent = _chatUniversalDecision?.intent || 'neutral';
+
+                // Action Resolver — injeção forçada pós-IA
+                if (_v11ResolveAction && _v11BuildLinksMap) {
+                    const _v11Links = _v11BuildLinksMap(processedPageData || {});
+                    const _v11ActionLink = _v11ResolveAction(_v11Intent, _v11Links);
+
+                    if (_v11ActionLink && _v11Intent === 'buy' && !finalResponse.includes(_v11ActionLink)) {
+                        finalResponse = `${finalResponse}\n\n👉 Finalizar agora: ${_v11ActionLink}`;
+                        console.log(`[V11] 🔥 Action Resolver: checkout forçado (intent=buy)`);
+                    }
+                }
+
+                // State Update — memória conversacional
+                if (_v11ConversationState && conversationId) {
+                    _v11ConversationState.updateState(conversationId, _v11Intent, message);
+                }
+            }
+        } catch (_v11ActErr) {
+            console.warn('[V11] ⚠️ Action Resolver / State erro (sem impacto):', _v11ActErr.message);
+        }
+
         // 🧹 [V9.6 + V10] LIMPEZA FINAL DE SPAM EXPANDIDA (chat-universal)
         // Inclui frases proibidas pela V10 Behavior Layer
         try {
@@ -6675,6 +6796,36 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         } catch (_orchErr) {
             console.error('⚠️ [ORCHESTRATOR_V10@inteligente] Erro (resposta mantida):', _orchErr.message);
             // Fallback: finalResponse fica inalterada
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 [V11] ACTION RESOLVER + STATE UPDATE (process-chat-inteligente)
+        // Injeção forçada do link correto + atualização de estado
+        // Protegido por FEATURE_V11_ENGINE + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v11ActiveInt = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V11_ENGINE');
+            if (_v11ActiveInt) {
+                const _v11IntIntent = _intDecision?.intent || 'neutral';
+
+                // Action Resolver — injeção forçada pós-IA
+                if (_v11ResolveAction && _v11BuildLinksMap) {
+                    const _v11IntLinks = _v11BuildLinksMap(processedPageData || {});
+                    const _v11IntActionLink = _v11ResolveAction(_v11IntIntent, _v11IntLinks);
+
+                    if (_v11IntActionLink && _v11IntIntent === 'buy' && !finalResponse.includes(_v11IntActionLink)) {
+                        finalResponse = `${finalResponse}\n\n👉 Finalizar agora: ${_v11IntActionLink}`;
+                        console.log(`[V11] 🔥 Action Resolver (inteligente): checkout forçado (intent=buy)`);
+                    }
+                }
+
+                // State Update — memória conversacional
+                if (_v11ConversationState && conversationId) {
+                    _v11ConversationState.updateState(conversationId, _v11IntIntent, message);
+                }
+            }
+        } catch (_v11IntActErr) {
+            console.warn('[V11] ⚠️ Action Resolver / State (inteligente) erro (sem impacto):', _v11IntActErr.message);
         }
 
         // 🧠 [V9.5] CHECKOUT AUTHORITY — HARD OVERRIDE FINAL (process-chat-inteligente)
