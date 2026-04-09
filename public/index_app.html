@@ -1239,6 +1239,21 @@
                 grid-template-columns: repeat(3, 1fr);
             }
         }
+
+        /* 🔥 V11.3 — CHECKOUT STATUS (Painel Admin) */
+        .v113-checkout-section{background:rgba(15,23,42,0.6);border:1px solid rgba(71,85,105,0.4);border-radius:12px;padding:16px;margin-top:12px}
+        .v113-checkout-section h4{color:#60a5fa;font-size:0.9rem;margin:0 0 10px 0;display:flex;align-items:center;gap:6px}
+        .v113-checkout-status{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:0.82rem;margin-bottom:10px}
+        .v113-checkout-status.found{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399}
+        .v113-checkout-status.missing{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fbbf24}
+        .v113-checkout-input-row{display:flex;gap:8px}
+        .v113-checkout-input-row input{flex:1;background:rgba(30,41,59,0.8);border:1px solid #475569;color:#e2e8f0;border-radius:8px;padding:10px 12px;font-size:0.85rem;outline:none;transition:border-color .3s}
+        .v113-checkout-input-row input:focus{border-color:#6366f1}
+        .v113-checkout-input-row input.v113-auto{border-color:#10b981;background:rgba(16,185,129,0.08)}
+        .v113-checkout-input-row button{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;border-radius:8px;padding:10px 16px;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .3s}
+        .v113-checkout-input-row button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+        .v113-checkout-input-row button:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+        .v113-checkout-hint{color:#64748b;font-size:0.75rem;margin-top:6px}
     </style>
 </head>
 
@@ -1460,6 +1475,20 @@
                         <strong>Resumo:</strong> <span id="extractedSummary">Os dados serão carregados após a
                             ativação...</span>
                     </div>
+                </div>
+
+                <!-- 🔥 V11.3 — CHECKOUT STATUS (para o operador/produtor) -->
+                <div class="v113-checkout-section" id="v113CheckoutSection" style="display:none;">
+                    <h4>💳 Link de Checkout</h4>
+                    <div class="v113-checkout-status" id="v113CheckoutStatus">
+                        <span id="v113StatusIcon">🔍</span>
+                        <span id="v113StatusLabel">Verificando checkout...</span>
+                    </div>
+                    <div class="v113-checkout-input-row">
+                        <input type="url" id="v113CheckoutUrl" placeholder="Cole aqui seu link de pagamento (Hotmart, Kiwify, etc)">
+                        <button id="v113SaveCheckoutBtn" onclick="v113SaveCheckout()">🚀 Salvar</button>
+                    </div>
+                    <p class="v113-checkout-hint" id="v113CheckoutHint">Se a IA não encontrou o checkout automaticamente, cole o link aqui.</p>
                 </div>
             </div>
 
@@ -2259,6 +2288,13 @@
                 // SAFE PATCH - BUG-WIDGET-001: Sincronizar código na aba Widget
                 if (typeof updateWidgetTabCode === 'function') {
                     updateWidgetTabCode();
+                }
+
+                // 🔥 V11.3: Verificar checkout após ativação
+                try {
+                    v113CheckCheckout(apiKeyValue);
+                } catch(v113e) {
+                    console.warn('[V11.3] Checkout check erro (não crítico):', v113e.message);
                 }
 
             } catch (error) {
@@ -3763,6 +3799,124 @@
             }
         }
         // ===== FIM MEUS ASSISTENTES JS =====
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 V11.3 — CHECKOUT FALLBACK INVISÍVEL (Painel Admin)
+        // ═══════════════════════════════════════════════════════════════════
+
+        // Verificar checkout após ativação
+        async function v113CheckCheckout(apiKey) {
+            try {
+                var section = document.getElementById('v113CheckoutSection');
+                var statusEl = document.getElementById('v113CheckoutStatus');
+                var statusIcon = document.getElementById('v113StatusIcon');
+                var statusLabel = document.getElementById('v113StatusLabel');
+                var inputEl = document.getElementById('v113CheckoutUrl');
+                var hintEl = document.getElementById('v113CheckoutHint');
+                if (!section || !apiKey) return;
+
+                // Mostrar seção
+                section.style.display = 'block';
+
+                // Status animado
+                statusEl.className = 'v113-checkout-status';
+                statusIcon.textContent = '🔍';
+                statusLabel.textContent = 'Verificando checkout...';
+
+                // Delay para dar tempo ao backend
+                await new Promise(function(r) { setTimeout(r, 3000); });
+
+                var resp = await fetch('/api/checkout-status?apiKey=' + encodeURIComponent(apiKey));
+                var data = await resp.json();
+
+                if (data.hasCheckout && data.checkoutUrl) {
+                    // CHECKOUT ENCONTRADO
+                    statusEl.className = 'v113-checkout-status found';
+                    statusIcon.textContent = '✅';
+                    var source = data.confirmed ? 'confirmado' : 'auto-detectado';
+                    statusLabel.textContent = 'Checkout ' + source + ': ' + data.checkoutUrl.substring(0, 60) + (data.checkoutUrl.length > 60 ? '...' : '');
+                    inputEl.value = data.checkoutUrl;
+                    inputEl.classList.add('v113-auto');
+                    hintEl.textContent = data.confirmed ? '✅ Checkout confirmado. Altere abaixo se necessário.' : '⚡ Auto-detectado. Confirme ou corrija abaixo.';
+                } else {
+                    // CHECKOUT NÃO ENCONTRADO
+                    statusEl.className = 'v113-checkout-status missing';
+                    statusIcon.textContent = '⚠️';
+                    statusLabel.textContent = 'Checkout não detectado automaticamente';
+                    hintEl.textContent = 'Cole o link de pagamento (Hotmart, Kiwify, Eduzz, etc) para a IA fechar vendas.';
+                }
+            } catch (e) {
+                console.warn('[V11.3] Erro ao verificar checkout:', e.message);
+                // Silencioso — não impacta nada
+            }
+        }
+
+        // Salvar checkout manualmente
+        async function v113SaveCheckout() {
+            try {
+                var inputEl = document.getElementById('v113CheckoutUrl');
+                var btn = document.getElementById('v113SaveCheckoutBtn');
+                var statusEl = document.getElementById('v113CheckoutStatus');
+                var statusIcon = document.getElementById('v113StatusIcon');
+                var statusLabel = document.getElementById('v113StatusLabel');
+                var hintEl = document.getElementById('v113CheckoutHint');
+                var checkoutUrl = (inputEl ? inputEl.value.trim() : '');
+
+                if (!checkoutUrl) {
+                    showToast('⚠️ Cole o link de pagamento antes de salvar.', 'error');
+                    return;
+                }
+
+                // Validar URL
+                try { new URL(checkoutUrl); } catch(_) {
+                    showToast('⚠️ URL inválida. Cole um link completo (https://...).', 'error');
+                    return;
+                }
+
+                // API Key
+                var apiKey = document.getElementById('apiKeyInput').value.trim()
+                    || localStorage.getItem('linkmagico_api_key') || '';
+                if (!apiKey) {
+                    showToast('⚠️ API Key necessária para salvar checkout.', 'error');
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = '🔄 Salvando...';
+
+                var resp = await fetch('/api/confirm-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        apiKey: apiKey,
+                        checkoutUrl: checkoutUrl,
+                        source: 'user_confirmed'
+                    })
+                });
+                var data = await resp.json();
+
+                if (data.success) {
+                    statusEl.className = 'v113-checkout-status found';
+                    statusIcon.textContent = '✅';
+                    statusLabel.textContent = 'Checkout confirmado: ' + checkoutUrl.substring(0, 60) + (checkoutUrl.length > 60 ? '...' : '');
+                    inputEl.classList.add('v113-auto');
+                    hintEl.textContent = '✅ Salvo! A IA usará este link para fechar vendas.';
+                    showToast('✅ Link de checkout salvo com sucesso!', 'success');
+                } else {
+                    showToast('❌ Erro ao salvar: ' + (data.error || 'tente novamente'), 'error');
+                }
+
+                btn.disabled = false;
+                btn.textContent = '🚀 Salvar';
+            } catch (e) {
+                console.warn('[V11.3] Erro ao salvar checkout:', e.message);
+                showToast('❌ Erro de conexão ao salvar checkout.', 'error');
+                var btn2 = document.getElementById('v113SaveCheckoutBtn');
+                if (btn2) { btn2.disabled = false; btn2.textContent = '🚀 Salvar'; }
+            }
+        }
+
+        // ===== FIM V11.3 CHECKOUT JS =====
 
         // SAFE PATCH - BUG-WIDGET-001: Funções da aba Widget
         function copyWidgetCodeFromTab() {
