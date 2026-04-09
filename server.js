@@ -7424,26 +7424,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         .sched-selected{background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:8px 12px;margin-top:8px;color:#065f46;font-size:0.9rem;text-align:center}
         .sched-loading{text-align:center;color:#64748b;padding:20px;font-size:0.9rem}
         @media (max-width:768px){.chat-container{height:100vh;border-radius:0}.chat-message{max-width:85%}.lead-form{margin:10px;padding:20px}.contact-button{min-width:100px;font-size:0.8rem}.lm-botoes-fixos{padding:10px !important}.lm-botoes-fixos a, .lm-botoes-fixos button{padding:10px 15px !important;font-size:0.8rem !important}.sched-day-btn{min-width:60px;padding:6px 8px;font-size:0.75rem}}
-        /* 🔥 V11.3 — FALLBACK INVISÍVEL UI */
-        .v113-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:999;animation:v113FadeIn .3s ease}
-        .v113-overlay.active{display:flex}
-        @keyframes v113FadeIn{from{opacity:0}to{opacity:1}}
-        .v113-modal{background:white;border-radius:20px;padding:30px;max-width:420px;width:90%;box-shadow:0 25px 60px rgba(0,0,0,0.2);animation:v113SlideUp .4s ease;text-align:center}
-        @keyframes v113SlideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
-        .v113-modal h3{color:#1e293b;font-size:1.2rem;margin-bottom:6px;font-weight:600}
-        .v113-modal p{color:#64748b;font-size:0.9rem;margin-bottom:20px;line-height:1.4}
-        .v113-modal input{width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:0.95rem;transition:all .3s;outline:none}
-        .v113-modal input:focus{border-color:${primaryColor};box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
-        .v113-modal input.v113-prefilled{border-color:#10b981;background:#f0fdf4}
-        .v113-btn{width:100%;background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;border:none;padding:14px;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:12px;transition:all .3s}
-        .v113-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(59,130,246,0.3)}
-        .v113-skip{color:#94a3b8;font-size:0.8rem;margin-top:10px;cursor:pointer;transition:color .2s}
-        .v113-skip:hover{color:#64748b}
-        .v113-status{display:none;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:12px;padding:12px 16px;margin:10px 20px;text-align:center}
-        .v113-status .v113-step{color:#0284c7;font-size:0.85rem;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px}
-        .v113-status .v113-step .v113-spinner{width:16px;height:16px;border:2px solid #bae6fd;border-top-color:#0284c7;border-radius:50%;animation:v113spin 1s linear infinite}
-        @keyframes v113spin{to{transform:rotate(360deg)}}
-        .v113-success-msg{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:12px;padding:12px 16px;margin:10px 20px;text-align:center;color:#15803d;font-weight:500;font-size:0.85rem;display:none;animation:v113FadeIn .5s ease}
     </style>
 </head>
 <body>
@@ -7474,20 +7454,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
-        </div>
-    </div>
-    <!-- 🔥 V11.3 FALLBACK INVISÍVEL — Modal de Checkout Mágico -->
-    <div class="v113-status" id="v113Status">
-        <div class="v113-step"><div class="v113-spinner"></div><span id="v113StatusText">🧠 Analisando sua página...</span></div>
-    </div>
-    <div class="v113-success-msg" id="v113SuccessMsg">✅ Checkout conectado com sucesso 🚀</div>
-    <div class="v113-overlay" id="v113Overlay">
-        <div class="v113-modal">
-            <h3>🔍 Quase pronto…</h3>
-            <p>Só preciso confirmar um detalhe rápido para ativar 100% das vendas 👇</p>
-            <input type="url" id="v113CheckoutInput" placeholder="Cole aqui seu link de pagamento (opcional)">
-            <button class="v113-btn" id="v113ConfirmBtn">🚀 Ativar vendedor completo</button>
-            <div class="v113-skip" id="v113SkipBtn">Pular por agora</div>
         </div>
     </div>
     <script>
@@ -7741,130 +7707,6 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
 
         // Auto-focus no primeiro campo do formulário
         document.getElementById('leadName').focus();
-
-        // ═══════════════════════════════════════════════════════════════════
-        // 🔥 V11.3 — FALLBACK INVISÍVEL (CHECKOUT MAGIC UI)
-        // Auto Prime + Detecção de Falha + Modal Mágico + Auto-fill
-        // ═══════════════════════════════════════════════════════════════════
-        (function v113Init() {
-            try {
-                const v113StatusEl = document.getElementById('v113Status');
-                const v113StatusText = document.getElementById('v113StatusText');
-                const v113Overlay = document.getElementById('v113Overlay');
-                const v113Input = document.getElementById('v113CheckoutInput');
-                const v113ConfirmBtn = document.getElementById('v113ConfirmBtn');
-                const v113SkipBtn = document.getElementById('v113SkipBtn');
-                const v113SuccessMsg = document.getElementById('v113SuccessMsg');
-                if (!v113StatusEl || !currentApiKey) return;
-
-                let v113CheckoutDetected = (pageData && pageData.checkoutLink) || null;
-
-                // CAMADA 1: AUTO PRIME — Status animado
-                if (pageData && pageData.url) {
-                    v113StatusEl.style.display = 'block';
-                    const steps = [
-                        '🧠 Analisando sua página...',
-                        '⚡ Preparando seu vendedor automático...',
-                        '🔗 Conectando seu checkout...'
-                    ];
-                    let stepIdx = 0;
-                    const stepInterval = setInterval(function() {
-                        stepIdx++;
-                        if (stepIdx < steps.length) {
-                            v113StatusText.textContent = steps[stepIdx];
-                        } else {
-                            clearInterval(stepInterval);
-                            // CAMADA 2: DETECÇÃO DE FALHA
-                            checkCheckoutStatus();
-                        }
-                    }, 2000);
-                }
-
-                // Verificar status do checkout via API
-                async function checkCheckoutStatus() {
-                    try {
-                        const resp = await fetch('/api/checkout-status?apiKey=' + encodeURIComponent(currentApiKey));
-                        const data = await resp.json();
-
-                        if (data.hasCheckout && data.checkoutUrl) {
-                            // Checkout encontrado — mostrar sucesso
-                            v113CheckoutDetected = data.checkoutUrl;
-                            showSuccess();
-                        } else if (v113CheckoutDetected) {
-                            // V11.2 detectou mas DB não tem — mostrar sucesso
-                            showSuccess();
-                        } else {
-                            // CAMADA 3: FALLBACK INVISÍVEL — mostrar modal mágico
-                            showFallbackModal();
-                        }
-                    } catch (e) {
-                        // Silencioso — ocultar status se falhar
-                        v113StatusEl.style.display = 'none';
-                    }
-                }
-
-                function showSuccess() {
-                    v113StatusEl.style.display = 'none';
-                    v113SuccessMsg.style.display = 'block';
-                    setTimeout(function() { v113SuccessMsg.style.display = 'none'; }, 4000);
-                }
-
-                function showFallbackModal() {
-                    v113StatusEl.style.display = 'none';
-                    v113Overlay.classList.add('active');
-
-                    // CAMADA 4: AUTO-PREENCHIMENTO — se detectou possível checkout
-                    if (v113CheckoutDetected) {
-                        v113Input.value = v113CheckoutDetected;
-                        v113Input.classList.add('v113-prefilled');
-                    }
-                }
-
-                // CAMADA 5: Confirmar checkout
-                v113ConfirmBtn.addEventListener('click', async function() {
-                    const checkoutUrl = v113Input.value.trim();
-                    if (!checkoutUrl) {
-                        // CAMADA 8: FALLBACK ZERO — pular sem checkout
-                        v113Overlay.classList.remove('active');
-                        return;
-                    }
-
-                    v113ConfirmBtn.textContent = '🔄 Salvando...';
-                    v113ConfirmBtn.disabled = true;
-
-                    try {
-                        await fetch('/api/confirm-checkout', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                apiKey: currentApiKey,
-                                checkoutUrl: checkoutUrl,
-                                source: 'user_confirmed'
-                            })
-                        });
-
-                        // Atualizar pageData local
-                        pageData.checkoutLink = checkoutUrl;
-
-                        // CAMADA 7: Micro interação de sucesso
-                        v113Overlay.classList.remove('active');
-                        v113SuccessMsg.style.display = 'block';
-                        setTimeout(function() { v113SuccessMsg.style.display = 'none'; }, 4000);
-                    } catch (e) {
-                        v113ConfirmBtn.textContent = '🚀 Ativar vendedor completo';
-                        v113ConfirmBtn.disabled = false;
-                    }
-                });
-
-                // CAMADA 8: Skip — sistema funciona sem checkout
-                v113SkipBtn.addEventListener('click', function() {
-                    v113Overlay.classList.remove('active');
-                });
-
-            } catch (v113Err) {
-                console.warn('[V11.3] UI fallback erro (não crítico):', v113Err);
-            }
-        })();
     </script>
 </body>
 </html>`;
