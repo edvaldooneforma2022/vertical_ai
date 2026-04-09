@@ -218,6 +218,47 @@ try {
     console.log('⚠️ [V11.0] Conversation State não disponível (não crítico):', e.message);
 }
 
+// ═══════════════════════════════════════════════════════
+// 🔥 V11.2 RAG ENGINE — Domain Crawler + Content Extraction + Knowledge Builder + Click Discovery
+// ═══════════════════════════════════════════════════════
+let _v112CrawlDomain = null;
+let _v112ExtractContent = null;
+let _v112DetectCheckoutFromLinks = null;
+let _v112BuildKnowledge = null;
+let _v112FormatKnowledgeContext = null;
+let _v112ClickDiscovery = null;
+
+try {
+    const _dc = require('./lib/domain-crawler');
+    _v112CrawlDomain = _dc.crawlDomain;
+    console.log('✅ [V11.2] Domain Crawler carregado');
+} catch (e) {
+    console.log('⚠️ [V11.2] Domain Crawler não disponível (não crítico):', e.message);
+}
+try {
+    const _ce = require('./lib/content-extractor-v112');
+    _v112ExtractContent = _ce.extractContent;
+    _v112DetectCheckoutFromLinks = _ce.detectCheckoutFromLinks;
+    console.log('✅ [V11.2] Content Extractor carregado');
+} catch (e) {
+    console.log('⚠️ [V11.2] Content Extractor não disponível (não crítico):', e.message);
+}
+try {
+    const _kb = require('./lib/knowledge-builder');
+    _v112BuildKnowledge = _kb.buildKnowledge;
+    _v112FormatKnowledgeContext = _kb.formatKnowledgeContext;
+    console.log('✅ [V11.2] Knowledge Builder carregado');
+} catch (e) {
+    console.log('⚠️ [V11.2] Knowledge Builder não disponível (não crítico):', e.message);
+}
+try {
+    const _ccd = require('./lib/checkout-click-discovery');
+    _v112ClickDiscovery = _ccd.discoverCheckoutByClick;
+    console.log('✅ [V11.2] Checkout Click Discovery carregado');
+} catch (e) {
+    console.log('⚠️ [V11.2] Checkout Click Discovery não disponível (não crítico):', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -4766,6 +4807,96 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             console.warn('[V11] ⚠️ Checkout Discovery erro (sem impacto):', _v11DiscErr.message);
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 V11.2 RAG ENGINE — AUTO EXTRAÇÃO + CONHECIMENTO + CHECKOUT
+        // Pipeline completo: Crawl → Extract → Knowledge → Checkout (3 níveis)
+        // Ativo APENAS em modo automático. Não impacta manual/desligado.
+        // Protegido por FEATURE_V11_2_RAG + try/catch total
+        // ═══════════════════════════════════════════════════════════════════
+        let _v112KnowledgeContext = '';
+        let _v112LinksMap = null;
+
+        try {
+            const _v112SalesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
+            const _v112Enabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V11_2_RAG');
+
+            // ISOLAMENTO: V11.2 SOMENTE ativa em modo automático
+            if (_v112Enabled && _v112SalesMode === 'auto' && pageData && pageData.url) {
+                console.log('[V11.2] 🚀 Pipeline RAG iniciando para:', (pageData.url || '').substring(0, 80));
+                const _v112StartTime = Date.now();
+
+                // ─── PASSO 1: Crawl do domínio (max 5 páginas) ───
+                if (_v112CrawlDomain && _v112ExtractContent && _v112BuildKnowledge) {
+                    const _v112Pages = await _v112CrawlDomain(pageData.url, 5);
+
+                    if (_v112Pages && _v112Pages.length > 0) {
+                        // ─── PASSO 2: Extrair conteúdo de cada página ───
+                        const _v112Extracted = _v112Pages.map(p => ({
+                            url: p.url,
+                            ..._v112ExtractContent(p.html)
+                        }));
+
+                        // ─── PASSO 3: Construir base de conhecimento (RAG) ───
+                        const _v112RawKnowledge = _v112BuildKnowledge(_v112Extracted);
+                        if (_v112RawKnowledge && _v112FormatKnowledgeContext) {
+                            _v112KnowledgeContext = _v112FormatKnowledgeContext(_v112RawKnowledge);
+                        }
+
+                        // ─── PASSO 4: Checkout Discovery PASSIVO (fallback por links) ───
+                        if (!pageData.checkoutLink && _v112DetectCheckoutFromLinks) {
+                            for (const page of _v112Extracted) {
+                                if (page.links && page.links.length > 0) {
+                                    const _v112FoundCheckout = _v112DetectCheckoutFromLinks(page.links);
+                                    if (_v112FoundCheckout) {
+                                        pageData.checkoutLink = _v112FoundCheckout;
+                                        console.log('[V11.2] 🎯 Nível 2 — Checkout via links passivos:', _v112FoundCheckout.substring(0, 100));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        console.log(`[V11.2] ✅ RAG completo em ${Date.now() - _v112StartTime}ms | ${_v112Pages.length} páginas | knowledge=${_v112KnowledgeContext.length} chars | checkout=${pageData.checkoutLink ? 'SIM' : 'NÃO'}`);
+                    } else {
+                        console.log('[V11.2] ℹ️ Nenhuma página crawleada (URL pode ser inacessível)');
+                    }
+                }
+
+                // ─── PASSO 5: ACTIVE CHECKOUT DISCOVERY — Clique automático (Nível 3) ───
+                // Só ativa se AINDA não temos checkout após RAG + links passivos
+                if (!pageData.checkoutLink && _v112ClickDiscovery && pageData.url) {
+                    try {
+                        console.log('[V11.2] 🖱️ Nível 3 — Iniciando Active Click Discovery...');
+                        const _v112ClickResult = await _v112ClickDiscovery(pageData.url, {
+                            timeout: 30000,
+                            clickWait: 3000,
+                            maxClicks: 3
+                        });
+                        if (_v112ClickResult) {
+                            pageData.checkoutLink = _v112ClickResult;
+                            console.log('[V11.2] 🔥 Nível 3 — Checkout via CLICK DISCOVERY:', _v112ClickResult.substring(0, 100));
+                        } else {
+                            console.log('[V11.2] ℹ️ Nível 3 — Nenhum checkout encontrado via clique');
+                        }
+                    } catch (_v112ClickErr) {
+                        console.warn('[V11.2] ⚠️ Click Discovery erro (sem impacto):', _v112ClickErr.message);
+                    }
+                }
+
+                // ─── PASSO 6: Construir Links Map V11 (fonte única) ───
+                if (_v11BuildLinksMap) {
+                    _v112LinksMap = _v11BuildLinksMap(pageData);
+                    console.log(`[V11.2] 🔗 Links Map: checkout=${_v112LinksMap.checkout ? 'SIM' : 'NÃO'} | site=${_v112LinksMap.site ? 'SIM' : 'NÃO'}`);
+                }
+
+                console.log(`[V11.2] 🏁 Pipeline V11.2 COMPLETO em ${Date.now() - _v112StartTime}ms`);
+            }
+        } catch (_v112Err) {
+            console.warn('[V11.2] ⚠️ Erro no pipeline RAG (sem impacto, fallback para fluxo existente):', _v112Err.message);
+            _v112KnowledgeContext = '';
+            _v112LinksMap = null;
+        }
+
         // 🔗 [V9.3 CHECKOUT-PRE-PROMPT] Resolver checkout link ANTES da montagem do prompt
         // Se o pageData já tem checkoutLink (do widget ou extração server-side), mantém.
         // Senão, tenta resolver via link-resolver (configuração do tenant, env var, etc).
@@ -5063,7 +5194,7 @@ USE estas informações para calibrar sua resposta: se ação=fechar → CTA dir
 
             // ─── MONTAGEM FINAL DO SYSTEM PROMPT POR MODO ───
             if (_promptSalesMode === 'auto') {
-                // ORDEM OTIMIZADA (V2 FINAL):
+                // ORDEM OTIMIZADA (V11.2 FINAL):
                 // 1. FULL PROMPT (quem sou)
                 // 2. CONTEXT LOCK (identidade do produto — CRÍTICO primeiro)
                 // 3. HIERARCHY (prioridade de contexto)
@@ -5072,7 +5203,9 @@ USE estas informações para calibrar sua resposta: se ação=fechar → CTA dir
                 // 6. DECISION (estratégia)
                 // 7. AUTO-INSTRUCTIONS (adaptação por nicho)
                 // 8. ANTI-CONTRADICTION (proteção final)
-                // 9. SCRAPED CONTEXT (dados brutos por último)
+                // 9. V11.2 KNOWLEDGE CONTEXT (RAG — conteúdo real do site)
+                // 10. V11.2 LINKS MAP (checkout + site disponíveis)
+                // 11. SCRAPED CONTEXT (dados brutos por último)
                 systemPrompt = PROMPT_UNIVERSAL_FULL +
                     (_contextLockBlock ? '\n' + _contextLockBlock : '') +
                     (_contextHierarchyBlock ? '\n' + _contextHierarchyBlock : '') +
@@ -5081,9 +5214,11 @@ USE estas informações para calibrar sua resposta: se ação=fechar → CTA dir
                     '\n' + _decisionContextStr +
                     (_autoInstructions ? '\n' + _autoInstructions : '') +
                     (_antiContradictionBlock ? '\n' + _antiContradictionBlock : '') +
+                    (_v112KnowledgeContext ? '\n' + _v112KnowledgeContext : '') +
+                    (_v112LinksMap && _v112LinksMap.checkout ? '\n\n[V11.2_LINKS_MAP]\nLINKS DISPONÍVEIS (fonte única V11.2):\n- checkout: ' + _v112LinksMap.checkout + '\n- site: ' + (_v112LinksMap.site || 'N/A') + '\nREGRA V11.2: Quando o cliente quiser comprar, use EXCLUSIVAMENTE o link de checkout acima. NUNCA use a URL do site como link de pagamento.' : '') +
                     '\n' + _scrapedContext;
 
-                console.log(`🧠 [UNIVERSAL-PROMPT] Modo AUTO ativado (${systemPrompt.length} chars, decision=${_decisionContextStr ? 'SIM' : 'NÃO'}, contextLock=${_contextLockBlock ? 'SIM' : 'NÃO'}, behaviorV2=${_behaviorV2Block ? 'SIM' : 'NÃO'})`);
+                console.log(`🧠 [UNIVERSAL-PROMPT] Modo AUTO ativado (${systemPrompt.length} chars, decision=${_decisionContextStr ? 'SIM' : 'NÃO'}, contextLock=${_contextLockBlock ? 'SIM' : 'NÃO'}, behaviorV2=${_behaviorV2Block ? 'SIM' : 'NÃO'}, v112RAG=${_v112KnowledgeContext ? 'SIM' : 'NÃO'}, v112Links=${_v112LinksMap && _v112LinksMap.checkout ? 'SIM' : 'NÃO'})`);
 
             } else if (_promptSalesMode === 'manual') {
                 // ORDEM: LIGHT PROMPT → USER INSTRUCTIONS → CONTEXTO
