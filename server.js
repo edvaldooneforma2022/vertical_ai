@@ -4678,6 +4678,50 @@ function shouldActivateSalesMode(instructions) {
     return salesKeywords.test(instructions);
 }
 
+/**
+ * 🔒 FASE 2 BLINDADA — HELPERS DE CONVERSÃO DETERMINÍSTICA (V11.3.2)
+ */
+
+/**
+ * Detecta intenção de compra com padrões expandidos e coloquiais
+ * @param {string} message 
+ * @returns {boolean}
+ */
+function detectBuyIntent(message = '') {
+    const msg = String(message).toLowerCase();
+    const patterns = [
+        'comprar', 'compra', 'quero', 'fechar', 'garantir',
+        'como faço', 'como funciona pagamento',
+        'valor', 'preço', 'quanto', 'custa',
+        'link', 'checkout',
+        'acesso', 'entrar', 'começar', 'liberar',
+        'adquirir', 'assinar', 'pagamento', 'finalizar',
+        'inscrição', 'inscrever', 'garantir meu'
+    ];
+    return patterns.some(p => msg.includes(p));
+}
+
+/**
+ * Validação robusta de presença de link na resposta
+ * @param {string} response 
+ * @param {string} checkout 
+ * @returns {boolean}
+ */
+function hasValidCheckout(response, checkout) {
+    if (!response || !checkout) return false;
+    return response.includes(checkout.trim());
+}
+
+/**
+ * Verifica se existe qualquer link válido na resposta
+ * @param {string} text 
+ * @returns {boolean}
+ */
+function hasAnyUrl(text) {
+    if (!text) return false;
+    return /(https?:\/\/[^\s]+)/g.test(text);
+}
+
 // ===== FUNÇÃO APRIMORADA DE RESPOSTA DA IA COM SUPERINTELIGÊNCIA =====
 // 🎯 FEATURE_CLEAN_CHAT_V2: chatbotId adicionado para buscar FAQs da Knowledge Base
 async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null, apiKey = null, chatbotId = null) {
@@ -5043,15 +5087,13 @@ ANTI-REPETIÇÃO:
 - Variar linguagem
 - Não repetir frases
 
-PREÇO:
-Nunca responder seco. Sempre contextualizar.
-Ex: "É R$97/ano. Mas pensa: isso substitui um vendedor 24h..."
-
-CTA:
-- Se intenção de compra → CTA direto
-- Se existe LINK DE CHECKOUT/COMPRA no contexto, use OBRIGATORIAMENTE ESSE link exato nas respostas (NÃO use a URL da página como link de compra — ela é apenas referência, NÃO é link de pagamento)
-- Quando o cliente pedir link de pagamento, compra, checkout: responda com o LINK DE CHECKOUT/COMPRA exatamente como fornecido
-- Nunca confundir com múltiplos caminhos
+REGRA CRÍTICA DE CONVERSÃO:
+Se o usuário demonstrar qualquer interesse em preço, pagamento, compra, acesso ou inscrição:
+- VOCÊ DEVE obrigatoriamente incluir o link de checkout fornecido.
+- NUNCA omita o link nesses casos.
+- NUNCA substitua por explicações genéricas.
+- NUNCA redirecione para página de vendas.
+Se existir checkoutLink → ele é a ação principal e deve estar na resposta.
 
 ADAPTAÇÃO:
 Leigo → simples
@@ -6096,6 +6138,18 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             });
         }
 
+        // 🔒 FASE 2 BLINDADA: Detecção de Intenção e Forçamento (V11.3.2)
+        const buyIntent = detectBuyIntent(message);
+        const hasCheckout = !!(pageData?.checkoutLink || (processedPageData && processedPageData.checkoutLink));
+        const forceCheckout = hasCheckout && buyIntent;
+
+        console.log(`[V11.3-SALES] intent=${buyIntent} | hadCheckout=${hasCheckout} | forced=${forceCheckout} | apiKey=${apiKey?.substring(0,8)}...`);
+
+        // Aviso de funil (intenção sem checkout disponível)
+        if (buyIntent && !hasCheckout) {
+            console.warn(`[V11.3-CRITICAL] Intent detected but NO checkout available (funnel drop risk) | apiKey=${apiKey?.substring(0,8)}...`);
+        }
+
         if (conversationId) {
             analytics.activeChats.add(conversationId);
             setTimeout(() => analytics.activeChats.delete(conversationId), 30 * 60 * 1000);
@@ -6356,45 +6410,33 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             console.warn('[V10.1] ⚠️ Checkout blocker erro (resposta mantida):', _v101Err.message);
         }
 
-        // 🧠 [V9.5] CHECKOUT AUTHORITY — HARD OVERRIDE FINAL (chat-universal)
-        // V10: Quando Orchestrator está ativo, ele já gerencia injeção de checkout link.
-        //      Checkout Authority só roda como fallback quando V10 NÃO está ativo.
+        // 🔒 [V11.3.2] FASE 2 BLINDADA — ORQUESTRAÇÃO FINAL DE VENDAS
         try {
-            const _v95OrchActive = orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10');
-            if (!_v95OrchActive && _reqSalesMode === 'auto' && featureFlags && featureFlags.isEnabled('FEATURE_CHECKOUT_AUTHORITY')) {
+            const checkout = processedPageData?.checkoutLink;
+            
+            // 1. Override Absoluto (Force)
+            if (forceCheckout && checkout) {
+                if (!hasValidCheckout(finalResponse, checkout)) {
+                    console.log(`[V11.3-SALES] 🔥 OVERRIDE ATIVO: Forçando link no final | apiKey=${apiKey?.substring(0,8)}...`);
+                    finalResponse += `
 
-                const _v95Msg = (message || '').toLowerCase();
-                const _v95BuyIntent = /(comprar|compr[ae]r|quero comprar|quero comp|pagar|checkout|finalizar|adquirir|assinar|garantir|onde compro|como compro|link de compra|quero esse|quero o produto|me manda o link|quero adquirir|quanto custa|qual o pre[cç]o|como fa[cç]o pra comprar|quero pagar|bora fechar|fechar negocio|vou levar|quero contratar)/i.test(_v95Msg);
-
-                if (_v95BuyIntent) {
-
-                    let _v95CheckoutUrl = processedPageData?.checkoutLink;
-
-                    // fallback: resolver novamente via link-resolver
-                    if (!_v95CheckoutUrl) {
-                        try {
-                            _v95CheckoutUrl = resolveCheckoutLink({ context: processedPageData, tenantConfig: req.cliente });
-                        } catch (_) {}
-                    }
-
-                    if (_v95CheckoutUrl && !finalResponse.includes(_v95CheckoutUrl)) {
-                        console.log('[CHECKOUT_AUTHORITY@chat-universal] 🔥 FORÇANDO CHECKOUT:', _v95CheckoutUrl);
-                        finalResponse = `${finalResponse}\n\n👉 Para finalizar sua compra com segurança, use este link oficial:\n${_v95CheckoutUrl}`.trim();
-                    }
-
-                    // 🔥 [V9.6] FAILSAFE ABSOLUTO (com fallback para URL original)
-                    if (!finalResponse.includes('http')) {
-                        const _v95Fallback = processedPageData?._originalUrl || processedPageData?.url || '';
-                        if (_v95Fallback) {
-                            finalResponse += `\n\n👉 Para comprar agora, acesse o link oficial:\n${_v95Fallback}`;
-                        }
-                    }
+━━━━━━━━━━━━━━━━━━━
+🚀 FINALIZAR COMPRA
+${checkout}
+━━━━━━━━━━━━━━━━━━━`;
                 }
-            } else if (_v95OrchActive) {
-                console.log('[CHECKOUT_AUTHORITY@chat-universal] ⏭️ Bypass — Orchestrator V10 ativo');
             }
-        } catch (_v95Err) {
-            console.warn('[CHECKOUT_AUTHORITY@chat-universal] fallback seguro:', _v95Err.message);
+
+            // 2. Proteção Anti-Sumiço (Rede de segurança se deveria ter link e não tem URL nenhuma)
+            if (hasCheckout && !hasAnyUrl(finalResponse) && buyIntent) {
+                console.warn(`[V11.3-SALES-GUARD] 🛡️ Anti-Sumiço ativado: IA omitiu URL | apiKey=${apiKey?.substring(0,8)}...`);
+                finalResponse += `
+
+👉 Acesse aqui para continuar:
+${checkout}`;
+            }
+        } catch (blindErr) {
+            console.warn('[V11.3-SALES-GUARD] ⚠️ Erro na blindagem final:', blindErr.message);
         }
 
 
