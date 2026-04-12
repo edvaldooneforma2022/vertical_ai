@@ -2291,8 +2291,10 @@
                 }
 
                 // 🔥 V11.3: Verificar checkout após ativação
+                // FIX V11.3.3: Passar checkoutLink extraído como fallback
                 try {
-                    v113CheckCheckout(apiKeyValue);
+                    var _extractedCheckoutLink = (data.data && data.data.checkoutLink) || null;
+                    v113CheckCheckout(apiKeyValue, _extractedCheckoutLink);
                 } catch(v113e) {
                     console.warn('[V11.3] Checkout check erro (não crítico):', v113e.message);
                 }
@@ -3805,19 +3807,38 @@
         // ═══════════════════════════════════════════════════════════════════
 
         // Verificar checkout após ativação
-        async function v113CheckCheckout(apiKey) {
+        // FIX V11.3.3: Aceita extractedCheckoutLink (dos dados de extração) como fallback
+        async function v113CheckCheckout(apiKey, extractedCheckoutLink) {
+            var section = document.getElementById('v113CheckoutSection');
+            var statusEl = document.getElementById('v113CheckoutStatus');
+            var statusIcon = document.getElementById('v113StatusIcon');
+            var statusLabel = document.getElementById('v113StatusLabel');
+            var inputEl = document.getElementById('v113CheckoutUrl');
+            var hintEl = document.getElementById('v113CheckoutHint');
+            if (!section) return;
+
+            // SEMPRE mostrar seção (mesmo sem API Key — operador precisa ver)
+            section.style.display = 'block';
+
+            // Se não tem API Key, usar dados de extração diretamente
+            if (!apiKey) {
+                if (extractedCheckoutLink) {
+                    statusEl.className = 'v113-checkout-status found';
+                    statusIcon.textContent = '✅';
+                    statusLabel.textContent = 'Checkout extraído: ' + extractedCheckoutLink.substring(0, 60) + (extractedCheckoutLink.length > 60 ? '...' : '');
+                    inputEl.value = extractedCheckoutLink;
+                    inputEl.classList.add('v113-auto');
+                    hintEl.textContent = '⚡ Auto-detectado via extração. Confirme ou corrija abaixo.';
+                } else {
+                    statusEl.className = 'v113-checkout-status missing';
+                    statusIcon.textContent = '⚠️';
+                    statusLabel.textContent = 'Checkout não detectado automaticamente';
+                    hintEl.textContent = 'Cole o link de pagamento (Hotmart, Kiwify, Eduzz, etc) para a IA fechar vendas.';
+                }
+                return;
+            }
+
             try {
-                var section = document.getElementById('v113CheckoutSection');
-                var statusEl = document.getElementById('v113CheckoutStatus');
-                var statusIcon = document.getElementById('v113StatusIcon');
-                var statusLabel = document.getElementById('v113StatusLabel');
-                var inputEl = document.getElementById('v113CheckoutUrl');
-                var hintEl = document.getElementById('v113CheckoutHint');
-                if (!section || !apiKey) return;
-
-                // Mostrar seção
-                section.style.display = 'block';
-
                 // Status animado
                 statusEl.className = 'v113-checkout-status';
                 statusIcon.textContent = '🔍';
@@ -3830,7 +3851,7 @@
                 var data = await resp.json();
 
                 if (data.hasCheckout && data.checkoutUrl) {
-                    // CHECKOUT ENCONTRADO
+                    // CHECKOUT ENCONTRADO VIA API
                     statusEl.className = 'v113-checkout-status found';
                     statusIcon.textContent = '✅';
                     var source = data.confirmed ? 'confirmado' : 'auto-detectado';
@@ -3838,6 +3859,14 @@
                     inputEl.value = data.checkoutUrl;
                     inputEl.classList.add('v113-auto');
                     hintEl.textContent = data.confirmed ? '✅ Checkout confirmado. Altere abaixo se necessário.' : '⚡ Auto-detectado. Confirme ou corrija abaixo.';
+                } else if (extractedCheckoutLink) {
+                    // FALLBACK: Usar checkout da extração
+                    statusEl.className = 'v113-checkout-status found';
+                    statusIcon.textContent = '✅';
+                    statusLabel.textContent = 'Checkout extraído: ' + extractedCheckoutLink.substring(0, 60) + (extractedCheckoutLink.length > 60 ? '...' : '');
+                    inputEl.value = extractedCheckoutLink;
+                    inputEl.classList.add('v113-auto');
+                    hintEl.textContent = '⚡ Auto-detectado via extração. Confirme abaixo para salvar.';
                 } else {
                     // CHECKOUT NÃO ENCONTRADO
                     statusEl.className = 'v113-checkout-status missing';
@@ -3847,7 +3876,20 @@
                 }
             } catch (e) {
                 console.warn('[V11.3] Erro ao verificar checkout:', e.message);
-                // Silencioso — não impacta nada
+                // FALLBACK: Mesmo com erro de API, mostrar seção com dados de extração
+                if (extractedCheckoutLink) {
+                    statusEl.className = 'v113-checkout-status found';
+                    statusIcon.textContent = '✅';
+                    statusLabel.textContent = 'Checkout extraído: ' + extractedCheckoutLink.substring(0, 60);
+                    inputEl.value = extractedCheckoutLink;
+                    inputEl.classList.add('v113-auto');
+                    hintEl.textContent = '⚡ Auto-detectado via extração. Confirme abaixo para salvar.';
+                } else {
+                    statusEl.className = 'v113-checkout-status missing';
+                    statusIcon.textContent = '⚠️';
+                    statusLabel.textContent = 'Checkout não detectado';
+                    hintEl.textContent = 'Cole o link de pagamento para a IA fechar vendas.';
+                }
             }
         }
 

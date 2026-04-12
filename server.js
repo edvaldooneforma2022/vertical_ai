@@ -4692,11 +4692,15 @@ function detectBuyIntent(message = '') {
     const patterns = [
         'comprar', 'compra', 'quero', 'fechar', 'garantir',
         'como faço', 'como funciona pagamento',
-        'valor', 'preço', 'quanto', 'custa',
+        'valor', 'preço', 'preco', 'quanto', 'custa',
         'link', 'checkout',
         'acesso', 'entrar', 'começar', 'liberar',
-        'adquirir', 'assinar', 'pagamento', 'finalizar',
-        'inscrição', 'inscrever', 'garantir meu'
+        'adquirir', 'assinar', 'pagamento', 'pagar', 'pago',
+        'finalizar', 'inscrição', 'inscrever', 'garantir meu',
+        'boleto', 'pix', 'cartão', 'cartao', 'parcelar', 'parcela',
+        'investimento', 'investir', 'contratar', 'cadastrar',
+        'compro', 'onde compro', 'como pago', 'como paga',
+        'pode parcelar', 'formas de pagamento', 'aceita'
     ];
     return patterns.some(p => msg.includes(p));
 }
@@ -6138,17 +6142,10 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             });
         }
 
-        // 🔒 FASE 2 BLINDADA: Detecção de Intenção e Forçamento (V11.3.2)
+        // 🔒 FASE 2 BLINDADA: Detecção de Intenção (V11.3.2 — FIX: cálculo prévio apenas da intenção)
+        // NOTA: hasCheckout e forceCheckout são calculados DEPOIS de processedPageData existir (logo antes da blindagem)
         const buyIntent = detectBuyIntent(message);
-        const hasCheckout = !!(pageData?.checkoutLink || (processedPageData && processedPageData.checkoutLink));
-        const forceCheckout = hasCheckout && buyIntent;
-
-        console.log(`[V11.3-SALES] intent=${buyIntent} | hadCheckout=${hasCheckout} | forced=${forceCheckout} | apiKey=${apiKey?.substring(0,8)}...`);
-
-        // Aviso de funil (intenção sem checkout disponível)
-        if (buyIntent && !hasCheckout) {
-            console.warn(`[V11.3-CRITICAL] Intent detected but NO checkout available (funnel drop risk) | apiKey=${apiKey?.substring(0,8)}...`);
-        }
+        console.log(`[V11.3-SALES] intent=${buyIntent} | apiKey=${apiKey?.substring(0,8)}... (checkout será verificado após extração)`);
 
         if (conversationId) {
             analytics.activeChats.add(conversationId);
@@ -6411,29 +6408,31 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         }
 
         // 🔒 [V11.3.2] FASE 2 BLINDADA — ORQUESTRAÇÃO FINAL DE VENDAS
+        // FIX V11.3.3: Recalcular hasCheckout/forceCheckout AQUI (processedPageData já existe)
         try {
             const checkout = processedPageData?.checkoutLink;
-            
+            const _blindHasCheckout = !!checkout;
+            const _blindForceCheckout = _blindHasCheckout && buyIntent;
+
+            console.log(`[V11.3-SALES] hasCheckout=${_blindHasCheckout} | forced=${_blindForceCheckout} | checkout=${checkout ? checkout.substring(0, 60) + '...' : 'N/A'} | apiKey=${apiKey?.substring(0,8)}...`);
+
+            // Aviso de funil (intenção sem checkout disponível)
+            if (buyIntent && !_blindHasCheckout) {
+                console.warn(`[V11.3-CRITICAL] ⚠️ Intent detected but NO checkout available (funnel drop risk) | apiKey=${apiKey?.substring(0,8)}...`);
+            }
+
             // 1. Override Absoluto (Force)
-            if (forceCheckout && checkout) {
+            if (_blindForceCheckout && checkout) {
                 if (!hasValidCheckout(finalResponse, checkout)) {
                     console.log(`[V11.3-SALES] 🔥 OVERRIDE ATIVO: Forçando link no final | apiKey=${apiKey?.substring(0,8)}...`);
-                    finalResponse += `
-
-━━━━━━━━━━━━━━━━━━━
-🚀 FINALIZAR COMPRA
-${checkout}
-━━━━━━━━━━━━━━━━━━━`;
+                    finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${checkout}\n━━━━━━━━━━━━━━━━━━━`;
                 }
             }
 
             // 2. Proteção Anti-Sumiço (Rede de segurança se deveria ter link e não tem URL nenhuma)
-            if (hasCheckout && !hasAnyUrl(finalResponse) && buyIntent) {
+            if (_blindHasCheckout && !hasAnyUrl(finalResponse) && buyIntent) {
                 console.warn(`[V11.3-SALES-GUARD] 🛡️ Anti-Sumiço ativado: IA omitiu URL | apiKey=${apiKey?.substring(0,8)}...`);
-                finalResponse += `
-
-👉 Acesse aqui para continuar:
-${checkout}`;
+                finalResponse += `\n\n👉 Acesse aqui para continuar:\n${checkout}`;
             }
         } catch (blindErr) {
             console.warn('[V11.3-SALES-GUARD] ⚠️ Erro na blindagem final:', blindErr.message);
@@ -7166,6 +7165,39 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
         } catch (_v101IntErr) {
             console.warn('[V10.1] ⚠️ Checkout blocker inteligente erro (resposta mantida):', _v101IntErr.message);
+        }
+
+        // 🔒 [V11.3.3] FASE 2 BLINDADA — ORQUESTRAÇÃO FINAL DE VENDAS (process-chat-inteligente)
+        // Espelhamento da blindagem do chat-universal para garantir checkout em AMBOS endpoints
+        // Protegido por try/catch — zero impacto se falhar
+        try {
+            const _blindIntBuyIntent = detectBuyIntent(message);
+            const _blindIntCheckout = processedPageData?.checkoutLink;
+            const _blindIntHasCheckout = !!_blindIntCheckout;
+            const _blindIntForce = _blindIntHasCheckout && _blindIntBuyIntent;
+
+            console.log(`[V11.3-SALES@inteligente] intent=${_blindIntBuyIntent} | hasCheckout=${_blindIntHasCheckout} | forced=${_blindIntForce} | apiKey=${apiKey?.substring(0,8)}...`);
+
+            // Aviso de funil
+            if (_blindIntBuyIntent && !_blindIntHasCheckout) {
+                console.warn(`[V11.3-CRITICAL@inteligente] ⚠️ Intent detected but NO checkout available | apiKey=${apiKey?.substring(0,8)}...`);
+            }
+
+            // 1. Override Absoluto (Force)
+            if (_blindIntForce && _blindIntCheckout) {
+                if (!hasValidCheckout(finalResponse, _blindIntCheckout)) {
+                    console.log(`[V11.3-SALES@inteligente] 🔥 OVERRIDE ATIVO: Forçando link | apiKey=${apiKey?.substring(0,8)}...`);
+                    finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_blindIntCheckout}\n━━━━━━━━━━━━━━━━━━━`;
+                }
+            }
+
+            // 2. Proteção Anti-Sumiço
+            if (_blindIntHasCheckout && !hasAnyUrl(finalResponse) && _blindIntBuyIntent) {
+                console.warn(`[V11.3-SALES-GUARD@inteligente] 🛡️ Anti-Sumiço ativado | apiKey=${apiKey?.substring(0,8)}...`);
+                finalResponse += `\n\n👉 Acesse aqui para continuar:\n${_blindIntCheckout}`;
+            }
+        } catch (_blindIntErr) {
+            console.warn('[V11.3-SALES-GUARD@inteligente] ⚠️ Erro na blindagem (resposta mantida):', _blindIntErr.message);
         }
 
         return res.json({
