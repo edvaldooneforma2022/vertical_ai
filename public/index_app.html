@@ -1243,11 +1243,11 @@
         /* 🔥 V11.3 — CHECKOUT STATUS (Painel Admin) */
         .v113-checkout-section{background:rgba(15,23,42,0.6);border:1px solid rgba(71,85,105,0.4);border-radius:12px;padding:16px;margin-top:12px}
         .v113-checkout-section h4{color:#60a5fa;font-size:0.9rem;margin:0 0 10px 0;display:flex;align-items:center;gap:6px}
-        .v113-checkout-status{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:0.82rem;margin-bottom:10px}
+        .v113-checkout-status{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:0.82rem;margin-bottom:10px;overflow:hidden;word-break:break-all;max-width:100%}
         .v113-checkout-status.found{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399}
         .v113-checkout-status.missing{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fbbf24}
         .v113-checkout-input-row{display:flex;gap:8px}
-        .v113-checkout-input-row input{flex:1;background:rgba(30,41,59,0.8);border:1px solid #475569;color:#e2e8f0;border-radius:8px;padding:10px 12px;font-size:0.85rem;outline:none;transition:border-color .3s}
+        .v113-checkout-input-row input{flex:1;background:rgba(30,41,59,0.8);border:1px solid #475569;color:#e2e8f0;border-radius:8px;padding:10px 12px;font-size:0.85rem;outline:none;transition:border-color .3s;overflow:hidden;text-overflow:ellipsis}
         .v113-checkout-input-row input:focus{border-color:#6366f1}
         .v113-checkout-input-row input.v113-auto{border-color:#10b981;background:rgba(16,185,129,0.08)}
         .v113-checkout-input-row button{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;border-radius:8px;padding:10px 16px;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .3s}
@@ -1312,12 +1312,12 @@
                 <div class="form-group">
                     <label for="robotName" class="form-label"><i class="fas fa-robot"></i> Nome do Assistente
                         Virtual:</label>
-                    <input type="text" id="robotName" class="form-input" value="@teste"
+                    <input type="text" id="robotName" class="form-input" value=""
                         placeholder="Ex: @AssistenteDeVendas">
                 </div>
                 <div class="form-group">
                     <label for="salesUrl" class="form-label"><i class="fas fa-link"></i> URL da Página:</label>
-                    <input type="url" id="salesUrl" class="form-input" value="https://www.arsenalsecretodosceos.com.br"
+                    <input type="url" id="salesUrl" class="form-input" value=""
                         placeholder="Ex: https://seusite.com/pagina-de-vendas">
                     <p class="input-hint">A URL deve ser da sua página de vendas ou de conteúdo relevante.</p>
                 </div>

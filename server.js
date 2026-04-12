@@ -265,13 +265,24 @@ try {
 let _v113GetConfirmedCheckout = null;
 let _v113SaveCheckoutLink = null;
 let _v113GetCheckoutStatus = null;
+let _v113ClearCache = null;
+let _v113ClearAllCache = null;
+let _v113IsValidCheckoutDomain = null;
 
 try {
     const _cfe = require('./lib/checkout-fallback-engine');
     _v113GetConfirmedCheckout = _cfe.getConfirmedCheckout;
     _v113SaveCheckoutLink = _cfe.saveCheckoutLink;
     _v113GetCheckoutStatus = _cfe.getCheckoutStatus;
-    console.log('✅ [V11.3] Checkout Fallback Engine carregado');
+    _v113ClearCache = _cfe.clearCache;
+    _v113ClearAllCache = _cfe.clearAllCache;
+    _v113IsValidCheckoutDomain = _cfe.isValidCheckoutDomain;
+    console.log('✅ [V11.3] Checkout Fallback Engine carregado (v11.3.1-hotfix)');
+    // 🧨 HOTFIX 11.3.1: Reset GLOBAL de cache na inicialização (contenção de incidente)
+    if (_v113ClearAllCache) {
+        _v113ClearAllCache();
+        console.log('🧨 [V11.3-HOTFIX] Cache global resetado na inicialização (contenção ativa)');
+    }
 } catch (e) {
     console.log('⚠️ [V11.3] Checkout Fallback Engine não disponível (não crítico):', e.message);
 }
@@ -4812,9 +4823,15 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             if (_v113Enabled && _v113GetConfirmedCheckout && apiKey && pageData && !pageData.checkoutLink) {
                 const _v113Confirmed = await _v113GetConfirmedCheckout(db, apiKey);
                 if (_v113Confirmed) {
-                    pageData.checkoutLink = _v113Confirmed;
-                    pageData._checkoutSource = 'v113_confirmed';
-                    console.log(`[V11.3] ✅ Checkout CONFIRMADO do DB (prioridade máxima): ${_v113Confirmed.substring(0, 80)}`);
+                    // 🔒 HOTFIX 11.3.1: Validar domínio do checkout antes de aplicar
+                    const _v113DomainOk = !_v113IsValidCheckoutDomain || _v113IsValidCheckoutDomain(_v113Confirmed);
+                    if (_v113DomainOk) {
+                        pageData.checkoutLink = _v113Confirmed;
+                        pageData._checkoutSource = 'v113_confirmed';
+                        console.log(`[V11.3-AUDIT] ✅ Checkout CONFIRMADO do DB aplicado: tenant=${apiKey?.substring(0, 8)}... url=${_v113Confirmed.substring(0, 80)}`);
+                    } else {
+                        console.warn(`[V11.3-SECURITY] ⛔ Checkout do DB REJEITADO (domínio inválido): tenant=${apiKey?.substring(0, 8)}... url=${_v113Confirmed.substring(0, 80)}`);
+                    }
                 }
             }
         } catch (_v113PreErr) {
@@ -4937,13 +4954,18 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         try {
             const _v113PersistEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V11_3_FALLBACK');
             if (_v113PersistEnabled && _v113SaveCheckoutLink && apiKey && pageData && pageData.checkoutLink && pageData._checkoutSource !== 'v113_confirmed') {
-                // Salvar como auto-detectado (não confirmado) — não sobrescreve confirmado
-                const _v113Source = pageData._checkoutSource || 'auto_v112';
-                _v113SaveCheckoutLink(db, apiKey, pageData.checkoutLink, _v113Source, false)
-                    .then(saved => {
-                        if (saved) console.log(`[V11.3] 💾 Checkout auto-persistido: ${pageData.checkoutLink.substring(0, 60)}`);
-                    })
-                    .catch(() => {}); // fire-and-forget, never blocks
+                // 🔒 HOTFIX 11.3.1: Validar domínio antes de persistir
+                const _v113PersistDomainOk = !_v113IsValidCheckoutDomain || _v113IsValidCheckoutDomain(pageData.checkoutLink);
+                if (_v113PersistDomainOk) {
+                    const _v113Source = pageData._checkoutSource || 'auto_v112';
+                    _v113SaveCheckoutLink(db, apiKey, pageData.checkoutLink, _v113Source, false)
+                        .then(saved => {
+                            if (saved) console.log(`[V11.3-AUDIT] 💾 Checkout auto-persistido: tenant=${apiKey?.substring(0, 8)}... url=${pageData.checkoutLink.substring(0, 60)}`);
+                        })
+                        .catch(() => {}); // fire-and-forget, never blocks
+                } else {
+                    console.warn(`[V11.3-SECURITY] ⛔ Checkout NÃO persistido (domínio inválido): tenant=${apiKey?.substring(0, 8)}... url=${pageData.checkoutLink.substring(0, 60)}`);
+                }
             }
         } catch (_v113PersistErr) {
             // Silencioso — persistencia é best-effort
@@ -8494,6 +8516,14 @@ try {
             // 🔍 DIAG-SHORT-URL: Log para diagnóstico de criação
             logger.info(`🔗 [CREATE-SHORT-URL] Recebido: robotName=${robotName || '(vazio)'}, salesUrl=${salesUrl ? salesUrl.substring(0, 40) : '(vazio)'}, apiKey=${apiKey ? apiKey.substring(0, 12) + '...' : '⚠️ VAZIA'}`);
 
+            // 🔒 HOTFIX 11.3.1: Limpar cache de checkout ao criar novo assistente
+            try {
+                if (_v113ClearCache && apiKey) {
+                    _v113ClearCache(apiKey);
+                    logger.info(`[V11.3-HOTFIX] 🧹 Cache checkout limpo ao criar short URL (tenant=${apiKey.substring(0, 8)}...)`);
+                }
+            } catch (_clearErr) { /* silencioso */ }
+
             // Validações
             if (!apiKey) {
                 return res.status(400).json({
@@ -8783,7 +8813,12 @@ try {
             }
 
             const saved = await _v113SaveCheckoutLink(db, apiKey, checkoutUrl, source || 'user_confirmed', true);
-            console.log(`[V11.3] 🔗 Checkout confirmado via API: ${checkoutUrl.substring(0, 80)} (tenant=${apiKey.substring(0, 8)}...)`);
+            console.log(`[V11.3-AUDIT] 🔗 Checkout confirmado via API: tenant=${apiKey.substring(0, 8)}... url=${checkoutUrl.substring(0, 80)}`);
+
+            // 🔒 HOTFIX 11.3.1: Limpar cache após confirmação para forçar refresh
+            try {
+                if (_v113ClearCache) _v113ClearCache(apiKey);
+            } catch (_) { /* silencioso */ }
 
             return res.json({ success: saved, message: saved ? 'Checkout salvo com sucesso' : 'Erro ao salvar' });
         } catch (err) {
