@@ -287,6 +287,28 @@ try {
     console.log('⚠️ [V11.3] Checkout Fallback Engine não disponível (não crítico):', e.message);
 }
 
+// ═══════════════════════════════════════════════════════
+// 🔒 V12.0 ESTABILIZAÇÃO — Safe Checkout Resolver + Force Checkout Layer
+// ═══════════════════════════════════════════════════════
+let _v12ValidateCheckout = null;
+let _v12ForceCheckoutPipeline = null;
+
+try {
+    const _scr = require('./lib/safe-checkout-resolver');
+    _v12ValidateCheckout = _scr.validateCheckoutForTenant;
+    console.log('✅ [V12.0] Safe Checkout Resolver carregado');
+} catch (e) {
+    console.log('⚠️ [V12.0] Safe Checkout Resolver não disponível (não crítico):', e.message);
+}
+
+try {
+    const _fc = require('./lib/force-checkout');
+    _v12ForceCheckoutPipeline = _fc.applyForceCheckoutPipeline;
+    console.log('✅ [V12.0] Force Checkout Layer carregado');
+} catch (e) {
+    console.log('⚠️ [V12.0] Force Checkout Layer não disponível (não crítico):', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -6438,6 +6460,60 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             console.warn('[V11.3-SALES-GUARD] ⚠️ Erro na blindagem final:', blindErr.message);
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔒 [V12.0] CAMADA 1 — SAFE CHECKOUT RESOLVER (chat-universal)
+        // Validação de domínio e anti-cross-tenant ANTES do envio final
+        // Protegido por FEATURE_V12_SAFE_CHECKOUT + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v12SafeEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V12_SAFE_CHECKOUT');
+            if (_v12SafeEnabled && _v12ValidateCheckout && processedPageData?.checkoutLink) {
+                const _v12Validation = _v12ValidateCheckout(apiKey, processedPageData.checkoutLink);
+                if (!_v12Validation.valid) {
+                    console.warn(`[V12-SAFE@chat-universal] ⛔ Checkout BLOQUEADO: reason=${_v12Validation.reason} | tenant=${apiKey?.substring(0,8)}... | url=${processedPageData.checkoutLink.substring(0,60)}`);
+                    // Remover checkout inválido da resposta
+                    if (finalResponse.includes(processedPageData.checkoutLink)) {
+                        finalResponse = finalResponse
+                            .replace(new RegExp(processedPageData.checkoutLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[link removido por segurança]')
+                            .replace(/\n*━[━]+\n[^\n]*FINALIZAR COMPRA[^\n]*\n\[link removido[^\n]*\n━[━]+/gi, '')
+                            .replace(/\n{3,}/g, '\n\n')
+                            .trim();
+                    }
+                } else {
+                    console.log(`[V12-SAFE@chat-universal] ✅ Checkout válido: tenant=${apiKey?.substring(0,8)}... domain=${_v12Validation.domain || 'ok'}`);
+                }
+            }
+        } catch (_v12SafeErr) {
+            console.warn('[V12-SAFE@chat-universal] ⚠️ Erro (resposta mantida):', _v12SafeErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 [V12.0] CAMADA 2 — FORCE CHECKOUT LAYER (chat-universal)
+        // Backend soberano: garante checkout quando IA detecta intenção de compra
+        // Protegido por FEATURE_V12_FORCE_CHECKOUT + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v12ForceEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V12_FORCE_CHECKOUT');
+            const _v12SalesMode = (processedPageData && processedPageData.salesMode) ||
+                req.body?.salesMode || req.body?.sales_mode ||
+                process.env.SALES_LAYER_MODE || 'auto';
+
+            if (_v12ForceEnabled && _v12ForceCheckoutPipeline && _v12SalesMode === 'auto') {
+                const _v12Result = _v12ForceCheckoutPipeline({
+                    response: finalResponse,
+                    message: message,
+                    checkoutLink: processedPageData?.checkoutLink || null,
+                    mode: _v12SalesMode
+                });
+
+                if (_v12Result && _v12Result.forced) {
+                    finalResponse = _v12Result.text;
+                    console.log(`[V12-FORCE@chat-universal] 🔥 Aplicado: reason=${_v12Result.reason} | tenant=${apiKey?.substring(0,8)}...`);
+                }
+            }
+        } catch (_v12ForceErr) {
+            console.warn('[V12-FORCE@chat-universal] ⚠️ Erro (resposta mantida):', _v12ForceErr.message);
+        }
 
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
@@ -7198,6 +7274,76 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
         } catch (_blindIntErr) {
             console.warn('[V11.3-SALES-GUARD@inteligente] ⚠️ Erro na blindagem (resposta mantida):', _blindIntErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔒 [V12.0] CAMADA 1 — SAFE CHECKOUT RESOLVER (inteligente)
+        // Validação de domínio e anti-cross-tenant ANTES do envio final
+        // Protegido por FEATURE_V12_SAFE_CHECKOUT + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v12SafeEnabledInt = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V12_SAFE_CHECKOUT');
+            if (_v12SafeEnabledInt && _v12ValidateCheckout && processedPageData?.checkoutLink) {
+                const _v12ValidationInt = _v12ValidateCheckout(apiKey, processedPageData.checkoutLink);
+                if (!_v12ValidationInt.valid) {
+                    console.warn(`[V12-SAFE@inteligente] ⛔ Checkout BLOQUEADO: reason=${_v12ValidationInt.reason} | tenant=${apiKey?.substring(0,8)}...`);
+                    if (finalResponse.includes(processedPageData.checkoutLink)) {
+                        finalResponse = finalResponse
+                            .replace(new RegExp(processedPageData.checkoutLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[link removido por segurança]')
+                            .replace(/\n*━[━]+\n[^\n]*FINALIZAR COMPRA[^\n]*\n\[link removido[^\n]*\n━[━]+/gi, '')
+                            .replace(/\n{3,}/g, '\n\n')
+                            .trim();
+                    }
+                } else {
+                    console.log(`[V12-SAFE@inteligente] ✅ Checkout válido: tenant=${apiKey?.substring(0,8)}...`);
+                }
+            }
+        } catch (_v12SafeIntErr) {
+            console.warn('[V12-SAFE@inteligente] ⚠️ Erro (resposta mantida):', _v12SafeIntErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 [V12.0] CAMADA 2 — FORCE CHECKOUT LAYER (inteligente)
+        // Backend soberano: garante checkout quando IA detecta intenção de compra
+        // Protegido por FEATURE_V12_FORCE_CHECKOUT + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v12ForceEnabledInt = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V12_FORCE_CHECKOUT');
+            const _v12SalesModeInt = (processedPageData && processedPageData.salesMode) ||
+                req.body?.salesMode || req.body?.sales_mode ||
+                process.env.SALES_LAYER_MODE || 'auto';
+
+            if (_v12ForceEnabledInt && _v12ForceCheckoutPipeline && _v12SalesModeInt === 'auto') {
+                const _v12ResultInt = _v12ForceCheckoutPipeline({
+                    response: finalResponse,
+                    message: message,
+                    checkoutLink: processedPageData?.checkoutLink || null,
+                    mode: _v12SalesModeInt
+                });
+
+                if (_v12ResultInt && _v12ResultInt.forced) {
+                    finalResponse = _v12ResultInt.text;
+                    console.log(`[V12-FORCE@inteligente] 🔥 Aplicado: reason=${_v12ResultInt.reason} | tenant=${apiKey?.substring(0,8)}...`);
+                }
+            }
+        } catch (_v12ForceIntErr) {
+            console.warn('[V12-FORCE@inteligente] ⚠️ Erro (resposta mantida):', _v12ForceIntErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🧠 [V12.0] CAMADA 3 — CONVERSATION STATE PROMPT (inteligente)
+        // Anti-amnésia: atualiza estado conversacional para próximas mensagens
+        // Protegido por FEATURE_V12_STATE_PROMPT + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v12StateEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V12_STATE_PROMPT');
+            if (_v12StateEnabled && _v11ConversationState && conversationId) {
+                const _v12Intent = _intDecision?.intent || 'neutral';
+                _v11ConversationState.updateState(conversationId, _v12Intent, message);
+                console.log(`[V12-STATE@inteligente] 📝 Estado atualizado: conv=${conversationId.substring(0,8)}... intent=${_v12Intent}`);
+            }
+        } catch (_v12StateErr) {
+            console.warn('[V12-STATE@inteligente] ⚠️ Erro (sem impacto):', _v12StateErr.message);
         }
 
         return res.json({
