@@ -309,6 +309,39 @@ try {
     console.log('⚠️ [V12.0] Force Checkout Layer não disponível (não crítico):', e.message);
 }
 
+// ═══════════════════════════════════════════════════════
+// 🧠 V12.1 AUTÔNOMO — Self-Healing + Validator + Learning
+// ═══════════════════════════════════════════════════════
+let _v12ApplyHealing = null;
+let _v12ValidateResponse = null;
+let _v12SaveFailure = null;
+let _v12SaveSuccess = null;
+
+try {
+    const _she = require('./lib/self-healing-engine');
+    _v12ApplyHealing = _she.applyHealing;
+    console.log('✅ [V12.1] Self-Healing Engine carregado');
+} catch (e) {
+    console.log('⚠️ [V12.1] Self-Healing Engine não disponível (não crítico):', e.message);
+}
+
+try {
+    const _rv = require('./lib/response-validator');
+    _v12ValidateResponse = _rv.validateResponse;
+    console.log('✅ [V12.1] Response Validator carregado');
+} catch (e) {
+    console.log('⚠️ [V12.1] Response Validator não disponível (não crítico):', e.message);
+}
+
+try {
+    const _lm = require('./lib/learning-memory');
+    _v12SaveFailure = _lm.saveFailure;
+    _v12SaveSuccess = _lm.saveSuccess;
+    console.log('✅ [V12.1] Learning Memory carregado');
+} catch (e) {
+    console.log('⚠️ [V12.1] Learning Memory não disponível (não crítico):', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -4891,7 +4924,9 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         try {
             const _v113Enabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V11_3_FALLBACK');
             if (_v113Enabled && _v113GetConfirmedCheckout && apiKey && pageData && !pageData.checkoutLink) {
-                const _v113Confirmed = await _v113GetConfirmedCheckout(db, apiKey);
+                // FIX V12.1: Passar salesUrl para isolamento por URL (não só apiKey)
+                const _v113SalesUrl = pageData.url || pageData.salesUrl || null;
+                const _v113Confirmed = await _v113GetConfirmedCheckout(db, apiKey, _v113SalesUrl);
                 if (_v113Confirmed) {
                     // 🔒 HOTFIX 11.3.1: Validar domínio do checkout antes de aplicar
                     const _v113DomainOk = !_v113IsValidCheckoutDomain || _v113IsValidCheckoutDomain(_v113Confirmed);
@@ -5028,7 +5063,9 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 const _v113PersistDomainOk = !_v113IsValidCheckoutDomain || _v113IsValidCheckoutDomain(pageData.checkoutLink);
                 if (_v113PersistDomainOk) {
                     const _v113Source = pageData._checkoutSource || 'auto_v112';
-                    _v113SaveCheckoutLink(db, apiKey, pageData.checkoutLink, _v113Source, false)
+                    // FIX V12.1: Passar salesUrl para isolamento por URL
+                    const _v113PersistSalesUrl = pageData.url || pageData.salesUrl || null;
+                    _v113SaveCheckoutLink(db, apiKey, pageData.checkoutLink, _v113Source, false, _v113PersistSalesUrl)
                         .then(saved => {
                             if (saved) console.log(`[V11.3-AUDIT] 💾 Checkout auto-persistido: tenant=${apiKey?.substring(0, 8)}... url=${pageData.checkoutLink.substring(0, 60)}`);
                         })
@@ -6515,6 +6552,68 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             console.warn('[V12-FORCE@chat-universal] ⚠️ Erro (resposta mantida):', _v12ForceErr.message);
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🧠 [V12.1] SELF-HEALING ENGINE (chat-universal)
+        // Detecta e corrige falhas automaticamente
+        // Protegido por FEATURE_V12_SELF_HEALING + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v12HealEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V12_SELF_HEALING');
+            const _v12HealMode = (processedPageData && processedPageData.salesMode) || 'auto';
+
+            if (_v12HealEnabled && _v12ApplyHealing && _v12HealMode === 'auto') {
+                const _v12HealResult = _v12ApplyHealing({
+                    response: finalResponse,
+                    checkoutLink: processedPageData?.checkoutLink || null,
+                    intent: _chatUniversalDecision?.intent || 'neutral',
+                    message: message,
+                    apiKey: apiKey,
+                    mode: _v12HealMode
+                });
+
+                if (_v12HealResult && _v12HealResult.healed) {
+                    finalResponse = _v12HealResult.text;
+                    console.log(`[V12-HEAL@chat-universal] 🧠 Auto-correção: type=${_v12HealResult.failureType} | tenant=${apiKey?.substring(0,8)}...`);
+
+                    // Registrar falha para aprendizado
+                    if (_v12SaveFailure) {
+                        _v12SaveFailure(apiKey, _v12HealResult.failureType, { intent: _chatUniversalDecision?.intent, message });
+                    }
+                } else {
+                    // Registrar sucesso
+                    if (_v12SaveSuccess) {
+                        _v12SaveSuccess(apiKey, _chatUniversalDecision?.intent || 'neutral', { checkoutLink: processedPageData?.checkoutLink, response: finalResponse });
+                    }
+                }
+            }
+        } catch (_v12HealErr) {
+            console.warn('[V12-HEAL@chat-universal] ⚠️ Erro (resposta mantida):', _v12HealErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔍 [V12.1] RESPONSE VALIDATOR (chat-universal)
+        // Valida resposta final — log de problemas
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            if (_v12ValidateResponse) {
+                const _v12ValResult = _v12ValidateResponse({
+                    response: finalResponse,
+                    checkoutLink: processedPageData?.checkoutLink || null,
+                    intent: _chatUniversalDecision?.intent || 'neutral',
+                    message: message
+                });
+
+                if (_v12ValResult.errors.length > 0) {
+                    console.warn(`[V12-VALIDATOR@chat-universal] ❌ Erros: ${_v12ValResult.errors.join(', ')} | tenant=${apiKey?.substring(0,8)}...`);
+                }
+                if (_v12ValResult.warnings.length > 0) {
+                    console.warn(`[V12-VALIDATOR@chat-universal] ⚠️ Avisos: ${_v12ValResult.warnings.join(', ')} | tenant=${apiKey?.substring(0,8)}...`);
+                }
+            }
+        } catch (_v12ValErr) {
+            // Silencioso — validator é observacional
+        }
+
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
 
@@ -7328,6 +7427,65 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
         } catch (_v12ForceIntErr) {
             console.warn('[V12-FORCE@inteligente] ⚠️ Erro (resposta mantida):', _v12ForceIntErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🧠 [V12.1] SELF-HEALING ENGINE (inteligente)
+        // Detecta e corrige falhas automaticamente
+        // Protegido por FEATURE_V12_SELF_HEALING + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v12HealEnabledInt = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V12_SELF_HEALING');
+            const _v12HealModeInt = (processedPageData && processedPageData.salesMode) || 'auto';
+
+            if (_v12HealEnabledInt && _v12ApplyHealing && _v12HealModeInt === 'auto') {
+                const _v12HealResultInt = _v12ApplyHealing({
+                    response: finalResponse,
+                    checkoutLink: processedPageData?.checkoutLink || null,
+                    intent: _intDecision?.intent || 'neutral',
+                    message: message,
+                    apiKey: apiKey,
+                    mode: _v12HealModeInt
+                });
+
+                if (_v12HealResultInt && _v12HealResultInt.healed) {
+                    finalResponse = _v12HealResultInt.text;
+                    console.log(`[V12-HEAL@inteligente] 🧠 Auto-correção: type=${_v12HealResultInt.failureType} | tenant=${apiKey?.substring(0,8)}...`);
+                    if (_v12SaveFailure) {
+                        _v12SaveFailure(apiKey, _v12HealResultInt.failureType, { intent: _intDecision?.intent, message });
+                    }
+                } else {
+                    if (_v12SaveSuccess) {
+                        _v12SaveSuccess(apiKey, _intDecision?.intent || 'neutral', { checkoutLink: processedPageData?.checkoutLink, response: finalResponse });
+                    }
+                }
+            }
+        } catch (_v12HealIntErr) {
+            console.warn('[V12-HEAL@inteligente] ⚠️ Erro (resposta mantida):', _v12HealIntErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔍 [V12.1] RESPONSE VALIDATOR (inteligente)
+        // Valida resposta final — log de problemas
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            if (_v12ValidateResponse) {
+                const _v12ValResultInt = _v12ValidateResponse({
+                    response: finalResponse,
+                    checkoutLink: processedPageData?.checkoutLink || null,
+                    intent: _intDecision?.intent || 'neutral',
+                    message: message
+                });
+
+                if (_v12ValResultInt.errors.length > 0) {
+                    console.warn(`[V12-VALIDATOR@inteligente] ❌ Erros: ${_v12ValResultInt.errors.join(', ')} | tenant=${apiKey?.substring(0,8)}...`);
+                }
+                if (_v12ValResultInt.warnings.length > 0) {
+                    console.warn(`[V12-VALIDATOR@inteligente] ⚠️ Avisos: ${_v12ValResultInt.warnings.join(', ')} | tenant=${apiKey?.substring(0,8)}...`);
+                }
+            }
+        } catch (_v12ValIntErr) {
+            // Silencioso — validator é observacional
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -9022,7 +9180,7 @@ try {
                 return res.json({ success: false, error: 'V11.3 não habilitado' });
             }
 
-            const { apiKey, checkoutUrl, source } = req.body || {};
+            const { apiKey, checkoutUrl, source, salesUrl } = req.body || {};
             if (!apiKey || !checkoutUrl) {
                 return res.status(400).json({ success: false, error: 'apiKey e checkoutUrl são obrigatórios' });
             }
@@ -9032,8 +9190,9 @@ try {
                 return res.status(400).json({ success: false, error: 'URL inválida' });
             }
 
-            const saved = await _v113SaveCheckoutLink(db, apiKey, checkoutUrl, source || 'user_confirmed', true);
-            console.log(`[V11.3-AUDIT] 🔗 Checkout confirmado via API: tenant=${apiKey.substring(0, 8)}... url=${checkoutUrl.substring(0, 80)}`);
+            // FIX V12.1: Passar salesUrl para isolamento por URL
+            const saved = await _v113SaveCheckoutLink(db, apiKey, checkoutUrl, source || 'user_confirmed', true, salesUrl || null);
+            console.log(`[V12.1-AUDIT] 🔗 Checkout confirmado via API: tenant=${apiKey.substring(0, 8)}... url=${checkoutUrl.substring(0, 80)} salesUrl=${(salesUrl || 'default').substring(0, 60)}`);
 
             // 🔒 HOTFIX 11.3.1: Limpar cache após confirmação para forçar refresh
             try {
@@ -9056,11 +9215,13 @@ try {
             }
 
             const apiKey = req.query.apiKey;
+            const salesUrl = req.query.salesUrl || null;
             if (!apiKey) {
                 return res.status(400).json({ success: false, error: 'apiKey é obrigatório' });
             }
 
-            const status = await _v113GetCheckoutStatus(db, apiKey);
+            // FIX V12.1: Passar salesUrl para isolamento por URL
+            const status = await _v113GetCheckoutStatus(db, apiKey, salesUrl);
             return res.json({ success: true, ...status });
         } catch (err) {
             console.warn('[V11.3] ⚠️ Erro no endpoint checkout-status:', err.message);
