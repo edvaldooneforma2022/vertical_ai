@@ -342,6 +342,58 @@ try {
     console.log('⚠️ [V12.1] Learning Memory não disponível (não crítico):', e.message);
 }
 
+// ═══════════════════════════════════════════════════════
+// 🔥 V13 ARQUITETURA BLINDADA — Controle Externo da IA
+// Intent Classifier + State Manager + Rule Engine + Prompt Blindado + Validator
+// Feature flag: FEATURE_V13_BLINDADO (default: FALSE — opt-in)
+// ═══════════════════════════════════════════════════════
+let _v13ClassifyIntent = null;
+let _v13StateManager = null;
+let _v13DecideAction = null;
+let _v13BuildBlindadoPrompt = null;
+let _v13GetLLMHardLimits = null;
+let _v13ValidateResponse = null;
+
+try {
+    const _ic = require('./lib/v13-intent-classifier');
+    _v13ClassifyIntent = _ic.classifyIntent;
+    console.log('✅ [V13] Intent Classifier carregado');
+} catch (e) {
+    console.log('⚠️ [V13] Intent Classifier não disponível:', e.message);
+}
+
+try {
+    _v13StateManager = require('./lib/v13-state-manager');
+    console.log('✅ [V13] State Manager carregado');
+} catch (e) {
+    console.log('⚠️ [V13] State Manager não disponível:', e.message);
+}
+
+try {
+    const _re = require('./lib/v13-rule-engine');
+    _v13DecideAction = _re.decideAction;
+    console.log('✅ [V13] Rule Engine carregado');
+} catch (e) {
+    console.log('⚠️ [V13] Rule Engine não disponível:', e.message);
+}
+
+try {
+    const _pb = require('./lib/v13-prompt-blindado');
+    _v13BuildBlindadoPrompt = _pb.buildBlindadoPrompt;
+    _v13GetLLMHardLimits = _pb.getLLMHardLimits;
+    console.log('✅ [V13] Prompt Blindado carregado');
+} catch (e) {
+    console.log('⚠️ [V13] Prompt Blindado não disponível:', e.message);
+}
+
+try {
+    const _rv = require('./lib/v13-response-validator');
+    _v13ValidateResponse = _rv.validateResponse;
+    console.log('✅ [V13] Response Validator carregado');
+} catch (e) {
+    console.log('⚠️ [V13] Response Validator não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -5094,6 +5146,112 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 }
             }
         } catch (_ckPreErr) { console.warn('[CHECKOUT-PRE-PROMPT] Erro (sem impacto):', _ckPreErr.message); }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 V13 — PIPELINE BLINDADO (EARLY RETURN)
+        // Se FEATURE_V13_BLINDADO ativo + modo auto → V13 assume controle TOTAL
+        // Se flag off ou modo manual/off → fluxo legado V0-V12 continua abaixo
+        // Protegido por try/catch — qualquer falha → fallback para legado
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v13FlagEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V13_BLINDADO');
+            const _v13SalesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
+            const _v13AllModulesReady = _v13ClassifyIntent && _v13StateManager && _v13DecideAction && _v13BuildBlindadoPrompt && _v13ValidateResponse;
+
+            if (_v13FlagEnabled && _v13SalesMode === 'auto' && _v13AllModulesReady) {
+                console.log(`[V13] 🔥 Pipeline Blindado ATIVADO | tenant=${apiKey?.substring(0, 8)}...`);
+                const _v13Start = Date.now();
+
+                // ─── PASSO 1: INTENT CLASSIFIER (determinístico, zero IA) ───
+                const _v13Intent = _v13ClassifyIntent(cleanUserMessage);
+                console.log(`[V13] 🧩 1/6 Intent: ${_v13Intent.intent} (conf=${_v13Intent.confidence}) | pattern=${_v13Intent.matchedPattern}`);
+
+                // ─── PASSO 2: STATE MANAGER (score + máquina de estados) ───
+                const _v13ConvId = (pageData && pageData.conversationId) || leadId || `v13_${Date.now()}`;
+                const _v13StateResult = _v13StateManager.updateState(_v13ConvId, _v13Intent.intent, cleanUserMessage);
+                console.log(`[V13] 🧩 2/6 State: ${_v13StateResult.stage} (score=${_v13StateResult.score}) ${_v13StateResult.transition ? '⚡ ' + _v13StateResult.transition : ''}`);
+
+                // ─── PASSO 3: RULE ENGINE (hard rules → ação) ───
+                const _v13Action = _v13DecideAction(_v13Intent.intent, _v13StateResult, {
+                    checkoutLink: pageData.checkoutLink || null,
+                    productName: pageData.title || ''
+                });
+                console.log(`[V13] 🧩 3/6 Action: ${_v13Action.action} | reason=${_v13Action.reason} | sendCheckout=${_v13Action.sendCheckout}`);
+
+                // ─── PASSO 3.5: PRÉ-CONFIRMAÇÃO (se necessário) ───
+                if (_v13Action.action === 'CONFIRM_BEFORE_CHECKOUT') {
+                    _v13StateManager.markCheckoutConfirmed(_v13ConvId);
+                }
+
+                // ─── PASSO 4: PROMPT BLINDADO + CHAMADA LLM ───
+                const _v13Prompt = _v13BuildBlindadoPrompt({
+                    action: _v13Action.action,
+                    intent: _v13Intent.intent,
+                    pageData: pageData,
+                    userInstructions: instructions || ''
+                });
+
+                const _v13Limits = _v13GetLLMHardLimits ? _v13GetLLMHardLimits() : { max_tokens: 150, temperature: 0.3 };
+
+                const _v13Messages = [
+                    { role: 'system', content: _v13Prompt },
+                    ...(Array.isArray(conversationHistory) ? conversationHistory.slice(-6) : []),
+                    { role: 'user', content: cleanUserMessage }
+                ];
+
+                let _v13RawResponse = '';
+                try {
+                    if (process.env.GROQ_API_KEY) {
+                        _v13RawResponse = await callGroq(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
+                    } else if (process.env.OPENROUTER_API_KEY) {
+                        _v13RawResponse = await callOpenRouter(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
+                    } else if (process.env.OPENAI_API_KEY) {
+                        _v13RawResponse = await callOpenAI(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
+                    }
+                } catch (_v13LLMErr) {
+                    console.warn('[V13] ⚠️ LLM falhou, usando fallback:', _v13LLMErr.message);
+                    _v13RawResponse = 'Me diga exatamente o que você quer saber para eu te responder com precisão.';
+                }
+
+                console.log(`[V13] 🧩 4/6 LLM: ${_v13RawResponse.length} chars | temp=${_v13Limits.temperature} | max_tokens=${_v13Limits.max_tokens}`);
+
+                // ─── PASSO 5: VALIDADOR ANTI-ALUCINAÇÃO ───
+                const _v13Validated = _v13ValidateResponse(_v13RawResponse, {
+                    productName: pageData.title || '',
+                    checkoutLink: pageData.checkoutLink || '',
+                    action: _v13Action.action
+                });
+
+                let _v13FinalResponse = _v13Validated.response;
+                if (_v13Validated.issues.length > 0) {
+                    console.warn(`[V13] 🧩 5/6 Validator: ${_v13Validated.issues.join(', ')}`);
+                } else {
+                    console.log(`[V13] 🧩 5/6 Validator: ✅ OK`);
+                }
+
+                // ─── PASSO 6: CHECKOUT ENGINE (FORA DA IA) ───
+                if (_v13Action.sendCheckout && pageData.checkoutLink) {
+                    // Injeta checkout PROGRAMATICAMENTE — a IA nunca viu esse link
+                    _v13FinalResponse += `\n\n🛒 ${pageData.checkoutLink}`;
+                    _v13StateManager.markCheckoutSent(_v13ConvId);
+                    console.log(`[V13] 🧩 6/6 Checkout: ✅ INJETADO (fora da IA) | ${pageData.checkoutLink.substring(0, 60)}`);
+                } else {
+                    console.log(`[V13] 🧩 6/6 Checkout: ⏸️ Não aplicável (action=${_v13Action.action})`);
+                }
+
+                const _v13Elapsed = Date.now() - _v13Start;
+                console.log(`[V13] 🏁 Pipeline completo em ${_v13Elapsed}ms | intent=${_v13Intent.intent} | state=${_v13StateResult.stage} | action=${_v13Action.action} | response=${_v13FinalResponse.length} chars`);
+
+                // Registrar uso no billing
+                const responseTime = Date.now() - startTime;
+                logger.info(`AI response generated in ${responseTime}ms using v13-blindado`);
+
+                return _v13FinalResponse;
+            }
+        } catch (_v13Err) {
+            // FALLBACK TOTAL — se V13 falhar, fluxo legado V0-V12 executa normalmente
+            console.warn('[V13] ⚠️ Pipeline Blindado falhou (fallback para legado):', _v13Err.message);
+        }
 
         // ═══════════════════════════════════════════════════════════════════
         // 🧠 PROMPT UNIVERSAL — Link Mágico (FEATURE_UNIVERSAL_PROMPT)
