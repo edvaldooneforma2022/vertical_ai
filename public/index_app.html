@@ -3847,7 +3847,12 @@
                 // Delay para dar tempo ao backend
                 await new Promise(function(r) { setTimeout(r, 3000); });
 
-                var resp = await fetch('/api/checkout-status?apiKey=' + encodeURIComponent(apiKey));
+                // FIX V12.1: Enviar salesUrl para isolamento por URL de vendas
+                var salesUrl = document.getElementById('salesUrl')?.value?.trim() || '';
+                var checkoutStatusUrl = '/api/checkout-status?apiKey=' + encodeURIComponent(apiKey);
+                if (salesUrl) checkoutStatusUrl += '&salesUrl=' + encodeURIComponent(salesUrl);
+
+                var resp = await fetch(checkoutStatusUrl);
                 var data = await resp.json();
 
                 if (data.hasCheckout && data.checkoutUrl) {
@@ -3926,13 +3931,17 @@
                 btn.disabled = true;
                 btn.textContent = '🔄 Salvando...';
 
+                // FIX V12.1: Enviar salesUrl para isolamento por URL de vendas
+                var salesUrlForSave = document.getElementById('salesUrl')?.value?.trim() || '';
+
                 var resp = await fetch('/api/confirm-checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         apiKey: apiKey,
                         checkoutUrl: checkoutUrl,
-                        source: 'user_confirmed'
+                        source: 'user_confirmed',
+                        salesUrl: salesUrlForSave || undefined
                     })
                 });
                 var data = await resp.json();
