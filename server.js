@@ -5235,6 +5235,18 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     _v13FinalResponse += `\n\n🛒 ${pageData.checkoutLink}`;
                     _v13StateManager.markCheckoutSent(_v13ConvId);
                     console.log(`[V13] 🧩 6/6 Checkout: ✅ INJETADO (fora da IA) | ${pageData.checkoutLink.substring(0, 60)}`);
+
+                    // Auto-persistir checkout no DB (elimina ativação manual)
+                    try {
+                        const _v13SalesUrl = pageData.url || pageData.salesUrl || null;
+                        if (_v13SalesUrl && _v113SaveCheckoutLink && apiKey) {
+                            _v113SaveCheckoutLink(db, apiKey, pageData.checkoutLink, 'auto_v13_blindado', false, _v13SalesUrl)
+                                .then(saved => {
+                                    if (saved) console.log(`[V13] 💾 Checkout auto-persistido: ${pageData.checkoutLink.substring(0, 60)}`);
+                                })
+                                .catch(() => {});
+                        }
+                    } catch (_) {}
                 } else {
                     console.log(`[V13] 🧩 6/6 Checkout: ⏸️ Não aplicável (action=${_v13Action.action})`);
                 }
@@ -6704,6 +6716,25 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                 if (_v12Result && _v12Result.forced) {
                     finalResponse = _v12Result.text;
                     console.log(`[V12-FORCE@chat-universal] 🔥 Aplicado: reason=${_v12Result.reason} | tenant=${apiKey?.substring(0,8)}...`);
+
+                    // ═══ V12.1 FIX: Auto-persistir checkout no DB quando Force Checkout aplica ═══
+                    // Elimina necessidade de ativação manual — salva automaticamente
+                    try {
+                        const _forceCheckoutLink = processedPageData?.checkoutLink || null;
+                        const _forceSalesUrl = processedPageData?.url || processedPageData?.salesUrl || url || null;
+                        if (_forceCheckoutLink && _forceSalesUrl && _v113SaveCheckoutLink && apiKey) {
+                            const _forceDomainOk = !_v113IsValidCheckoutDomain || _v113IsValidCheckoutDomain(_forceCheckoutLink);
+                            if (_forceDomainOk) {
+                                _v113SaveCheckoutLink(db, apiKey, _forceCheckoutLink, 'auto_force_checkout', false, _forceSalesUrl)
+                                    .then(saved => {
+                                        if (saved) console.log(`[V12-FORCE] 💾 Checkout auto-persistido no DB: tenant=${apiKey?.substring(0,8)}... url=${_forceCheckoutLink.substring(0, 60)}`);
+                                    })
+                                    .catch(() => {}); // fire-and-forget
+                            }
+                        }
+                    } catch (_forceSaveErr) {
+                        // Silencioso — persistência é best-effort
+                    }
                 }
             }
         } catch (_v12ForceErr) {
