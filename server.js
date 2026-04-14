@@ -430,6 +430,16 @@ try {
     console.log('⚠️ [V13.2] Multi-Checkout Engine não disponível:', e.message);
 }
 
+// V13.2.1 — Checkout Classifier (auto-alimentação upsell/downsell)
+let _v13EnrichPageData = null;
+try {
+    const _cc = require('./lib/v13-checkout-classifier');
+    _v13EnrichPageData = _cc.enrichPageDataWithCheckouts;
+    console.log('✅ [V13.2.1] Checkout Classifier carregado');
+} catch (e) {
+    console.log('⚠️ [V13.2.1] Checkout Classifier não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -5097,6 +5107,24 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                                     }
                                 }
                             }
+                        }
+                        // ─── V13.2.1: PASSO 4.5 — CLASSIFICAR TODOS OS LINKS (auto-alimentação) ───
+                        // Coleta todos os links de todas as páginas e classifica em primary/upsell/downsell
+                        try {
+                            if (_v13EnrichPageData && process.env.FEATURE_V13_MULTI_CHECKOUT === 'true') {
+                                const _v132AllLinks = [];
+                                for (const page of _v112Extracted) {
+                                    if (page.links && Array.isArray(page.links)) {
+                                        _v132AllLinks.push(...page.links);
+                                    }
+                                }
+                                if (_v132AllLinks.length > 0) {
+                                    _v13EnrichPageData(pageData, _v132AllLinks);
+                                    console.log(`[V13.2.1] ✅ Auto-alimentação: ${_v132AllLinks.length} links analisados | upsells=${(pageData.upsells || []).length} | downsells=${(pageData.downsells || []).length}`);
+                                }
+                            }
+                        } catch (_v132ClassErr) {
+                            console.warn('[V13.2.1] ⚠️ Classificação falhou (sem impacto):', _v132ClassErr.message);
                         }
 
                         console.log(`[V11.2] ✅ RAG completo em ${Date.now() - _v112StartTime}ms | ${_v112Pages.length} páginas | knowledge=${_v112KnowledgeContext.length} chars | checkout=${pageData.checkoutLink ? 'SIM' : 'NÃO'}`);
