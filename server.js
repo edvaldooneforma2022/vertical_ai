@@ -440,6 +440,43 @@ try {
     console.log('⚠️ [V13.2.1] Checkout Classifier não disponível:', e.message);
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// V14.0 — AUTO-OTIMIZAÇÃO (Feature Flag: FEATURE_V14_SELF_OPTIMIZING)
+// Camada ADITIVA — NÃO altera V13, apenas loga + aprende
+// ═══════════════════════════════════════════════════════════════════
+let _v14Logger = null;
+let _v14OutcomeDetector = null;
+let _v14PatternAnalyzer = null;
+let _v14AdaptiveLayer = null;
+
+try {
+    _v14Logger = require('./lib/v14-conversation-logger');
+    console.log('✅ [V14] Conversation Logger carregado');
+} catch (e) {
+    console.log('⚠️ [V14] Conversation Logger não disponível:', e.message);
+}
+
+try {
+    _v14OutcomeDetector = require('./lib/v14-outcome-detector');
+    console.log('✅ [V14] Outcome Detector carregado');
+} catch (e) {
+    console.log('⚠️ [V14] Outcome Detector não disponível:', e.message);
+}
+
+try {
+    _v14PatternAnalyzer = require('./lib/v14-pattern-analyzer');
+    console.log('✅ [V14] Pattern Analyzer carregado');
+} catch (e) {
+    console.log('⚠️ [V14] Pattern Analyzer não disponível:', e.message);
+}
+
+try {
+    _v14AdaptiveLayer = require('./lib/v14-adaptive-layer');
+    console.log('✅ [V14] Adaptive Layer carregado');
+} catch (e) {
+    console.log('⚠️ [V14] Adaptive Layer não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -5527,6 +5564,31 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 const responseTime = Date.now() - startTime;
                 logger.info(`AI response generated in ${responseTime}ms using v13-blindado`);
 
+                // ═══ V14.0: CONVERSATION LOGGER (fire-and-forget, NUNCA bloqueia) ═══
+                try {
+                    const _v14FlagOn = process.env.FEATURE_V14_SELF_OPTIMIZING === 'true' ||
+                        (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_SELF_OPTIMIZING'));
+                    
+                    if (_v14FlagOn && _v14Logger && _v14Logger.logConversation && db) {
+                        const _v14HadCheckout = _v13FinalResponse.includes('FINALIZAR COMPRA') || _v13Action.sendCheckout;
+                        _v14Logger.logConversation(db, {
+                            apiKey,
+                            conversationId: _v13ConvId,
+                            userMessage: cleanUserMessage,
+                            aiResponse: _v13FinalResponse,
+                            intent: _v13Intent.intent,
+                            action: _v13Action.action,
+                            stage: _v13StateResult.stage,
+                            hadCheckout: _v14HadCheckout,
+                            checkoutType: _v14HadCheckout ? (_v13Action.action === 'TRIGGER_CHECKOUT' ? 'direct' : 'injected') : null,
+                            responseTimeMs: responseTime,
+                            v13Pipeline: true
+                        }).catch(() => {}); // fire-and-forget
+                    }
+                } catch (_v14LogErr) {
+                    // Silencioso — logger NUNCA impacta resposta
+                }
+
                 return _v13FinalResponse;
             }
         } catch (_v13Err) {
@@ -9754,6 +9816,41 @@ try {
         console.log('  🧠 Cache LLM V9: TTL 5min + normalização');
         console.log('  📊 Logs: JSON estruturado');
         console.log('═══════════════════════════════════════════');
+
+        // ═══ V14.0 — Inicialização Auto-Otimização ═══
+        try {
+            const _v14Enabled = process.env.FEATURE_V14_SELF_OPTIMIZING === 'true' ||
+                (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_SELF_OPTIMIZING'));
+            
+            if (_v14Enabled && db) {
+                console.log('');
+                console.log('═══════════════════════════════════════════');
+                console.log('  🧠 V14.0 — AUTO-OTIMIZAÇÃO ATIVA');
+                console.log('═══════════════════════════════════════════');
+
+                // Criar índices
+                if (_v14Logger && _v14Logger.ensureIndexes) {
+                    _v14Logger.ensureIndexes(db).catch(() => {});
+                }
+
+                // Carregar pesos do DB
+                if (_v14PatternAnalyzer && _v14PatternAnalyzer.loadWeightsFromDB) {
+                    _v14PatternAnalyzer.loadWeightsFromDB(db).catch(() => {});
+                }
+
+                // Iniciar cron (análise a cada 10 min)
+                if (_v14PatternAnalyzer && _v14PatternAnalyzer.startAnalysisCron) {
+                    _v14PatternAnalyzer.startAnalysisCron(db);
+                }
+
+                console.log('  ✅ Logger + Analyzer + Cron ATIVOS');
+                console.log('═══════════════════════════════════════════');
+            } else {
+                console.log('[V14] ⏸️ Auto-Otimização DESATIVADA (flag off ou sem DB)');
+            }
+        } catch (_v14BootErr) {
+            console.warn('[V14] ⚠️ Erro na inicialização (sem impacto):', _v14BootErr.message);
+        }
     });
 
 })();
