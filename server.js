@@ -4894,6 +4894,30 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             return "Desculpe, não entendi sua mensagem. Poderia reformular?";
         }
 
+        // ═══ V13.0.3: HARD SUPPORT OVERRIDE (TOPO ABSOLUTO — ANTES DE TUDO) ═══
+        // Se usuário pede suporte/atendente → retorno IMEDIATO, sem IA, sem pipeline
+        try {
+            const _hardMsg = cleanUserMessage.toLowerCase();
+            if (
+                _hardMsg.includes('falar com algu') ||
+                _hardMsg.includes('atendente') ||
+                _hardMsg.includes('suporte') ||
+                _hardMsg.includes('whatsapp') ||
+                _hardMsg.includes('contato') ||
+                _hardMsg.includes('humano') ||
+                _hardMsg.includes('pessoa real')
+            ) {
+                const _hardWhatsApp = pageData?.whatsapp || pageData?.whatsappLink || null;
+                const _hardResponse = _hardWhatsApp
+                    ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_hardWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
+                    : `Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌`;
+                console.log(`[V13-HARD-SUPPORT] 🚀 Interceptado no topo | msg="${cleanUserMessage.substring(0, 40)}" | whatsapp=${!!_hardWhatsApp}`);
+                return _hardResponse;
+            }
+        } catch (_hardErr) {
+            console.warn('[V13-HARD-SUPPORT] Erro (continuando pipeline):', _hardErr.message);
+        }
+
         // 🎯 SUPERINTELIGÊNCIA: Análise Avançada
         const userId = leadId || `user_${Date.now()}`;
         const estadoEmocional = superInteligenciaGlobal.analisarEstadoEmocional(cleanUserMessage);
