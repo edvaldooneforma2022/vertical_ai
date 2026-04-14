@@ -394,6 +394,18 @@ try {
     console.log('⚠️ [V13] Response Validator não disponível:', e.message);
 }
 
+// V13.0.2 — Response Builder (Sistema monta → IA humaniza)
+let _v13BuildBaseResponse = null;
+let _v13ApplyPostGuards = null;
+try {
+    const _rb = require('./lib/v13-response-builder');
+    _v13BuildBaseResponse = _rb.buildBaseResponse;
+    _v13ApplyPostGuards = _rb.applyPostGuards;
+    console.log('✅ [V13.0.2] Response Builder carregado');
+} catch (e) {
+    console.log('⚠️ [V13.0.2] Response Builder não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -5180,60 +5192,122 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     _v13StateManager.markCheckoutConfirmed(_v13ConvId);
                 }
 
-                // ─── PASSO 4: PROMPT BLINDADO + CHAMADA LLM ───
-                const _v13Prompt = _v13BuildBlindadoPrompt({
-                    action: _v13Action.action,
-                    intent: _v13Intent.intent,
-                    pageData: pageData,
-                    userInstructions: instructions || ''
-                });
+                // ─── V13.0.2: PASSO 4 — RESPONSE BUILDER (Sistema monta base) ───
+                // Se V13.0.2 disponível: sistema → base → IA humaniza
+                // Se não: fallback para V13.0.0 (prompt blindado direto)
+                
+                let _v13FinalResponse = '';
+                const _v13HasBuilder = _v13BuildBaseResponse && _v13ApplyPostGuards;
 
-                const _v13Limits = _v13GetLLMHardLimits ? _v13GetLLMHardLimits() : { max_tokens: 150, temperature: 0.3 };
+                if (_v13HasBuilder) {
+                    // ═══ V13.0.2 — SISTEMA → BASE → IA HUMANIZA ═══
+                    console.log('[V13.0.2] 🔥 Response Builder ativo — sistema monta, IA humaniza');
 
-                const _v13Messages = [
-                    { role: 'system', content: _v13Prompt },
-                    ...(Array.isArray(conversationHistory) ? conversationHistory.slice(-6) : []),
-                    { role: 'user', content: cleanUserMessage }
-                ];
+                    const _v13Base = _v13BuildBaseResponse(_v13Action.action, {
+                        checkoutLink: pageData.checkoutLink || null,
+                        productName: pageData.title || '',
+                        productDescription: (pageData.resumo || pageData.description || '').substring(0, 300),
+                        whatsappLink: pageData.whatsapp || null,
+                        price: null,  // Nunca passar preço — sistema não informa preço à IA
+                        guarantee: pageData.garantia || pageData.guarantee || null,
+                        benefits: pageData.beneficios || pageData.benefits || null,
+                        userMessage: cleanUserMessage
+                    });
 
-                let _v13RawResponse = '';
-                try {
-                    if (process.env.GROQ_API_KEY) {
-                        _v13RawResponse = await callGroq(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
-                    } else if (process.env.OPENROUTER_API_KEY) {
-                        _v13RawResponse = await callOpenRouter(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
-                    } else if (process.env.OPENAI_API_KEY) {
-                        _v13RawResponse = await callOpenAI(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
+                    console.log(`[V13.0.2] 🧩 4a/7 Base: type=${_v13Base.type} | text=${_v13Base.baseText.substring(0, 60)}... | lockCheckout=${_v13Base.meta?.lockCheckout || false}`);
+
+                    // ─── V13.0.2: PASSO 5 — IA SÓ HUMANIZA (se necessário) ───
+                    let _v13Humanized = _v13Base.baseText;
+
+                    if (_v13Base.humanizePrompt) {
+                        try {
+                            const _v13HumanizeMessages = [
+                                { role: 'system', content: _v13Base.humanizePrompt },
+                                ...(Array.isArray(conversationHistory) ? conversationHistory.slice(-4) : []),
+                                { role: 'user', content: cleanUserMessage }
+                            ];
+
+                            const _v13Limits = _v13GetLLMHardLimits ? _v13GetLLMHardLimits() : { max_tokens: 120, temperature: 0.3 };
+
+                            if (process.env.GROQ_API_KEY) {
+                                _v13Humanized = await callGroq(_v13HumanizeMessages, _v13Limits.temperature, _v13Limits.max_tokens);
+                            } else if (process.env.OPENROUTER_API_KEY) {
+                                _v13Humanized = await callOpenRouter(_v13HumanizeMessages, _v13Limits.temperature, _v13Limits.max_tokens);
+                            } else if (process.env.OPENAI_API_KEY) {
+                                _v13Humanized = await callOpenAI(_v13HumanizeMessages, _v13Limits.temperature, _v13Limits.max_tokens);
+                            }
+
+                            console.log(`[V13.0.2] 🧩 5/7 Humanize: ${_v13Humanized.length} chars`);
+                        } catch (_v13HumanErr) {
+                            console.warn('[V13.0.2] ⚠️ Humanize falhou, usando base crua:', _v13HumanErr.message);
+                            _v13Humanized = _v13Base.baseText;
+                        }
+                    } else {
+                        console.log('[V13.0.2] 🧩 5/7 Humanize: ⏭️ Não necessário (texto final)');
                     }
-                } catch (_v13LLMErr) {
-                    console.warn('[V13] ⚠️ LLM falhou, usando fallback:', _v13LLMErr.message);
-                    _v13RawResponse = 'Me diga exatamente o que você quer saber para eu te responder com precisão.';
-                }
 
-                console.log(`[V13] 🧩 4/6 LLM: ${_v13RawResponse.length} chars | temp=${_v13Limits.temperature} | max_tokens=${_v13Limits.max_tokens}`);
+                    // ─── V13.0.2: PASSO 6 — POST-GUARDS (travas anti-alucinação) ───
+                    _v13FinalResponse = _v13ApplyPostGuards(_v13Humanized, _v13Base.meta, {
+                        checkoutLink: pageData.checkoutLink || null,
+                        whatsappLink: pageData.whatsapp || null,
+                        baseText: _v13Base.baseText
+                    });
 
-                // ─── PASSO 5: VALIDADOR ANTI-ALUCINAÇÃO ───
-                const _v13Validated = _v13ValidateResponse(_v13RawResponse, {
-                    productName: pageData.title || '',
-                    checkoutLink: pageData.checkoutLink || '',
-                    action: _v13Action.action
-                });
+                    console.log(`[V13.0.2] 🧩 6/7 PostGuards: ✅ Aplicados | ${_v13FinalResponse.length} chars`);
 
-                let _v13FinalResponse = _v13Validated.response;
-                if (_v13Validated.issues.length > 0) {
-                    console.warn(`[V13] 🧩 5/6 Validator: ${_v13Validated.issues.join(', ')}`);
                 } else {
-                    console.log(`[V13] 🧩 5/6 Validator: ✅ OK`);
+                    // ═══ FALLBACK V13.0.0 — Prompt Blindado direto ═══
+                    console.log('[V13] ℹ️ Response Builder não disponível, usando V13.0.0 (prompt blindado)');
+
+                    const _v13Prompt = _v13BuildBlindadoPrompt({
+                        action: _v13Action.action,
+                        intent: _v13Intent.intent,
+                        pageData: pageData,
+                        userInstructions: instructions || ''
+                    });
+
+                    const _v13Limits = _v13GetLLMHardLimits ? _v13GetLLMHardLimits() : { max_tokens: 150, temperature: 0.3 };
+                    const _v13Messages = [
+                        { role: 'system', content: _v13Prompt },
+                        ...(Array.isArray(conversationHistory) ? conversationHistory.slice(-6) : []),
+                        { role: 'user', content: cleanUserMessage }
+                    ];
+
+                    let _v13RawResponse = '';
+                    try {
+                        if (process.env.GROQ_API_KEY) {
+                            _v13RawResponse = await callGroq(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
+                        } else if (process.env.OPENROUTER_API_KEY) {
+                            _v13RawResponse = await callOpenRouter(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
+                        } else if (process.env.OPENAI_API_KEY) {
+                            _v13RawResponse = await callOpenAI(_v13Messages, _v13Limits.temperature, _v13Limits.max_tokens);
+                        }
+                    } catch (_v13LLMErr) {
+                        console.warn('[V13] ⚠️ LLM falhou:', _v13LLMErr.message);
+                        _v13RawResponse = 'Me diga exatamente o que você quer saber.';
+                    }
+
+                    console.log(`[V13] 🧩 4/6 LLM: ${_v13RawResponse.length} chars`);
+
+                    const _v13Validated = _v13ValidateResponse(_v13RawResponse, {
+                        productName: pageData.title || '',
+                        checkoutLink: pageData.checkoutLink || '',
+                        action: _v13Action.action
+                    });
+
+                    _v13FinalResponse = _v13Validated.response;
+                    if (_v13Validated.issues.length > 0) {
+                        console.warn(`[V13] 🧩 5/6 Validator: ${_v13Validated.issues.join(', ')}`);
+                    }
                 }
 
-                // ─── PASSO 6: CHECKOUT ENGINE (FORA DA IA) ───
+                // ─── V13: PASSO 7 — CHECKOUT ENGINE (FORA DA IA, SEMPRE POR ÚLTIMO) ───
                 if (_v13Action.sendCheckout && pageData.checkoutLink) {
-                    // Injeta checkout PROGRAMATICAMENTE — a IA nunca viu esse link
-                    _v13FinalResponse += `\n\n🛒 ${pageData.checkoutLink}`;
+                    _v13FinalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${pageData.checkoutLink}\n━━━━━━━━━━━━━━━━━━━`;
                     _v13StateManager.markCheckoutSent(_v13ConvId);
-                    console.log(`[V13] 🧩 6/6 Checkout: ✅ INJETADO (fora da IA) | ${pageData.checkoutLink.substring(0, 60)}`);
+                    console.log(`[V13] 🧩 7/7 Checkout: ✅ INJETADO (fora da IA) | ${pageData.checkoutLink.substring(0, 60)}`);
 
-                    // Auto-persistir checkout no DB (elimina ativação manual)
+                    // Auto-persistir checkout no DB
                     try {
                         const _v13SalesUrl = pageData.url || pageData.salesUrl || null;
                         if (_v13SalesUrl && _v113SaveCheckoutLink && apiKey) {
@@ -5244,8 +5318,10 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                                 .catch(() => {});
                         }
                     } catch (_) {}
+                } else if (_v13Action.sendCheckout && !pageData.checkoutLink) {
+                    console.warn(`[V13] 🧩 7/7 Checkout: ⚠️ Ação pede checkout mas não há link disponível`);
                 } else {
-                    console.log(`[V13] 🧩 6/6 Checkout: ⏸️ Não aplicável (action=${_v13Action.action})`);
+                    console.log(`[V13] 🧩 7/7 Checkout: ⏸️ Não aplicável (action=${_v13Action.action})`);
                 }
 
                 const _v13Elapsed = Date.now() - _v13Start;
