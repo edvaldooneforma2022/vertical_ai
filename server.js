@@ -4980,15 +4980,12 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 const _v113SalesUrl = pageData.url || pageData.salesUrl || null;
                 const _v113Confirmed = await _v113GetConfirmedCheckout(db, apiKey, _v113SalesUrl);
                 if (_v113Confirmed) {
-                    // 🔒 HOTFIX 11.3.1: Validar domínio do checkout antes de aplicar
-                    const _v113DomainOk = !_v113IsValidCheckoutDomain || _v113IsValidCheckoutDomain(_v113Confirmed);
-                    if (_v113DomainOk) {
-                        pageData.checkoutLink = _v113Confirmed;
-                        pageData._checkoutSource = 'v113_confirmed';
-                        console.log(`[V11.3-AUDIT] ✅ Checkout CONFIRMADO do DB aplicado: tenant=${apiKey?.substring(0, 8)}... url=${_v113Confirmed.substring(0, 80)}`);
-                    } else {
-                        console.warn(`[V11.3-SECURITY] ⛔ Checkout do DB REJEITADO (domínio inválido): tenant=${apiKey?.substring(0, 8)}... url=${_v113Confirmed.substring(0, 80)}`);
-                    }
+                    // FIX: getConfirmedCheckout já valida domínio internamente
+                    // (permite user_confirmed com domínios custom)
+                    // Validação dupla aqui bloqueava checkouts confirmados manualmente
+                    pageData.checkoutLink = _v113Confirmed;
+                    pageData._checkoutSource = 'v113_confirmed';
+                    console.log(`[V11.3-AUDIT] ✅ Checkout CONFIRMADO do DB aplicado: tenant=${apiKey?.substring(0, 8)}... url=${_v113Confirmed.substring(0, 80)}`);
                 }
             }
         } catch (_v113PreErr) {
