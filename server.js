@@ -4902,16 +4902,25 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 _hardMsg.includes('falar com algu') ||
                 _hardMsg.includes('atendente') ||
                 _hardMsg.includes('suporte') ||
-                _hardMsg.includes('whatsapp') ||
-                _hardMsg.includes('contato') ||
                 _hardMsg.includes('humano') ||
                 _hardMsg.includes('pessoa real')
             ) {
-                const _hardWhatsApp = pageData?.whatsapp || pageData?.whatsappLink || null;
-                const _hardResponse = _hardWhatsApp
-                    ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_hardWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
-                    : `Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌`;
-                console.log(`[V13-HARD-SUPPORT] 🚀 Interceptado no topo | msg="${cleanUserMessage.substring(0, 40)}" | whatsapp=${!!_hardWhatsApp}`);
+                // Buscar WhatsApp em TODOS os locais possíveis do pageData
+                const _hardWhatsApp = 
+                    (pageData?.contatos?.whatsapp && pageData.contatos.whatsapp.length > 0 ? pageData.contatos.whatsapp[0] : null) ||
+                    pageData?.whatsapp ||
+                    pageData?.whatsappLink ||
+                    (pageData?.contatos?.telefone && pageData.contatos.telefone.length > 0 ? pageData.contatos.telefone[0] : null) ||
+                    null;
+                
+                const _hardWhatsAppUrl = _hardWhatsApp 
+                    ? (_hardWhatsApp.startsWith('http') ? _hardWhatsApp : `https://wa.me/${_hardWhatsApp.replace(/\D/g, '')}`)
+                    : null;
+
+                const _hardResponse = _hardWhatsAppUrl
+                    ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_hardWhatsAppUrl}\n\nEles vão te ajudar rapidinho 🙌`
+                    : `Perfeito 👍 nosso time está pronto para te atender.\n\nDigite sua dúvida aqui mesmo que vou te ajudar! 🙌`;
+                console.log(`[V13-HARD-SUPPORT] 🚀 Interceptado | whatsapp=${_hardWhatsAppUrl || 'N/A'} | contatos=${JSON.stringify(pageData?.contatos || 'null').substring(0, 100)}`);
                 return _hardResponse;
             }
         } catch (_hardErr) {
@@ -5311,7 +5320,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                         checkoutLink: pageData.checkoutLink || null,
                         productName: pageData.title || '',
                         productDescription: (pageData.resumo || pageData.description || '').substring(0, 300),
-                        whatsappLink: pageData.whatsapp || null,
+                        whatsappLink: (pageData.contatos && pageData.contatos.whatsapp && pageData.contatos.whatsapp[0]) || pageData.whatsapp || null,
                         price: null,  // Nunca passar preço — sistema não informa preço à IA
                         guarantee: pageData.garantia || pageData.guarantee || null,
                         benefits: pageData.beneficios || pageData.benefits || null,
