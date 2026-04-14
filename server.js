@@ -406,6 +406,18 @@ try {
     console.log('⚠️ [V13.0.2] Response Builder não disponível:', e.message);
 }
 
+// V13.1 — Humanizer (IA só reescreve como humano)
+let _v13BuildHumanizerPrompt = null;
+let _v13ValidateHumanized = null;
+try {
+    const _hp = require('./lib/v13-humanizer-prompt');
+    _v13BuildHumanizerPrompt = _hp.buildHumanizerPrompt;
+    _v13ValidateHumanized = _hp.validateHumanizedResponse;
+    console.log('✅ [V13.1] Humanizer carregado');
+} catch (e) {
+    console.log('⚠️ [V13.1] Humanizer não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -5216,44 +5228,75 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
 
                     console.log(`[V13.0.2] 🧩 4a/7 Base: type=${_v13Base.type} | text=${_v13Base.baseText.substring(0, 60)}... | lockCheckout=${_v13Base.meta?.lockCheckout || false}`);
 
-                    // ─── V13.0.2: PASSO 5 — IA SÓ HUMANIZA (se necessário) ───
+                    // ─── V13.1: PASSO 5 — IA HUMANIZA (prompt especializado) ───
                     let _v13Humanized = _v13Base.baseText;
 
-                    if (_v13Base.humanizePrompt) {
+                    if (_v13Base.humanizePrompt || _v13Base.baseText) {
                         try {
-                            const _v13HumanizeMessages = [
-                                { role: 'system', content: _v13Base.humanizePrompt },
-                                ...(Array.isArray(conversationHistory) ? conversationHistory.slice(-4) : []),
-                                { role: 'user', content: cleanUserMessage }
-                            ];
-
-                            const _v13Limits = _v13GetLLMHardLimits ? _v13GetLLMHardLimits() : { max_tokens: 120, temperature: 0.3 };
-
-                            if (process.env.GROQ_API_KEY) {
-                                _v13Humanized = await callGroq(_v13HumanizeMessages, _v13Limits.temperature, _v13Limits.max_tokens);
-                            } else if (process.env.OPENROUTER_API_KEY) {
-                                _v13Humanized = await callOpenRouter(_v13HumanizeMessages, _v13Limits.temperature, _v13Limits.max_tokens);
-                            } else if (process.env.OPENAI_API_KEY) {
-                                _v13Humanized = await callOpenAI(_v13HumanizeMessages, _v13Limits.temperature, _v13Limits.max_tokens);
+                            // V13.1: Usar humanizer dedicado se disponível
+                            let _v13HumanizeSystemPrompt = _v13Base.humanizePrompt;
+                            
+                            if (_v13BuildHumanizerPrompt) {
+                                _v13HumanizeSystemPrompt = _v13BuildHumanizerPrompt(_v13Base.baseText, {
+                                    intent: _v13Intent.intent,
+                                    action: _v13Action.action,
+                                    productName: pageData.title || '',
+                                    stage: _v13StateResult.stage || 'COLD'
+                                });
+                                console.log('[V13.1] 🎭 Humanizer V13.1 ativo — tom WhatsApp');
                             }
 
-                            console.log(`[V13.0.2] 🧩 5/7 Humanize: ${_v13Humanized.length} chars`);
+                            if (_v13HumanizeSystemPrompt) {
+                                const _v13HumanizeMessages = [
+                                    { role: 'system', content: _v13HumanizeSystemPrompt },
+                                    ...(Array.isArray(conversationHistory) ? conversationHistory.slice(-4) : []),
+                                    { role: 'user', content: cleanUserMessage }
+                                ];
+
+                                // V13.1: temperatura 0.7 para humanização mais natural
+                                const _v13HumanTemp = 0.7;
+                                const _v13HumanMaxTokens = 120;
+
+                                if (process.env.GROQ_API_KEY) {
+                                    _v13Humanized = await callGroq(_v13HumanizeMessages, _v13HumanTemp, _v13HumanMaxTokens);
+                                } else if (process.env.OPENROUTER_API_KEY) {
+                                    _v13Humanized = await callOpenRouter(_v13HumanizeMessages, _v13HumanTemp, _v13HumanMaxTokens);
+                                } else if (process.env.OPENAI_API_KEY) {
+                                    _v13Humanized = await callOpenAI(_v13HumanizeMessages, _v13HumanTemp, _v13HumanMaxTokens);
+                                }
+
+                                console.log(`[V13.1] 🧩 5/7 Humanize: ${_v13Humanized.length} chars | temp=0.7`);
+
+                                // V13.1: Validar resposta humanizada (anti-alucinação pós-IA)
+                                if (_v13ValidateHumanized) {
+                                    const _v13HumanValid = _v13ValidateHumanized(_v13Humanized, _v13Base.baseText, {
+                                        allowPrice: false
+                                    });
+                                    if (!_v13HumanValid.valid) {
+                                        console.warn(`[V13.1-GUARD] ⛔ Humanização rejeitada: ${_v13HumanValid.issues.join(', ')} → usando base`);
+                                        _v13Humanized = _v13HumanValid.response; // fallback para base
+                                    } else if (_v13HumanValid.issues.length > 0) {
+                                        console.warn(`[V13.1-GUARD] ⚠️ Avisos: ${_v13HumanValid.issues.join(', ')}`);
+                                        _v13Humanized = _v13HumanValid.response;
+                                    }
+                                }
+                            }
                         } catch (_v13HumanErr) {
-                            console.warn('[V13.0.2] ⚠️ Humanize falhou, usando base crua:', _v13HumanErr.message);
+                            console.warn('[V13.1] ⚠️ Humanize falhou, usando base crua:', _v13HumanErr.message);
                             _v13Humanized = _v13Base.baseText;
                         }
                     } else {
-                        console.log('[V13.0.2] 🧩 5/7 Humanize: ⏭️ Não necessário (texto final)');
+                        console.log('[V13.1] 🧩 5/7 Humanize: ⏭️ Não necessário (texto final)');
                     }
 
-                    // ─── V13.0.2: PASSO 6 — POST-GUARDS (travas anti-alucinação) ───
+                    // ─── V13.0.2: PASSO 6 — POST-GUARDS (travas estruturais) ───
                     _v13FinalResponse = _v13ApplyPostGuards(_v13Humanized, _v13Base.meta, {
                         checkoutLink: pageData.checkoutLink || null,
                         whatsappLink: pageData.whatsapp || null,
                         baseText: _v13Base.baseText
                     });
 
-                    console.log(`[V13.0.2] 🧩 6/7 PostGuards: ✅ Aplicados | ${_v13FinalResponse.length} chars`);
+                    console.log(`[V13.1] 🧩 6/7 PostGuards: ✅ Aplicados | ${_v13FinalResponse.length} chars`);
 
                 } else {
                     // ═══ FALLBACK V13.0.0 — Prompt Blindado direto ═══
