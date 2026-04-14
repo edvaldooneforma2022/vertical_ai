@@ -5215,13 +5215,20 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         // Protegido por try/catch — qualquer falha → fallback para legado
         // ═══════════════════════════════════════════════════════════════════
         try {
-            const _v13FlagEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V13_BLINDADO');
+            // V13.0.3: Verificação dupla — FeatureFlags OU env var direta
+            const _v13FlagFromManager = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V13_BLINDADO');
+            const _v13FlagFromEnv = process.env.FEATURE_V13_BLINDADO === 'true';
+            const _v13FlagEnabled = _v13FlagFromManager || _v13FlagFromEnv;
+            
+            console.log(`[V13-DEBUG] FLAG: manager=${_v13FlagFromManager} | env=${_v13FlagFromEnv} | final=${_v13FlagEnabled}`);
+
             const _v13SalesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
             const _v13AllModulesReady = _v13ClassifyIntent && _v13StateManager && _v13DecideAction && _v13BuildBlindadoPrompt && _v13ValidateResponse;
 
             if (_v13FlagEnabled && _v13SalesMode === 'auto' && _v13AllModulesReady) {
                 console.log(`[V13] 🔥 Pipeline Blindado ATIVADO | tenant=${apiKey?.substring(0, 8)}...`);
                 const _v13Start = Date.now();
+                let _v13Used = false;
 
                 // ─── PASSO 1: INTENT CLASSIFIER (determinístico, zero IA) ───
                 const _v13Intent = _v13ClassifyIntent(cleanUserMessage);
@@ -5239,6 +5246,23 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 });
                 console.log(`[V13] 🧩 3/6 Action: ${_v13Action.action} | reason=${_v13Action.reason} | sendCheckout=${_v13Action.sendCheckout}`);
 
+                // ─── V13.0.3: SUPPORT INTERCEPT (EARLY RETURN — SEM IA, SEM CHECKOUT) ───
+                if (_v13Action.action === 'SUPPORT') {
+                    console.log('[V13.0.3] 🚀 SUPPORT INTERCEPT — retorno direto');
+                    const _v13WhatsApp = pageData.whatsapp || pageData.whatsappLink || null;
+                    const _v13SupportResponse = _v13WhatsApp
+                        ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_v13WhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
+                        : `Perfeito 👍 nosso time está pronto para te atender agora. Fale com a gente! 🙌`;
+                    
+                    const _v13Elapsed = Date.now() - _v13Start;
+                    console.log(`[V13] ✅ SUPPORT finalizado em ${_v13Elapsed}ms (interceptado)`);
+                    
+                    aiResponseText = _v13SupportResponse;
+                    // Pular todo o resto do pipeline (IA, checkout, etc)
+                    // O fluxo continua após o bloco V13 com aiResponseText já preenchido
+                    _v13Used = true;
+                }
+
                 // ─── PASSO 3.5: PRÉ-CONFIRMAÇÃO (se necessário) ───
                 if (_v13Action.action === 'CONFIRM_BEFORE_CHECKOUT') {
                     _v13StateManager.markCheckoutConfirmed(_v13ConvId);
@@ -5251,7 +5275,11 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 let _v13FinalResponse = '';
                 const _v13HasBuilder = _v13BuildBaseResponse && _v13ApplyPostGuards;
 
-                if (_v13HasBuilder) {
+                if (_v13Used) {
+                    // V13.0.3: SUPPORT já interceptou — pular pipeline inteiro
+                    _v13FinalResponse = aiResponseText;
+                    console.log('[V13.0.3] ⏭️ Pipeline pulado (SUPPORT já processado)');
+                } else if (_v13HasBuilder) {
                     // ═══ V13.0.2 — SISTEMA → BASE → IA HUMANIZA ═══
                     console.log('[V13.0.2] 🔥 Response Builder ativo — sistema monta, IA humaniza');
 
