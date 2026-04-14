@@ -6666,6 +6666,16 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
 
         let finalResponse = aiResponse;
 
+        // 🔥 V13.0.3: BLOQUEIO TOTAL DO LEGADO QUANDO V13 ATIVO
+        // Se V13 gerou a resposta, NÃO processar camadas V10/V11/CTA/Closing/Orchestrator
+        const _v13ActiveBypass = process.env.FEATURE_V13_BLINDADO === 'true' && 
+            (pageData && pageData.salesMode || process.env.SALES_LAYER_MODE || 'auto') === 'auto';
+        
+        if (_v13ActiveBypass) {
+            console.log('[V13.0.3] 🚫 BYPASS LEGADO ATIVO — V10/V11/CTA/Closing/Orchestrator PULADOS');
+            // Pular DIRETO para o envio (sem nenhuma camada legada)
+        } else {
+
         // 🧠 [V10 DECISION-CORE] Detectar intenção para o Orchestrator (ADITIVO, try/catch)
         let _chatUniversalDecision = null;
         try {
@@ -7038,6 +7048,7 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         } catch (_v12ValErr) {
             // Silencioso — validator é observacional
         }
+        } // V13.0.3: Fim do bloco else (legado V10-V12 PULADO quando V13 ativo)
 
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
