@@ -418,6 +418,18 @@ try {
     console.log('⚠️ [V13.1] Humanizer não disponível:', e.message);
 }
 
+// V13.2 — Multi-Checkout Engine (upsell/downsell inteligente)
+let _v13ResolveCheckout = null;
+let _v13DetectObjectionType = null;
+try {
+    const _mce = require('./lib/v13-multi-checkout-engine');
+    _v13ResolveCheckout = _mce.resolveCheckout;
+    _v13DetectObjectionType = _mce.detectObjectionType;
+    console.log('✅ [V13.2] Multi-Checkout Engine carregado');
+} catch (e) {
+    console.log('⚠️ [V13.2] Multi-Checkout Engine não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -5344,27 +5356,70 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     }
                 }
 
-                // ─── V13: PASSO 7 — CHECKOUT ENGINE (FORA DA IA, SEMPRE POR ÚLTIMO) ───
-                if (_v13Action.sendCheckout && pageData.checkoutLink) {
-                    _v13FinalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${pageData.checkoutLink}\n━━━━━━━━━━━━━━━━━━━`;
-                    _v13StateManager.markCheckoutSent(_v13ConvId);
-                    console.log(`[V13] 🧩 7/7 Checkout: ✅ INJETADO (fora da IA) | ${pageData.checkoutLink.substring(0, 60)}`);
+                // ─── V13.2: PASSO 7 — MULTI-CHECKOUT ENGINE (FORA DA IA, SEMPRE POR ÚLTIMO) ───
+                // Se V13.2 ativo: resolve checkout via multi-engine (primary/upsell/downsell)
+                // Se não: fallback para checkout principal (V13.0 comportamento original)
+                try {
+                    const _v132Enabled = process.env.FEATURE_V13_MULTI_CHECKOUT === 'true';
+                    let _v13FinalCheckoutUrl = pageData.checkoutLink || null;
+                    let _v13FinalCheckoutLabel = 'FINALIZAR COMPRA';
+                    let _v13CheckoutType = 'primary';
 
-                    // Auto-persistir checkout no DB
-                    try {
-                        const _v13SalesUrl = pageData.url || pageData.salesUrl || null;
-                        if (_v13SalesUrl && _v113SaveCheckoutLink && apiKey) {
-                            _v113SaveCheckoutLink(db, apiKey, pageData.checkoutLink, 'auto_v13_blindado', false, _v13SalesUrl)
-                                .then(saved => {
-                                    if (saved) console.log(`[V13] 💾 Checkout auto-persistido: ${pageData.checkoutLink.substring(0, 60)}`);
-                                })
-                                .catch(() => {});
+                    if (_v132Enabled && _v13ResolveCheckout && _v13Action.sendCheckout && _v13FinalCheckoutUrl) {
+                        // V13.2: Multi-Checkout resolve qual link enviar
+                        const _v13ObjType = _v13DetectObjectionType ? _v13DetectObjectionType(cleanUserMessage) : null;
+
+                        const _v132Result = _v13ResolveCheckout({
+                            action: _v13Action.action,
+                            intent: _v13Intent.intent,
+                            stage: _v13StateResult.stage || 'COLD',
+                            baseCheckout: _v13FinalCheckoutUrl,
+                            context: {
+                                upsells: pageData.upsells || [],
+                                downsells: pageData.downsells || [],
+                                objectionType: _v13ObjType,
+                                messageCount: _v13StateResult.messageCount || 0,
+                                checkoutAlreadySent: _v13StateResult.checkoutSent || false
+                            }
+                        });
+
+                        if (_v132Result && _v132Result.url) {
+                            _v13FinalCheckoutUrl = _v132Result.url;
+                            _v13FinalCheckoutLabel = _v132Result.label || 'FINALIZAR COMPRA';
+                            _v13CheckoutType = _v132Result.type || 'primary';
+                            console.log(`[V13.2] 🎯 Multi-Checkout: type=${_v13CheckoutType} | reason=${_v132Result.reason} | url=${_v13FinalCheckoutUrl.substring(0, 60)}`);
                         }
-                    } catch (_) {}
-                } else if (_v13Action.sendCheckout && !pageData.checkoutLink) {
-                    console.warn(`[V13] 🧩 7/7 Checkout: ⚠️ Ação pede checkout mas não há link disponível`);
-                } else {
-                    console.log(`[V13] 🧩 7/7 Checkout: ⏸️ Não aplicável (action=${_v13Action.action})`);
+                    }
+
+                    // Injetar checkout (sempre por último, sempre fora da IA)
+                    if (_v13Action.sendCheckout && _v13FinalCheckoutUrl) {
+                        _v13FinalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 ${_v13FinalCheckoutLabel}\n${_v13FinalCheckoutUrl}\n━━━━━━━━━━━━━━━━━━━`;
+                        _v13StateManager.markCheckoutSent(_v13ConvId);
+                        console.log(`[V13] 🧩 7/7 Checkout: ✅ INJETADO (${_v13CheckoutType}) | ${_v13FinalCheckoutUrl.substring(0, 60)}`);
+
+                        // Auto-persistir checkout no DB
+                        try {
+                            const _v13SalesUrl = pageData.url || pageData.salesUrl || null;
+                            if (_v13SalesUrl && _v113SaveCheckoutLink && apiKey) {
+                                _v113SaveCheckoutLink(db, apiKey, _v13FinalCheckoutUrl, `auto_v13_${_v13CheckoutType}`, false, _v13SalesUrl)
+                                    .then(saved => {
+                                        if (saved) console.log(`[V13] 💾 Checkout auto-persistido (${_v13CheckoutType}): ${_v13FinalCheckoutUrl.substring(0, 60)}`);
+                                    })
+                                    .catch(() => {});
+                            }
+                        } catch (_) {}
+                    } else if (_v13Action.sendCheckout && !_v13FinalCheckoutUrl) {
+                        console.warn(`[V13] 🧩 7/7 Checkout: ⚠️ Ação pede checkout mas não há link disponível`);
+                    } else {
+                        console.log(`[V13] 🧩 7/7 Checkout: ⏸️ Não aplicável (action=${_v13Action.action})`);
+                    }
+                } catch (_v132Err) {
+                    console.warn('[V13.2] ⚠️ Multi-Checkout erro (fallback para checkout original):', _v132Err.message);
+                    // Fallback: injetar checkout principal se ação pede
+                    if (_v13Action.sendCheckout && pageData.checkoutLink) {
+                        _v13FinalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${pageData.checkoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                        _v13StateManager.markCheckoutSent(_v13ConvId);
+                    }
                 }
 
                 const _v13Elapsed = Date.now() - _v13Start;
