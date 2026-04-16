@@ -7576,14 +7576,102 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.warn('⚠️ [SCHED-PRIORITY] Erro na detecção de agendamento (fluxo original continua):', schedErr.message);
             // Não propaga — fluxo original é o fallback seguro
         }
+        // ================================================================
+        // 🔥 FIX ESTRUTURAL V16.3 — INTERCEPTOR PRÉ-KB
+        // Intenção de compra/suporte intercepta ANTES de qualquer outro sistema
+        // Memória IS_BUYER persiste entre mensagens via cache por conversationId
+        // ================================================================
+        try {
+            // Estado global (in-memory, leve)
+            if (!global._ppBuyerState) global._ppBuyerState = new Map();
+            const _iBuyerState = global._ppBuyerState;
+            const _iMsg = (message || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const _iConvId = conversationId || null;
+            const _iCheckoutLink = processedPageData?.checkoutLink || null;
+            const _iWhatsApp = processedPageData?.whatsapp || processedPageData?.whatsappLink ||
+                (processedPageData?.contatos?.whatsapp && processedPageData.contatos.whatsapp[0]) || null;
 
-        // ================================================================
-        // 📚 SAFE PATCH - KB-FIRST-001: Consultar Knowledge Base PRIMEIRO
-        // Antes: detectarAgendamento e capturarInteligencias rodavam ANTES do KB,
-        // sequestrando a resposta com outputs genéricos/agendamento falso.
-        // Agora: Se KB tem FAQ com match de score alto, retorna direto (bypass total).
-        // Se KB vazio ou sem match, fluxo original continua intacto.
-        // ================================================================
+            // ═══ SUPORTE HARD OVERRIDE (ANTES DE TUDO) ═══
+            const _iSupportKw = ['atendente', 'suporte', 'falar com alguem', 'falar com alguém', 'humano', 'preciso de ajuda', 'falar com pessoa', 'pessoa real'];
+            if (_iSupportKw.some(k => _iMsg.includes(k))) {
+                console.log('[PRE-KB] 🚀 SUPPORT INTERCEPT — bypass KB/IA/tudo');
+                try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
+                const _iSupportResp = _iWhatsApp
+                    ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_iWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
+                    : `Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌`;
+                return res.json({
+                    success: true,
+                    response: _iSupportResp,
+                    inteligenciasDetectadas: {},
+                    analiseEmocional: {},
+                    journeyStage: 'suporte',
+                    bonuses_detected: processedPageData?.bonuses_detected || [],
+                    contatos: processedPageData?.contatos || {},
+                    metadata: { method: 'support-intercept-v16', sistema: 'pre-kb-v1' }
+                });
+            }
+
+            // ═══ MEMÓRIA IS_BUYER — Verificar se já é comprador ═══
+            let _iIsBuyer = false;
+            if (_iConvId && _iBuyerState.has(_iConvId)) {
+                const _iBuyerData = _iBuyerState.get(_iConvId);
+                // Expira em 15 minutos
+                if (Date.now() - _iBuyerData.timestamp < 15 * 60 * 1000) {
+                    _iIsBuyer = true;
+                    console.log(`[PRE-KB] 🧠 IS_BUYER ativo (conv=${_iConvId.substring(0, 8)}...)`);
+                } else {
+                    _iBuyerState.delete(_iConvId);
+                }
+            }
+
+            // ═══ INTENÇÃO DE COMPRA DIRETA — INTERCEPTA ANTES DA KB ═══
+            const _iBuyDirect = [
+                'quero comprar', 'qro compra', 'me manda o link', 'manda o link',
+                'tem link', 'tem o link', 'manda o site', 'bora',
+                'onde compra', 'como faco pra comprar', 'como faço pra comprar',
+                'como q compra', 'quero comprar de novo', 'como pago', 'aceita pix',
+                'tem parcelamento'
+            ];
+            const _iIsBuyMsg = _iBuyDirect.some(p => _iMsg.includes(p));
+
+            // Marcar como buyer se intenção de compra
+            if (_iIsBuyMsg && _iConvId) {
+                _iBuyerState.set(_iConvId, { timestamp: Date.now(), firstIntent: _iMsg });
+                _iIsBuyer = true;
+                console.log(`[PRE-KB] 💰 BUYER MARCADO (conv=${_iConvId.substring(0, 8)}...)`);
+            }
+
+            // Se é compra direta → checkout IMEDIATO (bypass KB/IA)
+            if (_iIsBuyMsg && _iCheckoutLink) {
+                console.log('[PRE-KB] 🔥 BUY INTERCEPT — checkout direto, bypass KB');
+                try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
+                return res.json({
+                    success: true,
+                    response: `Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_iCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`,
+                    inteligenciasDetectadas: {},
+                    analiseEmocional: {},
+                    journeyStage: 'checkout',
+                    bonuses_detected: processedPageData?.bonuses_detected || [],
+                    contatos: processedPageData?.contatos || {},
+                    metadata: { method: 'buy-intercept-v16', sistema: 'pre-kb-v1' }
+                });
+            }
+
+            // Guardar estado de buyer no req para o pós-processador usar
+            req._ppIsBuyer = _iIsBuyer;
+            req._ppCheckoutLink = _iCheckoutLink;
+
+            // Limpar estados expirados (a cada 100 requests)
+            if (Math.random() < 0.01) {
+                const _now = Date.now();
+                for (const [k, v] of _iBuyerState.entries()) {
+                    if (_now - v.timestamp > 15 * 60 * 1000) _iBuyerState.delete(k);
+                }
+            }
+        } catch (_iErr) {
+            console.warn('[PRE-KB] ⚠️ Erro (fallback KB/legado):', _iErr.message);
+        }
+
         let kbDirectAnswer = null;
         try {
             // Usar searchSmart (tokenização por palavras) em vez de search (substring)
@@ -8245,81 +8333,76 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // 🔥 PÓS-PROCESSADOR GLOBAL V16.2 — ANTI-PERDA DE VENDA
+        // 🔥 PÓS-PROCESSADOR GLOBAL V16.3 — ANTI-PERDA DE VENDA
         // Executa SEMPRE, independente de V13/V16/legado
-        // Última camada antes do envio — corrige bugs críticos
+        // Agora com MEMÓRIA IS_BUYER do interceptor PRÉ-KB
         // ═══════════════════════════════════════════════════════════════════
         try {
             const _ppMsg = (message || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            const _ppCheckoutLink = processedPageData?.checkoutLink || null;
+            const _ppCheckoutLink = processedPageData?.checkoutLink || req._ppCheckoutLink || null;
             const _ppWhatsApp = processedPageData?.whatsapp || processedPageData?.whatsappLink ||
                 (processedPageData?.contatos?.whatsapp && processedPageData.contatos.whatsapp[0]) || null;
+            const _ppIsBuyer = req._ppIsBuyer || false;
 
-            // ═══ 1. SUPPORT HARD OVERRIDE ═══
-            const _ppSupportKeywords = ['atendente', 'suporte', 'falar com alguem', 'falar com alguém', 'humano', 'preciso de ajuda', 'falar com pessoa', 'pessoa real'];
-            if (_ppSupportKeywords.some(k => _ppMsg.includes(k))) {
-                console.log('[PP-GLOBAL] 🚀 SUPPORT OVERRIDE');
-                finalResponse = _ppWhatsApp
-                    ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_ppWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
-                    : `Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌`;
-            }
-
-            // ═══ 2. ANTI-GENÉRICO — Bloqueia "Ótima pergunta!" e similares ═══
-            const _ppGenericPatterns = ['ótima pergunta', 'otima pergunta', 'deixe-me explicar detalhadamente', 'como posso ajudar você hoje', 'como posso te ajudar hoje', 'aqui estão as informações que você precisa'];
+            // ═══ 1. ANTI-GENÉRICO EXPANDIDO ═══
+            const _ppGenericPatterns = [
+                'ótima pergunta', 'otima pergunta',
+                'deixe-me explicar detalhadamente', 'deixe-me explicar',
+                'como posso ajudar você hoje', 'como posso te ajudar hoje',
+                'aqui estão as informações que você precisa',
+                'obrigado pelo seu interesse! como posso',
+                'posso te mostrar como funciona primeiro'
+            ];
             const _ppResponseLower = (finalResponse || '').toLowerCase();
             const _ppIsGeneric = _ppGenericPatterns.some(p => _ppResponseLower.includes(p));
 
             if (_ppIsGeneric) {
                 console.log('[PP-GLOBAL] 🚫 GENERIC BLOCKED');
-
-                // Detectar se era intenção de compra
-                const _ppBuyPatterns = ['comprar', 'compra', 'link', 'manda o link', 'tem link', 'manda o site', 'bora', 'quero', 'como faco', 'como faço', 'onde compra', 'pagar', 'pagamento', 'pix', 'preco', 'preço', 'quanto', 'valor', 'custa', 'parcel'];
+                const _ppBuyPatterns = ['comprar', 'compra', 'link', 'manda o link', 'tem link', 'manda o site', 'bora', 'quero', 'como faco', 'como faço', 'onde compra', 'pagar', 'pagamento', 'pix', 'preco', 'preço', 'quanto', 'valor', 'custa', 'parcel', 'site'];
                 const _ppIsBuyIntent = _ppBuyPatterns.some(p => _ppMsg.includes(p));
 
-                if (_ppIsBuyIntent && _ppCheckoutLink) {
+                if ((_ppIsBuyIntent || _ppIsBuyer) && _ppCheckoutLink) {
                     finalResponse = `Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
-                } else if (_ppIsBuyIntent && _ppWhatsApp) {
+                } else if ((_ppIsBuyIntent || _ppIsBuyer) && _ppWhatsApp) {
                     finalResponse = `Vou te direcionar para o suporte pra te ajudar melhor 👇\n\n${_ppWhatsApp}`;
                 } else {
-                    // Não é compra — remover o "Ótima pergunta!" e manter o resto
-                    finalResponse = finalResponse.replace(/💭\s*\*?\*?Ótima pergunta!?\*?\*?\s*/gi, '').replace(/💭\s*\*?\*?tima pergunta!?\*?\*?\s*/gi, '').trim();
+                    finalResponse = finalResponse
+                        .replace(/💭\s*\*?\*?Ótima pergunta!?\*?\*?\s*/gi, '')
+                        .replace(/💭\s*\*?\*?tima pergunta!?\*?\*?\s*/gi, '')
+                        .replace(/Deixe-me explicar detalhadamente\.\s*/gi, '')
+                        .replace(/🎯\s*Obrigado pelo seu interesse!\s*Como posso ajudar você hoje\?\s*/gi, '')
+                        .replace(/👉\s*Posso te mostrar como funciona primeiro.*$/gim, '')
+                        .trim();
                     if (!finalResponse || finalResponse.length < 20) {
-                        finalResponse = 'Como posso te ajudar com mais informações sobre o produto?';
+                        finalResponse = _ppCheckoutLink
+                            ? `Posso te ajudar! Veja mais detalhes aqui 👇\n\n${_ppCheckoutLink}`
+                            : 'Como posso te ajudar com mais informações sobre o produto?';
                     }
                 }
             }
 
-            // ═══ 3. CHECKOUT OBRIGATÓRIO para intenção de compra direta ═══
-            const _ppDirectBuyPatterns = ['quero comprar', 'qro compra', 'me manda o link', 'manda o link', 'tem link', 'tem o link', 'manda o site', 'bora', 'onde compra', 'como faco pra comprar', 'como faço pra comprar', 'como q compra'];
-            const _ppIsDirectBuy = _ppDirectBuyPatterns.some(p => _ppMsg.includes(p));
-            const _ppHasLink = _ppCheckoutLink && finalResponse.includes(_ppCheckoutLink);
-
-            if (_ppIsDirectBuy && _ppCheckoutLink && !_ppHasLink) {
-                console.log('[PP-GLOBAL] 💰 CHECKOUT INJECT (direct buy without link)');
-                // Se CTA sem link real, substituir
-                if (finalResponse.includes('FINALIZAR COMPRA') && !finalResponse.includes('http')) {
-                    finalResponse = finalResponse.replace(/━+\n🚀 FINALIZAR COMPRA\n━+/g, 
-                        `━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`);
-                } else if (!finalResponse.includes('FINALIZAR COMPRA')) {
+            // ═══ 2. IS_BUYER SEM CHECKOUT — Injetar checkout em resposta de interrupção ═══
+            if (_ppIsBuyer && _ppCheckoutLink) {
+                const _ppHasCheckout = finalResponse.includes(_ppCheckoutLink) || finalResponse.includes('FINALIZAR COMPRA');
+                if (!_ppHasCheckout) {
+                    console.log('[PP-GLOBAL] 🧠 IS_BUYER ativo + sem checkout → injetando');
                     finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
                 }
             }
 
-            // ═══ 4. FIX CTA SEM LINK — "FINALIZAR COMPRA" sem URL ═══
+            // ═══ 3. FIX CTA SEM LINK — "FINALIZAR COMPRA" sem URL ═══
             if (finalResponse.includes('FINALIZAR COMPRA') && !finalResponse.includes('http')) {
-                console.log('[PP-GLOBAL] 🔗 CTA SEM LINK → injetando URL');
                 if (_ppCheckoutLink) {
                     finalResponse = finalResponse.replace(
                         /━+\n🚀 FINALIZAR COMPRA\n━+/g,
                         `━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`
                     );
                 } else {
-                    // Remove CTA vazio se não tem link
                     finalResponse = finalResponse.replace(/\n*━+\n🚀 FINALIZAR COMPRA\n━+\n*/g, '').trim();
                 }
             }
 
-            // ═══ 5. SANITIZER — Remove nomes de plataforma ═══
+            // ═══ 4. SANITIZER — Remove nomes de plataforma ═══
             const _ppBlockedTerms = ['Braip', 'Hotmart', 'Kiwify', 'Eduzz', 'Monetizze', 'PerfectPay', 'Greenn'];
             for (const _term of _ppBlockedTerms) {
                 const _ppRegex = new RegExp(`\\b${_term}\\b`, 'gi');
@@ -8327,7 +8410,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
             finalResponse = finalResponse.replace(/\s{3,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 
-            console.log(`[PP-GLOBAL] ✅ Pós-processamento completo | len=${finalResponse.length}`);
+            console.log(`[PP-GLOBAL] ✅ Pós-processamento completo | isBuyer=${_ppIsBuyer} | len=${finalResponse.length}`);
         } catch (_ppErr) {
             console.warn('[PP-GLOBAL] ⚠️ Erro (sem impacto):', _ppErr.message);
         }
