@@ -14,15 +14,15 @@ const BASE_URL = 'https://vertical-ai-dktu.onrender.com';
 // CONFIGURAÇÃO DOS TENANTS
 // ═══════════════════════════════════════════════════════
 const SHORT_URLS = [
-    'EmrTDd', 'dTOCWs', 'erpaii', '9nbcI5', 'WObmBi', 'NV2M2R'
+    'eRB12O', 'nL76Al', 'EPqNi1', 'MKg7kN', 'rHWv1r', 'TSEyV6', 'Ak54tA', 'N075dH', 'PLkz7W'
 ];
 
 // Tenant direto (sem short URL)
 const DIRECT_TENANT = {
-    name: '05 (Arsenal)',
-    url: 'https://www.arsenalsecretodosceos.com.br/linkmagic',
+    name: '06 (Hotmart)',
+    url: 'https://go.hotmart.com/M103540655P',
     apiKey: 'LMV7-HNTM-9OS5-QGFK',
-    instructions: 'Sempre responda de forma amigável, consultiva e entusiasmada, mas objetiva'
+    instructions: ''
 };
 
 // ═══════════════════════════════════════════════════════

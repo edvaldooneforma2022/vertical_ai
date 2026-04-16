@@ -8244,6 +8244,94 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.warn('[V12-STATE@inteligente] ⚠️ Erro (sem impacto):', _v12StateErr.message);
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 PÓS-PROCESSADOR GLOBAL V16.2 — ANTI-PERDA DE VENDA
+        // Executa SEMPRE, independente de V13/V16/legado
+        // Última camada antes do envio — corrige bugs críticos
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _ppMsg = (message || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const _ppCheckoutLink = processedPageData?.checkoutLink || null;
+            const _ppWhatsApp = processedPageData?.whatsapp || processedPageData?.whatsappLink ||
+                (processedPageData?.contatos?.whatsapp && processedPageData.contatos.whatsapp[0]) || null;
+
+            // ═══ 1. SUPPORT HARD OVERRIDE ═══
+            const _ppSupportKeywords = ['atendente', 'suporte', 'falar com alguem', 'falar com alguém', 'humano', 'preciso de ajuda', 'falar com pessoa', 'pessoa real'];
+            if (_ppSupportKeywords.some(k => _ppMsg.includes(k))) {
+                console.log('[PP-GLOBAL] 🚀 SUPPORT OVERRIDE');
+                finalResponse = _ppWhatsApp
+                    ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_ppWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
+                    : `Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌`;
+            }
+
+            // ═══ 2. ANTI-GENÉRICO — Bloqueia "Ótima pergunta!" e similares ═══
+            const _ppGenericPatterns = ['ótima pergunta', 'otima pergunta', 'deixe-me explicar detalhadamente', 'como posso ajudar você hoje', 'como posso te ajudar hoje', 'aqui estão as informações que você precisa'];
+            const _ppResponseLower = (finalResponse || '').toLowerCase();
+            const _ppIsGeneric = _ppGenericPatterns.some(p => _ppResponseLower.includes(p));
+
+            if (_ppIsGeneric) {
+                console.log('[PP-GLOBAL] 🚫 GENERIC BLOCKED');
+
+                // Detectar se era intenção de compra
+                const _ppBuyPatterns = ['comprar', 'compra', 'link', 'manda o link', 'tem link', 'manda o site', 'bora', 'quero', 'como faco', 'como faço', 'onde compra', 'pagar', 'pagamento', 'pix', 'preco', 'preço', 'quanto', 'valor', 'custa', 'parcel'];
+                const _ppIsBuyIntent = _ppBuyPatterns.some(p => _ppMsg.includes(p));
+
+                if (_ppIsBuyIntent && _ppCheckoutLink) {
+                    finalResponse = `Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                } else if (_ppIsBuyIntent && _ppWhatsApp) {
+                    finalResponse = `Vou te direcionar para o suporte pra te ajudar melhor 👇\n\n${_ppWhatsApp}`;
+                } else {
+                    // Não é compra — remover o "Ótima pergunta!" e manter o resto
+                    finalResponse = finalResponse.replace(/💭\s*\*?\*?Ótima pergunta!?\*?\*?\s*/gi, '').replace(/💭\s*\*?\*?tima pergunta!?\*?\*?\s*/gi, '').trim();
+                    if (!finalResponse || finalResponse.length < 20) {
+                        finalResponse = 'Como posso te ajudar com mais informações sobre o produto?';
+                    }
+                }
+            }
+
+            // ═══ 3. CHECKOUT OBRIGATÓRIO para intenção de compra direta ═══
+            const _ppDirectBuyPatterns = ['quero comprar', 'qro compra', 'me manda o link', 'manda o link', 'tem link', 'tem o link', 'manda o site', 'bora', 'onde compra', 'como faco pra comprar', 'como faço pra comprar', 'como q compra'];
+            const _ppIsDirectBuy = _ppDirectBuyPatterns.some(p => _ppMsg.includes(p));
+            const _ppHasLink = _ppCheckoutLink && finalResponse.includes(_ppCheckoutLink);
+
+            if (_ppIsDirectBuy && _ppCheckoutLink && !_ppHasLink) {
+                console.log('[PP-GLOBAL] 💰 CHECKOUT INJECT (direct buy without link)');
+                // Se CTA sem link real, substituir
+                if (finalResponse.includes('FINALIZAR COMPRA') && !finalResponse.includes('http')) {
+                    finalResponse = finalResponse.replace(/━+\n🚀 FINALIZAR COMPRA\n━+/g, 
+                        `━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`);
+                } else if (!finalResponse.includes('FINALIZAR COMPRA')) {
+                    finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                }
+            }
+
+            // ═══ 4. FIX CTA SEM LINK — "FINALIZAR COMPRA" sem URL ═══
+            if (finalResponse.includes('FINALIZAR COMPRA') && !finalResponse.includes('http')) {
+                console.log('[PP-GLOBAL] 🔗 CTA SEM LINK → injetando URL');
+                if (_ppCheckoutLink) {
+                    finalResponse = finalResponse.replace(
+                        /━+\n🚀 FINALIZAR COMPRA\n━+/g,
+                        `━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`
+                    );
+                } else {
+                    // Remove CTA vazio se não tem link
+                    finalResponse = finalResponse.replace(/\n*━+\n🚀 FINALIZAR COMPRA\n━+\n*/g, '').trim();
+                }
+            }
+
+            // ═══ 5. SANITIZER — Remove nomes de plataforma ═══
+            const _ppBlockedTerms = ['Braip', 'Hotmart', 'Kiwify', 'Eduzz', 'Monetizze', 'PerfectPay', 'Greenn'];
+            for (const _term of _ppBlockedTerms) {
+                const _ppRegex = new RegExp(`\\b${_term}\\b`, 'gi');
+                finalResponse = finalResponse.replace(_ppRegex, '');
+            }
+            finalResponse = finalResponse.replace(/\s{3,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+
+            console.log(`[PP-GLOBAL] ✅ Pós-processamento completo | len=${finalResponse.length}`);
+        } catch (_ppErr) {
+            console.warn('[PP-GLOBAL] ⚠️ Erro (sem impacto):', _ppErr.message);
+        }
+
         return res.json({
             success: true,
             response: finalResponse,
