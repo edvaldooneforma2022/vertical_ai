@@ -441,6 +441,19 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🔥 V16.2 DECISION ENGINE BLINDADO FINAL — Anti-Perda de Venda
+// Camada determinística SOBRE V13 (NÃO altera V13/V14)
+// Feature flag: FEATURE_V16_2_BLINDADO_FINAL (default: FALSE — opt-in)
+// ═══════════════════════════════════════════════════════════════════
+let _v162DecisionEngine = null;
+try {
+    _v162DecisionEngine = require('./lib/v16-decision-engine');
+    console.log('✅ [V16.2] Decision Engine Blindado Final carregado');
+} catch (e) {
+    console.log('⚠️ [V16.2] Decision Engine não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // V14.0 — AUTO-OTIMIZAÇÃO (Feature Flag: FEATURE_V14_SELF_OPTIMIZING)
 // Camada ADITIVA — NÃO altera V13, apenas loga + aprende
 // ═══════════════════════════════════════════════════════════════════
@@ -5309,6 +5322,75 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 const _v13StateResult = _v13StateManager.updateState(_v13ConvId, _v13Intent.intent, cleanUserMessage);
                 console.log(`[V13] 🧩 2/6 State: ${_v13StateResult.stage} (score=${_v13StateResult.score}) ${_v13StateResult.transition ? '⚡ ' + _v13StateResult.transition : ''}`);
 
+                // ═══════════════════════════════════════════════════════════════════
+                // 🔥 V16.2 — DECISION ENGINE BLINDADO FINAL (INTERCEPTAÇÃO)
+                // Ponto: APÓS State Manager (passo 2), ANTES do Rule Engine (passo 3)
+                // Se V16.2 decide override → assume controle (early return)
+                // Se V16.2 decide DEFAULT → V13 continua normalmente
+                // Se V16.2 FALHA → fallback total para V13
+                // ═══════════════════════════════════════════════════════════════════
+                let _v162Override = null;
+                try {
+                    const _v162FlagFromManager = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V16_2_BLINDADO_FINAL');
+                    const _v162FlagFromEnv = process.env.FEATURE_V16_2_BLINDADO_FINAL === 'true';
+                    const _v162FlagEnabled = _v162FlagFromManager || _v162FlagFromEnv;
+
+                    if (_v162FlagEnabled && _v162DecisionEngine && _v162DecisionEngine.processDecision) {
+                        console.log(`[V16.2] 🔥 Decision Engine ATIVO | tenant=${apiKey?.substring(0, 8)}...`);
+
+                        _v162Override = await _v162DecisionEngine.processDecision({
+                            userMessage: cleanUserMessage,
+                            v13Intent: _v13Intent,
+                            v13State: _v13StateResult,
+                            conversationId: _v13ConvId,
+                            pageData: pageData
+                        });
+
+                        if (_v162Override && _v162Override.override && _v162Override.blockAI) {
+                            console.log(`[V16.2] 🏁 OVERRIDE COMPLETO: decision=${_v162Override.decision} | reason=${_v162Override.reason}`);
+
+                            let _v162FinalText = _v162Override.response || '';
+
+                            // Injetar checkout se necessário (e não bloqueado)
+                            if (_v162Override.injectCheckout && pageData.checkoutLink && !_v162Override.blockCheckout) {
+                                if (!_v162FinalText.includes('FINALIZAR COMPRA') && !_v162FinalText.includes(pageData.checkoutLink)) {
+                                    _v162FinalText += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${pageData.checkoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                                    _v13StateManager.markCheckoutSent(_v13ConvId);
+                                }
+                            }
+
+                            // V14: Log da interação (fire-and-forget)
+                            try {
+                                const _v14FlagOnV162 = process.env.FEATURE_V14_SELF_OPTIMIZING === 'true' ||
+                                    (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_SELF_OPTIMIZING'));
+                                if (_v14FlagOnV162 && _v14Logger && _v14Logger.logConversation && db) {
+                                    _v14Logger.logConversation(db, {
+                                        apiKey,
+                                        conversationId: _v13ConvId,
+                                        userMessage: cleanUserMessage,
+                                        aiResponse: _v162FinalText,
+                                        intent: _v13Intent.intent,
+                                        action: `V16_${_v162Override.decision}`,
+                                        stage: _v13StateResult.stage,
+                                        hadCheckout: _v162Override.injectCheckout,
+                                        checkoutType: _v162Override.injectCheckout ? `v16_${_v162Override.decision.toLowerCase()}` : null,
+                                        responseTimeMs: Date.now() - _v13Start,
+                                        v13Pipeline: true
+                                    }).catch(() => {});
+                                }
+                            } catch (_) {}
+
+                            const _v162Elapsed = Date.now() - _v13Start;
+                            console.log(`[V16.2] 🏁 Pipeline V16.2 completo em ${_v162Elapsed}ms | decision=${_v162Override.decision} | response=${_v162FinalText.length} chars`);
+                            return _v162FinalText;
+                        }
+                    }
+                } catch (_v162Err) {
+                    // FALLBACK TOTAL — V13 continua normalmente
+                    console.warn('[V16.2] ⚠️ Decision Engine falhou (fallback V13):', _v162Err.message);
+                    _v162Override = null;
+                }
+
                 // ─── PASSO 3: RULE ENGINE (hard rules → ação) ───
                 const _v13Action = _v13DecideAction(_v13Intent.intent, _v13StateResult, {
                     checkoutLink: pageData.checkoutLink || null,
@@ -5555,6 +5637,46 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                         _v13FinalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${pageData.checkoutLink}\n━━━━━━━━━━━━━━━━━━━`;
                         _v13StateManager.markCheckoutSent(_v13ConvId);
                     }
+                }
+
+                // ═══════════════════════════════════════════════════════════════════
+                // 🔥 V16.2 — ANTI-RESPOSTA-FRACA (PÓS-PIPELINE V13)
+                // Se buyer ativo + resposta sem checkout → injetar (IDEMPOTENTE)
+                // Se V16.2 FORCE_CLOSE pendente → complementar resposta V13
+                // ═══════════════════════════════════════════════════════════════════
+                try {
+                    const _v162PostFlagOn = (process.env.FEATURE_V16_2_BLINDADO_FINAL === 'true') ||
+                        (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V16_2_BLINDADO_FINAL'));
+
+                    if (_v162PostFlagOn && _v162DecisionEngine) {
+                        // V16.2 FORCE_CLOSE: complementar resposta V13 (sem bloquear IA)
+                        if (_v162Override && _v162Override.override && _v162Override.isComplement && _v162Override.injectCheckout) {
+                            if (pageData.checkoutLink && !_v13FinalResponse.includes('FINALIZAR COMPRA') && !_v13FinalResponse.includes(pageData.checkoutLink)) {
+                                const _v162ComplementText = _v162Override.response || '';
+                                _v13FinalResponse += `\n\n${_v162ComplementText}\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${pageData.checkoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                                _v13StateManager.markCheckoutSent(_v13ConvId);
+                                console.log(`[V16.2] 🔥 FORCE_CLOSE complement injetado`);
+                            }
+                        }
+
+                        // Anti-Resposta-Fraca global (idempotente)
+                        const _v162AntiWeak = _v162DecisionEngine.applyAntiWeakResponse(
+                            _v13FinalResponse,
+                            _v162DecisionEngine.getBuyerState(_v13ConvId),
+                            pageData.checkoutLink || null
+                        );
+                        if (_v162AntiWeak.wasWeak) {
+                            _v13FinalResponse = _v162AntiWeak.response;
+                            _v13StateManager.markCheckoutSent(_v13ConvId);
+                            console.log(`[V16.2] 🛡️ Anti-Weak Response aplicado (checkout injetado para buyer ativo)`);
+                        }
+
+                        // Sanitizar resposta final
+                        _v13FinalResponse = _v162DecisionEngine.sanitizeResponse(_v13FinalResponse);
+                    }
+                } catch (_v162PostErr) {
+                    // Silencioso — anti-weak NUNCA impacta resposta existente
+                    console.warn('[V16.2] ⚠️ Anti-Weak/Sanitize erro (sem impacto):', _v162PostErr.message);
                 }
 
                 const _v13Elapsed = Date.now() - _v13Start;
