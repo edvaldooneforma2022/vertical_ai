@@ -5313,6 +5313,30 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 const _v13Start = Date.now();
                 let _v13Used = false;
 
+                // ═══════════════════════════════════════════════════════════════════
+                // 🔥 SUPPORT HARD OVERRIDE (BUG-7 FIX) — ANTES DE TUDO
+                // Bypassa V13, V16, IA completamente
+                // ═══════════════════════════════════════════════════════════════════
+                try {
+                    const _supportKeywords = ['atendente', 'suporte', 'falar com alguém', 'falar com alguem', 'humano', 'preciso de ajuda', 'falar com pessoa', 'pessoa real'];
+                    const _supportNormalized = (cleanUserMessage || '').toLowerCase();
+                    if (_supportKeywords.some(k => _supportNormalized.includes(k))) {
+                        console.log(`[V16.2-SUPPORT] 🚀 HARD OVERRIDE — bypass total`);
+                        const _supportWhatsApp = (pageData && (pageData.whatsapp || pageData.whatsappLink)) ||
+                            (pageData && pageData.contatos && pageData.contatos.whatsapp && pageData.contatos.whatsapp[0]) || null;
+                        const _supportResponse = _supportWhatsApp
+                            ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_supportWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
+                            : `Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌`;
+                        
+                        const _supportElapsed = Date.now() - _v13Start;
+                        console.log(`[V16.2-SUPPORT] ✅ Finalizado em ${_supportElapsed}ms (hard override)`);
+                        return _supportResponse;
+                    }
+                } catch (_supportErr) {
+                    console.warn('[V16.2-SUPPORT] ⚠️ Erro (fallback V13):', _supportErr.message);
+                }
+
+
                 // ─── PASSO 1: INTENT CLASSIFIER (determinístico, zero IA) ───
                 const _v13Intent = _v13ClassifyIntent(cleanUserMessage);
                 console.log(`[V13] 🧩 1/6 Intent: ${_v13Intent.intent} (conf=${_v13Intent.confidence}) | pattern=${_v13Intent.matchedPattern}`);
@@ -5324,8 +5348,8 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
 
                 // ═══════════════════════════════════════════════════════════════════
                 // 🔥 V16.2 — DECISION ENGINE BLINDADO FINAL (INTERCEPTAÇÃO)
-                // Ponto: APÓS State Manager (passo 2), ANTES do Rule Engine (passo 3)
-                // Se V16.2 decide override → assume controle (early return)
+                // PATCH CIRÚRGICO: V16.2 faz OVERRIDE TOTAL — NÃO deixa V13 continuar
+                // Se V16.2 decide override → pipeline é ENCERRADO (early return)
                 // Se V16.2 decide DEFAULT → V13 continua normalmente
                 // Se V16.2 FALHA → fallback total para V13
                 // ═══════════════════════════════════════════════════════════════════
@@ -5346,16 +5370,46 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                             pageData: pageData
                         });
 
-                        if (_v162Override && _v162Override.override && _v162Override.blockAI) {
-                            console.log(`[V16.2] 🏁 OVERRIDE COMPLETO: decision=${_v162Override.decision} | reason=${_v162Override.reason}`);
+                        // 💣 OVERRIDE TOTAL — V16.2 encerra pipeline (NÃO deixa V13 continuar)
+                        if (_v162Override && _v162Override.override) {
+                            console.log(`[V16.2] 🏁 OVERRIDE TOTAL: decision=${_v162Override.decision} | reason=${_v162Override.reason} | blockAI=${_v162Override.blockAI}`);
 
                             let _v162FinalText = _v162Override.response || '';
+                            const _v162CheckoutLink = pageData.checkoutLink || null;
+                            const _v162WhatsApp = pageData.whatsapp || pageData.whatsappLink ||
+                                (pageData.contatos && pageData.contatos.whatsapp && pageData.contatos.whatsapp[0]) || null;
 
-                            // Injetar checkout se necessário (e não bloqueado)
-                            if (_v162Override.injectCheckout && pageData.checkoutLink && !_v162Override.blockCheckout) {
-                                if (!_v162FinalText.includes('FINALIZAR COMPRA') && !_v162FinalText.includes(pageData.checkoutLink)) {
-                                    _v162FinalText += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${pageData.checkoutLink}\n━━━━━━━━━━━━━━━━━━━`;
-                                    _v13StateManager.markCheckoutSent(_v13ConvId);
+                            // 🔴 FIX BUG-5: Se precisa de checkout mas NÃO tem link → fallback WhatsApp
+                            if (_v162Override.injectCheckout && !_v162CheckoutLink && !_v162Override.blockCheckout) {
+                                console.log(`[V16.2] ⚠️ Checkout ausente → fallback WhatsApp`);
+                                _v162FinalText = _v162WhatsApp
+                                    ? `Vou te direcionar para o suporte pra te ajudar melhor 👇\n\n${_v162WhatsApp}`
+                                    : 'Vou te direcionar para o suporte pra te ajudar melhor 👇';
+                                _v162Override.injectCheckout = false;
+                            }
+
+                            // 🔴 FIX BUG-2: Checkout block com link OBRIGATÓRIO
+                            if (_v162Override.injectCheckout && _v162CheckoutLink && !_v162Override.blockCheckout) {
+                                if (!_v162FinalText.includes(_v162CheckoutLink)) {
+                                    _v162FinalText += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_v162CheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                                    try { _v13StateManager.markCheckoutSent(_v13ConvId); } catch (_) {}
+                                }
+                            }
+
+                            // 🔴 FIX BUG-6: Sanitizer final — remove nomes de plataforma
+                            try {
+                                _v162FinalText = _v162DecisionEngine.sanitizeResponse(_v162FinalText);
+                            } catch (_) {}
+
+                            // 🔴 FIX BUG-1: Anti-genérico — bloquear respostas fracas
+                            const _v162GenericPatterns = ['ótima pergunta', 'otima pergunta', 'deixe-me explicar', 'como posso ajudar', 'me fale mais', 'posso te ajudar'];
+                            const _v162Lower = (_v162FinalText || '').toLowerCase();
+                            if (_v162GenericPatterns.some(p => _v162Lower.includes(p))) {
+                                console.log('[V16.2] 🚫 GENERIC BLOCKED → forcing checkout');
+                                if (_v162CheckoutLink) {
+                                    _v162FinalText = `Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_v162CheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                                } else if (_v162WhatsApp) {
+                                    _v162FinalText = `Vou te direcionar para o suporte 👇\n\n${_v162WhatsApp}`;
                                 }
                             }
 
@@ -5677,6 +5731,39 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 } catch (_v162PostErr) {
                     // Silencioso — anti-weak NUNCA impacta resposta existente
                     console.warn('[V16.2] ⚠️ Anti-Weak/Sanitize erro (sem impacto):', _v162PostErr.message);
+                }
+
+                // ═══════════════════════════════════════════════════════════════════
+                // 🔴 SANITIZER FINAL GLOBAL (BUG-6 FIX) — SEMPRE EXECUTA
+                // Remove nomes de plataforma independente de V16.2
+                // ═══════════════════════════════════════════════════════════════════
+                try {
+                    const _sanitizeBlockedTerms = ['Braip', 'Hotmart', 'Kiwify', 'Eduzz', 'Monetizze', 'PerfectPay', 'Greenn'];
+                    for (const _term of _sanitizeBlockedTerms) {
+                        const _sanitizeRegex = new RegExp(`\\b${_term}\\b`, 'gi');
+                        _v13FinalResponse = _v13FinalResponse.replace(_sanitizeRegex, '');
+                    }
+                    _v13FinalResponse = _v13FinalResponse.replace(/\s{2,}/g, ' ').trim();
+                } catch (_sanitizeErr) {
+                    console.warn('[SANITIZER] ⚠️ Erro (sem impacto):', _sanitizeErr.message);
+                }
+
+                // ═══════════════════════════════════════════════════════════════════
+                // 🔴 ANTI-GENÉRICO GLOBAL (BUG-1 FIX) — SEMPRE EXECUTA
+                // Se resposta é genérica + tem checkout → forçar checkout
+                // ═══════════════════════════════════════════════════════════════════
+                try {
+                    const _antiGenericPatterns = ['ótima pergunta', 'otima pergunta', 'deixe-me explicar', 'como posso ajudar', 'me fale mais', 'posso te ajudar'];
+                    const _antiGenericLower = (_v13FinalResponse || '').toLowerCase();
+                    const _antiGenericCheckout = pageData.checkoutLink || null;
+                    if (_antiGenericPatterns.some(p => _antiGenericLower.includes(p))) {
+                        console.log('[ANTI-GENERIC] 🚫 Resposta genérica detectada → substituindo');
+                        if (_antiGenericCheckout) {
+                            _v13FinalResponse = `Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_antiGenericCheckout}\n━━━━━━━━━━━━━━━━━━━`;
+                        }
+                    }
+                } catch (_antiGenErr) {
+                    console.warn('[ANTI-GENERIC] ⚠️ Erro (sem impacto):', _antiGenErr.message);
                 }
 
                 const _v13Elapsed = Date.now() - _v13Start;

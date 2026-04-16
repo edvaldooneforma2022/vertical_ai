@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-04-16T12:27:44.368Z",
+  "version": "V16.2",
+  "overallRate": 67,
+  "grandTotal": 210,
+  "grandPass": 141,
+  "grandCheckout": 131,
+  "grandGeneric": 42,
+  "grandPlatform": 95,
+  "tenants": [
+    {
+      "name": "01",
+      "passRate": 67,
+      "tests": 30,
+      "passed": 20,
+      "checkout": 18,
+      "generic": 6,
+      "platform": 0,
+      "avgTime": 342
+    },
+    {
+      "name": "02",
+      "passRate": 73,
+      "tests": 30,
+      "passed": 22,
+      "checkout": 23,
+      "generic": 6,
+      "platform": 19,
+      "avgTime": 1629
+    },
+    {
+      "name": "03",
+      "passRate": 37,
+      "tests": 30,
+      "passed": 11,
+      "checkout": 0,
+      "generic": 6,
+      "platform": 0,
+      "avgTime": 671
+    },
+    {
+      "name": "04",
+      "passRate": 77,
+      "tests": 30,
+      "passed": 23,
+      "checkout": 23,
+      "generic": 6,
+      "platform": 19,
+      "avgTime": 596
+    },
+    {
+      "name": "06",
+      "passRate": 70,
+      "tests": 30,
+      "passed": 21,
+      "checkout": 22,
+      "generic": 6,
+      "platform": 19,
+      "avgTime": 1186
+    },
+    {
+      "name": "07",
+      "passRate": 73,
+      "tests": 30,
+      "passed": 22,
+      "checkout": 22,
+      "generic": 6,
+      "platform": 19,
+      "avgTime": 1651
+    },
+    {
+      "name": "05 (Arsenal)",
+      "passRate": 73,
+      "tests": 30,
+      "passed": 22,
+      "checkout": 23,
+      "generic": 6,
+      "platform": 19,
+      "avgTime": 789
+    }
+  ]
+}
