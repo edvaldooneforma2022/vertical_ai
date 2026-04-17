@@ -508,6 +508,15 @@ try {
     console.log('⚠️ [V14.2] Assistant Diagnostic não disponível:', e.message);
 }
 
+// 🌐 V14.3 Deep Context Explorer
+let _deepContextExplorer = null;
+try {
+    _deepContextExplorer = require('./lib/deep-context-explorer');
+    console.log('✅ [V14.3] Deep Context Explorer carregado');
+} catch (e) {
+    console.log('⚠️ [V14.3] Deep Context Explorer não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -4573,6 +4582,75 @@ async function extractPageData(url) {
                 // 🎯 EXTRAIR CONTATOS
                 extractedData.contatos = sistemaContatosAprimorado.extrairContatosAprimorado($);
 
+                // 🎯 V14.2.1: Promover WhatsApp para campo top-level (compatibilidade com diagnóstico)
+                try {
+                    if (extractedData.contatos?.whatsappLinks?.length > 0) {
+                        extractedData.whatsappLink = extractedData.contatos.whatsappLinks[0];
+                    } else if (extractedData.contatos?.whatsapp?.length > 0) {
+                        const _wpNum = extractedData.contatos.whatsapp[0].replace(/\D/g, '');
+                        extractedData.whatsappLink = `https://wa.me/${_wpNum}`;
+                    }
+                    if (extractedData.whatsappLink) {
+                        console.log(`📱 [V14.2.1] WhatsApp promovido: ${extractedData.whatsappLink}`);
+                    }
+                } catch (_wpErr) {
+                    console.warn('[V14.2.1] Erro ao promover WhatsApp (sem impacto):', _wpErr.message);
+                }
+
+                // 🎯 V14.2.1: EXTRAIR FAQ (Perguntas Frequentes)
+                try {
+                    const faqItems = [];
+                    
+                    // Seletores para diferentes frameworks de FAQ
+                    const faqSelectors = [
+                        { container: '.elementor-toggle-item', title: '.elementor-toggle-title', content: '.elementor-tab-content' },
+                        { container: '.elementor-accordion-item', title: '.elementor-accordion-title', content: '.elementor-accordion-content' },
+                        { container: 'details', title: 'summary', content: 'p' },
+                        { container: '.faq-item', title: '.faq-question, .question, h3, h4', content: '.faq-answer, .answer, p' },
+                        { container: '.accordion-item', title: '.accordion-header, .accordion-button', content: '.accordion-body, .accordion-collapse' },
+                        { container: '[itemtype*="Question"]', title: '[itemprop="name"]', content: '[itemprop="acceptedAnswer"], [itemprop="text"]' },
+                    ];
+
+                    for (const sel of faqSelectors) {
+                        $(sel.container).each((_, el) => {
+                            try {
+                                const q = $(el).find(sel.title).first().text().trim();
+                                const a = $(el).find(sel.content).first().text().trim();
+                                if (q && q.length > 5 && q.length < 500) {
+                                    faqItems.push({ question: q, answer: (a || '').substring(0, 1000) });
+                                }
+                            } catch (_) {}
+                        });
+                        if (faqItems.length > 0) break;
+                    }
+
+                    // Fallback: buscar seções com perguntas em texto
+                    if (faqItems.length === 0) {
+                        const faqSectionSelectors = [
+                            '[class*="faq"]', '[class*="duvida"]', '[class*="pergunta"]',
+                            '[id*="faq"]', '[id*="duvida"]', '[id*="pergunta"]'
+                        ];
+                        for (const selector of faqSectionSelectors) {
+                            $(selector).find('h3, h4, h5, strong, .title, dt').each((_, el) => {
+                                try {
+                                    const text = $(el).text().trim();
+                                    if (text.endsWith('?') && text.length > 10 && text.length < 500) {
+                                        faqItems.push({ question: text, answer: '' });
+                                    }
+                                } catch (_) {}
+                            });
+                            if (faqItems.length > 0) break;
+                        }
+                    }
+
+                    if (faqItems.length > 0) {
+                        extractedData.faq = faqItems;
+                        console.log(`❓ [V14.2.1] ${faqItems.length} perguntas frequentes extraídas`);
+                    }
+                } catch (faqErr) {
+                    console.warn('[V14.2.1] Erro na extração de FAQ (sem impacto):', faqErr.message);
+                }
+
                 // 🔗 [V9.3 CHECKOUT-SERVER] Extração server-side de checkout link via heurística
                 // Protegido por feature flag + try/catch — zero impacto se falhar
                 try {
@@ -4770,6 +4848,38 @@ async function extractPageData(url) {
                 logger.warn(`⚠️ [ENHANCED] Enhanced extraction failed, continuing with basic: ${enhancedError.message}`);
                 // Não interrompe o fluxo - continua com extração básica
             }
+        }
+
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🌐 V14.3 DEEP CONTEXT EXPLORER
+        // Explora subpáginas do mesmo domínio para enriquecer FAQ, WhatsApp, Checkout
+        // Protegido por FEATURE_DEEP_CONTEXT_EXPLORER + try/catch + timeout
+        // NÃO sobrescreve dados existentes — apenas ADICIONA o que falta
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _deepEnabled = _deepContextExplorer && featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_DEEP_CONTEXT_EXPLORER');
+            if (_deepEnabled) {
+                console.log(`[V14.3] 🌐 Deep Context Explorer ativado para: ${url.substring(0, 80)}`);
+                
+                const deepTimeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Deep Context timeout (45s)')), 45000)
+                );
+                
+                const deepExplorePromise = _deepContextExplorer.exploreDeepContext(url, extractedData, {
+                    maxPages: 5,
+                    maxDepth: 3,
+                    timeoutPerPage: 8000,
+                    globalTimeout: 45000
+                });
+                
+                const deepResult = await Promise.race([deepExplorePromise, deepTimeoutPromise]);
+                _deepContextExplorer.mergeDeepContext(extractedData, deepResult);
+                
+                console.log(`[V14.3] ✅ Deep Context completo: ${deepResult.pagesExplored} páginas, confidence=${deepResult.confidenceScore}%`);
+            }
+        } catch (_deepErr) {
+            console.warn('[V14.3] ⚠️ Deep Context Explorer falhou (dados originais mantidos):', _deepErr.message);
         }
 
 
