@@ -8755,7 +8755,6 @@ app.post("/api/extract", ...[billingMiddleware].filter(Boolean), async (req, res
             details: error.message
         });
     }
-    }
 });
 
 /**
