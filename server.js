@@ -490,6 +490,15 @@ try {
     console.log('⚠️ [V14] Adaptive Layer não disponível:', e.message);
 }
 
+// V14.1 — Context Layer (Memória + Anti-Repetição + Coerência)
+let _v14ContextLayer = null;
+try {
+    _v14ContextLayer = require('./lib/v14-context-layer');
+    console.log('✅ [V14.1] Context Layer carregado');
+} catch (e) {
+    console.log('⚠️ [V14.1] Context Layer não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -5521,9 +5530,43 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                             }
 
                             if (_v13HumanizeSystemPrompt) {
+                                // ═══ V14.1: INJETAR CONTEXTO CONVERSACIONAL NO HUMANIZER ═══
+                                let _v14EnrichedPrompt = _v13HumanizeSystemPrompt;
+                                try {
+                                    const _v14CtxEnabled = _v14ContextLayer &&
+                                        (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
+                                    if (_v14CtxEnabled) {
+                                        const _v14CtxBlock = _v14ContextLayer.buildContextPrompt(_v13ConvId);
+                                        if (_v14CtxBlock) {
+                                            _v14EnrichedPrompt = _v13HumanizeSystemPrompt + '\n' + _v14CtxBlock;
+                                            console.log('[V14.1] 🧠 Contexto conversacional injetado no humanizer');
+                                        }
+                                    }
+                                } catch (_v14CtxErr) {
+                                    console.warn('[V14.1] ⚠️ Erro ao injetar contexto (sem impacto):', _v14CtxErr.message);
+                                }
+
+                                // ═══ V14.1: USAR HISTÓRICO REAL EM VEZ DE [] ═══
+                                let _v14HistoryMessages = [];
+                                try {
+                                    const _v14HEnabled = _v14ContextLayer &&
+                                        (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
+                                    if (_v14HEnabled) {
+                                        _v14HistoryMessages = _v14ContextLayer.getMessagesForLLM(_v13ConvId, 6);
+                                        if (_v14HistoryMessages.length > 0) {
+                                            console.log(`[V14.1] 📚 ${_v14HistoryMessages.length} msgs do histórico real injetadas no LLM`);
+                                        }
+                                    }
+                                } catch (_) {}
+
+                                // Fallback: se V14 não tiver histórico, usar conversationHistory original
+                                const _v13HistoryToUse = _v14HistoryMessages.length > 0
+                                    ? _v14HistoryMessages
+                                    : (Array.isArray(conversationHistory) ? conversationHistory.slice(-4) : []);
+
                                 const _v13HumanizeMessages = [
-                                    { role: 'system', content: _v13HumanizeSystemPrompt },
-                                    ...(Array.isArray(conversationHistory) ? conversationHistory.slice(-4) : []),
+                                    { role: 'system', content: _v14EnrichedPrompt },
+                                    ..._v13HistoryToUse,
                                     { role: 'user', content: cleanUserMessage }
                                 ];
 
@@ -5584,9 +5627,24 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     });
 
                     const _v13Limits = _v13GetLLMHardLimits ? _v13GetLLMHardLimits() : { max_tokens: 150, temperature: 0.3 };
+
+                    // ═══ V14.1: CONTEXTO + HISTÓRICO REAL PARA FALLBACK V13.0.0 ═══
+                    let _v14FallbackPrompt = _v13Prompt;
+                    let _v14FallbackHistory = (Array.isArray(conversationHistory) ? conversationHistory.slice(-6) : []);
+                    try {
+                        const _v14FbEnabled = _v14ContextLayer &&
+                            (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
+                        if (_v14FbEnabled) {
+                            const _v14FbCtx = _v14ContextLayer.buildContextPrompt(_v13ConvId);
+                            if (_v14FbCtx) _v14FallbackPrompt = _v13Prompt + '\n' + _v14FbCtx;
+                            const _v14FbHist = _v14ContextLayer.getMessagesForLLM(_v13ConvId, 6);
+                            if (_v14FbHist.length > 0) _v14FallbackHistory = _v14FbHist;
+                        }
+                    } catch (_) {}
+
                     const _v13Messages = [
-                        { role: 'system', content: _v13Prompt },
-                        ...(Array.isArray(conversationHistory) ? conversationHistory.slice(-6) : []),
+                        { role: 'system', content: _v14FallbackPrompt },
+                        ..._v14FallbackHistory,
                         { role: 'user', content: cleanUserMessage }
                     ];
 
@@ -5796,6 +5854,44 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     }
                 } catch (_v14LogErr) {
                     // Silencioso — logger NUNCA impacta resposta
+                }
+
+                // ═══ V14.1: ANTI-REPETIÇÃO + SALVAR NO HISTÓRICO ═══
+                try {
+                    const _v14SaveEnabled = _v14ContextLayer &&
+                        (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
+                    if (_v14SaveEnabled) {
+                        // Anti-repetição: verificar se resposta é duplicada/banida
+                        const _v14RepCheck = _v14ContextLayer.checkRepetition(_v13ConvId, _v13FinalResponse);
+                        if (_v14RepCheck.isRepetition) {
+                            console.log(`[V14.1] 🚫 REPETIÇÃO DETECTADA: ${_v14RepCheck.reason}`);
+                            // Limpar frases banidas da resposta
+                            const _v14CleanedResp = _v13FinalResponse
+                                .replace(/já usou algo parecido\??/gi, '')
+                                .replace(/como posso te ajudar\??/gi, '')
+                                .replace(/como posso ajudar\??/gi, '')
+                                .replace(/me conta mais/gi, '')
+                                .replace(/posso te ajudar\??/gi, '')
+                                .replace(/\n{3,}/g, '\n\n')
+                                .trim();
+                            if (_v14CleanedResp.length > 20) {
+                                _v13FinalResponse = _v14CleanedResp;
+                                console.log('[V14.1] ✅ Frases repetidas removidas da resposta');
+                            }
+                        }
+
+                        // Salvar user + bot no histórico
+                        _v14ContextLayer.addMessage(_v13ConvId, 'user', cleanUserMessage);
+                        _v14ContextLayer.addMessage(_v13ConvId, 'assistant', _v13FinalResponse);
+
+                        // Salvar info do produto na primeira interação
+                        _v14ContextLayer.saveProductInfo(_v13ConvId, pageData);
+
+                        const _v14Stats = _v14ContextLayer.getStats();
+                        console.log(`[V14.1] 📊 Sessions=${_v14Stats.activeSessions} | TotalMsgs=${_v14Stats.totalMessages}`);
+                    }
+                } catch (_v14SaveErr) {
+                    console.warn('[V14.1] ⚠️ Erro ao salvar histórico (sem impacto):', _v14SaveErr.message);
                 }
 
                 return _v13FinalResponse;
@@ -6963,6 +7059,27 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         } catch(_ckErr) { console.warn('[AUTO-CHECKOUT] Erro (silencioso):', _ckErr.message); }
         const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
 
+        // ═══ V14.1: SALVAR NO HISTÓRICO (para endpoint chat-universal / pipeline legado) ═══
+        try {
+            const _v14CuEnabled = _v14ContextLayer &&
+                (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
+            if (_v14CuEnabled && conversationId) {
+                // Nota: Se V13 pipeline rodou, ele já salvou internamente.
+                // Aqui salvamos para o caso do pipeline legado V0-V12 ter respondido.
+                const _v14CuHist = _v14ContextLayer.getHistory(conversationId);
+                const _v14CuLastUser = _v14CuHist.length > 0 ? _v14CuHist[_v14CuHist.length - 1] : null;
+                // Só salvar se o V13 não salvou ainda (evitar duplicata)
+                if (!_v14CuLastUser || _v14CuLastUser.content !== message.substring(0, 500)) {
+                    _v14ContextLayer.addMessage(conversationId, 'user', message);
+                    _v14ContextLayer.addMessage(conversationId, 'assistant', aiResponse);
+                    _v14ContextLayer.saveProductInfo(conversationId, processedPageData);
+                    console.log(`[V14.1@chat-universal] 📝 Histórico salvo | conv=${conversationId.substring(0, 8)}...`);
+                }
+            }
+        } catch (_v14CuErr) {
+            // Silencioso — nunca impacta resposta
+        }
+
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
         if (effectiveLeadId) {
             leadSystem.updateLeadConversation(effectiveLeadId, aiResponse, false);
@@ -7825,6 +7942,24 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
         if (effectiveLeadId) {
             leadSystem.updateLeadConversation(effectiveLeadId, finalResponse, false);
+        }
+
+        // ═══ V14.1: SALVAR NO HISTÓRICO (para endpoint process-chat-inteligente / pipeline legado) ═══
+        try {
+            const _v14PciEnabled = _v14ContextLayer &&
+                (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
+            if (_v14PciEnabled && conversationId) {
+                const _v14PciHist = _v14ContextLayer.getHistory(conversationId);
+                const _v14PciLast = _v14PciHist.length > 0 ? _v14PciHist[_v14PciHist.length - 1] : null;
+                if (!_v14PciLast || _v14PciLast.content !== message.substring(0, 500)) {
+                    _v14ContextLayer.addMessage(conversationId, 'user', message);
+                    _v14ContextLayer.addMessage(conversationId, 'assistant', finalResponse);
+                    _v14ContextLayer.saveProductInfo(conversationId, processedPageData);
+                    console.log(`[V14.1@chat-inteligente] 📝 Histórico salvo | conv=${conversationId.substring(0, 8)}...`);
+                }
+            }
+        } catch (_v14PciErr) {
+            // Silencioso
         }
 
         // 💳 Billing: registrar uso de mensagem
