@@ -1098,6 +1098,111 @@
             color: var(--dark-text-secondary);
         }
 
+        /* Diagnostic Modal */
+        .diag-score-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--glass-border);
+        }
+
+        .diag-score-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 8px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: #60a5fa;
+        }
+
+        .diag-mode-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .diag-mode-auto { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .diag-mode-limited { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
+        .diag-mode-manual { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .diag-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--dark-text-secondary);
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .diag-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .diag-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .diag-item-issue { border-left: 4px solid #ef4444; color: #f87171; }
+        .diag-item-warning { border-left: 4px solid #f59e0b; color: #fbbf24; }
+
+        .diag-item i { font-size: 1.1rem; }
+        
+        .diag-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .diag-footer button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-diag-primary {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-diag-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--dark-text-secondary);
+            border: 1px solid var(--glass-border) !important;
+        }
+
+        .btn-diag-primary:hover, .btn-diag-secondary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
         .legal-basis {
             background: rgba(59, 130, 246, 0.1);
             border-left: 4px solid var(--primary);
@@ -1655,6 +1760,36 @@
         </div>
     </main>
 
+    <div class="consent-modal" id="diagnosticModal">
+        <div class="consent-backdrop"></div>
+        <div class="consent-content" style="max-width: 450px;">
+            <div class="consent-header">
+                <h3>🔍 Diagnóstico do Assistente</h3>
+                <button class="close-btn" id="closeDiagModal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="consent-body">
+                <div class="diag-score-container">
+                    <div class="diag-score-circle" id="diagScore">0</div>
+                    <div class="diag-mode-badge" id="diagMode">MANUAL</div>
+                </div>
+
+                <div id="diagIssuesSection">
+                    <div class="diag-section-title">Problemas Críticos</div>
+                    <ul class="diag-list" id="diagIssuesList"></ul>
+                </div>
+
+                <div id="diagWarningsSection">
+                    <div class="diag-section-title">Avisos e Melhorias</div>
+                    <ul class="diag-list" id="diagWarningsList"></ul>
+                </div>
+
+                <div class="diag-footer">
+                    <button class="btn-diag-primary" id="diagContinueBtn">Ativar Assistente</button>
+                    <button class="btn-diag-secondary" id="diagAdjustBtn">Ajustar Configuração</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="consent-modal" id="consentModal">
         <div class="consent-backdrop"></div>
         <div class="consent-content">
@@ -2139,71 +2274,52 @@
             };
         }
 
-        activateChatbotBtn.addEventListener('click', async () => {
-            const robotName = robotNameInput.value;
-            const salesUrl = salesUrlInput.value;
-            const customInstructions = customInstructionsInput.value;
+        // ===== 🧠 DIAGNÓSTICO E ATIVAÇÃO DO ASSISTENTE =====
+        
+        const diagnosticModal = document.getElementById('diagnosticModal');
+        const closeDiagModal = document.getElementById('closeDiagModal');
+        const diagContinueBtn = document.getElementById('diagContinueBtn');
+        const diagAdjustBtn = document.getElementById('diagAdjustBtn');
+        
+        const diagScore = document.getElementById('diagScore');
+        const diagMode = document.getElementById('diagMode');
+        const diagIssuesList = document.getElementById('diagIssuesList');
+        const diagWarningsList = document.getElementById('diagWarningsList');
+        
+        const ISSUE_MAP = {
+            CHECKOUT_MISSING: "Checkout não encontrado",
+            WHATSAPP_MISSING: "WhatsApp não configurado",
+            DATA_MISSING: "Dados do assistente não encontrados",
+            DIAGNOSTIC_ERROR: "Erro interno no diagnóstico"
+        };
 
-            // 🔑 FIX-APIKEY-SESSION: Resolver API key com fallback robusto
-            // 1) Campo de input (pode estar em seção colapsada)
-            // 2) localStorage (salvo por initializeApiKeyFromSession)
-            // 3) Sessão ativa (/api/session/me) — fallback final
-            let apiKeyValue = document.getElementById('apiKeyInput').value.trim()
-                || localStorage.getItem('linkmagico_api_key')
-                || '';
+        const WARNING_MAP = {
+            CONTENT_WEAK: "Conteúdo insuficiente",
+            CONTENT_LOW: "Conteúdo pouco detalhado",
+            FAQ_MISSING: "FAQ não encontrada",
+            FAQ_LOW: "Poucas perguntas no FAQ"
+        };
 
-            if (!apiKeyValue) {
-                try {
-                    console.log('🔑 [FIX-APIKEY-SESSION] Campo API Key vazio, buscando da sessão...');
-                    const sessionRes = await fetch('/api/session/me');
-                    const sessionData = await sessionRes.json();
-                    if (sessionData.success && sessionData.apiKey) {
-                        apiKeyValue = sessionData.apiKey;
-                        // Popular o campo e localStorage para próximas interações
-                        const apiKeyInput = document.getElementById('apiKeyInput');
-                        if (apiKeyInput) apiKeyInput.value = apiKeyValue;
-                        localStorage.setItem('linkmagico_api_key', apiKeyValue);
-                        console.log('✅ [FIX-APIKEY-SESSION] API Key recuperada da sessão:', apiKeyValue.substring(0, 12) + '...');
-                    }
-                } catch (sessionErr) {
-                    console.warn('⚠️ [FIX-APIKEY-SESSION] Não foi possível obter API Key da sessão:', sessionErr.message);
-                }
-            }
+        // Cache para dados da extração para usar após diagnóstico
+        let lastExtractedData = null;
+        let lastActivationParams = null;
 
-            // SAFE PATCH - BUG-APIKEY-001: Avisar quando API Key estiver vazia
-            if (!apiKeyValue) {
-                console.warn('⚠️ API Key vazia ao ativar assistente. Chat será gerado sem tenant identificado.');
-                showToast('⚠️ API Key não encontrada. O assistente pode não funcionar corretamente. Preencha a API Key nas opções avançadas.', 'error');
-            }
+        closeDiagModal.onclick = () => diagnosticModal.style.display = 'none';
+        diagAdjustBtn.onclick = () => {
+            diagnosticModal.style.display = 'none';
+            // Scroll para opções avançadas ou campos de input
+            document.getElementById('salesUrl').focus();
+        };
 
-            if (!robotName || !salesUrl) {
-                showToast('Por favor, preencha o nome do assistente e a URL da página.', 'error');
-                return;
-            }
+        // Função para realizar a ativação final após diagnóstico
+        async function performFinalActivation() {
+            const { robotName, salesUrl, customInstructions, apiKeyValue } = lastActivationParams;
+            const data = lastExtractedData;
 
+            diagnosticModal.style.display = 'none';
             showLoading();
 
             try {
-                // SAFE PATCH - BUG-EXT-001: Sempre forçar nova extração ao ativar assistente
-                const response = await fetch('/api/extract', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        url: salesUrl,
-                        instructions: customInstructions,
-                        robotName: robotName,
-                        forceRefresh: true  // Sempre fazer extração completa
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error || 'Erro desconhecido na extração.');
-                }
-
                 // Gerar URL do chatbot longo (mantém compatibilidade)
                 const longChatbotUrl = generateChatbotUrl(robotName, salesUrl, customInstructions, apiKeyValue);
 
@@ -2224,39 +2340,27 @@
                     shortUrlData = await shortUrlResponse.json();
 
                     if (shortUrlData.success) {
-                        // Usar short URL como link principal
                         currentChatbotUrl = shortUrlData.shortUrl;
-                        console.log('✅ Short URL gerada:', currentChatbotUrl);
                     } else {
-                        // Fallback para link longo se short URL falhar
                         currentChatbotUrl = longChatbotUrl;
-                        console.warn('⚠️ Short URL failed, using long URL:', shortUrlData.error);
                     }
                 } catch (shortUrlError) {
-                    // Fallback silencioso para link longo
                     currentChatbotUrl = longChatbotUrl;
-                    console.warn('⚠️ Short URL creation failed, using long URL:', shortUrlError);
                 }
 
-                // Atualizar seção do link do chatbot
+                // Atualizar UI
                 chatbotLinkUrl.href = currentChatbotUrl;
                 chatbotLinkUrl.textContent = currentChatbotUrl;
-
-                // Atualizar dados extraídos
+                
                 if (data.data && data.data.summary) {
                     extractedSummary.textContent = data.data.summary;
                 } else {
                     extractedSummary.textContent = 'Dados extraídos com sucesso da página.';
                 }
 
-                // Mostrar seção do link do chatbot
                 chatbotLinkSection.classList.add('active');
-
-                // Atualizar links de compartilhamento social (usar short URL)
                 updateSocialShareLinks(currentChatbotUrl, robotName);
 
-                // Atualiza o iframe do chatbot preview
-                // SAFE PATCH - BUG-APIKEY-002: Passar apiKey para o iframe preview
                 const chatbotParams = new URLSearchParams({
                     url: salesUrl,
                     name: robotName,
@@ -2265,44 +2369,158 @@
                 });
                 chatbotFrame.src = `/chat.html?${chatbotParams.toString()}`;
 
-                // Atualiza o código do widget com as cores do Whitelabel
                 const wlPrimaryColor = document.getElementById('wl-primary') ? document.getElementById('wl-primary').value : '#3b82f6';
                 widgetCodeDisplay.textContent = generateModernWidgetScript(robotName, salesUrl, customInstructions, apiKeyValue, wlPrimaryColor);
 
                 successAlert.style.display = 'block';
+                showToast('✅ Assistente ativado com sucesso!', 'success');
 
-                // Mensagem customizada baseada no sucesso da short URL
-                if (shortUrlData && shortUrlData.success) {
-                    showToast('✅ Assistente ativado! Link curto gerado para redes sociais.', 'success');
-                } else {
-                    showToast('Assistente ativado com sucesso! Link gerado e pronto para compartilhar.', 'success');
-                }
-
-                // Atualizar analytics - SAFE PATCH: Carregar stats reais do backend
-                // (Delay para permitir que o backend processe o novo assistente)
                 setTimeout(() => loadDashboardStats(), 1000);
-
-                // Carregar dados de leads
                 loadDashboardLeads();
 
-                // SAFE PATCH - BUG-WIDGET-001: Sincronizar código na aba Widget
-                if (typeof updateWidgetTabCode === 'function') {
-                    updateWidgetTabCode();
-                }
+                if (typeof updateWidgetTabCode === 'function') updateWidgetTabCode();
 
                 // 🔥 V11.3: Verificar checkout após ativação
-                // FIX V11.3.3: Passar checkoutLink extraído como fallback
                 try {
                     var _extractedCheckoutLink = (data.data && data.data.checkoutLink) || null;
                     v113CheckCheckout(apiKeyValue, _extractedCheckoutLink);
-                } catch(v113e) {
-                    console.warn('[V11.3] Checkout check erro (não crítico):', v113e.message);
+                } catch(v113e) {}
+
+            } catch (error) {
+                console.error('Erro na ativação final:', error);
+                showToast(`Erro ao ativar: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        diagContinueBtn.onclick = performFinalActivation;
+
+        activateChatbotBtn.addEventListener('click', async () => {
+            const robotName = robotNameInput.value;
+            const salesUrl = salesUrlInput.value;
+            const customInstructions = customInstructionsInput.value;
+
+            let apiKeyValue = document.getElementById('apiKeyInput').value.trim()
+                || localStorage.getItem('linkmagico_api_key')
+                || '';
+
+            if (!apiKeyValue) {
+                try {
+                    const sessionRes = await fetch('/api/session/me');
+                    const sessionData = await sessionRes.json();
+                    if (sessionData.success && sessionData.apiKey) {
+                        apiKeyValue = sessionData.apiKey;
+                        const apiKeyInput = document.getElementById('apiKeyInput');
+                        if (apiKeyInput) apiKeyInput.value = apiKeyValue;
+                        localStorage.setItem('linkmagico_api_key', apiKeyValue);
+                    }
+                } catch (sessionErr) {}
+            }
+
+            if (!robotName || !salesUrl) {
+                showToast('Por favor, preencha o nome do assistente e a URL da página.', 'error');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                // 1. Extração de Dados
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: salesUrl,
+                        instructions: customInstructions,
+                        robotName: robotName,
+                        forceRefresh: true
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Erro na extração.');
                 }
+
+                // Salvar para uso posterior
+                lastExtractedData = data;
+                lastActivationParams = { robotName, salesUrl, customInstructions, apiKeyValue };
+
+                // 2. Diagnóstico
+                try {
+                    const diagRes = await fetch('/api/assistant-diagnostic', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ processedPageData: data.data })
+                    });
+                    const diagData = await diagRes.json();
+
+                    if (diagData.success && diagData.diagnostic) {
+                        const d = diagData.diagnostic;
+                        
+                        // Popular Modal
+                        diagScore.textContent = d.score;
+                        diagMode.textContent = d.mode;
+                        diagMode.className = 'diag-mode-badge diag-mode-' + d.mode.toLowerCase();
+                        
+                        // Issues
+                        diagIssuesList.innerHTML = '';
+                        if (d.issues && d.issues.length > 0) {
+                            document.getElementById('diagIssuesSection').style.display = 'block';
+                            d.issues.forEach(iss => {
+                                const li = document.createElement('li');
+                                li.className = 'diag-item diag-item-issue';
+                                li.innerHTML = `<i class="fas fa-exclamation-circle"></i> <span>${ISSUE_MAP[iss] || iss}</span>`;
+                                diagIssuesList.appendChild(li);
+                            });
+                        } else {
+                            document.getElementById('diagIssuesSection').style.display = 'none';
+                        }
+                        
+                        // Warnings
+                        diagWarningsList.innerHTML = '';
+                        if (d.warnings && d.warnings.length > 0) {
+                            document.getElementById('diagWarningsSection').style.display = 'block';
+                            d.warnings.forEach(warn => {
+                                const li = document.createElement('li');
+                                li.className = 'diag-item diag-item-warning';
+                                li.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>${WARNING_MAP[warn] || warn}</span>`;
+                                diagWarningsList.appendChild(li);
+                            });
+                        } else {
+                            document.getElementById('diagWarningsSection').style.display = 'none';
+                        }
+                        
+                        // Botões Customizados
+                        if (d.mode === 'AUTO') {
+                            diagContinueBtn.textContent = '✅ Ativar Assistente';
+                            diagAdjustBtn.style.display = 'none';
+                        } else if (d.mode === 'LIMITED') {
+                            diagContinueBtn.textContent = '⚠️ Continuar em modo limitado';
+                            diagAdjustBtn.style.display = 'block';
+                            diagAdjustBtn.textContent = '🔧 Ajustar configuração';
+                        } else {
+                            diagContinueBtn.textContent = '⚠️ Continuar mesmo assim';
+                            diagAdjustBtn.style.display = 'block';
+                            diagAdjustBtn.textContent = '🔧 Preencher manualmente';
+                        }
+                        
+                        hideLoading();
+                        diagnosticModal.style.display = 'flex';
+                        return; // Para aqui, espera modal
+                    }
+                } catch (diagErr) {
+                    console.warn('⚠️ Erro no diagnóstico, pulando para ativação direta:', diagErr);
+                }
+
+                // Fallback: Se diagnóstico falhar ou feature flag off, ativa direto
+                await performFinalActivation();
 
             } catch (error) {
                 console.error('Erro ao ativar chatbot:', error);
-                showToast(`Erro ao ativar assistente: ${error.message || 'Servidor indisponível. Tente novamente em alguns minutos.'}`, 'error');
-            } finally {
+                showToast(`Erro ao ativar assistente: ${error.message}`, 'error');
                 hideLoading();
             }
         });

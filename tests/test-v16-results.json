@@ -1,22 +1,22 @@
 {
-  "timestamp": "2026-04-16T16:48:54.144Z",
+  "timestamp": "2026-04-16T17:23:22.262Z",
   "version": "V16.2",
-  "overallRate": 81,
+  "overallRate": 90,
   "grandTotal": 300,
-  "grandPass": 243,
-  "grandCheckout": 234,
+  "grandPass": 269,
+  "grandCheckout": 260,
   "grandGeneric": 8,
-  "grandPlatform": 7,
+  "grandPlatform": 112,
   "tenants": [
     {
       "name": "01",
-      "passRate": 67,
+      "passRate": 77,
       "tests": 30,
-      "passed": 20,
-      "checkout": 20,
+      "passed": 23,
+      "checkout": 23,
       "generic": 4,
       "platform": 0,
-      "avgTime": 478
+      "avgTime": 386
     },
     {
       "name": "02",
@@ -25,88 +25,88 @@
       "passed": 27,
       "checkout": 27,
       "generic": 0,
-      "platform": 7,
-      "avgTime": 681
+      "platform": 14,
+      "avgTime": 1625
     },
     {
       "name": "03",
-      "passRate": 67,
-      "tests": 30,
-      "passed": 20,
-      "checkout": 20,
-      "generic": 4,
-      "platform": 0,
-      "avgTime": 621
-    },
-    {
-      "name": "04",
-      "passRate": 90,
-      "tests": 30,
-      "passed": 27,
-      "checkout": 24,
-      "generic": 0,
-      "platform": 0,
-      "avgTime": 992
-    },
-    {
-      "name": "05",
-      "passRate": 90,
-      "tests": 30,
-      "passed": 27,
-      "checkout": 24,
-      "generic": 0,
-      "platform": 0,
-      "avgTime": 534
-    },
-    {
-      "name": "07",
-      "passRate": 90,
-      "tests": 30,
-      "passed": 27,
-      "checkout": 24,
-      "generic": 0,
-      "platform": 0,
-      "avgTime": 576
-    },
-    {
-      "name": "08",
-      "passRate": 80,
-      "tests": 30,
-      "passed": 24,
-      "checkout": 24,
-      "generic": 0,
-      "platform": 0,
-      "avgTime": 527
-    },
-    {
-      "name": "09",
-      "passRate": 80,
-      "tests": 30,
-      "passed": 24,
-      "checkout": 24,
-      "generic": 0,
-      "platform": 0,
-      "avgTime": 468
-    },
-    {
-      "name": "10",
       "passRate": 77,
       "tests": 30,
       "passed": 23,
       "checkout": 23,
-      "generic": 0,
+      "generic": 4,
       "platform": 0,
-      "avgTime": 621
+      "avgTime": 604
+    },
+    {
+      "name": "04",
+      "passRate": 100,
+      "tests": 30,
+      "passed": 30,
+      "checkout": 27,
+      "generic": 0,
+      "platform": 14,
+      "avgTime": 2090
+    },
+    {
+      "name": "05",
+      "passRate": 100,
+      "tests": 30,
+      "passed": 30,
+      "checkout": 27,
+      "generic": 0,
+      "platform": 14,
+      "avgTime": 610
+    },
+    {
+      "name": "07",
+      "passRate": 100,
+      "tests": 30,
+      "passed": 30,
+      "checkout": 27,
+      "generic": 0,
+      "platform": 14,
+      "avgTime": 1427
+    },
+    {
+      "name": "08",
+      "passRate": 90,
+      "tests": 30,
+      "passed": 27,
+      "checkout": 27,
+      "generic": 0,
+      "platform": 14,
+      "avgTime": 922
+    },
+    {
+      "name": "09",
+      "passRate": 90,
+      "tests": 30,
+      "passed": 27,
+      "checkout": 27,
+      "generic": 0,
+      "platform": 14,
+      "avgTime": 447
+    },
+    {
+      "name": "10",
+      "passRate": 83,
+      "tests": 30,
+      "passed": 25,
+      "checkout": 25,
+      "generic": 0,
+      "platform": 14,
+      "avgTime": 423
     },
     {
       "name": "06 (Hotmart)",
-      "passRate": 80,
+      "passRate": 90,
       "tests": 30,
-      "passed": 24,
-      "checkout": 24,
+      "passed": 27,
+      "checkout": 27,
       "generic": 0,
-      "platform": 0,
-      "avgTime": 544
+      "platform": 14,
+      "avgTime": 1188
     }
   ]
 }

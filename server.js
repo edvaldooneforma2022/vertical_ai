@@ -499,6 +499,15 @@ try {
     console.log('⚠️ [V14.1] Context Layer não disponível:', e.message);
 }
 
+// 🧠 Assistant Diagnostic System
+let _assistantDiagnostic = null;
+try {
+    _assistantDiagnostic = require('./lib/assistant-diagnostic');
+    console.log('✅ [V14.2] Assistant Diagnostic carregado');
+} catch (e) {
+    console.log('⚠️ [V14.2] Assistant Diagnostic não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -8744,6 +8753,52 @@ app.post("/api/extract", ...[billingMiddleware].filter(Boolean), async (req, res
             success: false,
             error: "Erro interno ao extrair página: " + (error.message || "Erro desconhecido"),
             details: error.message
+        });
+    }
+    }
+});
+
+/**
+ * 🧠 DIAGNÓSTICO DO ASSISTENTE
+ * POST /api/assistant-diagnostic
+ * 
+ * Avalia se o assistente tem dados suficientes para operar com sucesso.
+ */
+app.post("/api/assistant-diagnostic", async (req, res) => {
+    try {
+        // Feature flag check
+        const flagOn = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_ASSISTANT_DIAGNOSTIC');
+        if (!flagOn) {
+            return res.json({ success: true, diagnostic: { score: 100, mode: 'AUTO', ready: true, bypassed: true } });
+        }
+
+        const { processedPageData } = req.body;
+
+        if (!processedPageData) {
+            return res.status(400).json({
+                success: false,
+                error: "Dados do assistente (processedPageData) são obrigatórios"
+            });
+        }
+
+        if (!_assistantDiagnostic) {
+            return res.json({ success: true, diagnostic: { score: 100, mode: 'AUTO', ready: true, error: 'Module not loaded' } });
+        }
+
+        const diagnostic = _assistantDiagnostic.runAssistantDiagnostic(processedPageData);
+
+        console.log(`🧠 [DIAGNOSTIC] Score: ${diagnostic.score} | Mode: ${diagnostic.mode} | Ready: ${diagnostic.ready}`);
+
+        return res.json({
+            success: true,
+            diagnostic
+        });
+
+    } catch (error) {
+        console.error("❌ Erro no endpoint /api/assistant-diagnostic:", error);
+        return res.json({
+            success: true, // Fallback safe: não bloquear ativação por erro no diagnóstico
+            diagnostic: { score: 0, mode: 'MANUAL', issues: ['SERVER_ERROR'], ready: false }
         });
     }
 });
