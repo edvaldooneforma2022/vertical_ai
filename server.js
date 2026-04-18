@@ -441,6 +441,21 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🧠 V15.5 — KNOWLEDGE ENFORCEMENT LAYER (STABLE)
+// Corrige respostas genéricas/fracas usando dados reais (V14.3)
+// NÃO força venda, NÃO injeta checkout, NÃO interfere no V16
+// Feature flag: FEATURE_V15_KNOWLEDGE_ENFORCER (default: FALSE)
+// ═══════════════════════════════════════════════════════════════════
+let _v155EnforceKnowledge = null;
+try {
+    const _v155Module = require('./lib/v15-knowledge-enforcer');
+    _v155EnforceKnowledge = _v155Module.enforceKnowledge;
+    console.log('✅ [V15.5] Knowledge Enforcement Layer carregado');
+} catch (e) {
+    console.log('⚠️ [V15.5] Knowledge Enforcer não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // 🔥 V16.2 DECISION ENGINE BLINDADO FINAL — Anti-Perda de Venda
 // Camada determinística SOBRE V13 (NÃO altera V13/V14)
 // Feature flag: FEATURE_V16_2_BLINDADO_FINAL (default: FALSE — opt-in)
@@ -5743,6 +5758,35 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     });
 
                     console.log(`[V13.1] 🧩 6/7 PostGuards: ✅ Aplicados | ${_v13FinalResponse.length} chars`);
+
+                    // ═══════════════════════════════════════════════════════════════════
+                    // 🧠 V15.5 — KNOWLEDGE ENFORCEMENT (PÓS-HUMANIZER, PRÉ-PP-GLOBAL)
+                    // Corrige respostas genéricas/fracas usando dados reais
+                    // NÃO toca no V16, NÃO injeta checkout
+                    // ═══════════════════════════════════════════════════════════════════
+                    try {
+                        const _v155FlagFromManager = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V15_KNOWLEDGE_ENFORCER');
+                        const _v155FlagFromEnv = process.env.FEATURE_V15_KNOWLEDGE_ENFORCER === 'true';
+                        const _v155Enabled = _v155FlagFromManager || _v155FlagFromEnv;
+
+                        if (_v155Enabled && _v155EnforceKnowledge) {
+                            const _v155Result = _v155EnforceKnowledge({
+                                response: _v13FinalResponse,
+                                userMessage: cleanUserMessage,
+                                extractedData: pageData || {}
+                            });
+
+                            if (_v155Result && _v155Result !== _v13FinalResponse) {
+                                console.log(`[V15.5] 🧠 Resposta enriquecida com contexto real | antes=${_v13FinalResponse.length} chars | depois=${_v155Result.length} chars`);
+                                _v13FinalResponse = _v155Result;
+                            } else {
+                                console.log('[V15.5] ✅ Resposta OK — sem necessidade de enforcement');
+                            }
+                        }
+                    } catch (_v155Err) {
+                        // FALLBACK TOTAL — V15.5 NUNCA impacta resposta existente
+                        console.warn('[V15.5] ⚠️ Knowledge Enforcer erro (sem impacto):', _v155Err.message);
+                    }
 
                 } else {
                     // ═══ FALLBACK V13.0.0 — Prompt Blindado direto ═══
