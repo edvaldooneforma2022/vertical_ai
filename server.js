@@ -517,6 +517,16 @@ try {
     console.log('⚠️ [V14.3] Deep Context Explorer não disponível:', e.message);
 }
 
+// 🧠 V15 Context Enforcement Layer
+let _v15EnforceContext = null;
+try {
+    const _v15Module = require('./lib/v15-context-enforcer');
+    _v15EnforceContext = _v15Module.enforceContext;
+    console.log('✅ [V15] Context Enforcement Layer carregado');
+} catch (e) {
+    console.log('⚠️ [V15] Context Enforcement Layer não disponível:', e.message);
+}
+
 // ===== V2.0 AUTO-LEARNING SYSTEM (ADITIVO, try/catch + flag gated) =====
 
 // Configurar env vars ANTES de carregar módulos (sub-módulos checam process.env no require)
@@ -7593,6 +7603,34 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🧠 V15 — CONTEXT ENFORCEMENT LAYER (chat-universal)
+        // Intercepta resposta final e garante entrega de checkout/WhatsApp
+        // Protegido por FEATURE_V15_CONTEXT_ENFORCEMENT + salesMode auto + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v15FlagEnabled = (process.env.FEATURE_V15_CONTEXT_ENFORCEMENT === 'true') ||
+                (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V15_CONTEXT_ENFORCEMENT'));
+            const _v15SalesMode = (processedPageData && processedPageData.salesMode) ||
+                req.body?.salesMode || req.body?.sales_mode ||
+                process.env.SALES_LAYER_MODE || 'auto';
+
+            if (_v15FlagEnabled && _v15SalesMode === 'auto' && _v15EnforceContext) {
+                const _v15Before = finalResponse;
+                finalResponse = _v15EnforceContext({
+                    response: finalResponse,
+                    userMessage: message,
+                    extractedData: processedPageData || {}
+                });
+                if (finalResponse !== _v15Before) {
+                    console.log(`[V15@chat-universal] 🧠 Context enforced | len=${finalResponse.length} | tenant=${apiKey?.substring(0,8)}...`);
+                }
+            }
+        } catch (_v15Err) {
+            console.warn('[V15@chat-universal] ⚠️ Erro (sem impacto):', _v15Err.message);
+            // Fallback total: finalResponse permanece inalterada
+        }
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -8667,6 +8705,34 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.log(`[PP-GLOBAL] ✅ Pós-processamento completo | isBuyer=${_ppIsBuyer} | len=${finalResponse.length}`);
         } catch (_ppErr) {
             console.warn('[PP-GLOBAL] ⚠️ Erro (sem impacto):', _ppErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🧠 V15 — CONTEXT ENFORCEMENT LAYER (process-chat-inteligente)
+        // Intercepta resposta final e garante entrega de checkout/WhatsApp
+        // Protegido por FEATURE_V15_CONTEXT_ENFORCEMENT + salesMode auto + try/catch
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v15FlagEnabledInt = (process.env.FEATURE_V15_CONTEXT_ENFORCEMENT === 'true') ||
+                (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V15_CONTEXT_ENFORCEMENT'));
+            const _v15SalesModeInt = (processedPageData && processedPageData.salesMode) ||
+                req.body?.salesMode || req.body?.sales_mode ||
+                process.env.SALES_LAYER_MODE || 'auto';
+
+            if (_v15FlagEnabledInt && _v15SalesModeInt === 'auto' && _v15EnforceContext) {
+                const _v15BeforeInt = finalResponse;
+                finalResponse = _v15EnforceContext({
+                    response: finalResponse,
+                    userMessage: message,
+                    extractedData: processedPageData || {}
+                });
+                if (finalResponse !== _v15BeforeInt) {
+                    console.log(`[V15@inteligente] 🧠 Context enforced | len=${finalResponse.length} | tenant=${apiKey?.substring(0,8)}...`);
+                }
+            }
+        } catch (_v15IntErr) {
+            console.warn('[V15@inteligente] ⚠️ Erro (sem impacto):', _v15IntErr.message);
+            // Fallback total: finalResponse permanece inalterada
         }
 
         return res.json({
