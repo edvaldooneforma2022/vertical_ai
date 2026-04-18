@@ -992,7 +992,7 @@
         function processMessageContent(content, isUser) {
             if (isUser) return content;
 
-            // Check for URLs and convert to CTA buttons
+            // Check for URLs and convert to smart CTA buttons
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             const urls = content.match(urlRegex);
 
@@ -1012,14 +1012,16 @@
                     container.appendChild(document.createElement('br'));
                 }
 
-                // Add CTA buttons
+                // V15.6: Add smart CTA buttons with contextual icons
                 urls.forEach(url => {
+                    const smartInfo = getSmartLinkLabel(url);
                     const ctaLink = document.createElement('a');
                     ctaLink.href = url;
                     ctaLink.target = '_blank';
                     ctaLink.rel = 'noopener noreferrer';
                     ctaLink.className = 'cta-link';
-                    ctaLink.innerHTML = 'Quero me inscrever agora <i class="fas fa-external-link-alt"></i>';
+                    const iconPrefix = smartInfo.brand ? 'fab' : 'fas';
+                    ctaLink.innerHTML = smartInfo.label + ' <i class="' + iconPrefix + ' ' + smartInfo.icon + '"></i>';
                     container.appendChild(ctaLink);
                 });
 
@@ -1027,6 +1029,30 @@
             }
 
             return content;
+        }
+
+        // V15.6: Detecta tipo de link e retorna ícone + label contextual
+        function getSmartLinkLabel(url) {
+            const u = (url || '').toLowerCase();
+            if (u.includes('wa.me') || u.includes('whatsapp') || u.includes('api.whatsapp'))
+                return { icon: 'fa-whatsapp', label: 'Falar no WhatsApp', brand: true };
+            if (u.includes('instagram.com'))
+                return { icon: 'fa-instagram', label: 'Ver Instagram', brand: true };
+            if (u.includes('facebook.com') || u.includes('fb.com'))
+                return { icon: 'fa-facebook', label: 'Ver Facebook', brand: true };
+            if (u.includes('youtube.com') || u.includes('youtu.be'))
+                return { icon: 'fa-youtube', label: 'Ver no YouTube', brand: true };
+            if (u.includes('tiktok.com'))
+                return { icon: 'fa-tiktok', label: 'Ver TikTok', brand: true };
+            if (u.includes('t.me/') || u.includes('telegram.me'))
+                return { icon: 'fa-telegram', label: 'Abrir Telegram', brand: true };
+            if (u.includes('linkedin.com'))
+                return { icon: 'fa-linkedin', label: 'Ver LinkedIn', brand: true };
+            if (u.includes('checkout') || u.includes('hotmart') || u.includes('kiwify') || u.includes('eduzz') || u.includes('monetizze') || u.includes('braip') || u.includes('herospark'))
+                return { icon: 'fa-shopping-cart', label: 'Finalizar Compra', brand: false };
+            if (u.includes('forms.gle') || u.includes('docs.google.com/forms') || u.includes('typeform.com') || u.includes('jotform.com'))
+                return { icon: 'fa-file-alt', label: 'Abrir Formulário', brand: false };
+            return { icon: 'fa-external-link-alt', label: 'Acessar agora', brand: false };
         }
 
         function updateQuickActions() {

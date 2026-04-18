@@ -1953,6 +1953,7 @@
         },
 
         // Process message content with enhanced URL handling
+        // V15.6: Smart Social Links — labels e ícones contextuais
         processMessageContent: function (content) {
             var container = document.createElement('div');
             var urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -1963,16 +1964,22 @@
 
                 // FIX: Usar regex literal sem flag /g para evitar bug de lastIndex
                 if (/^https?:\/\//.test(part)) {
+                    // V15.6: Detectar tipo de link e usar label/ícone contextual
+                    var smartInfo = this.getSmartLinkLabel(part);
+
                     // Create enhanced CTA button for URL
                     var ctaLink = document.createElement('a');
                     ctaLink.href = part;
                     ctaLink.target = '_blank';
                     ctaLink.rel = 'noopener noreferrer';
                     ctaLink.className = 'lm-cta-button';
-                    ctaLink.innerHTML = 'Acessar agora <i class="fas fa-external-link-alt"></i>';
+                    
+                    // Usar ícone brand (fab) ou solid (fas) conforme o tipo
+                    var iconPrefix = smartInfo.brand ? 'fab' : 'fas';
+                    ctaLink.innerHTML = smartInfo.label + ' <i class="' + iconPrefix + ' ' + smartInfo.icon + '"></i>';
 
                     // Track CTA clicks
-                    ctaLink.addEventListener('click', this.trackEvent.bind(this, 'cta_clicked', { url: part }));
+                    ctaLink.addEventListener('click', this.trackEvent.bind(this, 'cta_clicked', { url: part, type: smartInfo.type || 'link' }));
 
                     container.appendChild(ctaLink);
                 } else if (part.trim()) {
@@ -1986,6 +1993,30 @@
             }
 
             return container;
+        },
+
+        // V15.6: Detecta tipo de link e retorna ícone + label contextual
+        getSmartLinkLabel: function (url) {
+            var u = (url || '').toLowerCase();
+            if (u.includes('wa.me') || u.includes('whatsapp') || u.includes('api.whatsapp'))
+                return { icon: 'fa-whatsapp', label: 'Falar no WhatsApp', brand: true, type: 'whatsapp' };
+            if (u.includes('instagram.com'))
+                return { icon: 'fa-instagram', label: 'Ver Instagram', brand: true, type: 'instagram' };
+            if (u.includes('facebook.com') || u.includes('fb.com'))
+                return { icon: 'fa-facebook', label: 'Ver Facebook', brand: true, type: 'facebook' };
+            if (u.includes('youtube.com') || u.includes('youtu.be'))
+                return { icon: 'fa-youtube', label: 'Ver no YouTube', brand: true, type: 'youtube' };
+            if (u.includes('tiktok.com'))
+                return { icon: 'fa-tiktok', label: 'Ver TikTok', brand: true, type: 'tiktok' };
+            if (u.includes('t.me/') || u.includes('telegram.me'))
+                return { icon: 'fa-telegram', label: 'Abrir Telegram', brand: true, type: 'telegram' };
+            if (u.includes('linkedin.com'))
+                return { icon: 'fa-linkedin', label: 'Ver LinkedIn', brand: true, type: 'linkedin' };
+            if (u.includes('checkout') || u.includes('hotmart') || u.includes('kiwify') || u.includes('eduzz') || u.includes('monetizze') || u.includes('braip') || u.includes('herospark'))
+                return { icon: 'fa-shopping-cart', label: 'Finalizar Compra', brand: false, type: 'checkout' };
+            if (u.includes('forms.gle') || u.includes('docs.google.com/forms') || u.includes('typeform.com') || u.includes('jotform.com'))
+                return { icon: 'fa-file-alt', label: 'Abrir Formulário', brand: false, type: 'formulario' };
+            return { icon: 'fa-external-link-alt', label: 'Acessar agora', brand: false, type: 'link' };
         },
 
         // Enhanced error handling
