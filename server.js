@@ -7866,7 +7866,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 (processedPageData?.contatos?.whatsapp && processedPageData.contatos.whatsapp[0]) || null;
 
             // ═══ SUPORTE HARD OVERRIDE (ANTES DE TUDO) ═══
-            const _iSupportKw = ['atendente', 'suporte', 'falar com alguem', 'falar com alguém', 'humano', 'preciso de ajuda', 'falar com pessoa', 'pessoa real'];
+            const _iSupportKw = ['atendente', 'suporte', 'falar com alguem', 'falar com alguém', 'humano', 'preciso de ajuda', 'falar com pessoa', 'pessoa real', 'quero falar', 'falar com voce', 'falar com você', 'contato humano', 'alguem de verdade', 'alguém de verdade'];
             if (_iSupportKw.some(k => _iMsg.includes(k))) {
                 console.log('[PRE-KB] 🚀 SUPPORT INTERCEPT — bypass KB/IA/tudo');
                 try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
@@ -8673,12 +8673,29 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 }
             }
 
-            // ═══ 2. IS_BUYER SEM CHECKOUT — Injetar checkout em resposta de interrupção ═══
+            // ═══ 2. IS_BUYER SEM CHECKOUT — AGORA COM DETECÇÃO DE EXCEÇÕES ═══
+            // FIX: NÃO injetar checkout se mensagem atual é objeção/saída/suporte
             if (_ppIsBuyer && _ppCheckoutLink) {
-                const _ppHasCheckout = finalResponse.includes(_ppCheckoutLink) || finalResponse.includes('FINALIZAR COMPRA');
-                if (!_ppHasCheckout) {
-                    console.log('[PP-GLOBAL] 🧠 IS_BUYER ativo + sem checkout → injetando');
-                    finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                const _ppExitPatterns = ['tchau', 'ate mais', 'ate logo', 'nao quero', 'nao me interessa',
+                    'depois eu vejo', 'valeu', 'obrigado', 'flw', 'falou', 'desisto', 'nao preciso'];
+                const _ppObjectionPatterns = ['golpe', 'fraude', 'piramide', 'enganacao', 'engano',
+                    'nao entendi', 'nao compreendi', 'parece golpe', 'isso e golpe', 'confiavel',
+                    'seguro', 'medo', 'duvido', 'mentira', 'falso', 'leigo', 'explica'];
+                const _ppSupportPatterns = ['quero falar', 'falar com', 'atendente', 'suporte',
+                    'humano', 'pessoa real', 'ajuda', 'alguem de verdade', 'alguém de verdade'];
+
+                const _ppIsExit = _ppExitPatterns.some(p => _ppMsg.includes(p));
+                const _ppIsObjection = _ppObjectionPatterns.some(p => _ppMsg.includes(p));
+                const _ppIsSupport = _ppSupportPatterns.some(p => _ppMsg.includes(p));
+
+                if (_ppIsExit || _ppIsObjection || _ppIsSupport) {
+                    console.log(`[PP-GLOBAL] 🛡️ IS_BUYER ativo MAS checkout BLOQUEADO (exit=${_ppIsExit} objection=${_ppIsObjection} support=${_ppIsSupport})`);
+                } else {
+                    const _ppHasCheckout = finalResponse.includes(_ppCheckoutLink) || finalResponse.includes('FINALIZAR COMPRA');
+                    if (!_ppHasCheckout) {
+                        console.log('[PP-GLOBAL] 🧠 IS_BUYER ativo + sem checkout → injetando');
+                        finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_ppCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                    }
                 }
             }
 
@@ -8701,6 +8718,21 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 finalResponse = finalResponse.replace(_ppRegex, '');
             }
             finalResponse = finalResponse.replace(/\s{3,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+
+            // ═══ 5. ANTI-DUPLICAÇÃO FINAL — Remove checkout duplicado ═══
+            try {
+                const _ppCheckoutCount = (finalResponse.match(/🚀 FINALIZAR COMPRA/g) || []).length;
+                if (_ppCheckoutCount > 1) {
+                    let _ppFirstFound = false;
+                    finalResponse = finalResponse.replace(/\n*━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n[^\n]*\n━━━━━━━━━━━━━━━━━━━/g, (match) => {
+                        if (!_ppFirstFound) { _ppFirstFound = true; return match; }
+                        return '';
+                    }).replace(/\n{3,}/g, '\n\n').trim();
+                    console.log(`[PP-GLOBAL] 🧹 Checkout duplicado removido (${_ppCheckoutCount} → 1)`);
+                }
+            } catch (_dedupErr) {
+                // Silencioso — dedup é best-effort
+            }
 
             console.log(`[PP-GLOBAL] ✅ Pós-processamento completo | isBuyer=${_ppIsBuyer} | len=${finalResponse.length}`);
         } catch (_ppErr) {
