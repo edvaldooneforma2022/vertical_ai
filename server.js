@@ -5233,6 +5233,10 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 // 6. SANITIZER LEVE (só limpa, NUNCA modifica sentido, NUNCA remove links)
                 _v17Response = _v17Orchestrator.sanitizeResponse(_v17Response);
 
+                // 6.1 INJEÇÃO DETERMINÍSTICA DE LINKS REAIS (pós-LLM, pós-sanitizer)
+                // O LLM conversa, o V17 injeta o link COMPLETO — nunca truncado
+                _v17Response = _v17Orchestrator.injectLinks(_v17Response, _v17Strategy);
+
                 // 7. Salvar no V14 histórico (fire-and-forget)
                 try {
                     const _v17SaveEnabled = _v14ContextLayer &&
