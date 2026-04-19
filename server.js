@@ -469,6 +469,19 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 💣 V17 — UNIFIED BRAIN ORCHESTRATOR
+// Cérebro unificado: V17 decide estratégia → LLM executa → bypass total
+// Feature flag: FEATURE_V17_BRAIN (default: FALSE — opt-in)
+// ═══════════════════════════════════════════════════════════════════
+let _v17Orchestrator = null;
+try {
+    _v17Orchestrator = require('./lib/v17-orchestrator');
+    console.log('🧠 [V17] Unified Brain Orchestrator carregado');
+} catch (e) {
+    console.log('⚠️ [V17] Orchestrator não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // V14.0 — AUTO-OTIMIZAÇÃO (Feature Flag: FEATURE_V14_SELF_OPTIMIZING)
 // Camada ADITIVA — NÃO altera V13, apenas loga + aprende
 // ═══════════════════════════════════════════════════════════════════
@@ -5128,6 +5141,124 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             }
         } catch (_hardErr) {
             console.warn('[V13-HARD-SUPPORT] Erro (continuando pipeline):', _hardErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 💣 V17 — UNIFIED BRAIN ORCHESTRATOR
+        // V17 decide estratégia → LLM executa → sanitizer leve → output
+        // Quando ON: bypassa V13, V15, V16, PP-GLOBAL, Sales Layer
+        // Quando OFF: pipeline atual executa normalmente (ZERO impacto)
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _v17FlagFromManager = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V17_BRAIN');
+            const _v17FlagFromEnv = process.env.FEATURE_V17_BRAIN === 'true';
+            const _v17Enabled = (_v17FlagFromManager || _v17FlagFromEnv) && _v17Orchestrator;
+
+            if (_v17Enabled) {
+                const _v17Start = Date.now();
+                console.log(`🧠 [V17] Unified Brain ativado para: "${cleanUserMessage.substring(0, 50)}..."`);
+
+                // 1. V17 DECIDE estratégia
+                const _v17Strategy = _v17Orchestrator.buildStrategy({
+                    userMessage: cleanUserMessage,
+                    extractedData: pageData || {},
+                    conversationHistory: conversationHistory || []
+                });
+
+                console.log(`🧠 [V17] Estratégia: intent=${_v17Strategy.intent} | sellMode=${_v17Strategy.sellMode} | tone=${_v17Strategy.tone} | checkout=${_v17Strategy.allowCheckout} | whatsapp=${_v17Strategy.allowWhatsApp}`);
+
+                // 2. V17 MONTA prompt dinâmico
+                const _v17SalesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
+                const _v17SystemPrompt = _v17Orchestrator.buildV17Prompt(
+                    _v17Strategy,
+                    pageData || {},
+                    instructions || '',
+                    _v17SalesMode
+                );
+
+                // 3. Montar messages (V14 histórico se disponível)
+                let _v17History = Array.isArray(conversationHistory) ? conversationHistory.slice(-6) : [];
+                try {
+                    const _v17CtxEnabled = _v14ContextLayer &&
+                        (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
+                    if (_v17CtxEnabled) {
+                        const _v17ConvId = (pageData && pageData.conversationId) || leadId || chatbotId || null;
+                        if (_v17ConvId) {
+                            const _v17CtxHistory = _v14ContextLayer.getMessagesForLLM(_v17ConvId, 6);
+                            if (_v17CtxHistory.length > 0) {
+                                _v17History = _v17CtxHistory;
+                                console.log(`🧠 [V17] V14 histórico real: ${_v17History.length} msgs`);
+                            }
+                        }
+                    }
+                } catch (_v17CtxErr) {
+                    console.warn('[V17] V14 histórico falhou (usando fallback):', _v17CtxErr.message);
+                }
+
+                const _v17Messages = [
+                    { role: 'system', content: _v17SystemPrompt },
+                    ..._v17History,
+                    { role: 'user', content: cleanUserMessage }
+                ];
+
+                // 4. CHAMAR LLM (Groq → OpenRouter → OpenAI)
+                let _v17Response = '';
+                let _v17Provider = 'none';
+
+                try {
+                    if (process.env.GROQ_API_KEY) {
+                        _v17Response = await callGroq(_v17Messages, 0.4, 200);
+                        _v17Provider = 'groq';
+                    }
+                    if (!_v17Response && process.env.OPENROUTER_API_KEY) {
+                        _v17Response = await callOpenRouter(_v17Messages, 0.3, 200);
+                        _v17Provider = 'openrouter';
+                    }
+                    if (!_v17Response && process.env.OPENAI_API_KEY) {
+                        _v17Response = await callOpenAI(_v17Messages, 0.3, 200);
+                        _v17Provider = 'openai';
+                    }
+                } catch (_v17LLMErr) {
+                    console.warn('[V17] LLM falhou:', _v17LLMErr.message);
+                    _v17Response = '';
+                }
+
+                // 5. FALLBACK: resposta vazia ou muito curta
+                if (!_v17Response || _v17Response.length < 20) {
+                    _v17Response = 'Posso te explicar melhor \u2014 o que voc\u00ea quer entender primeiro?';
+                    _v17Provider = 'fallback';
+                    console.warn('[V17] \u26a0\ufe0f Resposta vazia/curta \u2192 fallback ativado');
+                }
+
+                // 6. SANITIZER LEVE (só limpa, NUNCA modifica sentido, NUNCA remove links)
+                _v17Response = _v17Orchestrator.sanitizeResponse(_v17Response);
+
+                // 7. Salvar no V14 histórico (fire-and-forget)
+                try {
+                    const _v17SaveEnabled = _v14ContextLayer &&
+                        (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
+                    if (_v17SaveEnabled) {
+                        const _v17ConvId = (pageData && pageData.conversationId) || leadId || chatbotId || null;
+                        if (_v17ConvId) {
+                            _v14ContextLayer.addMessage(_v17ConvId, 'user', cleanUserMessage);
+                            _v14ContextLayer.addMessage(_v17ConvId, 'assistant', _v17Response);
+                            _v14ContextLayer.saveProductInfo(_v17ConvId, pageData);
+                        }
+                    }
+                } catch (_v17SaveErr) {
+                    // fire-and-forget
+                }
+
+                const _v17Elapsed = Date.now() - _v17Start;
+                console.log(`🧠 [V17] ✅ COMPLETO em ${_v17Elapsed}ms | provider=${_v17Provider} | intent=${_v17Strategy.intent} | sellMode=${_v17Strategy.sellMode} | response=${_v17Response.length} chars`);
+                console.log(`🧠 [V17] Resposta: "${_v17Response.substring(0, 80)}..."`);
+
+                // 8. RETURN DIRETO — BYPASS TOTAL de V13, V15, V16, PP-GLOBAL, Sales Layer
+                return _v17Response;
+            }
+        } catch (_v17Err) {
+            // FALLBACK TOTAL — V17 NUNCA impacta pipeline existente
+            console.warn('🧠 [V17] \u26a0\ufe0f Orchestrator erro (fallback para pipeline atual):', _v17Err.message);
         }
 
         // 🎯 SUPERINTELIGÊNCIA: Análise Avançada
