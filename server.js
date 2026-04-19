@@ -4541,9 +4541,17 @@ async function extractPageData(url) {
                 extractedData.checkoutSource = 'monetizze-direct';
                 console.log('[CHECKOUT] 🔥 Monetizze direto detectado:', url.substring(0, 80));
             } else if (_v95Url.includes('braip.com')) {
-                extractedData.checkoutLink = url;
-                extractedData.checkoutSource = 'braip-direct';
-                console.log('[CHECKOUT] 🔥 Braip direto detectado:', url.substring(0, 80));
+                // V17.1 FIX: Na Braip, /ref? é PÁGINA DE VENDAS (não checkout)
+                // O checkout real está DENTRO da página (botão de compra)
+                // Só marcar como checkout direto se NÃO for /ref? (ex: /checkout/)
+                if (_v95Url.includes('/ref?') || _v95Url.includes('/ref/')) {
+                    console.log('[CHECKOUT] ℹ️ Braip /ref? detectado como PÁGINA DE VENDAS (não checkout). Heurística V9.3 buscará link real dentro da página.');
+                    // NÃO setar checkoutLink — deixar a heurística V9.3 encontrar o link real
+                } else {
+                    extractedData.checkoutLink = url;
+                    extractedData.checkoutSource = 'braip-direct';
+                    console.log('[CHECKOUT] 🔥 Braip checkout direto detectado:', url.substring(0, 80));
+                }
             }
         } catch (_v95DetectErr) {
             console.warn('[CHECKOUT] Erro na detecção direta (sem impacto):', _v95DetectErr.message);
@@ -4714,7 +4722,12 @@ async function extractPageData(url) {
 
                             // Penalizar links internos/âncora
                             if (_hrefLower.includes('#') && !_hrefLower.startsWith('http')) _sc -= 30;
-                            try { if (_href === url) _sc -= 30; } catch(_) {}
+                            // V17.1 FIX: ELIMINAR links que são a própria URL da página (page URL ≠ checkout)
+                            try {
+                                if (_href === url) _sc = -999;
+                                // Braip /ref? é SEMPRE página de vendas, nunca checkout
+                                if (_hrefLower.includes('braip.com') && (_hrefLower.includes('/ref?') || _hrefLower.includes('/ref/'))) _sc = -999;
+                            } catch(_) {}
 
                             if (_sc > _ckBestScore) { _ckBestScore = _sc; _ckBestLink = _href; }
                         });
