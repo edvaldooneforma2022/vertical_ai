@@ -4520,41 +4520,35 @@ async function extractPageData(url) {
             }
         };
 
-        // 🔥 [V9.5] Resolver redirects (Hotmart, Kiwify, etc)
-        // Se a URL é de plataforma de pagamento, usar como checkout direto
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔥 [V9.5 → V17.1] DETECÇÃO DE PLATAFORMA (NÃO CHECKOUT)
+        // REGRA UNIVERSAL: A URL de entrada é SEMPRE a página de vendas.
+        // O checkout REAL está DENTRO da página (botão de compra).
+        // A heurística V9.3 buscará o link de pagamento real no HTML.
+        // ═══════════════════════════════════════════════════════════════════
         try {
             const _v95Url = (url || '').toLowerCase();
-            if (_v95Url.includes('hotmart.com') || _v95Url.includes('go.hotmart.com')) {
-                extractedData.checkoutLink = url;
-                extractedData.checkoutSource = 'hotmart-direct';
-                console.log('[CHECKOUT] 🔥 Hotmart direto detectado:', url.substring(0, 80));
-            } else if (_v95Url.includes('kiwify.com.br')) {
-                extractedData.checkoutLink = url;
-                extractedData.checkoutSource = 'kiwify-direct';
-                console.log('[CHECKOUT] 🔥 Kiwify direto detectado:', url.substring(0, 80));
-            } else if (_v95Url.includes('eduzz.com')) {
-                extractedData.checkoutLink = url;
-                extractedData.checkoutSource = 'eduzz-direct';
-                console.log('[CHECKOUT] 🔥 Eduzz direto detectado:', url.substring(0, 80));
-            } else if (_v95Url.includes('monetizze.com.br')) {
-                extractedData.checkoutLink = url;
-                extractedData.checkoutSource = 'monetizze-direct';
-                console.log('[CHECKOUT] 🔥 Monetizze direto detectado:', url.substring(0, 80));
-            } else if (_v95Url.includes('braip.com')) {
-                // V17.1 FIX: Na Braip, /ref? é PÁGINA DE VENDAS (não checkout)
-                // O checkout real está DENTRO da página (botão de compra)
-                // Só marcar como checkout direto se NÃO for /ref? (ex: /checkout/)
-                if (_v95Url.includes('/ref?') || _v95Url.includes('/ref/')) {
-                    console.log('[CHECKOUT] ℹ️ Braip /ref? detectado como PÁGINA DE VENDAS (não checkout). Heurística V9.3 buscará link real dentro da página.');
-                    // NÃO setar checkoutLink — deixar a heurística V9.3 encontrar o link real
-                } else {
-                    extractedData.checkoutLink = url;
-                    extractedData.checkoutSource = 'braip-direct';
-                    console.log('[CHECKOUT] 🔥 Braip checkout direto detectado:', url.substring(0, 80));
-                }
+            const _knownPlatforms = [
+                { pattern: 'hotmart.com', name: 'Hotmart' },
+                { pattern: 'go.hotmart.com', name: 'Hotmart' },
+                { pattern: 'kiwify.com.br', name: 'Kiwify' },
+                { pattern: 'eduzz.com', name: 'Eduzz' },
+                { pattern: 'monetizze.com.br', name: 'Monetizze' },
+                { pattern: 'braip.com', name: 'Braip' },
+                { pattern: 'herospark.com', name: 'HeroSpark' },
+                { pattern: 'perfectpay.com.br', name: 'PerfectPay' },
+                { pattern: 'greenn.com.br', name: 'Greenn' }
+            ];
+
+            const _detectedPlatform = _knownPlatforms.find(p => _v95Url.includes(p.pattern));
+            if (_detectedPlatform) {
+                extractedData.detectedPlatform = _detectedPlatform.name;
+                console.log(`[CHECKOUT] ℹ️ Plataforma detectada: ${_detectedPlatform.name} — URL é PÁGINA DE VENDAS. Checkout será buscado DENTRO da página pela heurística V9.3.`);
+                // NÃO setar checkoutLink com a URL de entrada
+                // O checkout real será encontrado pela heurística V9.3 dentro do HTML
             }
         } catch (_v95DetectErr) {
-            console.warn('[CHECKOUT] Erro na detecção direta (sem impacto):', _v95DetectErr.message);
+            console.warn('[CHECKOUT] Erro na detecção de plataforma (sem impacto):', _v95DetectErr.message);
         }
 
         let html = "";
@@ -4722,24 +4716,23 @@ async function extractPageData(url) {
 
                             // Penalizar links internos/âncora
                             if (_hrefLower.includes('#') && !_hrefLower.startsWith('http')) _sc -= 30;
-                            // V17.1 FIX: ELIMINAR links que são a própria URL da página (page URL ≠ checkout)
+                            // V17.1 REGRA UNIVERSAL: ELIMINAR links que são a própria URL de entrada
+                            // A URL de entrada é SEMPRE página de vendas, NUNCA checkout
                             try {
                                 if (_href === url) _sc = -999;
-                                // Braip /ref? é SEMPRE página de vendas, nunca checkout
-                                if (_hrefLower.includes('braip.com') && (_hrefLower.includes('/ref?') || _hrefLower.includes('/ref/'))) _sc = -999;
+                                // Normalizar para comparar sem trailing slash/params
+                                const _urlBase = url.split('?')[0].replace(/\/$/, '');
+                                const _hrefBase = _href.split('?')[0].replace(/\/$/, '');
+                                if (_urlBase === _hrefBase) _sc = -999;
                             } catch(_) {}
 
                             if (_sc > _ckBestScore) { _ckBestScore = _sc; _ckBestLink = _href; }
                         });
 
                         if (_ckBestLink && _ckBestScore >= 50) {
-                            // 🔥 [V9.6] NÃO sobrescrever se V9.5 já detectou checkout direto (Braip/Hotmart/etc)
-                            if (extractedData.checkoutLink && extractedData.checkoutSource) {
-                                logger.info(`🔗 [CHECKOUT-SERVER] Heurística ignorada — V9.5 direto já definiu: ${extractedData.checkoutLink.substring(0, 80)} (source: ${extractedData.checkoutSource})`);
-                            } else {
-                                extractedData.checkoutLink = _ckBestLink;
-                                logger.info(`🔗 [CHECKOUT-SERVER] Link detectado server-side: ${_ckBestLink.substring(0, 80)} (score: ${_ckBestScore})`);
-                            }
+                            extractedData.checkoutLink = _ckBestLink;
+                            extractedData.checkoutSource = 'heuristic-v93';
+                            logger.info(`🔗 [CHECKOUT-SERVER] Link REAL detectado via heurística: ${_ckBestLink.substring(0, 80)} (score: ${_ckBestScore})`);
                         }
                     }
                 } catch (_ckServerErr) {
