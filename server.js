@@ -7850,6 +7850,10 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                     });
                 }
                 // 2. V17.2: Decisão de CTA por INTENÇÃO + LINK VÁLIDO
+                // PATCH 4: Remove CTA antigo do texto (━━━ FINALIZAR COMPRA ━━━)
+                if (_v17LinkResolver && _v17LinkResolver.stripCTAText) {
+                    finalResponse = _v17LinkResolver.stripCTAText(finalResponse);
+                }
                 if (_v17LinkResolver && _urlGuard) {
                     const _cuIntent = _v17LinkResolver.detectIntent(message);
                     const _cuBestLink = _v17LinkResolver.resolveBestLink(_cuIntent, {
@@ -9017,6 +9021,10 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                     });
                 }
                 // 2. V17.2: Decisão de CTA por INTENÇÃO + LINK VÁLIDO
+                // PATCH 4: Remove CTA antigo do texto (━━━ FINALIZAR COMPRA ━━━)
+                if (_v17LinkResolver && _v17LinkResolver.stripCTAText) {
+                    finalResponse = _v17LinkResolver.stripCTAText(finalResponse);
+                }
                 if (_v17LinkResolver && _urlGuard) {
                     const _intIntent = _v17LinkResolver.detectIntent(message);
                     const _intBestLink = _v17LinkResolver.resolveBestLink(_intIntent, {
