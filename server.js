@@ -493,6 +493,17 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🧠 V17.2 — LINK RESOLVER (Decisão correta de CTA)
+// ═══════════════════════════════════════════════════════════════════
+let _v17LinkResolver = null;
+try {
+    _v17LinkResolver = require('./lib/v17-link-resolver');
+    console.log('🧠 [V17.2] Link Resolver carregado');
+} catch (e) {
+    console.log('⚠️ [V17.2] Link Resolver não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // V14.0 — AUTO-OTIMIZAÇÃO (Feature Flag: FEATURE_V14_SELF_OPTIMIZING)
 // Camada ADITIVA — NÃO altera V13, apenas loga + aprende
 // ═══════════════════════════════════════════════════════════════════
@@ -7827,34 +7838,46 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             // Fallback total: finalResponse permanece inalterada
         }
 
-        // 🛡️ FINAL OUTPUT GUARD (chat-universal) — ÚLTIMO PONTO ANTES DO ENVIO
+        // 🛡️ FINAL OUTPUT GUARD + V17.2 LINK RESOLVER (chat-universal)
+        let _cuCta = null;
         try {
-            if (_urlGuard && typeof finalResponse === 'string') {
-                const urlRegex = /(https?:\/\/[^\s]+)/g;
-                finalResponse = finalResponse.replace(urlRegex, (url) => {
-                    const safe = _urlGuard.guardUrl(url);
-                    return safe || '';
-                });
-                if (!finalResponse.includes('http') && processedPageData) {
-                    const fallback = _urlGuard.resolveBestLink(processedPageData);
-                    if (fallback) {
-                        finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 ACESSAR AGORA\n${fallback}\n━━━━━━━━━━━━━━━━━━━`;
+            if (typeof finalResponse === 'string') {
+                // 1. URL Guard: remove URLs corrompidas do texto
+                if (_urlGuard) {
+                    finalResponse = finalResponse.replace(/(https?:\/\/[^\s]+)/g, (url) => {
+                        const safe = _urlGuard.guardUrl(url);
+                        return safe || '';
+                    });
+                }
+                // 2. V17.2: Decisão de CTA por INTENÇÃO + LINK VÁLIDO
+                if (_v17LinkResolver && _urlGuard) {
+                    const _cuIntent = _v17LinkResolver.detectIntent(message);
+                    const _cuBestLink = _v17LinkResolver.resolveBestLink(_cuIntent, {
+                        checkoutLink: processedPageData?.checkoutLink,
+                        whatsappLink: processedPageData?.whatsappLink || processedPageData?.contatos?.whatsappLink,
+                        primaryLink: processedPageData?.linksExtraidos?.[0]
+                    });
+                    const _cuSafeLink = _cuBestLink ? _urlGuard.guardUrl(_cuBestLink) : null;
+                    if (_v17LinkResolver.shouldShowCTA(_cuIntent, _cuSafeLink)) {
+                        _cuCta = _v17LinkResolver.buildCTA(_cuSafeLink, _cuIntent);
                     }
+                    console.log('[V17.2@chat-universal] intent=' + _cuIntent + ' | link=' + (_cuSafeLink || 'N/A') + ' | cta=' + (!!_cuCta));
                 }
             }
         } catch (_ugErr) {
-            console.warn('[URL-GUARD@chat-universal] erro:', _ugErr.message);
+            console.warn('[V17.2@chat-universal] erro:', _ugErr.message);
         }
 
         return res.json({
             success: true,
             response: finalResponse,
+            cta: _cuCta,
             bonuses_detected: processedPageData?.bonuses_detected || [],
             contatos: processedPageData?.contatos || {},
             metadata: {
                 hasPageData: !!processedPageData,
                 contentLength: processedPageData?.cleanText?.length || 0,
-                method: processedPageData?.method || "none"
+                method: processedPageData?.method || 'none'
             }
         });
 
@@ -8982,28 +9005,40 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             // Fallback total: finalResponse permanece inalterada
         }
 
-        // 🛡️ FINAL OUTPUT GUARD (chat-inteligente) — ÚLTIMO PONTO ANTES DO ENVIO
+        // 🛡️ FINAL OUTPUT GUARD + V17.2 LINK RESOLVER (chat-inteligente)
+        let _intCta = null;
         try {
-            if (_urlGuard && typeof finalResponse === 'string') {
-                const urlRegex = /(https?:\/\/[^\s]+)/g;
-                finalResponse = finalResponse.replace(urlRegex, (url) => {
-                    const safe = _urlGuard.guardUrl(url);
-                    return safe || '';
-                });
-                if (!finalResponse.includes('http') && processedPageData) {
-                    const fallback = _urlGuard.resolveBestLink(processedPageData);
-                    if (fallback) {
-                        finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 ACESSAR AGORA\n${fallback}\n━━━━━━━━━━━━━━━━━━━`;
+            if (typeof finalResponse === 'string') {
+                // 1. URL Guard: remove URLs corrompidas do texto
+                if (_urlGuard) {
+                    finalResponse = finalResponse.replace(/(https?:\/\/[^\s]+)/g, (url) => {
+                        const safe = _urlGuard.guardUrl(url);
+                        return safe || '';
+                    });
+                }
+                // 2. V17.2: Decisão de CTA por INTENÇÃO + LINK VÁLIDO
+                if (_v17LinkResolver && _urlGuard) {
+                    const _intIntent = _v17LinkResolver.detectIntent(message);
+                    const _intBestLink = _v17LinkResolver.resolveBestLink(_intIntent, {
+                        checkoutLink: processedPageData?.checkoutLink,
+                        whatsappLink: processedPageData?.whatsappLink || processedPageData?.contatos?.whatsappLink,
+                        primaryLink: processedPageData?.linksExtraidos?.[0]
+                    });
+                    const _intSafeLink = _intBestLink ? _urlGuard.guardUrl(_intBestLink) : null;
+                    if (_v17LinkResolver.shouldShowCTA(_intIntent, _intSafeLink)) {
+                        _intCta = _v17LinkResolver.buildCTA(_intSafeLink, _intIntent);
                     }
+                    console.log('[V17.2@chat-inteligente] intent=' + _intIntent + ' | link=' + (_intSafeLink || 'N/A') + ' | cta=' + (!!_intCta));
                 }
             }
         } catch (_ugErr) {
-            console.warn('[URL-GUARD@chat-inteligente] erro:', _ugErr.message);
+            console.warn('[V17.2@chat-inteligente] erro:', _ugErr.message);
         }
 
         return res.json({
             success: true,
             response: finalResponse,
+            cta: _intCta,
             calendarHash: mainFlowCalendarHash,
             inteligenciasDetectadas: inteligencias,
             analiseEmocional: analiseEmocional,
@@ -9014,8 +9049,8 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             metadata: {
                 hasPageData: !!processedPageData,
                 contentLength: processedPageData?.cleanText?.length || 0,
-                method: processedPageData?.method || "none",
-                sistema: "super-inteligencia-v1"
+                method: processedPageData?.method || 'none',
+                sistema: 'super-inteligencia-v1'
             }
         });
 
