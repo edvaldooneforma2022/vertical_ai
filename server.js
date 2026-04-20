@@ -482,6 +482,17 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🛡️ URL GUARD — PROTEÇÃO UNIVERSAL DE SAÍDA
+// ═══════════════════════════════════════════════════════════════════
+let _urlGuard = null;
+try {
+    _urlGuard = require('./lib/utils/url-guard');
+    console.log('🛡️ [URL-GUARD] Módulo de proteção de URLs carregado');
+} catch (e) {
+    console.log('⚠️ [URL-GUARD] Não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // V14.0 — AUTO-OTIMIZAÇÃO (Feature Flag: FEATURE_V14_SELF_OPTIMIZING)
 // Camada ADITIVA — NÃO altera V13, apenas loga + aprende
 // ═══════════════════════════════════════════════════════════════════
@@ -7816,6 +7827,25 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             // Fallback total: finalResponse permanece inalterada
         }
 
+        // 🛡️ FINAL OUTPUT GUARD (chat-universal) — ÚLTIMO PONTO ANTES DO ENVIO
+        try {
+            if (_urlGuard && typeof finalResponse === 'string') {
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                finalResponse = finalResponse.replace(urlRegex, (url) => {
+                    const safe = _urlGuard.guardUrl(url);
+                    return safe || '';
+                });
+                if (!finalResponse.includes('http') && processedPageData) {
+                    const fallback = _urlGuard.resolveBestLink(processedPageData);
+                    if (fallback) {
+                        finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 ACESSAR AGORA\n${fallback}\n━━━━━━━━━━━━━━━━━━━`;
+                    }
+                }
+            }
+        } catch (_ugErr) {
+            console.warn('[URL-GUARD@chat-universal] erro:', _ugErr.message);
+        }
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -8950,6 +8980,25 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         } catch (_v15IntErr) {
             console.warn('[V15@inteligente] ⚠️ Erro (sem impacto):', _v15IntErr.message);
             // Fallback total: finalResponse permanece inalterada
+        }
+
+        // 🛡️ FINAL OUTPUT GUARD (chat-inteligente) — ÚLTIMO PONTO ANTES DO ENVIO
+        try {
+            if (_urlGuard && typeof finalResponse === 'string') {
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                finalResponse = finalResponse.replace(urlRegex, (url) => {
+                    const safe = _urlGuard.guardUrl(url);
+                    return safe || '';
+                });
+                if (!finalResponse.includes('http') && processedPageData) {
+                    const fallback = _urlGuard.resolveBestLink(processedPageData);
+                    if (fallback) {
+                        finalResponse += `\n\n━━━━━━━━━━━━━━━━━━━\n🚀 ACESSAR AGORA\n${fallback}\n━━━━━━━━━━━━━━━━━━━`;
+                    }
+                }
+            }
+        } catch (_ugErr) {
+            console.warn('[URL-GUARD@chat-inteligente] erro:', _ugErr.message);
         }
 
         return res.json({
