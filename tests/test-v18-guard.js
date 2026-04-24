@@ -8,7 +8,10 @@ const {
     buildValidatedData,
     discoverAndClassifyLinks,
     applyIntelligentFallback,
-    guardPageData
+    guardPageData,
+    markUrlFailed,
+    getUrlFailureInfo,
+    isUrlRecentlyFailed
 } = require('../lib/v18-extraction-guard');
 
 let passed = 0;
@@ -152,7 +155,7 @@ console.log('\n🧪 TESTE 5 — guardPageData (end-to-end)');
 // Caso 1: pageData completo
 const fullGuarded = guardPageData({ ...fullPageData }, { enableFallback: false });
 assert(fullGuarded._extractionGuard !== undefined, 'metadata adicionada');
-assert(fullGuarded._extractionGuard.version === '18.2', 'version=18.2');
+assert(fullGuarded._extractionGuard.version === '18.4', 'version=18.4');
 assert(fullGuarded._extractionGuard.status === 'ok', 'status=ok');
 assert(fullGuarded._extractionGuard.isReliable === true, 'isReliable=true');
 assert(fullGuarded._extractionGuard.extractionFailed === false, 'extractionFailed=false (confidence alta)');
@@ -203,6 +206,54 @@ guardPageData(originalData, { enableFallback: true });
 assert(originalData.title === originalCopy.title, 'title preservado');
 assert(originalData.checkoutLink === originalCopy.checkoutLink, 'checkoutLink preservado (já existia)');
 assert(originalData.whatsappLink === originalCopy.whatsappLink, 'whatsappLink preservado (já existia)');
+
+// ═══════════════════════════════════════════════════════
+console.log('\n🧪 TESTE 6 — PARTIAL_CRITICAL status');
+
+// Caso: confidence >= 50, tem texto, mas sem checkout
+const partialCriticalData = {
+    title: 'Produto Excelente de Marketing Digital',
+    description: 'Aprenda as melhores estratégias de marketing digital com nosso curso',
+    cleanText: 'A'.repeat(2500),
+    whatsappLink: 'https://wa.me/5511999999999',
+    price_detected: ['R$ 297,00'],
+    contatos: { whatsapp: ['5511999999999'] }
+    // SEM checkoutLink!
+};
+const pcResult = evaluateExtractionStatus(partialCriticalData);
+assert(pcResult.status === 'partial_critical', `PARTIAL_CRITICAL: status=${pcResult.status} (esperado partial_critical)`);
+assert(pcResult.confidence >= 50, `PARTIAL_CRITICAL: confidence=${pcResult.confidence} (>=50 mas sem checkout)`);
+assert(pcResult.signals.hasCheckout === false, 'PARTIAL_CRITICAL: hasCheckout=false');
+
+// Caso: com checkout = ok normal
+const withCheckout = { ...partialCriticalData, checkoutLink: 'https://pay.hotmart.com/X' };
+const wcResult = evaluateExtractionStatus(withCheckout);
+assert(wcResult.status === 'ok', `Com checkout: status=${wcResult.status} (esperado ok)`);
+
+// ═══════════════════════════════════════════════════════
+console.log('\n🧪 TESTE 7 — Failure Cache (V18.6)');
+
+// Caso 1: URL não falhou
+assert(!isUrlRecentlyFailed('https://novissimo.com'), 'URL nova → não falhou');
+
+// Caso 2: Registrar falha
+markUrlFailed('https://networkpro.site/vendas?id=1', 15, 'axios-cheerio');
+assert(isUrlRecentlyFailed('https://networkpro.site/vendas'), 'URL registrada como falha (sem query)');
+
+// Caso 3: Contador incrementa
+markUrlFailed('https://networkpro.site/vendas?id=2', 12, 'axios-cheerio');
+const info = getUrlFailureInfo('https://networkpro.site/vendas');
+assert(info !== null, 'Failure info disponível');
+assert(info.count === 2, `Falha contada ${info.count}x (esperado 2)`);
+assert(info.method === 'axios-cheerio', `method=${info.method}`);
+
+// Caso 4: guardPageData registra falha automaticamente
+const failingPage = guardPageData({
+    url: 'https://sitequefalhou.com/page',
+    title: '', cleanText: 'tiny', contatos: {}
+}, { enableFallback: false });
+assert(failingPage._extractionGuard.extractionFailed === true, 'extractionFailed=true');
+assert(isUrlRecentlyFailed('https://sitequefalhou.com/page'), 'URL registrada no cache após guard');
 
 // ═══════════════════════════════════════════════════════
 console.log('\n══════════════════════════════════════════════════');
