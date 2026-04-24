@@ -504,6 +504,25 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🛡️ V18 — EXTRACTION GUARD (Blindagem contra extractor imperfeito)
+// Avalia confiança, classifica links, aplica fallback controlado
+// Protegido por FEATURE_V18_EXTRACTION_GUARD + try/catch
+// ═══════════════════════════════════════════════════════════════════
+let _v18Guard = null;
+let _v18GuardEnabled = false;
+let _v18FallbackEnabled = false;
+try {
+    _v18Guard = require('./lib/v18-extraction-guard');
+    _v18GuardEnabled = (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V18_EXTRACTION_GUARD'))
+        || process.env.FEATURE_V18_EXTRACTION_GUARD === 'true';
+    _v18FallbackEnabled = (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V18_FALLBACK'))
+        || process.env.FEATURE_V18_FALLBACK === 'true';
+    console.log(`🛡️ [V18] Extraction Guard carregado (guard=${_v18GuardEnabled}, fallback=${_v18FallbackEnabled})`);
+} catch (e) {
+    console.log('🛡️ [V18] Extraction Guard não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // V14.0 — AUTO-OTIMIZAÇÃO (Feature Flag: FEATURE_V14_SELF_OPTIMIZING)
 // Camada ADITIVA — NÃO altera V13, apenas loga + aprende
 // ═══════════════════════════════════════════════════════════════════
@@ -7393,6 +7412,18 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                 }
             }
         } catch(_ckErr) { console.warn('[AUTO-CHECKOUT] Erro (silencioso):', _ckErr.message); }
+
+        // 🛡️ V18 — EXTRACTION GUARD (chat-universal)
+        try {
+            if (_v18GuardEnabled && _v18Guard && _v18Guard.guardPageData && processedPageData) {
+                processedPageData = _v18Guard.guardPageData(processedPageData, {
+                    enableFallback: _v18FallbackEnabled
+                });
+            }
+        } catch (_v18Err) {
+            console.warn('[V18-GUARD@chat-universal] Erro (sem impacto):', _v18Err.message);
+        }
+
         const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
 
         // ═══ V14.1: SALVAR NO HISTÓRICO (para endpoint chat-universal / pipeline legado) ═══
@@ -8026,6 +8057,17 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 }
             }
         } catch(_ckErr) { console.warn('[AUTO-CHECKOUT@inteligente] Erro (silencioso):', _ckErr.message); }
+
+        // 🛡️ V18 — EXTRACTION GUARD (chat-inteligente)
+        try {
+            if (_v18GuardEnabled && _v18Guard && _v18Guard.guardPageData && processedPageData) {
+                processedPageData = _v18Guard.guardPageData(processedPageData, {
+                    enableFallback: _v18FallbackEnabled
+                });
+            }
+        } catch (_v18Err) {
+            console.warn('[V18-GUARD@chat-inteligente] Erro (sem impacto):', _v18Err.message);
+        }
 
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);
