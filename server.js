@@ -7417,7 +7417,8 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         try {
             if (_v18GuardEnabled && _v18Guard && _v18Guard.guardPageData && processedPageData) {
                 processedPageData = _v18Guard.guardPageData(processedPageData, {
-                    enableFallback: _v18FallbackEnabled
+                    enableFallback: _v18FallbackEnabled,
+                    context: { tenantId: apiKey, conversationId: conversationId || '' }
                 });
             }
         } catch (_v18Err) {
@@ -8062,7 +8063,8 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         try {
             if (_v18GuardEnabled && _v18Guard && _v18Guard.guardPageData && processedPageData) {
                 processedPageData = _v18Guard.guardPageData(processedPageData, {
-                    enableFallback: _v18FallbackEnabled
+                    enableFallback: _v18FallbackEnabled,
+                    context: { tenantId: apiKey, conversationId: conversationId || '' }
                 });
             }
         } catch (_v18Err) {

@@ -123,18 +123,21 @@ const okMeta = { status: 'ok', confidence: 90 };
 const okValidated = { checkout: 'https://pay.hotmart.com/X', whatsapp: null };
 const okFallback = applyIntelligentFallback(okPageData, okValidated, { checkout: ['https://alt.com'], whatsapp: [] }, okMeta);
 assert(okFallback.applied === false, 'status=ok → sem fallback');
+assert(okFallback.fallbackData !== undefined, 'fallbackData retornado');
 
-// Caso 2: extração parcial + checkout descoberto → fallback
+// Caso 2: extração parcial + checkout descoberto → fallback disponível (NÃO muta pageData)
 const partialPage = { url: 'https://meuproduto.com' };
 const partialMeta = { status: 'partial', confidence: 30 };
 const partialValidated2 = { checkout: null, whatsapp: null };
 const partialLinks = { checkout: ['https://pay.hotmart.com/FALLBACK'], whatsapp: ['https://wa.me/5511111111'] };
 const partialFallback = applyIntelligentFallback(partialPage, partialValidated2, partialLinks, partialMeta);
-assert(partialFallback.applied === true, 'status=partial → fallback aplicado');
+assert(partialFallback.applied === true, 'status=partial → fallback disponível');
 assert(partialFallback.fallbacks.length === 2, `fallbacks: ${partialFallback.fallbacks.length} (checkout+whatsapp)`);
-assert(partialPage.checkoutLink === 'https://pay.hotmart.com/FALLBACK', 'checkout preenchido via fallback');
-assert(partialPage.checkoutSource === 'v18-fallback-discovery', 'checkoutSource=v18-fallback-discovery');
-assert(partialPage.whatsappLink === 'https://wa.me/5511111111', 'whatsapp preenchido via fallback');
+assert(partialFallback.fallbackData.checkout === 'https://pay.hotmart.com/FALLBACK', 'fallbackData.checkout preenchido');
+assert(partialFallback.fallbackData.checkoutSource === 'v18-fallback-discovery', 'fallbackData.checkoutSource correto');
+assert(partialFallback.fallbackData.whatsapp === 'https://wa.me/5511111111', 'fallbackData.whatsapp preenchido');
+assert(!partialPage.checkoutLink, 'pageData NÃO mutado (checkoutLink ainda null)');
+assert(!partialPage.whatsappLink, 'pageData NÃO mutado (whatsappLink ainda null)');
 
 // Caso 3: extração falhou mas sem links → sem fallback
 const failedPage = {};
@@ -149,8 +152,10 @@ console.log('\n🧪 TESTE 5 — guardPageData (end-to-end)');
 // Caso 1: pageData completo
 const fullGuarded = guardPageData({ ...fullPageData }, { enableFallback: false });
 assert(fullGuarded._extractionGuard !== undefined, 'metadata adicionada');
+assert(fullGuarded._extractionGuard.version === '18.2', 'version=18.2');
 assert(fullGuarded._extractionGuard.status === 'ok', 'status=ok');
 assert(fullGuarded._extractionGuard.isReliable === true, 'isReliable=true');
+assert(fullGuarded._extractionGuard.extractionFailed === false, 'extractionFailed=false (confidence alta)');
 assert(fullGuarded.checkoutLink === 'https://pay.hotmart.com/ABC123', 'checkoutLink preservado (sem fallback)');
 
 // Caso 2: pageData parcial COM fallback
