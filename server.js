@@ -523,6 +523,19 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🔧 PUPPETEER FALLBACK — Extração JS-heavy (Render-safe)
+// Feature flag: FEATURE_PUPPETEER=true para ativar
+// ═══════════════════════════════════════════════════════════════════
+let _puppeteerExtractor = null;
+try {
+    _puppeteerExtractor = require('./lib/puppeteer-extractor');
+    const _ppEnabled = process.env.FEATURE_PUPPETEER === 'true';
+    console.log(`🔧 [PUPPETEER] Extractor carregado (enabled=${_ppEnabled}, available=${_puppeteerExtractor.isAvailable()})`);
+} catch (e) {
+    console.log('🔧 [PUPPETEER] Extractor não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // V14.0 — AUTO-OTIMIZAÇÃO (Feature Flag: FEATURE_V14_SELF_OPTIMIZING)
 // Camada ADITIVA — NÃO altera V13, apenas loga + aprende
 // ═══════════════════════════════════════════════════════════════════
@@ -4967,6 +4980,42 @@ async function extractPageData(url) {
             console.warn('[V14.3] ⚠️ Deep Context Explorer falhou (dados originais mantidos):', _deepErr.message);
         }
 
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔧 PUPPETEER FALLBACK — Enriquece extração quando axios-cheerio falha
+        // Ativado SOMENTE se: FEATURE_PUPPETEER=true + texto < 200 chars
+        // NÃO sobrescreve dados existentes — apenas COMPLEMENTA
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            if (_puppeteerExtractor && process.env.FEATURE_PUPPETEER === 'true') {
+                const _ppBefore = (extractedData.cleanText || '').length;
+                const _ppEnriched = await _puppeteerExtractor.enrichWithPuppeteerFallback(
+                    url,
+                    extractedData,
+                    extractCleanTextFromHTML
+                );
+                if (_ppEnriched && _ppEnriched !== extractedData) {
+                    // Transferir campos enriquecidos
+                    if (_ppEnriched.cleanText && _ppEnriched.cleanText.length > _ppBefore) {
+                        extractedData.cleanText = _ppEnriched.cleanText;
+                        extractedData.method = _ppEnriched.method || extractedData.method;
+                    }
+                    if (_ppEnriched.checkoutLink && !extractedData.checkoutLink) {
+                        extractedData.checkoutLink = _ppEnriched.checkoutLink;
+                        extractedData.checkoutSource = _ppEnriched.checkoutSource || 'puppeteer-fallback';
+                    }
+                    if (_ppEnriched.whatsappLink && !extractedData.whatsappLink) {
+                        extractedData.whatsappLink = _ppEnriched.whatsappLink;
+                    }
+                    if (_ppEnriched._puppeteerFallback) {
+                        extractedData._puppeteerFallback = _ppEnriched._puppeteerFallback;
+                    }
+                    console.log(`[PUPPETEER-FALLBACK] ✅ Dados enriquecidos | text: ${_ppBefore} → ${(extractedData.cleanText || '').length} chars | checkout=${!!extractedData.checkoutLink}`);
+                }
+            }
+        } catch (_ppErr) {
+            console.warn('[PUPPETEER-FALLBACK] ⚠️ Falhou (dados originais mantidos):', _ppErr.message);
+        }
 
         // Final processing
         try {
