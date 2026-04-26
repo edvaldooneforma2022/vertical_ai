@@ -539,6 +539,23 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🔒 CONCURRENCY LIMIT + OOM GUARD — Proteção de memória
+// Limita páginas Puppeteer simultâneas + detecta memória crítica
+// ═══════════════════════════════════════════════════════════════════
+let _concurrencyLimiter = null;
+let _isMemoryCritical = () => false;
+let _getMemoryUsage = () => ({ rss: 0, heapUsed: 0, heapTotal: 0 });
+try {
+    const _concLimit = require('./lib/concurrency-limit');
+    _concurrencyLimiter = _concLimit.createLimiter(2); // 🔴 máximo 2 páginas simultâneas
+    _isMemoryCritical = _concLimit.isMemoryCritical;
+    _getMemoryUsage = _concLimit.getMemoryUsage;
+    console.log('🔒 [CONCURRENCY] Limitador carregado (max=2 páginas simultâneas)');
+} catch (e) {
+    console.log('🔒 [CONCURRENCY] Limitador não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // 🔧 PUPPETEER FALLBACK — Extração JS-heavy (Render-safe)
 // Feature flag: FEATURE_PUPPETEER=true para ativar
 // ═══════════════════════════════════════════════════════════════════
@@ -4869,6 +4886,11 @@ async function extractPageData(url) {
         const minAcceptableLength = 200;
         const _ppClientLegacy = _puppeteerExtractor ? require('./lib/puppeteer-client') : null;
         if ((!extractedData.cleanText || extractedData.cleanText.length < minAcceptableLength) && _ppClientLegacy && _ppClientLegacy.isAvailable()) {
+            // 🛡️ OOM GUARD — Pular Puppeteer se memória crítica
+            if (_isMemoryCritical()) {
+                const _mem = _getMemoryUsage();
+                logger.warn(`[OOM-GUARD] ⚠️ Memória alta (${_mem.rss}MB) — pulando Puppeteer fallback`);
+            } else {
             logger.info("Trying Puppeteer (via client) for dynamic rendering...");
             let browser = null;
             let page = null;
@@ -4942,21 +4964,40 @@ async function extractPageData(url) {
                 // Fechar página mas NÃO o browser (singleton reutilizável)
                 try { if (page) await page.close(); } catch (e) { }
             }
+            } // fecha else do OOM GUARD
         }
 
         // 🚀 ENHANCED EXTRACTION: OCR + Dynamic Content + Floating Elements
         // ⏱️ Wrapped with timeout to prevent blocking
-        if (enhancedExtractor) {
+        // 🛡️ Curto-circuito: skip se WA já encontrado no estático (economia massiva)
+        const _alreadyHasWhatsApp = extractedData?.contatos?.whatsappLinks?.length > 0;
+        const _skipEnhanced = _alreadyHasWhatsApp && extractedData.cleanText && extractedData.cleanText.length > minAcceptableLength;
+        if (_skipEnhanced) {
+            console.log('[ENHANCED] ⏩ Skip — WA já encontrado no estático + conteúdo suficiente');
+        }
+        if (enhancedExtractor && !_skipEnhanced) {
             try {
+                // 🛡️ OOM GUARD
+                if (_isMemoryCritical()) {
+                    const _mem2 = _getMemoryUsage();
+                    logger.warn(`[OOM-GUARD] ⚠️ Memória alta (${_mem2.rss}MB) — pulando Enhanced Extraction`);
+                    throw new Error(`OOM-GUARD: ${_mem2.rss}MB`);
+                }
+
                 logger.info(`🚀 [ENHANCED] Starting enhanced extraction for ${url}`);
 
                 // Timeout de 30 segundos para evitar bloqueio
-                const enhancedPromise = enhancedExtractor.extractComplete(url, {
+                const _enhancedFn = () => enhancedExtractor.extractComplete(url, {
                     enableOCR: true,
-                    maxOCRImages: 5, // Reduzido para performance
+                    maxOCRImages: 3, // 🔴 Reduzido de 5 para 3 (economia de memória)
                     enableFloating: true,
                     enableDynamic: true
                 });
+
+                // Wrappear com concurrency limiter (se disponível)
+                const enhancedPromise = _concurrencyLimiter
+                    ? _concurrencyLimiter(_enhancedFn)
+                    : _enhancedFn();
 
                 const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('Enhanced extraction timeout (30s)')), 30000)
