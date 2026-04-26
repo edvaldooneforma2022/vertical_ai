@@ -292,11 +292,115 @@ class EnhancedContentExtractor {
                 return imgUrls;
             });
 
+            // 🚀 WIDGET WA DETECTION — Detectar WhatsApp no DOM renderizado
+            // Cobre widgets injetados pós-render (classe universal, não por domínio)
+            let detectedWhatsAppLinks = [];
+            try {
+                detectedWhatsAppLinks = await page.evaluate(() => {
+                    const results = [];
+                    const seen = new Set();
+
+                    // 1. Busca ampla por href scan (cobre shadow DOM indiretamente)
+                    const allAnchors = document.querySelectorAll('a');
+                    for (const a of allAnchors) {
+                        const href = (a.href || '').trim();
+                        if (!href) continue;
+                        const lower = href.toLowerCase();
+                        if (lower.includes('wa.me') || lower.includes('api.whatsapp.com') || lower.includes('whatsapp.com/send')) {
+                            if (seen.has(href)) continue;
+                            seen.add(href);
+
+                            // Filtrar visibilidade: elemento deve ser renderizado e clicável
+                            const rect = a.getBoundingClientRect();
+                            const isVisible = (
+                                a.offsetParent !== null &&
+                                rect.width > 0 &&
+                                rect.height > 0
+                            );
+
+                            // Posição no viewport (above fold = mais relevante)
+                            const isAboveFold = rect.top < window.innerHeight;
+
+                            results.push({
+                                href: href,
+                                text: (a.textContent || '').trim().substring(0, 100),
+                                visible: isVisible,
+                                aboveFold: isAboveFold,
+                                isFixed: false // será atualizado abaixo
+                            });
+                        }
+                    }
+
+                    // 2. Elementos fixed/floating com links WA (padrão de widget)
+                    const fixedSelectors = [
+                        '[style*="position: fixed"] a',
+                        '[style*="position: sticky"] a',
+                        '[class*="float"] a',
+                        '[class*="fixed"] a',
+                        '[class*="widget"] a'
+                    ];
+
+                    for (const sel of fixedSelectors) {
+                        try {
+                            const els = document.querySelectorAll(sel);
+                            for (const el of els) {
+                                const href = (el.href || '').trim();
+                                if (!href) continue;
+                                const lower = href.toLowerCase();
+                                if (lower.includes('wa.me') || lower.includes('whatsapp')) {
+                                    if (seen.has(href)) {
+                                        // Marcar como fixed o já existente
+                                        const existing = results.find(r => r.href === href);
+                                        if (existing) existing.isFixed = true;
+                                        continue;
+                                    }
+                                    seen.add(href);
+                                    results.push({
+                                        href: href,
+                                        text: (el.textContent || '').trim().substring(0, 100),
+                                        visible: true,
+                                        aboveFold: true,
+                                        isFixed: true
+                                    });
+                                }
+                            }
+                        } catch (_) {}
+                    }
+
+                    // 3. Iframes com WhatsApp (widgets embed)
+                    try {
+                        const iframes = document.querySelectorAll('iframe[src*="whatsapp"], iframe[src*="wa.me"]');
+                        for (const iframe of iframes) {
+                            const src = (iframe.src || '').trim();
+                            if (src && !seen.has(src)) {
+                                seen.add(src);
+                                results.push({
+                                    href: src,
+                                    text: '[iframe-widget]',
+                                    visible: true,
+                                    aboveFold: false,
+                                    isFixed: false
+                                });
+                            }
+                        }
+                    } catch (_) {}
+
+                    return results;
+                });
+
+                if (detectedWhatsAppLinks.length > 0) {
+                    console.log(`📱 [ENHANCED-WA] ${detectedWhatsAppLinks.length} links WhatsApp detectados no DOM renderizado`);
+                }
+            } catch (waDetectErr) {
+                console.warn('📱 [ENHANCED-WA] Erro na detecção (sem impacto):', waDetectErr.message);
+            }
+
             return {
                 text: pageContent.texts.join('\n\n'),
                 floatingContent: floatingContent,
                 iframeContent: iframeContent,
-                images: images
+                images: images,
+                whatsappLinks: detectedWhatsAppLinks
             };
 
         } finally {

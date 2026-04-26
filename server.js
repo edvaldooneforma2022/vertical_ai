@@ -523,6 +523,22 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🚀 WA-CTA PROMOTER — Promoção Universal de WhatsApp como CTA
+// Quando não há checkout e WhatsApp tem intenção de conversão → promover
+// Feature flag: FEATURE_WA_CTA_PROMOTER
+// ═══════════════════════════════════════════════════════════════════
+let _waCTAPromoter = null;
+let _waCTAEnabled = false;
+try {
+    _waCTAPromoter = require('./lib/wa-cta-promoter');
+    _waCTAEnabled = (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_WA_CTA_PROMOTER'))
+        || process.env.FEATURE_WA_CTA_PROMOTER === 'true';
+    console.log(`🚀 [WA-CTA] Promoter carregado (enabled=${_waCTAEnabled})`);
+} catch (e) {
+    console.log('🚀 [WA-CTA] Promoter não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // 🔧 PUPPETEER FALLBACK — Extração JS-heavy (Render-safe)
 // Feature flag: FEATURE_PUPPETEER=true para ativar
 // ═══════════════════════════════════════════════════════════════════
@@ -4989,6 +5005,47 @@ async function extractPageData(url) {
                     }
                 }
 
+                // 📱 [P3 WIDGET-WA] Merge WhatsApp links detectados no DOM renderizado
+                // Cobre classe "Widget externo" — CTAs injetados pós-render via JS
+                try {
+                    const _enhWaLinks = enhancedContent.whatsappLinks || [];
+                    if (_enhWaLinks.length > 0) {
+                        // Garantir estrutura de contatos
+                        if (!extractedData.contatos) extractedData.contatos = {};
+                        if (!extractedData.contatos.whatsappLinks) extractedData.contatos.whatsappLinks = [];
+
+                        let _waAdded = 0;
+                        for (const waItem of _enhWaLinks) {
+                            // Filtrar: apenas links visíveis (elementos renderizados e clicáveis)
+                            if (!waItem.visible) continue;
+                            const href = waItem.href || '';
+                            if (!href || !href.startsWith('http')) continue;
+                            if (!extractedData.contatos.whatsappLinks.includes(href)) {
+                                extractedData.contatos.whatsappLinks.push(href);
+                                _waAdded++;
+                            }
+                        }
+
+                        // Promover melhor WA para top-level (se ainda não tem)
+                        if (!extractedData.whatsappLink && _waAdded > 0) {
+                            // Prioridade: fixed/floating > above fold > outros
+                            const _bestWA = _enhWaLinks.find(l => l.visible && l.isFixed)
+                                || _enhWaLinks.find(l => l.visible && l.aboveFold)
+                                || _enhWaLinks.find(l => l.visible);
+                            if (_bestWA) {
+                                extractedData.whatsappLink = _bestWA.href;
+                                console.log(`📱 [ENHANCED-WA] WhatsApp promovido do DOM: ${_bestWA.href.substring(0, 80)} (fixed=${_bestWA.isFixed}, aboveFold=${_bestWA.aboveFold})`);
+                            }
+                        }
+
+                        if (_waAdded > 0) {
+                            console.log(`📱 [ENHANCED-WA] ${_waAdded} links WA do DOM mesclados nos contatos`);
+                        }
+                    }
+                } catch (_enhWaErr) {
+                    console.warn('📱 [ENHANCED-WA] Erro no merge (sem impacto):', _enhWaErr.message);
+                }
+
             } catch (enhancedError) {
                 logger.warn(`⚠️ [ENHANCED] Enhanced extraction failed, continuing with basic: ${enhancedError.message}`);
                 // Não interrompe o fluxo - continua com extração básica
@@ -7518,6 +7575,22 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             }
         } catch(_ckErr) { console.warn('[AUTO-CHECKOUT] Erro (silencioso):', _ckErr.message); }
 
+        // 🚀 WA-CTA PROMOTER (chat-universal) — ANTES do V18 Guard
+        // Promove WhatsApp como CTA quando checkout está ausente + intenção de conversão
+        try {
+            if (_waCTAEnabled && _waCTAPromoter && _waCTAPromoter.promoteWhatsAppToCTA && processedPageData && !processedPageData.checkoutLink) {
+                const _waCTAResult = _waCTAPromoter.promoteWhatsAppToCTA(processedPageData);
+                if (_waCTAResult.promoted && _waCTAResult.checkoutLink) {
+                    processedPageData.checkoutLink = _waCTAResult.checkoutLink;
+                    processedPageData.checkoutSource = _waCTAResult.checkoutSource;
+                    processedPageData._waCTAPromotion = _waCTAResult;
+                    console.log(`[WA-CTA@chat-universal] ✅ Promovido | confidence=${_waCTAResult.confidence} | url=${_waCTAResult.checkoutLink.substring(0, 60)}`);
+                }
+            }
+        } catch (_waCTAErr) {
+            console.warn('[WA-CTA@chat-universal] Erro (sem impacto):', _waCTAErr.message);
+        }
+
         // 🛡️ V18 — EXTRACTION GUARD (chat-universal)
         try {
             if (_v18GuardEnabled && _v18Guard && _v18Guard.guardPageData && processedPageData) {
@@ -8163,6 +8236,21 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 }
             }
         } catch(_ckErr) { console.warn('[AUTO-CHECKOUT@inteligente] Erro (silencioso):', _ckErr.message); }
+
+        // 🚀 WA-CTA PROMOTER (chat-inteligente) — ANTES do V18 Guard
+        try {
+            if (_waCTAEnabled && _waCTAPromoter && _waCTAPromoter.promoteWhatsAppToCTA && processedPageData && !processedPageData.checkoutLink) {
+                const _waCTAResult2 = _waCTAPromoter.promoteWhatsAppToCTA(processedPageData);
+                if (_waCTAResult2.promoted && _waCTAResult2.checkoutLink) {
+                    processedPageData.checkoutLink = _waCTAResult2.checkoutLink;
+                    processedPageData.checkoutSource = _waCTAResult2.checkoutSource;
+                    processedPageData._waCTAPromotion = _waCTAResult2;
+                    console.log(`[WA-CTA@chat-inteligente] ✅ Promovido | confidence=${_waCTAResult2.confidence} | url=${_waCTAResult2.checkoutLink.substring(0, 60)}`);
+                }
+            }
+        } catch (_waCTAErr2) {
+            console.warn('[WA-CTA@chat-inteligente] Erro (sem impacto):', _waCTAErr2.message);
+        }
 
         // 🛡️ V18 — EXTRACTION GUARD (chat-inteligente)
         try {
