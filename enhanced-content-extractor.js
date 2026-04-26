@@ -17,12 +17,15 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const path = require('path');
 
-// Puppeteer é opcional - graceful fallback
-let puppeteer = null;
+// Puppeteer via client singleton (compartilhado com toda a plataforma)
+let puppeteerClient = null;
 try {
-    puppeteer = require('puppeteer');
+    puppeteerClient = require('./lib/puppeteer-client');
+    if (puppeteerClient && puppeteerClient.isAvailable()) {
+        console.log('✅ Puppeteer (via client) disponível para extração avançada');
+    }
 } catch (e) {
-    console.log('⚠️ Puppeteer não disponível para extração avançada');
+    console.log('⚠️ Puppeteer client não disponível para extração avançada');
 }
 
 class EnhancedContentExtractor {
@@ -115,7 +118,7 @@ class EnhancedContentExtractor {
 
         try {
             // 1. Extração dinâmica com Puppeteer
-            if (puppeteer && mergedOptions.enableDynamic) {
+            if (puppeteerClient && puppeteerClient.isAvailable() && mergedOptions.enableDynamic) {
                 try {
                     const dynamicResult = await this._extractWithPuppeteer(url, mergedOptions);
                     result.dynamicText = dynamicResult.text || '';
@@ -173,32 +176,23 @@ class EnhancedContentExtractor {
      * Extração com Puppeteer para conteúdo dinâmico
      */
     async _extractWithPuppeteer(url, options) {
-        if (!puppeteer) {
+        if (!puppeteerClient || !puppeteerClient.isAvailable()) {
             throw new Error('Puppeteer não disponível');
         }
 
-        let browser = null;
+        let page = null;
         try {
-            browser = await puppeteer.launch({
-                headless: 'new',
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--disable-gpu',
-                    '--window-size=1920,1080'
-                ],
-                defaultViewport: { width: 1920, height: 1080 },
-                timeout: 30000
-            });
+            const browser = await puppeteerClient.getBrowser();
+            if (!browser) {
+                throw new Error('Browser não disponível (circuit breaker ou falha de init)');
+            }
 
-            const page = await browser.newPage();
+            page = await browser.newPage();
 
             // User agent realista
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-            // Interceptar requests para melhor performance (não bloquear imagens para OCR)
+            // Interceptar requests para performance (NÃO bloquear imagens — necessário para OCR)
             await page.setRequestInterception(true);
             page.on('request', (req) => {
                 const resourceType = req.resourceType();
@@ -211,11 +205,11 @@ class EnhancedContentExtractor {
 
             // Navegar para a página
             await page.goto(url, {
-                waitUntil: 'networkidle2',
-                timeout: 40000
+                waitUntil: 'domcontentloaded',
+                timeout: 25000
             });
 
-            // Aguardar carregamento adicional (compatível com todas versões Puppeteer)
+            // Aguardar carregamento adicional
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Scroll completo para carregar conteúdo lazy
@@ -306,9 +300,10 @@ class EnhancedContentExtractor {
             };
 
         } finally {
-            if (browser) {
+            // Fechar página mas NÃO o browser (singleton reutilizável)
+            if (page) {
                 try {
-                    await browser.close();
+                    await page.close();
                 } catch (e) { }
             }
         }

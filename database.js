@@ -167,6 +167,7 @@ async function initializeDatabase() {
         `CREATE INDEX IF NOT EXISTS idx_api_keys_tenant ON api_keys(tenant_id)`,
 
         // Adicionar tenant_uuid em todas as tabelas operacionais
+        `ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
         `ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
         `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
         `ALTER TABLE short_urls ADD COLUMN IF NOT EXISTS tenant_uuid ${USE_POSTGRES ? 'UUID' : 'TEXT'} REFERENCES tenants(id)`,
