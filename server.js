@@ -4750,17 +4750,34 @@ async function extractPageData(url) {
                 try {
                     const _ckServerEnabled = !featureFlags || !featureFlags.isEnabled || featureFlags.isEnabled('FEATURE_AUTO_CHECKOUT_DETECTION');
                     if (_ckServerEnabled) {
-                        const _ckKeywordsHigh = ['comprar', 'buy', 'checkout', 'pagar', 'finalizar', 'adquirir', 'assinar'];
-                        const _ckKeywordsMed  = ['carrinho', 'cart', 'quero', 'garantir', 'inscrever', 'matricular'];
-                        const _ckPayDomains   = ['hotmart', 'kiwify', 'eduzz', 'monetizze', 'pay.', 'checkout.', 'mercadopago', 'pagar.me', 'stripe', 'paypal', 'braip', 'herospark'];
+                        const _ckKeywordsHigh = ['comprar', 'buy', 'checkout', 'pagar', 'finalizar', 'adquirir', 'assinar', 'subscribe', 'purchase', 'order'];
+                        const _ckKeywordsMed  = ['carrinho', 'cart', 'quero', 'garantir', 'inscrever', 'matricular', 'começar', 'comecar', 'start', 'pricing', 'planos', 'precos', 'preço', 'plans', 'upgrade', 'trial', 'signup', 'cadastr'];
+                        const _ckPayDomains   = ['hotmart', 'kiwify', 'eduzz', 'monetizze', 'pay.', 'checkout.', 'mercadopago', 'pagar.me', 'stripe', 'paypal', 'braip', 'herospark', 'shopify', 'shopee', 'magazineluiza', 'magalu', 'casasbahia', 'americanas', 'amazon', 'aliexpress'];
 
                         let _ckBestLink = null;
                         let _ckBestScore = 0;
 
+                        // 🔗 UNIVERSAL: Extrair TODOS os links da página
+                        const _allDiscoveredLinks = [];
+
                         $('a[href]').each((_, el) => {
                             const _href = ($(el).attr('href') || '').trim();
                             const _text = ($(el).text() || '').toLowerCase().trim();
-                            if (!_href.startsWith('http')) return;
+                            
+                            // Resolver URLs relativas
+                            let _resolvedHref = _href;
+                            try {
+                                if (_href && !_href.startsWith('http') && !_href.startsWith('#') && !_href.startsWith('javascript:') && !_href.startsWith('mailto:') && !_href.startsWith('tel:')) {
+                                    _resolvedHref = new URL(_href, url).href;
+                                }
+                            } catch(_) {}
+
+                            // Salvar TODOS os links descobertos
+                            if (_resolvedHref && _resolvedHref.startsWith('http')) {
+                                _allDiscoveredLinks.push({ href: _resolvedHref, text: _text.substring(0, 100) });
+                            }
+
+                            if (!_resolvedHref.startsWith('http')) return;
                             const _hrefLower = _href.toLowerCase();
 
                             let _sc = 0;
@@ -4780,8 +4797,39 @@ async function extractPageData(url) {
                                 if (_urlBase === _hrefBase) _sc = -999;
                             } catch(_) {}
 
-                            if (_sc > _ckBestScore) { _ckBestScore = _sc; _ckBestLink = _href; }
+                            if (_sc > _ckBestScore) { _ckBestScore = _sc; _ckBestLink = _resolvedHref; }
                         });
+
+                        // 🔗 UNIVERSAL: Salvar TODOS os links para o pipeline
+                        if (_allDiscoveredLinks.length > 0) {
+                            extractedData.discoveredLinks = _allDiscoveredLinks;
+                            console.log(`🔗 [DISCOVERY] ${_allDiscoveredLinks.length} links extraídos da página`);
+                        }
+
+                        // 📱 WhatsApp: detectar em TODOS os links
+                        if (!extractedData.whatsappLink) {
+                            const _waPatterns = ['wa.me', 'api.whatsapp.com', 'whatsapp.com/send', 'whatsapp.com/catalog'];
+                            for (const _link of _allDiscoveredLinks) {
+                                if (_waPatterns.some(p => (_link.href || '').toLowerCase().includes(p))) {
+                                    extractedData.whatsappLink = _link.href;
+                                    console.log(`📱 [DISCOVERY] WhatsApp descoberto: ${_link.href.substring(0, 80)}`);
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 📱 WhatsApp: detectar também em onclick
+                        if (!extractedData.whatsappLink) {
+                            $('[onclick]').each((_, el) => {
+                                if (extractedData.whatsappLink) return;
+                                const onclick = ($(el).attr('onclick') || '').toLowerCase();
+                                const waMatch = onclick.match(/(?:wa\.me|api\.whatsapp\.com|whatsapp\.com\/send)[^"'\s]*/i);
+                                if (waMatch) {
+                                    extractedData.whatsappLink = 'https://' + waMatch[0];
+                                    console.log(`📱 [DISCOVERY] WhatsApp via onclick: ${extractedData.whatsappLink.substring(0, 80)}`);
+                                }
+                            });
+                        }
 
                         if (_ckBestLink && _ckBestScore >= 50) {
                             extractedData.checkoutLink = _ckBestLink;
@@ -5006,6 +5054,15 @@ async function extractPageData(url) {
                     }
                     if (_ppEnriched.whatsappLink && !extractedData.whatsappLink) {
                         extractedData.whatsappLink = _ppEnriched.whatsappLink;
+                    }
+                    // FAQ: transferir se enriquecido
+                    if (_ppEnriched.faq && _ppEnriched.faq.length > 0 && (!extractedData.faq || extractedData.faq.length === 0)) {
+                        extractedData.faq = _ppEnriched.faq;
+                        console.log(`[PUPPETEER-FALLBACK] ❓ ${_ppEnriched.faq.length} FAQs transferidas`);
+                    }
+                    // discoveredLinks: transferir para uso pelo pipeline
+                    if (_ppEnriched.discoveredLinks && _ppEnriched.discoveredLinks.length > 0 && !extractedData.discoveredLinks) {
+                        extractedData.discoveredLinks = _ppEnriched.discoveredLinks;
                     }
                     if (_ppEnriched._puppeteerFallback) {
                         extractedData._puppeteerFallback = _ppEnriched._puppeteerFallback;
