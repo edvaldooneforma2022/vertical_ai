@@ -4882,15 +4882,34 @@ async function extractPageData(url) {
             }
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔒 PER-REQUEST PUPPETEER LOCK — Impede cascata dentro da mesma request
+        // Apenas 1 execução de Puppeteer por chamada a extractPageData()
+        // ═══════════════════════════════════════════════════════════════════
+        let _puppeteerUsedInRequest = false;
+
+        // 🎯 HEURÍSTICA DE ATIVAÇÃO — Puppeteer como ÚLTIMO RECURSO
+        // Se já tem dados suficientes, não gasta memória com Puppeteer
+        const _hasCheckout = !!extractedData.checkoutLink;
+        const _hasWA = !!extractedData.whatsappLink || (extractedData.contatos?.whatsappLinks?.length > 0);
+        const _hasContent = (extractedData.cleanText || '').length > 500;
+        const _estimatedScore = (_hasCheckout ? 40 : 0) + (_hasContent ? 30 : 0) + (_hasWA ? 15 : 0);
+        const _skipPuppeteerHeuristic = _estimatedScore >= 70;
+
+        if (_skipPuppeteerHeuristic) {
+            console.log(`[PUPPETEER] ⏩ Skip por heurística — score estimado=${_estimatedScore} (checkout=${_hasCheckout}, wa=${_hasWA}, content=${_hasContent})`);
+        }
+
         // Puppeteer fallback
         const minAcceptableLength = 200;
         const _ppClientLegacy = _puppeteerExtractor ? require('./lib/puppeteer-client') : null;
-        if ((!extractedData.cleanText || extractedData.cleanText.length < minAcceptableLength) && _ppClientLegacy && _ppClientLegacy.isAvailable()) {
+        if (!_skipPuppeteerHeuristic && (!extractedData.cleanText || extractedData.cleanText.length < minAcceptableLength) && _ppClientLegacy && _ppClientLegacy.isAvailable()) {
             // 🛡️ OOM GUARD — Pular Puppeteer se memória crítica
             if (_isMemoryCritical()) {
                 const _mem = _getMemoryUsage();
                 logger.warn(`[OOM-GUARD] ⚠️ Memória alta (${_mem.rss}MB) — pulando Puppeteer fallback`);
             } else {
+            _puppeteerUsedInRequest = true;
             logger.info("Trying Puppeteer (via client) for dynamic rendering...");
             let browser = null;
             let page = null;
@@ -4961,21 +4980,30 @@ async function extractPageData(url) {
                 logger.warn("Puppeteer extraction failed:", puppeteerErr.message || puppeteerErr);
                 analytics.failedExtractions++;
             } finally {
-                // Fechar página mas NÃO o browser (singleton reutilizável)
-                try { if (page) await page.close(); } catch (e) { }
+                // 🧹 Liberação agressiva — fechar página + anular referência
+                try {
+                    if (page) { await page.close(); page = null; }
+                } catch (e) { }
             }
             } // fecha else do OOM GUARD
         }
 
         // 🚀 ENHANCED EXTRACTION: OCR + Dynamic Content + Floating Elements
         // ⏱️ Wrapped with timeout to prevent blocking
-        // 🛡️ Curto-circuito: skip se WA já encontrado no estático (economia massiva)
+        // 🛡️ Curto-circuito TRIPLO: WA já encontrado / score alto / Puppeteer já usado
         const _alreadyHasWhatsApp = extractedData?.contatos?.whatsappLinks?.length > 0;
         const _skipEnhanced = _alreadyHasWhatsApp && extractedData.cleanText && extractedData.cleanText.length > minAcceptableLength;
+        const _skipByPuppeteerLock = _puppeteerUsedInRequest;
+        const _skipByScore = _skipPuppeteerHeuristic;
+
         if (_skipEnhanced) {
             console.log('[ENHANCED] ⏩ Skip — WA já encontrado no estático + conteúdo suficiente');
+        } else if (_skipByPuppeteerLock) {
+            console.log('[ENHANCED] ⏩ Skip — Puppeteer já usado nesta request (anti-cascata)');
+        } else if (_skipByScore) {
+            console.log(`[ENHANCED] ⏩ Skip — score estimado=${_estimatedScore} >= 70`);
         }
-        if (enhancedExtractor && !_skipEnhanced) {
+        if (enhancedExtractor && !_skipEnhanced && !_skipByPuppeteerLock && !_skipByScore) {
             try {
                 // 🛡️ OOM GUARD
                 if (_isMemoryCritical()) {
@@ -5129,10 +5157,11 @@ async function extractPageData(url) {
         // ═══════════════════════════════════════════════════════════════════
         // 🔧 PUPPETEER FALLBACK — Enriquece extração quando axios-cheerio falha
         // Ativado SOMENTE se: FEATURE_PUPPETEER=true + texto < 200 chars
+        // 🔒 BLOQUEADO se Puppeteer já rodou nesta request (anti-cascata)
         // NÃO sobrescreve dados existentes — apenas COMPLEMENTA
         // ═══════════════════════════════════════════════════════════════════
         try {
-            if (_puppeteerExtractor && process.env.FEATURE_PUPPETEER === 'true') {
+            if (_puppeteerExtractor && process.env.FEATURE_PUPPETEER === 'true' && !_puppeteerUsedInRequest && !_isMemoryCritical()) {
                 const _ppBefore = (extractedData.cleanText || '').length;
                 const _ppEnriched = await _puppeteerExtractor.enrichWithPuppeteerFallback(
                     url,

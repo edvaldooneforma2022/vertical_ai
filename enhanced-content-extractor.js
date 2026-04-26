@@ -314,53 +314,49 @@ class EnhancedContentExtractor {
             let detectedWhatsAppLinks = [];
             try {
                 detectedWhatsAppLinks = await page.evaluate(() => {
-                    const selectors = [
-                        'a[href*="wa.me"]',
-                        'a[href*="api.whatsapp.com"]',
-                        'a[href*="whatsapp.com/send"]',
-                        '[style*="position: fixed"] a[href*="wa.me"]',
-                        '[style*="position: fixed"] a[href*="whatsapp"]',
-                        '[class*="widget"] a[href*="wa.me"]',
-                        '[class*="widget"] a[href*="whatsapp"]',
-                        'iframe[src*="whatsapp"]',
-                        'iframe[src*="wa.me"]'
-                    ];
-
                     const results = [];
                     const seen = new Set();
 
-                    for (const sel of selectors) {
+                    // 📉 PASSE 1: document.links (coleção nativa — zero custo de traversal)
+                    // Muito mais leve que querySelectorAll em páginas grandes
+                    for (const link of document.links) {
+                        const href = (link.href || '').trim();
+                        if (!href || seen.has(href)) continue;
+                        const lower = href.toLowerCase();
+                        if (!lower.includes('wa.me') && !lower.includes('whatsapp.com')) continue;
+                        seen.add(href);
+
+                        const rect = link.getBoundingClientRect();
+                        const visible = rect.width > 0 && rect.height > 0;
+                        const aboveFold = rect.top < window.innerHeight;
+
+                        // Detectar fixed/sticky (max 3 níveis — economia)
+                        let isFixed = false;
                         try {
-                            document.querySelectorAll(sel).forEach(el => {
-                                const href = (el.href || el.src || '').trim();
-                                if (!href || seen.has(href)) return;
-                                seen.add(href);
-
-                                // Filtro leve de visibilidade
-                                const rect = el.getBoundingClientRect();
-                                const visible = rect.width > 0 && rect.height > 0;
-
-                                // Detectar se é fixed/floating
-                                let isFixed = false;
-                                try {
-                                    let parent = el;
-                                    for (let i = 0; i < 5 && parent; i++) {
-                                        const cs = window.getComputedStyle(parent);
-                                        if (cs.position === 'fixed' || cs.position === 'sticky') {
-                                            isFixed = true;
-                                            break;
-                                        }
-                                        parent = parent.parentElement;
-                                    }
-                                } catch (_) {}
-
-                                const aboveFold = rect.top < window.innerHeight;
-                                const text = (el.textContent || '').trim().substring(0, 60);
-
-                                results.push({ href, text, visible, aboveFold, isFixed });
-                            });
+                            let p = link;
+                            for (let i = 0; i < 3 && p; i++) {
+                                const cs = window.getComputedStyle(p);
+                                if (cs.position === 'fixed' || cs.position === 'sticky') {
+                                    isFixed = true; break;
+                                }
+                                p = p.parentElement;
+                            }
                         } catch (_) {}
+
+                        const text = (link.textContent || '').trim().substring(0, 60);
+                        results.push({ href, text, visible, aboveFold, isFixed });
                     }
+
+                    // PASSE 2: iframes com WA (document.links não cobre)
+                    try {
+                        document.querySelectorAll('iframe[src*="whatsapp"], iframe[src*="wa.me"]').forEach(el => {
+                            const src = (el.src || '').trim();
+                            if (src && !seen.has(src)) {
+                                seen.add(src);
+                                results.push({ href: src, text: '[iframe]', visible: true, aboveFold: false, isFixed: false });
+                            }
+                        });
+                    } catch (_) {}
 
                     // 🔴 Retorna só o essencial, limitado a 20
                     return results.slice(0, 20);
@@ -382,10 +378,11 @@ class EnhancedContentExtractor {
             };
 
         } finally {
-            // Fechar página mas NÃO o browser (singleton reutilizável)
+            // 🧹 Liberação agressiva — fechar página + anular referência
             if (page) {
                 try {
                     await page.close();
+                    page = null;
                 } catch (e) { }
             }
         }
