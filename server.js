@@ -4851,17 +4851,15 @@ async function extractPageData(url) {
 
         // Puppeteer fallback
         const minAcceptableLength = 200;
-        if ((!extractedData.cleanText || extractedData.cleanText.length < minAcceptableLength) && puppeteer) {
-            logger.info("Trying Puppeteer for dynamic rendering...");
+        const _ppClientLegacy = _puppeteerExtractor ? require('./lib/puppeteer-client') : null;
+        if ((!extractedData.cleanText || extractedData.cleanText.length < minAcceptableLength) && _ppClientLegacy && _ppClientLegacy.isAvailable()) {
+            logger.info("Trying Puppeteer (via client) for dynamic rendering...");
             let browser = null;
+            let page = null;
             try {
-                browser = await puppeteer.launch({
-                    headless: true,
-                    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-                    defaultViewport: { width: 1200, height: 800 },
-                    timeout: 40000
-                });
-                const page = await browser.newPage();
+                browser = await _ppClientLegacy.getBrowser();
+                if (!browser) throw new Error('Browser não disponível');
+                page = await browser.newPage();
                 await page.setUserAgent("Mozilla/5.0 (compatible; LinkMagico-Bot/6.0)");
                 await page.setRequestInterception(true);
                 page.on("request", (req) => {
@@ -4871,7 +4869,7 @@ async function extractPageData(url) {
                 });
 
                 try {
-                    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 40000 });
+                    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 });
                 } catch (gotoErr) {
                     logger.warn("Puppeteer goto failed:", gotoErr.message || gotoErr);
                 }
@@ -4925,7 +4923,8 @@ async function extractPageData(url) {
                 logger.warn("Puppeteer extraction failed:", puppeteerErr.message || puppeteerErr);
                 analytics.failedExtractions++;
             } finally {
-                try { if (browser) await browser.close(); } catch (e) { }
+                // Fechar página mas NÃO o browser (singleton reutilizável)
+                try { if (page) await page.close(); } catch (e) { }
             }
         }
 
@@ -7304,7 +7303,7 @@ app.get("/api/system/status", (req, res) => {
             groq: !!process.env.GROQ_API_KEY,
             openai: !!process.env.OPENAI_API_KEY,
             openrouter: !!process.env.OPENROUTER_API_KEY,
-            puppeteer: !!puppeteer,
+            puppeteer: _puppeteerExtractor ? require('./lib/puppeteer-client').isAvailable() : false,
             superinteligencia: true
         },
         v8_features: featureFlags ? featureFlags.getEnabledFlags() : []
@@ -7337,7 +7336,7 @@ app.get("/health", (req, res) => {
             groq: !!process.env.GROQ_API_KEY,
             openai: !!process.env.OPENAI_API_KEY,
             openrouter: !!process.env.OPENROUTER_API_KEY,
-            puppeteer: !!puppeteer,
+            puppeteer: _puppeteerExtractor ? require('./lib/puppeteer-client').isAvailable() : false,
             superinteligencia: true
         },
         v8_features: featureFlags ? featureFlags.getEnabledFlags() : []

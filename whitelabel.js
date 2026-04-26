@@ -52,12 +52,11 @@ class WhitelabelManager {
 
             await DatabaseHelpers.run(query);
 
-            // BUG-FIX-005: Adicionar coluna welcome_message se não existir (migração)
+            // BUG-FIX-005: Adicionar coluna welcome_message se não existir (migração idempotente)
             try {
-                await DatabaseHelpers.run(`ALTER TABLE whitelabel_settings ADD COLUMN welcome_message TEXT`);
-                console.log('✅ Coluna welcome_message adicionada à tabela whitelabel_settings');
+                await DatabaseHelpers.run(`ALTER TABLE whitelabel_settings ADD COLUMN IF NOT EXISTS welcome_message TEXT`);
             } catch (alterErr) {
-                // Coluna já existe - ignorar erro silenciosamente
+                // Coluna já existe ou DB não suporta IF NOT EXISTS — ignorar silenciosamente
             }
 
             console.log('✅ Tabela whitelabel_settings criada/verificada');
