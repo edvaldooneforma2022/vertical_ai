@@ -5054,10 +5054,10 @@ async function extractPageData(url) {
 
                 logger.info(`🚀 [ENHANCED] Starting enhanced extraction for ${url}`);
 
-                // Timeout de 30 segundos para evitar bloqueio
+                // Timeout de 15 segundos (reduzido de 30s — proteção universal SPA)
                 const _enhancedFn = () => enhancedExtractor.extractComplete(url, {
                     enableOCR: true,
-                    maxOCRImages: 3, // 🔴 Reduzido de 5 para 3 (economia de memória)
+                    maxOCRImages: 2, // 🔴 Reduzido de 3 para 2 (512MB safe)
                     enableFloating: true,
                     enableDynamic: true
                 });
@@ -5068,7 +5068,7 @@ async function extractPageData(url) {
                     : _enhancedFn();
 
                 const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Enhanced extraction timeout (30s)')), 30000)
+                    setTimeout(() => reject(new Error('Enhanced extraction timeout (15s)')), 15000)
                 );
 
                 const enhancedContent = await Promise.race([enhancedPromise, timeoutPromise]);

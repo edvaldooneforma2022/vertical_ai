@@ -153,8 +153,10 @@ class EnhancedContentExtractor {
                 }
             }
 
-            // 3. OCR em imagens
-            if (mergedOptions.enableOCR && result.allImages.length > 0) {
+            // 3. OCR em imagens — CONDICIONAL (só se memória OK e texto insuficiente)
+            const _hasEnoughText = (result.dynamicText || '').length > 300;
+            const _ocrSafe = !isMemoryCritical(400) && !_hasEnoughText;
+            if (mergedOptions.enableOCR && result.allImages.length > 0 && _ocrSafe) {
                 try {
                     const ocrResult = await this._extractImageTexts(
                         result.allImages,
@@ -167,6 +169,8 @@ class EnhancedContentExtractor {
                     console.warn(`⚠️ [ENHANCED] OCR falhou: ${ocrError.message}`);
                     result.errors.push(`OCR: ${ocrError.message}`);
                 }
+            } else if (!_ocrSafe && mergedOptions.enableOCR) {
+                console.log(`[ENHANCED] ⏩ OCR skipped (textLen=${(result.dynamicText||'').length}, memCritical=${isMemoryCritical(400)})`);
             }
 
         } catch (error) {
@@ -189,7 +193,15 @@ class EnhancedContentExtractor {
             throw new Error('Puppeteer não disponível');
         }
 
+        // 🛡️ OOM GUARD — Checar ANTES de abrir página
+        if (isMemoryCritical(350)) {
+            const mem = getMemoryUsage();
+            console.warn(`[OOM-GUARD] ⚠️ Memória alta (${mem.rss}MB) — pulando Enhanced Puppeteer`);
+            throw new Error(`OOM-GUARD: memória ${mem.rss}MB > 350MB`);
+        }
+
         let page = null;
+        const _startTime = Date.now();
         try {
             const browser = await puppeteerClient.getBrowser();
             if (!browser) {
@@ -198,41 +210,41 @@ class EnhancedContentExtractor {
 
             page = await browser.newPage();
 
-            // User agent realista
+            // Viewport compacto (economia de memória)
+            await page.setViewport({ width: 1280, height: 800 });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-            // Interceptar requests para performance (NÃO bloquear imagens — necessário para OCR)
+            // 🔴 BLOQUEIO AGRESSIVO — imagens + stylesheet + font + media
+            // OCR agora é condicional, então NÃO precisamos carregar imagens
             await page.setRequestInterception(true);
             page.on('request', (req) => {
                 const resourceType = req.resourceType();
-                if (['stylesheet', 'font', 'media'].includes(resourceType)) {
+                if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
                     req.abort();
                 } else {
                     req.continue();
                 }
             });
 
-            // 🛡️ OOM GUARD — Pular se memória crítica
-            if (isMemoryCritical()) {
-                const mem = getMemoryUsage();
-                console.warn(`[OOM-GUARD] ⚠️ Memória alta (${mem.rss}MB) — pulando Puppeteer`);
-                throw new Error(`OOM-GUARD: memória ${mem.rss}MB > threshold`);
-            }
-
-            // Navegar para a página (timeout reduzido para economia de recursos)
+            // Navegar (timeout agressivo)
             await page.goto(url, {
                 waitUntil: 'domcontentloaded',
-                timeout: 15000
+                timeout: 10000
             });
 
-            // Aguardar carregamento adicional
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Event-driven wait (substitui delay fixo de 2s)
+            await page.waitForFunction(
+                () => document.readyState === 'complete',
+                { timeout: 3000 }
+            ).catch(() => {});
 
-            // Scroll completo para carregar conteúdo lazy
-            await this._scrollPage(page);
-
-            // Aguardar mais um pouco após scroll
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Scroll leve — máximo 30% da página (substitui 10000px)
+            await page.evaluate(() => {
+                const maxScroll = Math.min(document.body.scrollHeight * 0.3, 2000);
+                window.scrollTo(0, maxScroll);
+            });
+            // Micro-wait pós-scroll (substitui delay fixo de 1.5s)
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Extrair todo o texto visível
             const pageContent = await page.evaluate((contentSelectors) => {
