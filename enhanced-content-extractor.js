@@ -246,77 +246,72 @@ class EnhancedContentExtractor {
             // Micro-wait pós-scroll (substitui delay fixo de 1.5s)
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            // Extrair todo o texto visível
+            // 🔴 STREAMING EXTRACTION — Coleta limitada DURANTE o loop
+            // Sem innerText (evita layout recalc), sem getComputedStyle (caro)
+            // Hard cap: 150 items, 300 chars por item, early break
             const pageContent = await page.evaluate((contentSelectors) => {
-                // Remover scripts e estilos
+                // Remover scripts e estilos (limpeza rápida)
                 document.querySelectorAll('script, style, noscript').forEach(el => el.remove());
 
+                const MAX_ITEMS = 150;
+                const MAX_CHARS = 300;
                 const texts = [];
-                const seenTexts = new Set();
+                const seen = new Set();
 
-                // Função para limpar e validar texto
-                const cleanText = (text) => {
-                    return (text || '').replace(/\s+/g, ' ').trim();
-                };
+                // Seletores prioritários primeiro (h1-h6, p, article)
+                const prioritySelectors = contentSelectors.slice(0, 12);
 
-                // Função para verificar se elemento é visível
-                const isVisible = (el) => {
-                    const style = window.getComputedStyle(el);
-                    return style.display !== 'none' &&
-                        style.visibility !== 'hidden' &&
-                        style.opacity !== '0' &&
-                        el.offsetHeight > 0;
-                };
-
-                // Extrair de seletores específicos primeiro
-                contentSelectors.forEach(selector => {
+                for (const selector of prioritySelectors) {
+                    if (texts.length >= MAX_ITEMS) break; // 🔴 EARLY ABORT
                     try {
-                        document.querySelectorAll(selector).forEach(el => {
-                            if (isVisible(el)) {
-                                const text = cleanText(el.textContent);
-                                if (text && text.length > 5 && text.length < 2000 && !seenTexts.has(text)) {
-                                    seenTexts.add(text);
-                                    texts.push(text);
-                                }
+                        const els = document.querySelectorAll(selector);
+                        for (let i = 0; i < els.length && texts.length < MAX_ITEMS; i++) {
+                            const el = els[i];
+                            // textContent (não innerText!) — evita layout recalculation
+                            const raw = (el.textContent || '').replace(/\s+/g, ' ').trim();
+                            if (raw.length > 20 && raw.length < 2000 && !seen.has(raw)) {
+                                seen.add(raw);
+                                texts.push(raw.slice(0, MAX_CHARS));
                             }
-                        });
-                    } catch (e) { }
-                });
+                        }
+                    } catch (_) {}
+                }
 
-                // Extrair texto do body como fallback
-                const bodyText = cleanText(document.body.textContent);
+                // Body text length (sem armazenar a string inteira)
+                const bodyLen = (document.body.textContent || '').length;
 
-                return {
-                    texts: texts.slice(0, 500), // Limitar quantidade
-                    bodyLength: bodyText.length
-                };
+                return { texts, bodyLength: bodyLen };
             }, this.contentSelectors);
 
-            // Extrair elementos flutuantes
-            const floatingContent = await this._extractFloatingElements(page);
+            // 🔴 SHORT-CIRCUIT — Se já tem conteúdo suficiente, skip floating/iframe
+            let floatingContent = '';
+            let iframeContent = '';
+            const _hasEnough = pageContent.texts.length > 50;
 
-            // Extrair conteúdo de iframes
-            const iframeContent = await this._extractIframeContent(page);
+            if (!_hasEnough) {
+                // Só roda se conteúdo insuficiente (economia massiva em SPAs)
+                floatingContent = await this._extractFloatingElements(page);
+                iframeContent = await this._extractIframeContent(page);
+            } else {
+                console.log(`[ENHANCED] ⏩ Skip floating/iframe — ${pageContent.texts.length} textos já coletados`);
+            }
 
             // Coletar URLs de imagens
+            // Coletar URLs de imagens (limitado a 10, early break)
             const images = await page.evaluate(() => {
                 const imgUrls = [];
-                document.querySelectorAll('img').forEach(img => {
+                const imgs = document.querySelectorAll('img');
+                for (let i = 0; i < imgs.length && imgUrls.length < 10; i++) {
+                    const img = imgs[i];
                     const src = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src');
                     if (src && src.startsWith('http') && !src.includes('data:')) {
-                        // Filtrar imagens muito pequenas (ícones)
                         const width = img.naturalWidth || img.width || 100;
                         const height = img.naturalHeight || img.height || 100;
                         if (width > 50 && height > 50) {
-                            imgUrls.push({
-                                src: src,
-                                alt: img.alt || '',
-                                width: width,
-                                height: height
-                            });
+                            imgUrls.push({ src, alt: (img.alt || '').slice(0, 60), width, height });
                         }
                     }
-                });
+                }
                 return imgUrls;
             });
 
