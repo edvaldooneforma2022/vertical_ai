@@ -547,7 +547,7 @@ let _isMemoryCritical = () => false;
 let _getMemoryUsage = () => ({ rss: 0, heapUsed: 0, heapTotal: 0 });
 try {
     const _concLimit = require('./lib/concurrency-limit');
-    _concurrencyLimiter = _concLimit.createLimiter(2); // 🔴 máximo 2 páginas simultâneas
+    _concurrencyLimiter = _concLimit.createLimiter(1); // 🔴 CRÍTICO: 1 Puppeteer por vez (512MB safe)
     _isMemoryCritical = _concLimit.isMemoryCritical;
     _getMemoryUsage = _concLimit.getMemoryUsage;
     console.log('🔒 [CONCURRENCY] Limitador carregado (max=2 páginas simultâneas)');
@@ -1504,6 +1504,11 @@ class LeadCaptureSystem {
         this.leads = this.loadLeadsSync(); // Carrega JSON primeiro (síncrono)
         this._postgresInitialized = false;
 
+        // 🔴 Cache em memória (anti-reload constante do disco)
+        this._cache = null;
+        this._lastLoad = 0;
+        this._ttl = 5000; // 5 segundos
+
         // Inicializar PostgreSQL assincronamente (se disponível)
         if (USE_POSTGRES) {
             this.initializePostgres();
@@ -1625,6 +1630,7 @@ class LeadCaptureSystem {
             // Sempre salvar em JSON como backup local
             fs.writeFileSync(this.leadsFilePath, JSON.stringify(this.leads, null, 2));
             console.log(`💾 Leads salvos no JSON: ${this.leads.length} registros`);
+            this._invalidateCache(); // 🔴 invalidar cache
             return true;
         } catch (error) {
             console.error("❌ Erro ao salvar leads:", error);
@@ -1637,6 +1643,12 @@ class LeadCaptureSystem {
                 return false;
             }
         }
+    }
+
+    // 🔴 Invalidar cache após salvar
+    _invalidateCache() {
+        this._cache = null;
+        this._lastLoad = 0;
     }
 
     addLead(leadData) {
@@ -1692,7 +1704,14 @@ class LeadCaptureSystem {
     }
 
     getLeads() {
-        return this.leads.sort((a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction));
+        const now = Date.now();
+        // 🔴 Cache: retorna dados em memória se TTL não expirou
+        if (this._cache && (now - this._lastLoad < this._ttl)) {
+            return this._cache;
+        }
+        this._cache = this.leads.sort((a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction));
+        this._lastLoad = now;
+        return this._cache;
     }
 
     getLeadById(leadId) {
@@ -1960,8 +1979,17 @@ class LeadCaptureSystem {
 }
 
 // Funções para obter instâncias de sistema de leads e backup por tenant
+// 🔴 SINGLETON MAP — Evita recriação do LeadCaptureSystem a cada request
+const _leadSystemCache = new Map();
+
 function getLeadSystem(apiKey) {
-    return new LeadCaptureSystem(apiKey);
+    if (_leadSystemCache.has(apiKey)) {
+        return _leadSystemCache.get(apiKey);
+    }
+    const system = new LeadCaptureSystem(apiKey);
+    _leadSystemCache.set(apiKey, system);
+    console.log(`📦 [LEADS] Singleton criado para tenant: ${apiKey.substring(0, 20)}...`);
+    return system;
 }
 
 function getBackupSystem(leadSystem, apiKey) {
@@ -3796,21 +3824,33 @@ app.get("/excluir-dados", (req, res) => {
 });
 
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
+// 🔒 Anti-storm: evita múltiplas leituras simultâneas de leads
+let _leadsRequestInFlight = false;
+
 app.get("/admin/leads", requireApiKey, (req, res) => {
+    if (_leadsRequestInFlight) {
+        return res.status(429).json({ success: false, error: "Leads busy, try again in a moment" });
+    }
+
     const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
     }
 
-    const leadSystem = getLeadSystem(apiKey);
-    const leads = leadSystem.getLeads();
-    console.log(`📊 Retornando ${leads.length} leads para admin`);
-    res.json({
-        success: true,
-        leads: leads,
-        total: leads.length
-    });
+    _leadsRequestInFlight = true;
+    try {
+        const leadSystem = getLeadSystem(apiKey);
+        const leads = leadSystem.getLeads();
+        console.log(`📊 Retornando ${leads.length} leads para admin`);
+        res.json({
+            success: true,
+            leads: leads,
+            total: leads.length
+        });
+    } finally {
+        _leadsRequestInFlight = false;
+    }
 });
 
 app.get("/admin/leads/:id", requireApiKey, (req, res) => {
