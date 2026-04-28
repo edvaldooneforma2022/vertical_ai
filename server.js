@@ -6033,9 +6033,10 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         try {
             const _v113PersistEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V11_3_FALLBACK');
             if (_v113PersistEnabled && _v113SaveCheckoutLink && apiKey && pageData && pageData.checkoutLink && pageData._checkoutSource !== 'v113_confirmed') {
-                // 🔒 HOTFIX 11.3.1: Validar domínio antes de persistir
+                // 🔒 V12.1.1: Permitir pricing pages mesmo fora da whitelist
                 const _v113PersistDomainOk = !_v113IsValidCheckoutDomain || _v113IsValidCheckoutDomain(pageData.checkoutLink);
-                if (_v113PersistDomainOk) {
+                const _v113IsPricingUrl = /pricing|planos|plans|subscribe|assinar|pagamento|checkout|buy|comprar/i.test(pageData.checkoutLink);
+                if (_v113PersistDomainOk || _v113IsPricingUrl) {
                     const _v113Source = pageData._checkoutSource || 'auto_v112';
                     // FIX V12.1: Passar salesUrl para isolamento por URL
                     const _v113PersistSalesUrl = pageData.url || pageData.salesUrl || null;
