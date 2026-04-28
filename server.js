@@ -5016,6 +5016,81 @@ async function extractPageData(url) {
                     analytics.successfulExtractions++;
                 }
 
+                // ═══════════════════════════════════════════════════════
+                // 🔍 [CONVERSION-SCAN] Fase 2: Links de conversão no DOM renderizado
+                // Leve: querySelectorAll('a[href]') + regex — SEM getComputedStyle/innerText
+                // Roda DENTRO da page já aberta (custo zero) com timeout 300ms
+                // SÓ executa se checkout ou WA ainda não foi encontrado
+                // ═══════════════════════════════════════════════════════
+                try {
+                    const _csNeedCheckout = !extractedData.checkoutLink;
+                    const _csNeedWA = !extractedData.whatsappLink && !(extractedData.contatos?.whatsappLinks?.length > 0);
+                    if ((_csNeedCheckout || _csNeedWA) && page) {
+                        const _csScanPromise = page.evaluate(() => {
+                            const r = { checkoutCandidates: [], whatsappCandidates: [], scanned: 0 };
+                            const MAX = 50;
+                            const anchors = document.querySelectorAll('a[href]');
+                            for (const a of anchors) {
+                                if (r.scanned >= MAX) break;
+                                const href = (a.href || '').trim();
+                                if (!href || !href.startsWith('http')) continue;
+                                r.scanned++;
+                                const h = href.toLowerCase();
+                                if (/wa\.me|api\.whatsapp\.com|whatsapp\.com\/send|whatsapp\.com\/catalog/.test(h)) {
+                                    r.whatsappCandidates.push(href);
+                                } else if (/checkout|pay\.|buy\b|hotmart|eduzz|kiwify|monetizze|braip|herospark|perfectpay|greenn|pepper|pagamento|planos|pricing/.test(h)) {
+                                    r.checkoutCandidates.push(href);
+                                }
+                            }
+                            // Botões com data-href ou onclick contendo links
+                            const buttons = document.querySelectorAll('button[onclick], [role="button"][onclick], button[data-href], [role="button"][data-href], button[data-url], [role="button"][data-url]');
+                            for (const btn of buttons) {
+                                if (r.scanned >= MAX) break;
+                                const onclick = btn.getAttribute('onclick') || '';
+                                const dataHref = btn.getAttribute('data-href') || btn.getAttribute('data-url') || '';
+                                const combined = (onclick + ' ' + dataHref).toLowerCase();
+                                if (!combined || combined.length < 5) continue;
+                                r.scanned++;
+                                const waMatch = combined.match(/(https?:\/\/[^\s"']+(?:wa\.me|whatsapp)[^\s"']*)/i);
+                                if (waMatch) r.whatsappCandidates.push(waMatch[1]);
+                                const ckMatch = combined.match(/(https?:\/\/[^\s"']+(?:checkout|pay|hotmart|eduzz|kiwify|monetizze|braip)[^\s"']*)/i);
+                                if (ckMatch) r.checkoutCandidates.push(ckMatch[1]);
+                            }
+                            return r;
+                        });
+                        const _csTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('CONVERSION-SCAN timeout 300ms')), 300));
+                        const _csResult = await Promise.race([_csScanPromise, _csTimeout]);
+
+                        console.log(`[CONVERSION-SCAN] 🔍 scanned=${_csResult.scanned} | checkoutCandidates=${_csResult.checkoutCandidates.length} | whatsappCandidates=${_csResult.whatsappCandidates.length}`);
+
+                        // Injetar APENAS se ausente (nunca sobrescreve)
+                        if (_csNeedCheckout && _csResult.checkoutCandidates.length > 0) {
+                            extractedData.checkoutLink = _csResult.checkoutCandidates[0];
+                            extractedData._checkoutSource = 'conversion_scan';
+                            console.log(`[CONVERSION-SCAN] ✅ Checkout descoberto: ${extractedData.checkoutLink.substring(0, 80)}`);
+                        }
+                        if (_csNeedWA && _csResult.whatsappCandidates.length > 0) {
+                            extractedData.whatsappLink = _csResult.whatsappCandidates[0];
+                            if (!extractedData.contatos) extractedData.contatos = {};
+                            if (!extractedData.contatos.whatsappLinks) extractedData.contatos.whatsappLinks = [];
+                            if (!extractedData.contatos.whatsappLinks.includes(_csResult.whatsappCandidates[0])) {
+                                extractedData.contatos.whatsappLinks.push(_csResult.whatsappCandidates[0]);
+                            }
+                            console.log(`[CONVERSION-SCAN] ✅ WhatsApp descoberto: ${extractedData.whatsappLink.substring(0, 80)}`);
+                        }
+                        // Salvar todos os candidatos no extractedData (metadata, sem promoção)
+                        extractedData._conversionScan = {
+                            scanned: _csResult.scanned,
+                            checkoutCandidates: _csResult.checkoutCandidates.slice(0, 5),
+                            whatsappCandidates: _csResult.whatsappCandidates.slice(0, 5)
+                        };
+                    } else {
+                        console.log(`[CONVERSION-SCAN] ⏩ Skip — checkout=${!!extractedData.checkoutLink} wa=${!!extractedData.whatsappLink}`);
+                    }
+                } catch (_csErr) {
+                    console.warn('[CONVERSION-SCAN] ⚠️ Falhou (sem impacto):', _csErr.message);
+                }
+
             } catch (puppeteerErr) {
                 logger.warn("Puppeteer extraction failed:", puppeteerErr.message || puppeteerErr);
                 analytics.failedExtractions++;
@@ -5161,6 +5236,102 @@ async function extractPageData(url) {
             }
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔍 [CONVERSION-SCAN-STANDALONE] Última tentativa de links de conversão
+        // Roda APENAS se: (1) sem checkout E sem WA (2) Puppeteer não rodou nesta request
+        // Abre página mínima (bloqueia CSS/img/font), timeout total 5s, scan 300ms
+        // Protegido por OOM Guard + try/catch + feature flag
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            const _css2NeedCheckout = !extractedData.checkoutLink;
+            const _css2NeedWA = !extractedData.whatsappLink && !(extractedData.contatos?.whatsappLinks?.length > 0);
+            const _css2ShouldRun = (_css2NeedCheckout || _css2NeedWA) && !_puppeteerUsedInRequest && !_isMemoryCritical();
+
+            if (_css2ShouldRun && _ppClientLegacy) {
+                console.log(`[CONVERSION-SCAN-STANDALONE] 🔍 Abrindo scan leve — checkout=${!_css2NeedCheckout} wa=${!_css2NeedWA}`);
+                let _css2Page = null;
+                try {
+                    const _css2Browser = await _ppClientLegacy.getBrowser();
+                    if (_css2Browser) {
+                        _css2Page = await _css2Browser.newPage();
+                        await _css2Page.setRequestInterception(true);
+                        _css2Page.on('request', (req) => {
+                            const rt = req.resourceType();
+                            if (['stylesheet', 'font', 'image', 'media', 'other'].includes(rt)) req.abort();
+                            else req.continue();
+                        });
+                        await _css2Page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
+
+                        // Scan idêntico ao do Puppeteer principal (300ms timeout)
+                        const _css2ScanPromise = _css2Page.evaluate(() => {
+                            const r = { checkoutCandidates: [], whatsappCandidates: [], scanned: 0 };
+                            const MAX = 50;
+                            const anchors = document.querySelectorAll('a[href]');
+                            for (const a of anchors) {
+                                if (r.scanned >= MAX) break;
+                                const href = (a.href || '').trim();
+                                if (!href || !href.startsWith('http')) continue;
+                                r.scanned++;
+                                const h = href.toLowerCase();
+                                if (/wa\.me|api\.whatsapp\.com|whatsapp\.com\/send|whatsapp\.com\/catalog/.test(h)) {
+                                    r.whatsappCandidates.push(href);
+                                } else if (/checkout|pay\.|buy\b|hotmart|eduzz|kiwify|monetizze|braip|herospark|perfectpay|greenn|pepper|pagamento|planos|pricing/.test(h)) {
+                                    r.checkoutCandidates.push(href);
+                                }
+                            }
+                            const buttons = document.querySelectorAll('button[onclick], [role="button"][onclick], button[data-href], [role="button"][data-href]');
+                            for (const btn of buttons) {
+                                if (r.scanned >= MAX) break;
+                                const onclick = btn.getAttribute('onclick') || '';
+                                const dataHref = btn.getAttribute('data-href') || btn.getAttribute('data-url') || '';
+                                const combined = (onclick + ' ' + dataHref).toLowerCase();
+                                if (!combined || combined.length < 5) continue;
+                                r.scanned++;
+                                const waMatch = combined.match(/(https?:\/\/[^\s"']+(?:wa\.me|whatsapp)[^\s"']*)/i);
+                                if (waMatch) r.whatsappCandidates.push(waMatch[1]);
+                                const ckMatch = combined.match(/(https?:\/\/[^\s"']+(?:checkout|pay|hotmart|eduzz|kiwify|monetizze|braip)[^\s"']*)/i);
+                                if (ckMatch) r.checkoutCandidates.push(ckMatch[1]);
+                            }
+                            return r;
+                        });
+                        const _css2Timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('STANDALONE-SCAN timeout 300ms')), 300));
+                        const _css2Result = await Promise.race([_css2ScanPromise, _css2Timeout]);
+
+                        console.log(`[CONVERSION-SCAN-STANDALONE] 🔍 scanned=${_css2Result.scanned} | checkoutCandidates=${_css2Result.checkoutCandidates.length} | whatsappCandidates=${_css2Result.whatsappCandidates.length}`);
+
+                        if (_css2NeedCheckout && _css2Result.checkoutCandidates.length > 0) {
+                            extractedData.checkoutLink = _css2Result.checkoutCandidates[0];
+                            extractedData._checkoutSource = 'conversion_scan_standalone';
+                            console.log(`[CONVERSION-SCAN-STANDALONE] ✅ Checkout: ${extractedData.checkoutLink.substring(0, 80)}`);
+                        }
+                        if (_css2NeedWA && _css2Result.whatsappCandidates.length > 0) {
+                            extractedData.whatsappLink = _css2Result.whatsappCandidates[0];
+                            if (!extractedData.contatos) extractedData.contatos = {};
+                            if (!extractedData.contatos.whatsappLinks) extractedData.contatos.whatsappLinks = [];
+                            if (!extractedData.contatos.whatsappLinks.includes(_css2Result.whatsappCandidates[0])) {
+                                extractedData.contatos.whatsappLinks.push(_css2Result.whatsappCandidates[0]);
+                            }
+                            console.log(`[CONVERSION-SCAN-STANDALONE] ✅ WhatsApp: ${extractedData.whatsappLink.substring(0, 80)}`);
+                        }
+                        extractedData._conversionScan = {
+                            scanned: _css2Result.scanned,
+                            checkoutCandidates: _css2Result.checkoutCandidates.slice(0, 5),
+                            whatsappCandidates: _css2Result.whatsappCandidates.slice(0, 5),
+                            source: 'standalone'
+                        };
+                        _markPuppeteerUsed(); // Registrar uso para cooldown
+                    }
+                } catch (_css2Err) {
+                    console.warn('[CONVERSION-SCAN-STANDALONE] ⚠️ Falhou (sem impacto):', _css2Err.message);
+                } finally {
+                    try { if (_css2Page) { await _css2Page.close(); _css2Page = null; } } catch (_) {}
+                }
+            } else if (_css2NeedCheckout || _css2NeedWA) {
+                console.log(`[CONVERSION-SCAN-STANDALONE] ⏩ Skip — puppeteerUsed=${_puppeteerUsedInRequest} memoryCritical=${_isMemoryCritical()}`);
+            }
+        } catch (_css2OuterErr) {
+            console.warn('[CONVERSION-SCAN-STANDALONE] ⚠️ Erro externo (sem impacto):', _css2OuterErr.message);
+        }
 
         // ═══════════════════════════════════════════════════════════════════
         // 🌐 V14.3 DEEP CONTEXT EXPLORER
