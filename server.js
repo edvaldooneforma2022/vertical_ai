@@ -7816,8 +7816,28 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         }
 
         let processedPageData = pageData;
-        if (!processedPageData && url) {
-            processedPageData = await extractPageData(url);
+
+        // 🔥 [V12.1] Verificar conteúdo REAL (widget pode enviar { url: '...' } sem conteúdo)
+        const _cuHasReal = processedPageData && (processedPageData.cleanText || processedPageData.title || processedPageData.summary);
+        if (!_cuHasReal && url) {
+            try {
+                const _cuExtracted = await extractPageData(url);
+                if (processedPageData && typeof processedPageData === 'object') {
+                    // MERGE SEGURO: extração como base, widget override só campos não-null
+                    const _cuMerged = { ..._cuExtracted };
+                    for (const [k, v] of Object.entries(processedPageData)) {
+                        if (v !== undefined && v !== null && v !== '') {
+                            _cuMerged[k] = v;
+                        }
+                    }
+                    processedPageData = _cuMerged;
+                } else {
+                    processedPageData = _cuExtracted;
+                }
+            } catch (_cuErr) {
+                console.warn('[V12.1@chat-universal] Erro na extração:', _cuErr.message);
+                if (!processedPageData) processedPageData = {};
+            }
         }
 
         // 🎯 ATUALIZAR CONVERSA DO LEAD SE EXISTIR
@@ -7855,6 +7875,33 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                 }
             }
         } catch(_ckErr) { console.warn('[AUTO-CHECKOUT] Erro (silencioso):', _ckErr.message); }
+
+        // 🔥 [CHECKOUT-DB-INJECT] FONTE DE VERDADE — checkout do DB (chat-universal)
+        // Roda APÓS widget, ANTES de WA-CTA/V18 — NUNCA sobrescreve widget
+        try {
+            if (!processedPageData?.checkoutLink && _v113GetConfirmedCheckout && apiKey) {
+                const _dbSalesUrl = processedPageData?.url || processedPageData?.salesUrl || url || null;
+                const _dbCheckout = await _v113GetConfirmedCheckout(db, apiKey, _dbSalesUrl);
+                if (_dbCheckout) {
+                    processedPageData.checkoutLink = _dbCheckout;
+                    processedPageData.checkoutSource = 'db_confirmed';
+                    console.log(`[CHECKOUT-DB-INJECT@chat-universal] ✅ Injetado: ${_dbCheckout.substring(0, 80)}`);
+                } else {
+                    console.log(`[CHECKOUT-DB-INJECT@chat-universal] ⚠️ Nenhum no DB para tenant=${apiKey?.substring(0, 8)}...`);
+                }
+            }
+        } catch (_dbInjectErr) {
+            console.warn('[CHECKOUT-DB-INJECT@chat-universal] Erro:', _dbInjectErr.message);
+        }
+
+        // 📊 [CHECKOUT-FINAL] Estado definitivo ANTES de qualquer decisão
+        console.log('[CHECKOUT-FINAL@chat-universal]', JSON.stringify({
+            checkoutLink: processedPageData?.checkoutLink || null,
+            checkoutSource: processedPageData?.checkoutSource || null,
+            whatsappLink: processedPageData?.whatsappLink || null,
+            waLinksCount: processedPageData?.contatos?.whatsappLinks?.length || 0,
+            textLen: (processedPageData?.cleanText || '').length
+        }));
 
         // 🚀 WA-CTA PROMOTER (chat-universal) — ANTES do V18 Guard
         // Promove WhatsApp como CTA quando checkout está ausente + intenção de conversão
@@ -8479,44 +8526,74 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         let processedPageData = pageData;
 
         // 🚨 CORREÇÃO CRÍTICA: O widget envia pageData apenas com URL
-        // Precisamos verificar se tem conteúdo real, senão extrair
-        const hasContent = processedPageData && (processedPageData.cleanText || processedPageData.title);
+        const hasContent = processedPageData && (processedPageData.cleanText || processedPageData.title || processedPageData.summary);
         const targetUrl = url || (processedPageData && processedPageData.url);
 
         if (!hasContent && targetUrl) {
-            console.log(`🔄 [WIDGET FIX] PageData incompleto detectado. Iniciando extração para: ${targetUrl}`);
+            console.log(`🔄 [WIDGET FIX] PageData incompleto. Extração para: ${targetUrl}`);
             try {
-                // 🔒 V9.3.2 FIX-1: Salvar checkoutLink do widget ANTES do spread
                 const _widgetCheckoutPreserve = processedPageData?.checkoutLink || null;
                 const extractionResult = await extractPageData(targetUrl);
-                // Mesclar: extraction como base, widget como override (preserva campos do widget)
-                processedPageData = { ...extractionResult, ...processedPageData };
-                // 🔒 V9.3.2: Garantir restauração do checkoutLink do widget (prioridade máxima)
+                // MERGE SEGURO: extração base, widget override só campos não-null
+                const _intMerged = { ...extractionResult };
+                if (processedPageData && typeof processedPageData === 'object') {
+                    for (const [k, v] of Object.entries(processedPageData)) {
+                        if (v !== undefined && v !== null && v !== '') {
+                            _intMerged[k] = v;
+                        }
+                    }
+                }
+                processedPageData = _intMerged;
+                // Widget checkout preservado (prioridade máxima)
                 if (_widgetCheckoutPreserve) {
                     processedPageData.checkoutLink = _widgetCheckoutPreserve;
-                    console.log('[V9.3.2-FIX1] ✅ checkoutLink do widget preservado após merge:', _widgetCheckoutPreserve.substring(0, 80));
+                    console.log('[V9.3.2-FIX1] ✅ checkoutLink do widget preservado:', _widgetCheckoutPreserve.substring(0, 80));
                 }
             } catch (extractErr) {
-                console.error("❌ Erro na extração automática do widget:", extractErr);
-                // Continua com o que tem para não quebrar
+                console.error('❌ Erro na extração automática do widget:', extractErr);
             }
         } else if (!processedPageData && targetUrl) {
             processedPageData = await extractPageData(targetUrl);
         }
 
-        // 🔍 [V9.1 AUTO-CHECKOUT] Preservar checkoutLink do widget no processedPageData
-        // Protegido por feature flag FEATURE_AUTO_CHECKOUT_DETECTION
+        // 🔍 [V9.1 AUTO-CHECKOUT] Preservar checkoutLink do widget
         try {
             const _autoCheckoutEnabled2 = featureFlags && featureFlags.isEnabled('FEATURE_AUTO_CHECKOUT_DETECTION');
             if (_autoCheckoutEnabled2) {
                 const _intWidgetCheckout = req.body?.pageData?.checkoutLink || req.body?.context?.checkoutLink || null;
                 if (_intWidgetCheckout && processedPageData) {
-                    // 🔒 V9.3.2 FIX-2: Widget SEMPRE tem prioridade máxima (conforme link-resolver.js)
                     processedPageData.checkoutLink = _intWidgetCheckout;
                     console.log('[AUTO-CHECKOUT@inteligente] ✅ Link do widget (prioridade máx):', _intWidgetCheckout.substring(0, 80));
                 }
             }
         } catch(_ckErr) { console.warn('[AUTO-CHECKOUT@inteligente] Erro (silencioso):', _ckErr.message); }
+
+        // 🔥 [CHECKOUT-DB-INJECT] FONTE DE VERDADE — checkout do DB (chat-inteligente)
+        // Roda APÓS widget, ANTES de WA-CTA/V18 — NUNCA sobrescreve widget
+        try {
+            if (!processedPageData?.checkoutLink && _v113GetConfirmedCheckout && apiKey) {
+                const _dbSalesUrl = processedPageData?.url || processedPageData?.salesUrl || targetUrl || url || null;
+                const _dbCheckout = await _v113GetConfirmedCheckout(db, apiKey, _dbSalesUrl);
+                if (_dbCheckout) {
+                    processedPageData.checkoutLink = _dbCheckout;
+                    processedPageData.checkoutSource = 'db_confirmed';
+                    console.log(`[CHECKOUT-DB-INJECT@chat-inteligente] ✅ Injetado: ${_dbCheckout.substring(0, 80)}`);
+                } else {
+                    console.log(`[CHECKOUT-DB-INJECT@chat-inteligente] ⚠️ Nenhum no DB para tenant=${apiKey?.substring(0, 8)}...`);
+                }
+            }
+        } catch (_dbInjectErr) {
+            console.warn('[CHECKOUT-DB-INJECT@chat-inteligente] Erro:', _dbInjectErr.message);
+        }
+
+        // 📊 [CHECKOUT-FINAL] Estado definitivo ANTES de qualquer decisão
+        console.log('[CHECKOUT-FINAL@chat-inteligente]', JSON.stringify({
+            checkoutLink: processedPageData?.checkoutLink || null,
+            checkoutSource: processedPageData?.checkoutSource || null,
+            whatsappLink: processedPageData?.whatsappLink || null,
+            waLinksCount: processedPageData?.contatos?.whatsappLinks?.length || 0,
+            textLen: (processedPageData?.cleanText || '').length
+        }));
 
         // 🚀 WA-CTA PROMOTER (chat-inteligente) — ANTES do V18 Guard
         try {
@@ -9768,38 +9845,51 @@ app.post("/api/extract", ...[billingMiddleware].filter(Boolean), async (req, res
  */
 app.post("/api/assistant-diagnostic", async (req, res) => {
     try {
-        // Feature flag check
         const flagOn = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_ASSISTANT_DIAGNOSTIC');
         if (!flagOn) {
             return res.json({ success: true, diagnostic: { score: 100, mode: 'AUTO', ready: true, bypassed: true } });
         }
 
-        const { processedPageData } = req.body;
+        const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body?.apiKey || req.query?.apiKey;
+        let { processedPageData } = req.body;
 
         if (!processedPageData) {
-            return res.status(400).json({
-                success: false,
-                error: "Dados do assistente (processedPageData) são obrigatórios"
-            });
+            return res.status(400).json({ success: false, error: "processedPageData é obrigatório" });
         }
 
         if (!_assistantDiagnostic) {
             return res.json({ success: true, diagnostic: { score: 100, mode: 'AUTO', ready: true, error: 'Module not loaded' } });
         }
 
+        // 🔥 [CHECKOUT-DB-INJECT] Injetar checkout do DB no diagnóstico
+        try {
+            if (!processedPageData.checkoutLink && _v113GetConfirmedCheckout && apiKey) {
+                const _diagUrl = processedPageData.url || processedPageData.salesUrl || null;
+                const _diagCheckout = await _v113GetConfirmedCheckout(db, apiKey, _diagUrl);
+                if (_diagCheckout) {
+                    processedPageData = { ...processedPageData, checkoutLink: _diagCheckout, checkoutSource: 'db_confirmed' };
+                    console.log(`[CHECKOUT-DB-INJECT@diagnostic] ✅ Injetado: ${_diagCheckout.substring(0, 80)}`);
+                }
+            }
+        } catch (_diagErr) {
+            console.warn('[CHECKOUT-DB-INJECT@diagnostic] Erro:', _diagErr.message);
+        }
+
+        console.log('[CHECKOUT-FINAL@diagnostic]', JSON.stringify({
+            checkoutLink: processedPageData?.checkoutLink || null,
+            checkoutSource: processedPageData?.checkoutSource || null
+        }));
+
         const diagnostic = _assistantDiagnostic.runAssistantDiagnostic(processedPageData);
 
         console.log(`🧠 [DIAGNOSTIC] Score: ${diagnostic.score} | Mode: ${diagnostic.mode} | Ready: ${diagnostic.ready}`);
 
-        return res.json({
-            success: true,
-            diagnostic
-        });
+        return res.json({ success: true, diagnostic });
 
     } catch (error) {
         console.error("❌ Erro no endpoint /api/assistant-diagnostic:", error);
         return res.json({
-            success: true, // Fallback safe: não bloquear ativação por erro no diagnóstico
+            success: true,
             diagnostic: { score: 0, mode: 'MANUAL', issues: ['SERVER_ERROR'], ready: false }
         });
     }
