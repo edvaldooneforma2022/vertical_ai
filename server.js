@@ -4923,6 +4923,48 @@ async function extractPageData(url) {
         }
 
         // ═══════════════════════════════════════════════════════════════════
+        // 🔍 [RSC-LINK-SCAN] Scan de links no HTML bruto (RSC/JSON/Next.js)
+        // SPAs como innerai.com embarcam links como JSON: "link":"/pricing"
+        // O cheerio $('a[href]') NÃO encontra esses links
+        // Roda APÓS cheerio, ANTES do Puppeteer — custo zero (regex no string)
+        // SÓ executa se checkout ainda não foi encontrado
+        // ═══════════════════════════════════════════════════════════════════
+        try {
+            if (!extractedData.checkoutLink && html && html.length > 0) {
+                const _rscPatterns = [
+                    /"(?:link|href|url)"\s*:\s*"(https?:\/\/[^"]+(?:pricing|planos|plans|subscribe|assinar|pagamento|checkout|buy|comprar|pay)[^"]*)"/gi,
+                    /"(?:link|href|url)"\s*:\s*"(\/[^"]*(?:pricing|planos|plans|subscribe|assinar|pagamento|checkout|buy|comprar|pay)[^"]*)"/gi,
+                    /href\s*=\s*["']((?:https?:\/\/)?[^"']*(?:pricing|planos|plans|subscribe|assinar|pagamento|checkout|buy|comprar|pay)[^"']*)["']/gi
+                ];
+                const _rscCandidates = [];
+                for (const pattern of _rscPatterns) {
+                    let match;
+                    while ((match = pattern.exec(html)) !== null && _rscCandidates.length < 10) {
+                        let _rscUrl = match[1];
+                        if (_rscUrl.startsWith('/') && url) {
+                            try { _rscUrl = new URL(_rscUrl, url).href; } catch (_) {}
+                        }
+                        if (_rscUrl && _rscUrl.startsWith('http') && !_rscCandidates.includes(_rscUrl)) {
+                            if (!/\.(js|css|png|jpg|svg|woff|ttf|json)$/i.test(_rscUrl)) {
+                                _rscCandidates.push(_rscUrl);
+                            }
+                        }
+                    }
+                }
+                if (_rscCandidates.length > 0) {
+                    extractedData.checkoutLink = _rscCandidates[0];
+                    extractedData._checkoutSource = 'rsc_link_scan';
+                    console.log('[RSC-LINK-SCAN] ✅ Checkout no HTML bruto: ' + extractedData.checkoutLink.substring(0, 80));
+                    console.log('[RSC-LINK-SCAN] 📊 Candidatos: ' + JSON.stringify(_rscCandidates.slice(0, 5)));
+                } else {
+                    console.log('[RSC-LINK-SCAN] ⏩ Nenhum link de conversão no HTML bruto');
+                }
+            }
+        } catch (_rscErr) {
+            console.warn('[RSC-LINK-SCAN] ⚠️ Falhou (sem impacto):', _rscErr.message);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
         // 🔒 PER-REQUEST PUPPETEER LOCK — Impede cascata dentro da mesma request
         // Apenas 1 execução de Puppeteer por chamada a extractPageData()
         // ═══════════════════════════════════════════════════════════════════
