@@ -523,6 +523,36 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🧠 V19 — DETERMINISTIC DECISION ENGINE (AUTORIDADE ÚNICA)
+// Valores: false | 'shadow' | true
+// false  → sistema atual intacto
+// shadow → V19 roda paralelo (apenas log de diferenças)
+// true   → V19 assume controle (bypassa V18.1-V18.4, PP-GLOBAL CTA)
+// Feature flag: FEATURE_DETERMINISTIC_V19
+// ═══════════════════════════════════════════════════════════════════
+let _v19Engine = null;
+let _v19Mode = false; // false | 'shadow' | true
+try {
+    _v19Engine = require('./lib/v19-deterministic-engine');
+    const _v19FlagValue = (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_DETERMINISTIC_V19'));
+    // Suportar 3 estados: false, 'shadow', true
+    if (_v19FlagValue === 'shadow') {
+        _v19Mode = 'shadow';
+    } else if (_v19FlagValue === true) {
+        _v19Mode = true;
+    } else if (process.env.FEATURE_DETERMINISTIC_V19 === 'shadow') {
+        _v19Mode = 'shadow';
+    } else if (process.env.FEATURE_DETERMINISTIC_V19 === 'true') {
+        _v19Mode = true;
+    } else {
+        _v19Mode = false;
+    }
+    console.log(`🧠 [V19] Deterministic Engine carregado (mode=${_v19Mode})`);
+} catch (e) {
+    console.log('🧠 [V19] Deterministic Engine não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // 🚀 WA-CTA PROMOTER — Promoção Universal de WhatsApp como CTA
 // Quando não há checkout e WhatsApp tem intenção de conversão → promover
 // Feature flag: FEATURE_WA_CTA_PROMOTER
@@ -8666,19 +8696,57 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         }
 
         // ================================================================
+        // 🧠 V19 — DETERMINISTIC DECISION ENGINE (PRÉ-PIPELINE)
+        // Decide ANTES de qualquer outro módulo
+        // Quando ativo: V18.1-V18.4 e PP-GLOBAL são bypassados
+        // ================================================================
+        let __v19Decision = null;
+        let __v19Active = false; // true quando V19 assume controle
+        try {
+            if (_v19Engine && _v19Mode) {
+                const _v19SalesMode = (processedPageData && processedPageData.salesMode) ||
+                    req.body?.salesMode || req.body?.sales_mode ||
+                    process.env.SALES_LAYER_MODE || 'auto';
+
+                __v19Decision = _v19Engine.decide({
+                    message: message,
+                    conversationId: conversationId || null,
+                    pageData: processedPageData || null,
+                    v17Intent: null, // V17 roda depois; V19 usa próprios patterns
+                    salesMode: _v19SalesMode
+                });
+
+                if (_v19Mode === true && __v19Decision && __v19Decision.active) {
+                    __v19Active = true;
+                    console.log('[V19] 🧠 ATIVO — V18.1-V18.4 + PP-GLOBAL serão bypassados');
+                } else if (_v19Mode === 'shadow') {
+                    console.log('[V19-SHADOW] 🔍 Rodando em paralelo (log only)');
+                }
+            }
+        } catch (_v19Err) {
+            console.warn('[V19] ⚠️ Erro (fallback para legado):', _v19Err.message);
+            __v19Active = false;
+        }
+
+        // ================================================================
         // 🔥 V18.1 - HARD BUY INTENT OVERRIDE
         // Detecta intenção de compra por keywords ANTES de qualquer decisão
+        // ⚡ BYPASS quando V19 ativo (V19 já resolveu intent)
         // ================================================================
         try {
-            const _v181msg = (message || '').toLowerCase();
-            const _v181BuyKw = [
-                'comprar','assinar','pagar','plano','planos','preço','valor',
-                'link','checkout','adquirir','ativar','contratar',
-                'link de pagamento','quero assinar','quero pagar'
-            ];
-            if (_v181BuyKw.some(k => _v181msg.includes(k))) {
-                console.log('[V18.1-INTENT] 🔥 BUY intent FORÇADO via keyword match');
-                req.__forceBuyIntent = true;
+            if (!__v19Active) {
+                const _v181msg = (message || '').toLowerCase();
+                const _v181BuyKw = [
+                    'comprar','assinar','pagar','plano','planos','preço','valor',
+                    'link','checkout','adquirir','ativar','contratar',
+                    'link de pagamento','quero assinar','quero pagar'
+                ];
+                if (_v181BuyKw.some(k => _v181msg.includes(k))) {
+                    console.log('[V18.1-INTENT] 🔥 BUY intent FORÇADO via keyword match');
+                    req.__forceBuyIntent = true;
+                }
+            } else {
+                console.log('[V18.1] ⏭️ BYPASS (V19 ativo)');
             }
         } catch (_v181err) {
             console.warn('[V18.1-INTENT] erro:', _v181err.message);
@@ -8687,13 +8755,18 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // ================================================================
         // 🔥 V18.2 - ORCHESTRATOR BYPASS FLAG
         // Se tem checkout + buy intent → prepara bypass
+        // ⚡ BYPASS quando V19 ativo (V19 controla CTA)
         // ================================================================
         let __forceCTA = false;
         try {
-            const _v182checkoutLink = processedPageData?.checkoutLink || null;
-            if (_v182checkoutLink && req.__forceBuyIntent === true) {
-                console.log('[V18.2-CTA] 🚀 Forçando CTA (checkout + buy intent)');
-                __forceCTA = true;
+            if (!__v19Active) {
+                const _v182checkoutLink = processedPageData?.checkoutLink || null;
+                if (_v182checkoutLink && req.__forceBuyIntent === true) {
+                    console.log('[V18.2-CTA] 🚀 Forçando CTA (checkout + buy intent)');
+                    __forceCTA = true;
+                }
+            } else {
+                console.log('[V18.2] ⏭️ BYPASS (V19 ativo)');
             }
         } catch (_v182err) {
             console.warn('[V18.2-CTA] erro:', _v182err.message);
@@ -9263,14 +9336,19 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // ================================================================
         // 🔥 V18.3 - CTA INJECTION (PÓS-ORCHESTRATOR)
         // Se forceCTA ativo e link não presente → injeta
+        // ⚡ BYPASS quando V19 ativo (V19 controla CTA via applyDecision)
         // ================================================================
         try {
-            const _v183checkoutLink = processedPageData?.checkoutLink || null;
-            if (__forceCTA && _v183checkoutLink && !finalResponse.includes(_v183checkoutLink)) {
-                console.log('[V18.3-CTA] ✅ Injetando CTA direto na resposta');
-                finalResponse += `\n\n👉 Finalize sua compra aqui:\n${_v183checkoutLink}`;
-            } else if (__forceCTA && _v183checkoutLink) {
-                console.log('[V18.3-CTA] ⏭️ Link já presente na resposta');
+            if (!__v19Active) {
+                const _v183checkoutLink = processedPageData?.checkoutLink || null;
+                if (__forceCTA && _v183checkoutLink && !finalResponse.includes(_v183checkoutLink)) {
+                    console.log('[V18.3-CTA] ✅ Injetando CTA direto na resposta');
+                    finalResponse += `\n\n👉 Finalize sua compra aqui:\n${_v183checkoutLink}`;
+                } else if (__forceCTA && _v183checkoutLink) {
+                    console.log('[V18.3-CTA] ⏭️ Link já presente na resposta');
+                }
+            } else {
+                console.log('[V18.3] ⏭️ BYPASS (V19 ativo)');
             }
         } catch (_v183err) {
             console.warn('[V18.3-CTA] erro:', _v183err.message);
@@ -9561,8 +9639,13 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // 🔥 PÓS-PROCESSADOR GLOBAL V16.3 — ANTI-PERDA DE VENDA
         // Executa SEMPRE, independente de V13/V16/legado
         // Agora com MEMÓRIA IS_BUYER do interceptor PRÉ-KB
+        // ⚡ BYPASS quando V19 ativo (V19 controla CTA/checkout/anti-genérico)
         // ═══════════════════════════════════════════════════════════════════
+        if (__v19Active) {
+            console.log('[PP-GLOBAL] ⏭️ BYPASS (V19 ativo — V19 controla decisões)');
+        }
         try {
+        if (!__v19Active) { // ← V19: só roda PP-GLOBAL se V19 NÃO ativo
             const _ppMsg = (message || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const _ppCheckoutLink = processedPageData?.checkoutLink || req._ppCheckoutLink || null;
             const _ppWhatsApp = processedPageData?.whatsapp || processedPageData?.whatsappLink ||
@@ -9668,6 +9751,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
 
             console.log(`[PP-GLOBAL] ✅ Pós-processamento completo | isBuyer=${_ppIsBuyer} | len=${finalResponse.length}`);
+        } // ← fim do if (!__v19Active)
         } catch (_ppErr) {
             console.warn('[PP-GLOBAL] ⚠️ Erro (sem impacto):', _ppErr.message);
         }
@@ -9735,20 +9819,47 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         }
 
         // ================================================================
-        // 🛡️ V18.4 - FAILSAFE FINAL (ANTI-BURACO)
-        // Se tem checkout e NÃO saiu na resposta → força no final
+        // 🧠 V19 — APPLY DECISION (ou V18.4 legado)
+        // V19 ativo: aplica decisão determinística sobre resposta final
+        // V19 shadow: loga diff vs legado
+        // V19 false: V18.4 failsafe original
         // ================================================================
         try {
-            const _v184checkoutLink = processedPageData?.checkoutLink || null;
-            if (_v184checkoutLink && typeof finalResponse === 'string' && !finalResponse.includes(_v184checkoutLink)) {
-                // Só força se houve intenção de compra (não força em perguntas genéricas)
-                if (req.__forceBuyIntent || req._ppIsBuyer) {
-                    console.warn('[V18.4-FALLBACK] ⚠️ CTA não saiu — forçando no final');
-                    finalResponse += `\n\n👉 Clique para finalizar sua compra:\n${_v184checkoutLink}`;
+            if (__v19Active && _v19Engine && __v19Decision) {
+                // V19 ATIVO: aplica decisão sobre resposta final
+                const _v19Applied = _v19Engine.applyDecision(__v19Decision, finalResponse);
+                if (_v19Applied.modified) {
+                    finalResponse = _v19Applied.response;
+                    console.log('[V19-APPLY] ✅ Decisão aplicada sobre resposta final');
+                }
+            } else if (_v19Mode === 'shadow' && _v19Engine && __v19Decision) {
+                // V19 SHADOW: loga diferenças sem alterar nada
+                _v19Engine.logDiff(__v19Decision, {
+                    forceBuyIntent: req.__forceBuyIntent || false,
+                    forceCTA: __forceCTA || false,
+                    isBuyer: req._ppIsBuyer || false,
+                    checkoutLink: processedPageData?.checkoutLink || null
+                });
+                // V18.4 legado roda normalmente em shadow
+                const _v184checkoutLink = processedPageData?.checkoutLink || null;
+                if (_v184checkoutLink && typeof finalResponse === 'string' && !finalResponse.includes(_v184checkoutLink)) {
+                    if (req.__forceBuyIntent || req._ppIsBuyer) {
+                        console.warn('[V18.4-FALLBACK] ⚠️ CTA não saiu — forçando no final');
+                        finalResponse += `\n\n👉 Clique para finalizar sua compra:\n${_v184checkoutLink}`;
+                    }
+                }
+            } else {
+                // V18.4 LEGADO: failsafe original
+                const _v184checkoutLink = processedPageData?.checkoutLink || null;
+                if (_v184checkoutLink && typeof finalResponse === 'string' && !finalResponse.includes(_v184checkoutLink)) {
+                    if (req.__forceBuyIntent || req._ppIsBuyer) {
+                        console.warn('[V18.4-FALLBACK] ⚠️ CTA não saiu — forçando no final');
+                        finalResponse += `\n\n👉 Clique para finalizar sua compra:\n${_v184checkoutLink}`;
+                    }
                 }
             }
-        } catch (_v184err) {
-            console.warn('[V18.4-FALLBACK] erro:', _v184err.message);
+        } catch (_v19ApplyErr) {
+            console.warn('[V19/V18.4] ⚠️ Erro:', _v19ApplyErr.message);
         }
 
         return res.json({
