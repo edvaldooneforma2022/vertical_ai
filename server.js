@@ -553,6 +553,22 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 📞 CHANNEL RESOLVER SAFE — Anti-Dead-End de Suporte
+// Garante saída acionável quando suporte é solicitado
+// Feature flag: FEATURE_CHANNEL_RESOLVER_SAFE
+// ═══════════════════════════════════════════════════════════════════
+let _channelResolver = null;
+let _channelResolverEnabled = false;
+try {
+    _channelResolver = require('./lib/channel-resolver-safe');
+    _channelResolverEnabled = (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_CHANNEL_RESOLVER_SAFE'))
+        || process.env.FEATURE_CHANNEL_RESOLVER_SAFE === 'true';
+    console.log(`📞 [CHANNEL-RESOLVER] Carregado (enabled=${_channelResolverEnabled})`);
+} catch (e) {
+    console.log('📞 [CHANNEL-RESOLVER] Não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // 🚀 WA-CTA PROMOTER — Promoção Universal de WhatsApp como CTA
 // Quando não há checkout e WhatsApp tem intenção de conversão → promover
 // Feature flag: FEATURE_WA_CTA_PROMOTER
@@ -8859,7 +8875,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
                 const _iSupportResp = _iWhatsApp
                     ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_iWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
-                    : `Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌`;
+                    : `Perfeito 👍 você pode falar com alguém direto pelo site.\n\n👉 É só clicar no botão de WhatsApp que fica no canto da tela.\n\nSe preferir, mande uma mensagem aqui que eu te ajudo no que puder 🙌`;
                 return res.json({
                     success: true,
                     response: _iSupportResp,
@@ -9816,6 +9832,31 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
         } catch (_ugErr) {
             console.warn('[V17.2@chat-inteligente] erro:', _ugErr.message);
+        }
+
+        // ================================================================
+        // 📞 CHANNEL RESOLVER SAFE — Anti-Dead-End de Suporte
+        // Garante saída acionável quando suporte solicitado sem WhatsApp
+        // Roda APÓS V17.2, ANTES de V19 apply
+        // NUNCA sobrescreve WhatsApp existente, NUNCA altera checkout
+        // ================================================================
+        try {
+            if (_channelResolverEnabled && _channelResolver && _channelResolver.resolve) {
+                const _crResult = _channelResolver.resolve({
+                    message: message,
+                    response: finalResponse,
+                    pageData: processedPageData || null,
+                    v19Decision: __v19Decision || null,
+                    tenantWhatsApp: null, // TODO: resolver do DB quando disponível
+                    channelLabel: null
+                });
+                if (_crResult.resolved) {
+                    finalResponse = _crResult.response;
+                    console.log(`[CHANNEL-RESOLVER@chat-inteligente] ✅ Resolvido: source=${_crResult.source}`);
+                }
+            }
+        } catch (_crErr) {
+            console.warn('[CHANNEL-RESOLVER@chat-inteligente] ⚠️ Erro (sem impacto):', _crErr.message);
         }
 
         // ================================================================
