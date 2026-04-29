@@ -8665,6 +8665,40 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.warn('[V18-GUARD@chat-inteligente] Erro (sem impacto):', _v18Err.message);
         }
 
+        // ================================================================
+        // 🔥 V18.1 - HARD BUY INTENT OVERRIDE
+        // Detecta intenção de compra por keywords ANTES de qualquer decisão
+        // ================================================================
+        try {
+            const _v181msg = (message || '').toLowerCase();
+            const _v181BuyKw = [
+                'comprar','assinar','pagar','plano','planos','preço','valor',
+                'link','checkout','adquirir','ativar','contratar',
+                'link de pagamento','quero assinar','quero pagar'
+            ];
+            if (_v181BuyKw.some(k => _v181msg.includes(k))) {
+                console.log('[V18.1-INTENT] 🔥 BUY intent FORÇADO via keyword match');
+                req.__forceBuyIntent = true;
+            }
+        } catch (_v181err) {
+            console.warn('[V18.1-INTENT] erro:', _v181err.message);
+        }
+
+        // ================================================================
+        // 🔥 V18.2 - ORCHESTRATOR BYPASS FLAG
+        // Se tem checkout + buy intent → prepara bypass
+        // ================================================================
+        let __forceCTA = false;
+        try {
+            const _v182checkoutLink = processedPageData?.checkoutLink || null;
+            if (_v182checkoutLink && req.__forceBuyIntent === true) {
+                console.log('[V18.2-CTA] 🚀 Forçando CTA (checkout + buy intent)');
+                __forceCTA = true;
+            }
+        } catch (_v182err) {
+            console.warn('[V18.2-CTA] erro:', _v182err.message);
+        }
+
         // 🎯 SUPERINTELIGÊNCIA: Análise Emocional Avançada
         const analiseEmocional = superInteligencia.analisarEmocao(message);
 
@@ -9198,7 +9232,10 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
 
         // 🧠 [V10 ORCHESTRATOR] — Decisão Final Unificada
         try {
-            if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
+            // 🔥 V18.2: Se __forceCTA ativo, bypass Orchestrator (ele mata o CTA)
+            if (__forceCTA) {
+                console.log('[V18.2-CTA] ⏭️ Orchestrator V10 BYPASSED (forceCTA ativo)');
+            } else if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
                 const _intSalesModeOrch = (processedPageData && processedPageData.salesMode) || 
                           req.body?.salesMode || req.body?.sales_mode || 
                           process.env.SALES_LAYER_MODE || 'auto';
@@ -9221,6 +9258,22 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         } catch (_orchErr) {
             console.error('⚠️ [ORCHESTRATOR_V10@inteligente] Erro (resposta mantida):', _orchErr.message);
             // Fallback: finalResponse fica inalterada
+        }
+
+        // ================================================================
+        // 🔥 V18.3 - CTA INJECTION (PÓS-ORCHESTRATOR)
+        // Se forceCTA ativo e link não presente → injeta
+        // ================================================================
+        try {
+            const _v183checkoutLink = processedPageData?.checkoutLink || null;
+            if (__forceCTA && _v183checkoutLink && !finalResponse.includes(_v183checkoutLink)) {
+                console.log('[V18.3-CTA] ✅ Injetando CTA direto na resposta');
+                finalResponse += `\n\n👉 Finalize sua compra aqui:\n${_v183checkoutLink}`;
+            } else if (__forceCTA && _v183checkoutLink) {
+                console.log('[V18.3-CTA] ⏭️ Link já presente na resposta');
+            }
+        } catch (_v183err) {
+            console.warn('[V18.3-CTA] erro:', _v183err.message);
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -9679,6 +9732,23 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             }
         } catch (_ugErr) {
             console.warn('[V17.2@chat-inteligente] erro:', _ugErr.message);
+        }
+
+        // ================================================================
+        // 🛡️ V18.4 - FAILSAFE FINAL (ANTI-BURACO)
+        // Se tem checkout e NÃO saiu na resposta → força no final
+        // ================================================================
+        try {
+            const _v184checkoutLink = processedPageData?.checkoutLink || null;
+            if (_v184checkoutLink && typeof finalResponse === 'string' && !finalResponse.includes(_v184checkoutLink)) {
+                // Só força se houve intenção de compra (não força em perguntas genéricas)
+                if (req.__forceBuyIntent || req._ppIsBuyer) {
+                    console.warn('[V18.4-FALLBACK] ⚠️ CTA não saiu — forçando no final');
+                    finalResponse += `\n\n👉 Clique para finalizar sua compra:\n${_v184checkoutLink}`;
+                }
+            }
+        } catch (_v184err) {
+            console.warn('[V18.4-FALLBACK] erro:', _v184err.message);
         }
 
         return res.json({
