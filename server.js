@@ -3632,7 +3632,7 @@ async function requireApiKey(req, res, next) {
         "/api/track-event"
     ];
 
-    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/")) {
+    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/") || req.path.startsWith("/api/admin/")) {
         return next();
     }
 
