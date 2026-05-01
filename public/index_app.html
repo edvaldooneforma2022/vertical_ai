@@ -4881,7 +4881,7 @@
 
         async function loadChatGPTSettings() {
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 const response = await fetch('/api/chatgpt/settings', {
                     headers: { 'X-API-Key': apiKey }
                 });
@@ -4928,7 +4928,7 @@
             }
 
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 const response = await fetch('/api/chatgpt/settings', {
                     method: 'POST',
                     headers: {
@@ -4955,7 +4955,7 @@
 
         async function testChatGPTConnection() {
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 const response = await fetch('/api/chatgpt/settings/test', {
                     method: 'POST',
                     headers: {
@@ -4983,7 +4983,7 @@
             }
 
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 const response = await fetch('/api/chatgpt/settings', {
                     method: 'DELETE',
                     headers: { 'X-API-Key': apiKey }
@@ -5015,7 +5015,7 @@
             responseEl.innerHTML = '<div style="color:#94a3b8;">🤖 Gerando resposta...</div>';
 
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 const model = document.getElementById('chatgpt-model').value;
 
                 const response = await fetch('/api/chatgpt/generate-tenant', {
@@ -5767,7 +5767,7 @@
 
         async function loadWhatsAppSettings() {
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 if (!apiKey) {
                     console.error('API Key não disponível');
                     return;
@@ -5864,7 +5864,7 @@
             }
 
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 const response = await fetch('/api/whatsapp/settings', {
                     method: 'POST',
                     headers: {
@@ -5903,7 +5903,7 @@
             }
 
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 const response = await fetch('/api/whatsapp/settings/test', {
                     method: 'POST',
                     headers: {
@@ -5927,7 +5927,7 @@
             }
 
             try {
-                const apiKey = window.currentApiKey;
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
                 const response = await fetch('/api/whatsapp/settings', {
                     method: 'DELETE',
                     headers: { 'X-API-Key': apiKey }
