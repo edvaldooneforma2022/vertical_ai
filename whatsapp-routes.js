@@ -3,13 +3,21 @@
 const { DatabaseHelpers } = require('./database');
 const { whatsappIntegration, clearTenantCache } = require('./whatsapp-integration');
 
+// Helper: resolver apiKey de múltiplas fontes (alinhado com server.js:3640)
+function resolveApiKey(req) {
+    return req.session?.validatedApiKey || req.headers['x-api-key'] || req.query?.apiKey || req.body?.apiKey || null;
+}
+
 module.exports = function (app, logger) {
     /**
      * Salvar configurações WhatsApp do tenant
      */
     app.post('/api/whatsapp/settings', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
             const settings = req.body;
 
             // Validar campos obrigatórios
@@ -62,7 +70,10 @@ module.exports = function (app, logger) {
      */
     app.get('/api/whatsapp/settings', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
             const settings = await DatabaseHelpers.getWhatsAppSettings(apiKey);
 
             if (!settings) {
@@ -102,7 +113,10 @@ module.exports = function (app, logger) {
      */
     app.post('/api/whatsapp/settings/test', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
             const { phoneNumber } = req.body;
 
             if (!phoneNumber) {
@@ -138,7 +152,10 @@ module.exports = function (app, logger) {
      */
     app.delete('/api/whatsapp/settings', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
 
             await DatabaseHelpers.deleteWhatsAppSettings(apiKey);
 

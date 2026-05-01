@@ -3,13 +3,21 @@
 const { DatabaseHelpers } = require('./database');
 const { chatgptIntegration, clearTenantCache } = require('./chatgpt-integration');
 
+// Helper: resolver apiKey de múltiplas fontes (alinhado com server.js:3640)
+function resolveApiKey(req) {
+    return req.session?.validatedApiKey || req.headers['x-api-key'] || req.query?.apiKey || req.body?.apiKey || null;
+}
+
 module.exports = function (app, logger) {
     /**
      * Salvar configurações ChatGPT do tenant
      */
     app.post('/api/chatgpt/settings', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
             const settings = req.body;
 
             // Validar API Key da OpenAI
@@ -45,7 +53,10 @@ module.exports = function (app, logger) {
      */
     app.get('/api/chatgpt/settings', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
             const settings = await DatabaseHelpers.getChatGPTSettings(apiKey);
 
             if (!settings) {
@@ -86,7 +97,10 @@ module.exports = function (app, logger) {
      */
     app.post('/api/chatgpt/settings/test', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
 
             const instance = await chatgptIntegration.getTenantInstance(apiKey);
 
@@ -122,7 +136,10 @@ module.exports = function (app, logger) {
      */
     app.delete('/api/chatgpt/settings', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
 
             await DatabaseHelpers.deleteChatGPTSettings(apiKey);
 
@@ -149,7 +166,10 @@ module.exports = function (app, logger) {
      */
     app.post('/api/chatgpt/generate-tenant', async (req, res) => {
         try {
-            const apiKey = req.session.validatedApiKey;
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
             const { prompt, model, pageContent } = req.body;
 
             if (!prompt) {
