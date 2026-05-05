@@ -531,6 +531,20 @@ function getPostgresTables() {
             FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
         )`,
 
+        // Tabela de Configurações ChatGPT por Tenant (Multi-Tenant)
+        `CREATE TABLE IF NOT EXISTS chatgpt_settings (
+            id SERIAL PRIMARY KEY,
+            api_key VARCHAR(255) UNIQUE NOT NULL,
+            openai_api_key TEXT NOT NULL,
+            default_model VARCHAR(50) DEFAULT 'gpt-4-turbo',
+            temperature REAL DEFAULT 0.7,
+            max_tokens INTEGER DEFAULT 1000,
+            is_active BOOLEAN DEFAULT true,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
+        )`,
+
         // ========================================
         // TABELAS V8.0 - NOVAS FUNCIONALIDADES
         // ========================================
