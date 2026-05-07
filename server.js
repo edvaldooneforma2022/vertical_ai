@@ -6983,7 +6983,7 @@ DECISÃO ESTRATÉGICA (automática):
 ${_promptDecision.context && _promptDecision.context.benefit ? '- Benefício-chave: ' + _promptDecision.context.benefit : ''}
 ${_promptDecision.context && _promptDecision.context.price ? '- Preço detectado: ' + _promptDecision.context.price : ''}
 ${_promptDecision.context && _promptDecision.context.productName ? '- Produto: ' + _promptDecision.context.productName : ''}
-USE estas informações para calibrar sua resposta: se ação=fechar → CTA direto. Se ação=educar → explicar. Se ação=quebrar_objecao → usar prova/garantia. Se ação=reengajar → curiosidade.`;
+USE estas informações para calibrar sua resposta: se ação=fechar → CTA direto. Se ação=engajar → explicar brevemente e conduzir para ação. Se ação=quebrar_objecao → usar prova/garantia e avançar. Se ação=reengajar → curiosidade e valor.`;
 
                             console.log(`🧠 [UNIVERSAL-PROMPT] Decision Engine: intent=${_promptDecision.intent} action=${_promptDecision.action || _promptDecision.strategy} urgency=${_promptDecision.urgency || _promptDecision.pressure}`);
                         }
@@ -7194,13 +7194,13 @@ REGRAS ABSOLUTAS (PRIORIDADE MÁXIMA — NÃO IGNORAR):
 1. RESPOSTA DIRETA OBRIGATÓRIA
 - Responda EXATAMENTE o que o usuário perguntou
 - Primeiro: resolva a dúvida/pergunta
-- Depois: se necessário, avance naturalmente
+- Depois: conduza naturalmente para o próximo passo
 
 2. PROIBIDO
 - NUNCA ignore a pergunta do usuário
 - NUNCA responda com outra pergunta antes de responder
 - NUNCA repita frases genéricas como "posso te explicar", "faz sentido?"
-- NUNCA envie link de compra se o usuário NÃO pediu para comprar
+- NUNCA invente links ou URLs
 
 ═══════════════════════════════════════════════════
 COMPORTAMENTO POR INTENÇÃO (SIGA À RISCA):
@@ -7211,29 +7211,26 @@ ${_v10UserIntent === 'info' ? `
 O usuário quer ENTENDER o produto/serviço.
 → EXPLIQUE de forma clara e objetiva usando os dados da página
 → Use benefícios, funcionalidades, diferenciais
-→ NÃO envie link de checkout
-→ NÃO tente vender ainda
-→ Responda com CONTEÚDO do produto
-→ Ao final, pergunte se quer saber mais detalhes
+→ Ao final, conduza naturalmente para a próxima ação (testar, ver mais, começar)
+→ Pode sugerir que tem como começar agora, sem pressionar
 ` : ''}
 ${_v10UserIntent === 'interest' ? `
 🟢 INTENÇÃO: INTERESSE
-O usuário demonstra interesse mas quer mais detalhes.
+O usuário demonstra interesse e quer mais detalhes.
 → Aprofunde sobre benefícios, garantia, resultados
 → Use dados concretos (preço, prazo, garantia)
-→ Se perguntar preço/valor: responda com clareza
-→ NÃO force checkout — deixe o interesse amadurecer
-→ Pode mencionar que tem link de compra, mas SEM pressão
+→ Se perguntar preço/valor: responda com clareza e ofereça o próximo passo
+→ Conduza naturalmente para a ação: "posso te mostrar como começar" ou "o link está logo abaixo"
+→ Não pressione, mas CONDUZA com naturalidade
 ` : ''}
 ${_v10UserIntent === 'objection' ? `
 🟠 INTENÇÃO: OBJEÇÃO
 O usuário tem uma preocupação, dúvida ou reclamação.
 → PRIMEIRO: reconheça o sentimento ("Entendo sua preocupação")
 → SEGUNDO: resolva a objeção com fatos (garantia, depoimentos, dados)
-→ TERCEIRO: pergunte se a dúvida foi resolvida
-→ NÃO envie link de checkout
-→ NÃO ignore a objeção
-→ NÃO tente vender sem resolver primeiro
+→ TERCEIRO: após resolver, conduza para o próximo passo natural
+→ NÃO ignore a objeção — resolva primeiro, depois avance
+→ Exemplo: "Tem garantia de X dias. Quer ver como começar?"
 ` : ''}
 ${_v10UserIntent === 'human' ? `
 📞 INTENÇÃO: CONTATO HUMANO
@@ -7241,8 +7238,7 @@ O usuário quer falar com uma pessoa real.
 → Respeite o pedido imediatamente
 → Se houver WhatsApp disponível no contexto: envie
 → Se não houver: oriente como entrar em contato
-→ NÃO envie link de checkout
-→ NÃO tente reter com vendas
+→ Foque em resolver o pedido de contato
 ` : ''}
 ${_v10UserIntent === 'buy' ? `
 🔥 INTENÇÃO: COMPRA
@@ -7282,18 +7278,18 @@ O usuário está irritado ou atacando a IA.
 ${_v10UserIntent === 'neutral' ? `
 ⚪ INTENÇÃO: NEUTRA
 O usuário fez uma saudação, confirmação ou resposta curta.
-→ Responda naturalmente
-→ Se for "sim/ok" como resposta a uma pergunta sua: CONTINUE de onde parou
-→ Se for saudação: cumprimente e pergunte como pode ajudar
-→ NÃO envie link de checkout sem contexto
-→ NÃO force vendas em saudações
+→ Responda naturalmente e de forma acolhedora
+→ Se for "sim/ok" como resposta a uma pergunta sua: CONTINUE de onde parou e avance
+→ Se for saudação: cumprimente, apresente brevemente o produto e ofereça ajuda
+→ Sempre conduza para o próximo passo da conversa
 ` : ''}
 
 ANTI-ERRO CRÍTICO:
-- É PROIBIDO repetir CTA de compra em toda resposta
-- Checkout APENAS quando intenção = buy
+- NÃO repita o mesmo CTA em toda resposta — varie as abordagens
 - Sempre use dados/conteúdo da página para responder
-- Fale como humano inteligente, não como script`;
+- Fale como humano inteligente, não como script
+- Cada resposta deve AVANÇAR a conversa — nunca ficar no mesmo ponto
+- Se já explicou algo, não repita — avance para o próximo benefício ou ação`;
 
                 systemPrompt += V10_BEHAVIOR_LAYER;
                 console.log(`[V10.1] ✅ Behavior Layer Applied (intent=${_v10UserIntent}, ${V10_BEHAVIOR_LAYER.length} chars)`);

@@ -133,7 +133,7 @@ function decideAction(intent, journeyStage, messageCount) {
       objecao:  { action: 'quebrar_objecao',  urgency: 'medium' },
       duvida:   { action: 'provar',           urgency: 'low' },
       sair:     { action: 'reengajar',        urgency: 'medium' },
-      curioso:  { action: 'educar',           urgency: 'low' }
+      curioso:  { action: 'engajar',          urgency: 'low' }
     };
 
     const base = actionMap[intent] || actionMap.curioso;
@@ -159,7 +159,7 @@ function decideAction(intent, journeyStage, messageCount) {
     return base;
   } catch (err) {
     console.warn('⚠️ [DECISION-ENGINE] decideAction erro:', err.message);
-    return { action: 'educar', urgency: 'low' };
+    return { action: 'engajar', urgency: 'low' };
   }
 }
 
@@ -701,7 +701,7 @@ function decideByMatrix({ intent, confidence, stage, evolution, messageCount }) 
     };
 
     const key = `${intent}:${stage}`;
-    let decision = matrix[key] || { strategy: 'educar', pressure: 'low', action: 'responder' };
+    let decision = matrix[key] || { strategy: 'engajar', pressure: 'low', action: 'responder' };
 
     // ── [V2 FASE 6] CONTROLE DE AGRESSIVIDADE ──
     // Escalar pressão baseado no número de mensagens
@@ -730,7 +730,7 @@ function decideByMatrix({ intent, confidence, stage, evolution, messageCount }) 
     return decision;
   } catch (err) {
     console.warn('⚠️ [DECISION-ENGINE-V2] decideByMatrix erro:', err.message);
-    return { strategy: 'educar', pressure: 'low', action: 'responder' };
+    return { strategy: 'engajar', pressure: 'low', action: 'responder' };
   }
 }
 
