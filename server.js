@@ -3629,10 +3629,12 @@ async function requireApiKey(req, res, next) {
         "/api/capture-lead",
         "/api/process-chat-inteligente",
         "/api/chat-universal",
-        "/api/track-event"
+        "/api/track-event",
+        "/signup.html",
+        "/signup-success.html"
     ];
 
-    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/") || req.path.startsWith("/api/admin/")) {
+    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/") || req.path.startsWith("/api/admin/") || req.path.startsWith("/api/auth/")) {
         return next();
     }
 
