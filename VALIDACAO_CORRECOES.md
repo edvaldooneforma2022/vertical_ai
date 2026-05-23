@@ -128,7 +128,7 @@ const response = await fetch('/api/capture-lead', {
 
 **Requisição:**
 ```bash
-curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
+curl -X POST https://linkmagico.app.br/api/capture-lead \
   -H "Content-Type: application/json" \
   -d '{
     "nome": "João Silva",
@@ -163,7 +163,7 @@ curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
 
 **Requisição:**
 ```bash
-curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
+curl -X POST https://linkmagico.app.br/api/capture-lead \
   -H "Content-Type: application/json" \
   -d '{
     "nome": "Maria Santos",
@@ -190,7 +190,7 @@ curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
 
 **Cliente A:**
 ```bash
-curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
+curl -X POST https://linkmagico.app.br/api/capture-lead \
   -H "Content-Type: application/json" \
   -d '{
     "email": "lead1@clienteA.com",
@@ -200,7 +200,7 @@ curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
 
 **Cliente B:**
 ```bash
-curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
+curl -X POST https://linkmagico.app.br/api/capture-lead \
   -H "Content-Type: application/json" \
   -d '{
     "email": "lead1@clienteB.com",
@@ -229,7 +229,7 @@ curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
 
 **URL Esperada da Janela:**
 ```
-https://linkmagico-comercial.onrender.com/chatbot?apiKey=XXX&robotName=YYY&url=ZZZ&instructions=WWW&color=CCC
+https://linkmagico.app.br/chatbot?apiKey=XXX&robotName=YYY&url=ZZZ&instructions=WWW&color=CCC
 ```
 
 ---

@@ -23,7 +23,7 @@ apiBase: window.location.origin,  // ❌ APONTA PARA O SITE DO CLIENTE!
 
 **Consequência:** Quando o widget tenta fazer requisições para `/api/chat`, ele chama:
 - `https://site-do-cliente.com/api/chat` ❌ (não existe)
-- Ao invés de: `https://linkmagico-comercial.onrender.com/api/chat` ✅
+- Ao invés de: `https://linkmagico.app.br/api/chat` ✅
 
 ### 3. **PROBLEMA CRÍTICO #3: Código de Integração no index_app.html**
 No arquivo `/public/index_app.html` (linha 1591):
@@ -33,7 +33,7 @@ No arquivo `/public/index_app.html` (linha 1591):
 
 **Consequência:** Quando o cliente copia isso, o navegador tenta carregar:
 - `https://site-do-cliente.com/public/widget.js` ❌ (404 Not Found)
-- Ao invés de: `https://linkmagico-comercial.onrender.com/public/widget.js` ✅
+- Ao invés de: `https://linkmagico.app.br/public/widget.js` ✅
 
 ### 4. **PROBLEMA CRÍTICO #4: Rota Inline no server.js**
 No arquivo `server.js` (linha 4391):

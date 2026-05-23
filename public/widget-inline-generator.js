@@ -32,7 +32,7 @@ function generateModernWidgetScript(config) {
     };
 
     // ===== CONFIGURAÇÃO DO SERVIDOR =====
-    const apiBase = "https://vertical-ai-dktu.onrender.com";
+    const apiBase = "https://linkmagico.app.br";
     
     // ===== VERIFICAÇÃO =====
     if (!config.apiKey || config.apiKey === "SUA_API_KEY") {

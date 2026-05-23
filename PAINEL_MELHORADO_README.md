@@ -110,7 +110,7 @@ Cada aba tem um botão **"🔄 Atualizar"** que busca dados frescos da API.
 
 ### 1. Abrir o Painel
 ```
-https://linkmagico-comercial.onrender.com/app
+https://linkmagico.app.br/app
 ```
 
 ### 2. Procurar o Botão

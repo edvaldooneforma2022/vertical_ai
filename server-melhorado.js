@@ -1125,7 +1125,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: ["https://linkmagico-comercial.onrender.com", "https://link-m-gico-v6-0-hmpl.onrender.com", "http://localhost:3000", "http://localhost:8080"],
+    origin: ["https://linkmagico.app.br", "https://linkmagico.app.br", "http://localhost:3000", "http://localhost:8080"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"]
@@ -1470,7 +1470,7 @@ async function extractPageData(url) {
             logger.info("Attempting Axios + Cheerio extraction...");
             const response = await axios.get(url, {
                 headers: {
-                    "User-Agent": "Mozilla/5.0 (compatible; LinkMagico-Bot/6.0; +https://linkmagico-comercial.onrender.com)",
+                    "User-Agent": "Mozilla/5.0 (compatible; LinkMagico-Bot/6.0; +https://linkmagico.app.br)",
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                     "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
                 },

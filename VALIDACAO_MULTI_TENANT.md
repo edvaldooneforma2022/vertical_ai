@@ -130,7 +130,7 @@ data/
 2. **Configure o widget** no seu site:
 
 ```html
-<script src="https://linkmagico-comercial.onrender.com/public/widget.js"></script>
+<script src="https://linkmagico.app.br/public/widget.js"></script>
 <script>
   window.LinkMagicoWidget.init({
     robotName: 'Meu Assistente',

@@ -12,7 +12,7 @@
  *     apiKey: "SUA_API_KEY"
  *   };
  * </script>
- * <script src="https://vertical-ai-dktu.onrender.com/public/widget-v2.js"></script>
+ * <script src="https://linkmagico.app.br/public/widget-v2.js"></script>
  */
 
 (function () {
@@ -25,7 +25,7 @@
     const instructions = config.instructions || '';
     const primaryColor = config.primaryColor || '#3b82f6';
     const apiKey = config.apiKey || '';
-    const apiBase = config.apiBase || 'https://vertical-ai-dktu.onrender.com';
+    const apiBase = config.apiBase || 'https://linkmagico.app.br';
     const avatarUrl = config.avatarUrl || '';
     const greetingMessage = config.greetingMessage || 'Oi! Posso ajudar?';
     const welcomeMessage = config.welcomeMessage || `Olá 👋 Muito bom ter você aqui!`;

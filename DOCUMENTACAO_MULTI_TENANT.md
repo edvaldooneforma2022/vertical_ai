@@ -42,7 +42,7 @@ O sistema utiliza as **API Keys** que você já tem para identificar cada client
 2. **Configure o widget** no seu site, adicionando sua API Key:
 
 ```html
-<script src="https://linkmagico-comercial.onrender.com/public/widget.js"></script>
+<script src="https://linkmagico.app.br/public/widget.js"></script>
 <script>
   window.LinkMagicoWidget.init({
     robotName: 'Meu Assistente',

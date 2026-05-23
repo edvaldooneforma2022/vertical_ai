@@ -50,7 +50,7 @@ class CRMIntegrations {
                     step: 2,
                     title: 'Configurar Webhook no Link Mágico',
                     description: 'Use a URL: https://api.rd.services/platform/conversions?api_key=SEU_TOKEN',
-                    code: `POST https://linkmagico-comercial.onrender.com/api/webhooks/SEU_CHATBOT_ID
+                    code: `POST https://linkmagico.app.br/api/webhooks/SEU_CHATBOT_ID
 
 {
   "eventType": "lead_captured",
@@ -124,7 +124,7 @@ class CRMIntegrations {
                 {
                     step: 3,
                     title: 'Configurar Webhook no Link Mágico',
-                    code: `POST https://linkmagico-comercial.onrender.com/api/webhooks/SEU_CHATBOT_ID
+                    code: `POST https://linkmagico.app.br/api/webhooks/SEU_CHATBOT_ID
 
 {
   "eventType": "lead_captured",
@@ -202,7 +202,7 @@ class CRMIntegrations {
                 {
                     step: 2,
                     title: 'Configurar Webhook no Link Mágico',
-                    code: `POST https://linkmagico-comercial.onrender.com/api/webhooks/SEU_CHATBOT_ID
+                    code: `POST https://linkmagico.app.br/api/webhooks/SEU_CHATBOT_ID
 
 {
   "eventType": "lead_captured",
@@ -269,7 +269,7 @@ class CRMIntegrations {
                 {
                     step: 2,
                     title: 'Configurar Webhook no Link Mágico',
-                    code: `POST https://linkmagico-comercial.onrender.com/api/webhooks/SEU_CHATBOT_ID
+                    code: `POST https://linkmagico.app.br/api/webhooks/SEU_CHATBOT_ID
 
 {
   "eventType": "lead_captured",
@@ -367,7 +367,7 @@ class CRMIntegrations {
             return { error: 'CRM não encontrado' };
         }
 
-        const baseUrl = customConfig.baseUrl || 'https://linkmagico-comercial.onrender.com';
+        const baseUrl = customConfig.baseUrl || 'https://linkmagico.app.br';
         
         return {
             curl: this.generateCurlCommand(crmName, chatbotId, baseUrl, customConfig),

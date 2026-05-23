@@ -4,8 +4,10 @@ const cors = require('cors');
 class CORSConfig {
     constructor() {
         this.allowedOrigins = [
-            'https://linkmagico-comercial.onrender.com',
-            'https://seusite.com',
+            'https://linkmagico.app.br',
+            'https://www.linkmagico.app.br',
+            'https://site.linkmagico.app.br',
+            'https://demo.linkmagico.app.br',
             'http://localhost:3000',
             'http://localhost:8080'
         ];

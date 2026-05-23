@@ -68,7 +68,7 @@ class ComplianceManager {
             const response = await fetch(robotsUrl, {
                 timeout: 5000,
                 headers: {
-                    'User-Agent': 'LinkMagico-Bot/6.0 (+https://link-m-gico-v6-0-hmpl.onrender.com/robot-info)'
+                    'User-Agent': 'LinkMagico-Bot/6.0 (+https://linkmagico.app.br/robot-info)'
                 }
             });
 

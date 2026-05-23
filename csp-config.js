@@ -30,8 +30,10 @@ class CSPConfig {
             ],
             connectSrc: [
                 "'self'",
-                "https://linkmagico-comercial.onrender.com",
-                "wss://linkmagico-comercial.onrender.com"
+                "https://linkmagico.app.br",
+                "wss://linkmagico.app.br",
+                "https://site.linkmagico.app.br",
+                "https://demo.linkmagico.app.br"
             ],
             frameSrc: ["'none'"],
             objectSrc: ["'none'"],

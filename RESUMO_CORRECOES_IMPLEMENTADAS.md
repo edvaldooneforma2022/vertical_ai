@@ -240,7 +240,7 @@ Resumo executivo de todas as alterações.
 
 ```bash
 # Teste COM API Key (deve funcionar)
-curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
+curl -X POST https://linkmagico.app.br/api/capture-lead \
   -H "Content-Type: application/json" \
   -d '{
     "nome": "João Silva",
@@ -252,7 +252,7 @@ curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
   }'
 
 # Teste SEM API Key (deve retornar 401)
-curl -X POST https://linkmagico-comercial.onrender.com/api/capture-lead \
+curl -X POST https://linkmagico.app.br/api/capture-lead \
   -H "Content-Type: application/json" \
   -d '{
     "nome": "Maria Santos",

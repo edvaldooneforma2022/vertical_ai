@@ -101,7 +101,7 @@ cliente-empresa-abc-2025
 
 📱 COMO ACESSAR:
 
-1. Acesse: https://linkmagico-comercial.onrender.com/app
+1. Acesse: https://linkmagico.app.br/app
 2. Cole sua chave de acesso no campo indicado
 3. Clique em "Entrar"
 
@@ -121,7 +121,7 @@ Abraço,
 
 ### Passo 1: Cliente Acessa o Painel
 
-O cliente acessa `https://linkmagico-comercial.onrender.com/app` e cola a API Key.
+O cliente acessa `https://linkmagico.app.br/app` e cola a API Key.
 
 ### Passo 2: Cliente Configura o Chatbot
 
@@ -136,7 +136,7 @@ Dentro do painel, o cliente preenche:
 O painel exibe um código como este:
 
 ```html
-<script src="https://linkmagico-comercial.onrender.com/public/widget.js"></script>
+<script src="https://linkmagico.app.br/public/widget.js"></script>
 <script>
   window.LinkMagicoWidget.init({
     robotName: 'Assistente da Loja ABC',
@@ -176,7 +176,7 @@ Olá [Nome do Cliente],
 Você verá o ícone do chat no canto inferior direito.
 
 📊 ACOMPANHE SEUS LEADS:
-Acesse seu painel: https://linkmagico-comercial.onrender.com/app
+Acesse seu painel: https://linkmagico.app.br/app
 Use sua chave: cliente-empresa-abc-2025
 
 Lá você verá todos os leads capturados em tempo real!
@@ -205,7 +205,7 @@ Abraço,
 
 Você pode acessar o painel de qualquer cliente usando a API Key dele:
 
-1. Acesse: `https://linkmagico-comercial.onrender.com/app`
+1. Acesse: `https://linkmagico.app.br/app`
 2. Cole a API Key do cliente
 3. Visualize os leads, conversas e estatísticas
 

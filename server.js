@@ -4729,7 +4729,7 @@ async function extractPageData(url) {
             logger.info("Attempting Axios + Cheerio extraction...");
             const response = await axios.get(url, {
                 headers: {
-                    "User-Agent": "Mozilla/5.0 (compatible; LinkMagico-Bot/6.0; +https://linkmagico-comercial.onrender.com)",
+                    "User-Agent": "Mozilla/5.0 (compatible; LinkMagico-Bot/6.0; +https://linkmagico.app.br)",
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                     "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
                 },

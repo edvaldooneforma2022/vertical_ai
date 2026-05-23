@@ -45,7 +45,7 @@ try {
 
 const HOTTOK = process.env.HOTMART_HOTTOK || null;
 const DEFAULT_PLAN = process.env.HOTMART_DEFAULT_PLAN || 'starter';
-const PLATFORM_URL = process.env.PLATFORM_URL || 'https://vertical-ai-dktu.onrender.com';
+const PLATFORM_URL = process.env.PLATFORM_URL || 'https://linkmagico.app.br';
 const API_KEYS_JSON_PATH = path.join(__dirname, 'data', 'api_keys.json');
 const PLAN_PRICE_CENTS = parseInt(process.env.HOTMART_PLAN_PRICE_CENTS || '9700'); // R$97,00
 

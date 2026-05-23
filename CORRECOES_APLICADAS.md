@@ -49,7 +49,7 @@ if (scriptSrc) {
 apiBase: window.location.origin,  // ❌ site-do-cliente.com
 
 // DEPOIS:
-apiBase: detectedServerDomain || window.location.origin,  // ✅ linkmagico-comercial.onrender.com
+apiBase: detectedServerDomain || window.location.origin,  // ✅ linkmagico.app.br
 ```
 
 #### D) Auto-Inicialização via window.LinkMagicoWidgetConfig (linhas 1624-1649)
@@ -107,7 +107,7 @@ widgetCodeDisplay.innerHTML = `...
 <script src="/public/widget.js"></script>`;
 
 // DEPOIS:
-const serverDomain = window.location.origin; // Ex: https://linkmagico-comercial.onrender.com
+const serverDomain = window.location.origin; // Ex: https://linkmagico.app.br
 widgetCodeDisplay.innerHTML = `...
 <script src="${serverDomain}/public/widget.js"></script>`;
 ```
@@ -127,7 +127,7 @@ widgetCodeDisplay.innerHTML = `...
 
 ### Fluxo de Integração Correto:
 
-1. **Cliente acessa o painel LinkMágico** em `https://linkmagico-comercial.onrender.com/app`
+1. **Cliente acessa o painel LinkMágico** em `https://linkmagico.app.br/app`
 
 2. **Cliente configura o chatbot** (nome, URL, instruções)
 
@@ -141,23 +141,23 @@ widgetCodeDisplay.innerHTML = `...
         primaryColor: "#3b82f6"
     };
 </script>
-<script src="https://linkmagico-comercial.onrender.com/public/widget.js"></script>
+<script src="https://linkmagico.app.br/public/widget.js"></script>
 ```
 
 4. **Cliente copia e cola no site dele** em `https://site-do-cliente.com`
 
 5. **Navegador do visitante carrega:**
-   - ✅ `https://linkmagico-comercial.onrender.com/public/widget.js` (CORRETO!)
+   - ✅ `https://linkmagico.app.br/public/widget.js` (CORRETO!)
    - ❌ ~~`https://site-do-cliente.com/public/widget.js`~~ (erro anterior)
 
 6. **Widget detecta automaticamente:**
-   - `scriptSrc` = `https://linkmagico-comercial.onrender.com/public/widget.js`
-   - `detectedServerDomain` = `https://linkmagico-comercial.onrender.com`
-   - `apiBase` = `https://linkmagico-comercial.onrender.com`
+   - `scriptSrc` = `https://linkmagico.app.br/public/widget.js`
+   - `detectedServerDomain` = `https://linkmagico.app.br`
+   - `apiBase` = `https://linkmagico.app.br`
 
 7. **Requisições funcionam:**
-   - ✅ `https://linkmagico-comercial.onrender.com/api/chat-universal`
-   - ✅ `https://linkmagico-comercial.onrender.com/api/capture-lead`
+   - ✅ `https://linkmagico.app.br/api/chat-universal`
+   - ✅ `https://linkmagico.app.br/api/capture-lead`
 
 8. **Widget aparece e funciona perfeitamente! 🎉**
 
@@ -232,7 +232,7 @@ widgetCodeDisplay.innerHTML = `...
 Se houver qualquer dúvida ou problema após a implementação, os logs do console do navegador agora fornecem informações detalhadas:
 
 ```
-LinkMagico Widget: Server domain detected as https://linkmagico-comercial.onrender.com
+LinkMagico Widget: Server domain detected as https://linkmagico.app.br
 LinkMagico Widget: No token provided, using configuration-based authentication
 LinkMagico Widget: Initializing with window.LinkMagicoWidgetConfig
 LinkMagico Commercial Widget v6.0.0-commercial initialized

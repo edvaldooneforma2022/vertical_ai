@@ -76,7 +76,7 @@ node server.js
 
 Abra no navegador:
 ```
-https://linkmagico-comercial.onrender.com/public/widget.js
+https://linkmagico.app.br/public/widget.js
 ```
 
 **Verificações:**
@@ -89,7 +89,7 @@ https://linkmagico-comercial.onrender.com/public/widget.js
 
 Acesse:
 ```
-https://linkmagico-comercial.onrender.com/app
+https://linkmagico.app.br/app
 ```
 
 **Verificações:**
@@ -118,10 +118,10 @@ https://linkmagico-comercial.onrender.com/app
         primaryColor: "#3b82f6"
     };
 </script>
-<script src="https://linkmagico-comercial.onrender.com/public/widget.js"></script>
+<script src="https://linkmagico.app.br/public/widget.js"></script>
 ```
 
-**✅ CORRETO:** URL absoluta `https://linkmagico-comercial.onrender.com/public/widget.js`
+**✅ CORRETO:** URL absoluta `https://linkmagico.app.br/public/widget.js`
 **❌ INCORRETO:** URL relativa `/public/widget.js`
 
 ---
@@ -155,7 +155,7 @@ Crie um arquivo `teste-widget.html` em qualquer servidor:
             primaryColor: "#3b82f6"
         };
     </script>
-    <script src="https://linkmagico-comercial.onrender.com/public/widget.js"></script>
+    <script src="https://linkmagico.app.br/public/widget.js"></script>
 </body>
 </html>
 ```
@@ -166,7 +166,7 @@ Abra o DevTools (F12) e vá para a aba **Console**.
 
 **Mensagens esperadas:**
 ```
-LinkMagico Widget: Server domain detected as https://linkmagico-comercial.onrender.com
+LinkMagico Widget: Server domain detected as https://linkmagico.app.br
 LinkMagico Widget: No token provided, using configuration-based authentication
 LinkMagico Widget: Initializing with window.LinkMagicoWidgetConfig
 LinkMagico Commercial Widget v6.0.0-commercial initialized

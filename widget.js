@@ -11,7 +11,7 @@
     // Configurações padrão e sobrescritas pelo cliente
     const defaultConfig = {
         robotName: "Chatbot Link Mágico",
-        salesUrl: "https://linkmagico-comercial.onrender.com/chatbot", // URL padrão do chatbot
+        salesUrl: "https://linkmagico.app.br/chatbot", // URL padrão do chatbot
         instructions: "Olá! Como posso ajudar hoje?",
         primaryColor: "#3b82f6",
         position: "right", // ou "left"

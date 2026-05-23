@@ -102,7 +102,7 @@ As configurações do Helmet no `server.js` foram atualizadas para habilitar e c
     *   `styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://ka-f.fontawesome.com"],`
     *   `imgSrc: ["'self'", "data:", "https://*"],`
     *   `fontSrc: ["'self'", "https://fonts.gstatic.com", "https://ka-f.fontawesome.com"],`
-    *   `connectSrc: ["'self'", "https://linkmagico-comercial.onrender.com", "https://link-m-gico-v6-0-hmpl.onrender.com"],` (Adicionar domínios da API)
+    *   `connectSrc: ["'self'", "https://linkmagico.app.br", "https://linkmagico.app.br"],` (Adicionar domínios da API)
     *   `frameSrc: ["'self'"],`
     *   `objectSrc: ["'none'"],`
     *   `baseUri: ["'self'"],`
@@ -156,7 +156,7 @@ O `server.js` injeta a API Key validada no `window.LINKMAGICO_API_KEY` e o scrip
 Se você pretende incorporar o widget em outras páginas (fora do seu domínio LinkMágico), você precisará garantir que a `apiKey` seja fornecida durante a inicialização. O script de incorporação deve ser semelhante a este:
 
 ```html
-<script src="https://linkmagico-comercial.onrender.com/public/script.js"></script>
+<script src="https://linkmagico.app.br/public/script.js"></script>
 <script>
     LinkMagicoWidget.init({
         apiKey: 'SUA_API_KEY_DO_CHATBOT_AQUI',

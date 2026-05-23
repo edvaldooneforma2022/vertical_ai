@@ -96,7 +96,7 @@ const url = lead.url_origem || lead.url || '';
   "nome": "Zézinho Paulanalomba",
   "email": "paunalomba@gmail.com",
   "telefone": "11920153079",
-  "url_origem": "https://linkmagico-comercial.onrender.com/chatbot?...",
+  "url_origem": "https://linkmagico.app.br/chatbot?...",
   "robotName": "@teste",
   "conversations": [...],
   "message": "Seu e-book ensina o que?",

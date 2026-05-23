@@ -43,7 +43,7 @@ O Render vai detectar as mudanças e fazer deploy automaticamente!
 
 Aguarde 2-3 minutos e acesse:
 ```
-https://linkmagico-comercial.onrender.com/app
+https://linkmagico.app.br/app
 ```
 
 ### Passo 4: Verificar o Botão Novo
@@ -148,7 +148,7 @@ Procure o botão **"Novos Sistemas V2.0"** no canto inferior direito!
 1. Verifique se o servidor está rodando
 2. Teste as APIs diretamente:
    ```
-   https://linkmagico-comercial.onrender.com/api/system/status
+   https://linkmagico.app.br/api/system/status
    ```
 3. Veja os logs do Render
 

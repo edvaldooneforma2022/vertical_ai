@@ -242,7 +242,7 @@ Os leads são salvos com a seguinte estrutura:
   "email": "paunalomba@gmail.com",
   "telefone": "11920153079",
   "message": "Mensagem do lead",
-  "url_origem": "https://linkmagico-comercial.onrender.com/chatbot",
+  "url_origem": "https://linkmagico.app.br/chatbot",
   "robotName": "@teste",
   "conversations": [
     {
