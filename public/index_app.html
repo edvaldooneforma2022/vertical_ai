@@ -2405,7 +2405,9 @@
                 || localStorage.getItem('linkmagico_api_key')
                 || '';
 
-            if (!apiKeyValue) {
+            // SAFE PATCH - BUG-SHORTURL-001: Validar que apiKey tem formato correto (LMV7-XXXX)
+            // Se o campo contém valor inválido (ex: senha digitada por engano), buscar da sessão
+            if (!apiKeyValue || !apiKeyValue.startsWith('LMV7-')) {
                 try {
                     const sessionRes = await fetch('/api/session/me');
                     const sessionData = await sessionRes.json();
@@ -2414,6 +2416,7 @@
                         const apiKeyInput = document.getElementById('apiKeyInput');
                         if (apiKeyInput) apiKeyInput.value = apiKeyValue;
                         localStorage.setItem('linkmagico_api_key', apiKeyValue);
+                        console.log('✅ [BUG-SHORTURL-001] API Key corrigida via sessão:', apiKeyValue.substring(0, 12) + '...');
                     }
                 } catch (sessionErr) {}
             }
