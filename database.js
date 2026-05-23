@@ -309,7 +309,14 @@ async function initializeDatabase() {
             confirmed ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
             created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP,
             updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
-        )`
+        )`,
+
+        // ═══════════════════════════════════════════════════════
+        // SELF-SERVICE SIGNUP V1.0 — Campos para login de tenants
+        // ═══════════════════════════════════════════════════════
+        `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS password_hash TEXT`,
+        `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS signup_source TEXT DEFAULT 'hotmart'`,
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email)`
     ];
 
     for (const migration of migrations) {

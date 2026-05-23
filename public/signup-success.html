@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conta Criada! — LinkMágico</title>
+    <meta name="description" content="Sua conta LinkMágico foi criada com sucesso. Copie sua API Key e comece a vender.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface2: #1a1a2e;
+            --border: rgba(255,255,255,0.06);
+            --text: #f0f0f5;
+            --muted: #8888a0;
+            --purple: #7c3aed;
+            --purple-l: #a78bfa;
+            --green: #10b981;
+            --green-l: #34d399;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.12;
+            pointer-events: none;
+        }
+        body::before { width: 500px; height: 500px; background: var(--green); top: -100px; right: -100px; }
+        body::after { width: 400px; height: 400px; background: var(--purple); bottom: -80px; left: -80px; }
+
+        .success-container {
+            width: 100%;
+            max-width: 540px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .success-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .success-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--green), #059669);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 20px;
+            box-shadow: 0 12px 40px rgba(16, 185, 129, 0.3);
+            animation: successPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes successPulse {
+            0%, 100% { box-shadow: 0 12px 40px rgba(16, 185, 129, 0.3); }
+            50% { box-shadow: 0 12px 60px rgba(16, 185, 129, 0.5); }
+        }
+
+        .success-header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .success-header p {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .success-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 20px;
+        }
+
+        /* API Key box */
+        .api-key-section {
+            margin-bottom: 28px;
+        }
+
+        .api-key-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .api-key-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface2);
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .api-key-value {
+            flex: 1;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--green-l);
+            letter-spacing: 0.08em;
+            word-break: break-all;
+        }
+
+        .btn-copy {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            background: var(--green);
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-copy:hover { background: #059669; transform: translateY(-1px); }
+        .btn-copy.copied { background: var(--purple); }
+
+        /* Steps */
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px;
+            border-radius: 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+
+        .step:hover { border-color: rgba(124, 58, 237, 0.3); }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--purple), #6d28d9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.82rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .step-content p {
+            font-size: 0.8rem;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        /* CTA */
+        .btn-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--purple), #6d28d9);
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(124, 58, 237, 0.35);
+        }
+
+        .plan-info {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .plan-info span {
+            font-size: 0.78rem;
+            color: var(--muted);
+            background: var(--surface2);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .plan-info .value { color: var(--green-l); font-weight: 700; }
+
+        .footer-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+
+        .footer-link a {
+            color: var(--purple-l);
+            text-decoration: none;
+        }
+
+        /* No data state */
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .no-data h2 { margin-bottom: 12px; }
+        .no-data a { color: var(--purple-l); }
+
+        @media (max-width: 480px) {
+            .success-card { padding: 24px 18px; }
+            .api-key-value { font-size: 0.88rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="success-container">
+    <div class="success-header">
+        <div class="success-icon">🎉</div>
+        <h1>Conta criada com sucesso!</h1>
+        <p>Sua API Key foi gerada. Copie-a e guarde em local seguro.</p>
+    </div>
+
+    <div id="successContent" style="display:none">
+        <div class="success-card">
+            <div class="api-key-section">
+                <div class="api-key-label">🔑 Sua API Key</div>
+                <div class="api-key-box">
+                    <div class="api-key-value" id="apiKeyDisplay">—</div>
+                    <button class="btn-copy" id="copyBtn" onclick="copyKey()">📋 Copiar</button>
+                </div>
+            </div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Copie sua API Key</h3>
+                        <p>Clique em "Copiar" acima. Você também recebeu por email.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Acesse o painel</h3>
+                        <p>Clique no botão abaixo para abrir seu painel de controle.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Cole o link da sua página</h3>
+                        <p>O LinkMágico aprende seu negócio e cria um vendedor automático em minutos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <a href="/app" class="btn-panel" id="panelBtn">🚀 Acessar meu painel</a>
+
+        <div class="plan-info">
+            <span><span class="value">100</span> msgs/mês</span>
+            <span><span class="value">1</span> chatbot</span>
+            <span><span class="value">3</span> extrações</span>
+            <span><span class="value">Free</span> para sempre</span>
+        </div>
+    </div>
+
+    <div id="noData" class="no-data" style="display:none">
+        <h2>🤔 Nenhum dado encontrado</h2>
+        <p>Parece que você acessou esta página diretamente.<br>
+        <a href="/signup.html">Clique aqui para criar sua conta →</a></p>
+    </div>
+
+    <div class="footer-link">
+        Precisa de ajuda? <a href="mailto:suporte@linkmagico.app.br">suporte@linkmagico.app.br</a>
+    </div>
+</div>
+
+<script>
+(function() {
+    try {
+        var raw = sessionStorage.getItem('lm_signup_data');
+        if (!raw) {
+            document.getElementById('noData').style.display = 'block';
+            return;
+        }
+
+        var data = JSON.parse(raw);
+        if (!data.apiKey) {
+            document.getElementById('noData').style.display = 'block';
+            return;
+        }
+
+        // Mostrar conteúdo de sucesso
+        document.getElementById('successContent').style.display = 'block';
+        document.getElementById('apiKeyDisplay').textContent = data.apiKey;
+
+        // Limpar sessionStorage (mostrar só uma vez)
+        // Manter para o caso do usuário dar refresh
+        // sessionStorage.removeItem('lm_signup_data');
+
+    } catch (e) {
+        document.getElementById('noData').style.display = 'block';
+    }
+})();
+
+function copyKey() {
+    var keyEl = document.getElementById('apiKeyDisplay');
+    var btn = document.getElementById('copyBtn');
+    var key = keyEl.textContent;
+
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(key).then(function() {
+            btn.innerHTML = '✅ Copiado!';
+            btn.classList.add('copied');
+            setTimeout(function() {
+                btn.innerHTML = '📋 Copiar';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    } else {
+        // Fallback
+        var textarea = document.createElement('textarea');
+        textarea.value = key;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        btn.innerHTML = '✅ Copiado!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.innerHTML = '📋 Copiar';
+            btn.classList.remove('copied');
+        }, 2000);
+    }
+}
+</script>
+
+</body>
+</html>

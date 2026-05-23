@@ -23,7 +23,7 @@ const PLANS = {
         features: {
             maxChatbots: 1,
             maxMessagesPerMonth: 100,
-            maxExtractions: 10,
+            maxExtractions: 3,
             cacheEnabled: false,
             analyticsRetention: 7, // dias
             webhooksEnabled: false,

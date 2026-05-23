@@ -93,6 +93,9 @@ function authMiddleware(req, res, next) {
     const publicRoutes = [
         '/',
         '/health',
+        '/signup.html',
+        '/signup-success.html',
+        '/api/auth/signup',
         '/privacy.html',
         '/excluir-dados',
         '/privacy-policy',

@@ -11685,6 +11685,17 @@ try {
 
     console.log('✅ [V11.3] Endpoints /api/confirm-checkout e /api/checkout-status configurados');
 
+    // ===== SELF-SERVICE SIGNUP (Feature Flag) =====
+    if (process.env.FEATURE_SELF_SERVICE_SIGNUP !== 'false') {
+        try {
+            const selfServiceSignup = require('./self-service-signup');
+            selfServiceSignup.registerRoutes(app);
+            console.log('✅ Self-Service Signup habilitado');
+        } catch (e) {
+            console.warn('⚠️ Self-Service Signup não disponível:', e.message);
+        }
+    }
+
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 
