@@ -278,6 +278,15 @@ async function handleSignup(req, res) {
             }
         }
 
+        // 10.5 Agendar sequência de onboarding (5 emails)
+        try {
+            const { enqueueOnboardingEmails } = require('./email-queue-worker');
+            await enqueueOnboardingEmails(tenantId, apiKey, email.trim(), clientName);
+        } catch (e) {
+            // Fail-safe: signup funciona mesmo sem onboarding
+            console.warn('⚠️ [Signup] Falha ao agendar onboarding (não crítico):', e.message);
+        }
+
         // 11. Sucesso!
         console.log(`🎉 [Signup] Cadastro concluído! ${clientName} — Plano Free — Key: ${apiKey.substring(0, 9)}...`);
 

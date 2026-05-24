@@ -11698,6 +11698,20 @@ try {
         }
     }
 
+    // ===== EMAIL QUEUE WORKER - Onboarding Automatizado =====
+    if (process.env.FEATURE_ONBOARDING_EMAILS !== 'false') {
+        try {
+            const { initEmailQueue, processEmailQueue } = require('./email-queue-worker');
+            initEmailQueue();
+            setInterval(processEmailQueue, 5 * 60 * 1000); // A cada 5 minutos
+            // Processar imediatamente na inicialização (emails pendentes)
+            setTimeout(processEmailQueue, 10000);
+            console.log('📧 [Onboarding] Email Queue Worker ativo (interval: 5min)');
+        } catch (e) {
+            console.warn('⚠️ [Onboarding] Email Queue Worker não disponível:', e.message);
+        }
+    }
+
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 

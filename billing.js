@@ -25,10 +25,12 @@ const PLANS = {
             maxMessagesPerMonth: 100,
             maxExtractions: 3,
             cacheEnabled: false,
-            analyticsRetention: 7, // dias
+            analyticsRetention: 7,
             webhooksEnabled: false,
             apiAccess: false,
             customBranding: false,
+            removePoweredBy: false,
+            whatsappEnabled: false,
             prioritySupport: false
         },
         limits: {
@@ -40,8 +42,8 @@ const PLANS = {
 
     starter: {
         id: 'starter',
-        name: 'Iniciante',
-        price: 29.90,
+        name: 'Starter',
+        price: 29,
         currency: 'BRL',
         interval: 'month',
         features: {
@@ -54,6 +56,8 @@ const PLANS = {
             maxWebhooks: 5,
             apiAccess: true,
             customBranding: false,
+            removePoweredBy: false,
+            whatsappEnabled: false,
             prioritySupport: false
         },
         limits: {
@@ -63,10 +67,10 @@ const PLANS = {
         }
     },
 
-    professional: {
-        id: 'professional',
-        name: 'Profissional',
-        price: 79.90,
+    pro: {
+        id: 'pro',
+        name: 'Pro',
+        price: 69,
         currency: 'BRL',
         interval: 'month',
         features: {
@@ -79,6 +83,8 @@ const PLANS = {
             maxWebhooks: 20,
             apiAccess: true,
             customBranding: true,
+            removePoweredBy: true,
+            whatsappEnabled: true,
             prioritySupport: true,
             advancedAnalytics: true,
             knowledgeBaseUpload: true
@@ -90,22 +96,24 @@ const PLANS = {
         }
     },
 
-    enterprise: {
-        id: 'enterprise',
-        name: 'Empresarial',
-        price: 299.90,
+    business: {
+        id: 'business',
+        name: 'Business',
+        price: 97,
         currency: 'BRL',
         interval: 'month',
         features: {
-            maxChatbots: -1, // ilimitado
-            maxMessagesPerMonth: -1, // ilimitado
-            maxExtractions: -1, // ilimitado
+            maxChatbots: -1,
+            maxMessagesPerMonth: -1,
+            maxExtractions: -1,
             cacheEnabled: true,
             analyticsRetention: 365,
             webhooksEnabled: true,
-            maxWebhooks: -1, // ilimitado
+            maxWebhooks: -1,
             apiAccess: true,
             customBranding: true,
+            removePoweredBy: true,
+            whatsappEnabled: true,
             prioritySupport: true,
             advancedAnalytics: true,
             knowledgeBaseUpload: true,
@@ -114,11 +122,17 @@ const PLANS = {
             whiteLabel: true
         },
         limits: {
-            requestsPerMinute: -1, // ilimitado
+            requestsPerMinute: -1,
             requestsPerHour: -1,
             requestsPerDay: -1
         }
     }
+};
+
+// Mapeamento de IDs antigos para novos (backward compatibility)
+const PLAN_ID_ALIASES = {
+    'professional': 'pro',
+    'enterprise': 'business'
 };
 
 /**
@@ -152,10 +166,11 @@ class BillingManager {
     }
 
     /**
-     * Obter plano por ID
+     * Obter plano por ID (com fallback para IDs antigos)
      */
     getPlan(planId) {
-        return PLANS[planId] || PLANS.free;
+        const resolvedId = PLAN_ID_ALIASES[planId] || planId;
+        return PLANS[resolvedId] || PLANS.free;
     }
 
     /**
