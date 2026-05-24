@@ -104,6 +104,10 @@ async function initializeDatabase() {
 
     // 🔄 Migrations seguras — adicionar colunas novas a tabelas existentes
     const migrations = [
+        // Stripe Billing — colunas para integração
+        `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT DEFAULT ''`,
+        `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT DEFAULT ''`,
+        `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS updated_at ${USE_POSTGRES ? 'TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP' : 'DATETIME'}`,
         // CRM V7.1 — estimated_value em crm_leads
         `ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS estimated_value ${USE_POSTGRES ? 'NUMERIC(12,2)' : 'REAL'} DEFAULT 0`,
         // CRM V7.1 — sent_at e response_detected em followup_logs

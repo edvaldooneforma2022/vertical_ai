@@ -3585,7 +3585,15 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"]
 }));
 
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({
+    limit: "10mb",
+    verify: function(req, res, buf) {
+        // Salvar raw body para verificação do webhook Stripe
+        if (req.url === '/api/stripe/webhook') {
+            req.rawBody = buf;
+        }
+    }
+}));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(bodyParser.json({ limit: "10mb" }));
 
@@ -11717,6 +11725,19 @@ try {
         } catch (e) {
             console.warn('⚠️ [Onboarding] Email Queue Worker não disponível:', e.message);
         }
+    }
+
+    // ===== STRIPE BILLING ROUTES =====
+    if (process.env.STRIPE_SECRET_KEY) {
+        try {
+            const { registerStripeRoutes } = require('./stripe-routes');
+            registerStripeRoutes(app);
+            console.log('💳 Stripe Billing habilitado');
+        } catch (e) {
+            console.warn('⚠️ Stripe Routes não disponível:', e.message);
+        }
+    } else {
+        console.log('⚠️ Stripe desabilitado (STRIPE_SECRET_KEY não configurada)');
     }
 
     app.listen(PORT, '0.0.0.0', () => {
