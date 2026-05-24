@@ -10209,6 +10209,9 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
     // 🎯 BUG-FIX-005: Mensagem de saudação configurável
     const welcomeMessage = whitelabel.welcomeMessage || `Olá! Sou ${safeRobotName}, estou aqui para tirar todas as suas dúvidas. Como posso ajudar você hoje?`;
 
+    // ⚡ Widget Viral: Powered by badge
+    const showPoweredBy = whitelabel.showPoweredBy !== false;
+
     // Gerar botões fixos com contatos
     const contatos = pageData.contatos || {
         telefone: [],
@@ -10280,6 +10283,9 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         .sched-selected{background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:8px 12px;margin-top:8px;color:#065f46;font-size:0.9rem;text-align:center}
         .sched-loading{text-align:center;color:#64748b;padding:20px;font-size:0.9rem}
         @media (max-width:768px){.chat-container{height:100vh;border-radius:0}.chat-message{max-width:85%}.lead-form{margin:10px;padding:20px}.contact-button{min-width:100px;font-size:0.8rem}.lm-botoes-fixos{padding:10px !important}.lm-botoes-fixos a, .lm-botoes-fixos button{padding:10px 15px !important;font-size:0.8rem !important}.sched-day-btn{min-width:60px;padding:6px 8px;font-size:0.75rem}}
+        .lm-powered-by{text-align:center;padding:8px 16px;background:rgba(0,0,0,0.03);border-top:1px solid rgba(0,0,0,0.06);flex-shrink:0}
+        .lm-powered-by a{color:#94a3b8;text-decoration:none;font-size:0.72rem;font-weight:500;letter-spacing:0.02em;transition:color .2s;display:inline-flex;align-items:center;gap:4px}
+        .lm-powered-by a:hover{color:#7c3aed}
     </style>
 </head>
 <body>
@@ -10311,6 +10317,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
         </div>
+        ${showPoweredBy !== false ? '<div class="lm-powered-by"><a href="https://linkmagico.app.br/signup.html?ref=chatbot" target="_blank" rel="noopener noreferrer">\u26a1 Powered by LinkMágico</a></div>' : ''}
     </div>
     <script>
         const pageData = ${escapedPageData};
