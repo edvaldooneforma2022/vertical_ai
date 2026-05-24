@@ -3639,7 +3639,12 @@ async function requireApiKey(req, res, next) {
         "/api/chat-universal",
         "/api/track-event",
         "/signup.html",
-        "/signup-success.html"
+        "/signup-success.html",
+        "/pricing.html",
+        "/pricing",
+        "/checkout-success.html",
+        "/api/billing/plans",
+        "/api/stripe/webhook"
     ];
 
     if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/") || req.path.startsWith("/api/admin/") || req.path.startsWith("/api/auth/")) {
