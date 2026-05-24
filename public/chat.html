@@ -648,6 +648,47 @@
             }
         }
 
+        /* Powered By Badge (Widget Viral) */
+        .lm-powered-by {
+            text-align: center;
+            padding: 8px 16px;
+            background: rgba(0,0,0,0.03);
+            border-top: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .lm-powered-by a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .lm-powered-by a:hover {
+            color: #7c3aed;
+        }
+
+        .lm-powered-by .lm-bolt {
+            font-size: 0.8rem;
+        }
+
+        .dark-mode .lm-powered-by {
+            background: rgba(255,255,255,0.03);
+            border-top-color: rgba(255,255,255,0.06);
+        }
+
+        .dark-mode .lm-powered-by a {
+            color: #64748b;
+        }
+
+        .dark-mode .lm-powered-by a:hover {
+            color: #a78bfa;
+        }
+
         /* Utility Classes */
         .hidden {
             display: none;
@@ -801,9 +842,25 @@
                 </button>
             </div>
         </div>
+        <!-- Widget Viral: Powered by LinkMágico -->
+        <div class="lm-powered-by" id="lmPoweredBy">
+            <a href="https://linkmagico.app.br/signup.html?ref=chatbot" target="_blank" rel="noopener noreferrer">
+                <span class="lm-bolt">⚡</span> Powered by LinkMágico
+            </a>
+        </div>
     </div>
 
     <script>
+        // Widget Viral: Ocultar badge se whitelabel showPoweredBy=0
+        (function() {
+            try {
+                var p = new URLSearchParams(window.location.search);
+                if (p.get('wlPoweredBy') === '0') {
+                    var el = document.getElementById('lmPoweredBy');
+                    if (el) el.style.display = 'none';
+                }
+            } catch(e) {}
+        })();
         let pageData = null;
         let robotName = 'Assistente IA';
         let conversationId = 'chat_' + Date.now();
