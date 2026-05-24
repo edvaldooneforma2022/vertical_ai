@@ -70,6 +70,8 @@ async function initEmailQueue() {
  * @param {string} name - Nome do usuário
  */
 async function enqueueOnboardingEmails(tenantId, apiKey, email, name) {
+    console.log(`📧 [EmailQueue] enqueueOnboardingEmails chamado para ${email} (tenant: ${(tenantId || '').substring(0, 8)}...)`);
+
     if (!FEATURE_ENABLED) {
         console.log('⚠️ [EmailQueue] Feature desabilitada — emails não agendados');
         return;
@@ -77,7 +79,10 @@ async function enqueueOnboardingEmails(tenantId, apiKey, email, name) {
 
     try {
         const { db, USE_POSTGRES } = require('./database');
-        if (!USE_POSTGRES || !db) return;
+        if (!USE_POSTGRES || !db) {
+            console.log('⚠️ [EmailQueue] DB não disponível no enqueue — USE_POSTGRES:', USE_POSTGRES, 'db:', !!db);
+            return;
+        }
 
         // Verificar se já existem emails agendados (idempotência)
         const existing = await db.query(
@@ -85,12 +90,15 @@ async function enqueueOnboardingEmails(tenantId, apiKey, email, name) {
             [tenantId]
         );
         const rows = existing.rows || existing;
-        if (rows[0] && parseInt(rows[0].count) > 0) {
-            console.log(`⚠️ [EmailQueue] Emails já agendados para tenant ${tenantId.substring(0, 8)}... — ignorando`);
+        const existingCount = rows[0] ? parseInt(rows[0].count) : 0;
+        
+        if (existingCount > 0) {
+            console.log(`⚠️ [EmailQueue] Emails já agendados (${existingCount}) para tenant ${tenantId.substring(0, 8)}... — ignorando`);
             return;
         }
 
         const now = new Date();
+        let inserted = 0;
 
         for (const seq of ONBOARDING_SEQUENCE) {
             const sendAt = new Date(now.getTime() + seq.delayMinutes * 60 * 1000);
@@ -100,12 +108,13 @@ async function enqueueOnboardingEmails(tenantId, apiKey, email, name) {
                  VALUES ($1, $2, $3, $4, $5, $6, $7)`,
                 [tenantId, apiKey, email, name || '', seq.id, seq.subject, sendAt.toISOString()]
             );
+            inserted++;
         }
 
-        console.log(`📧 [EmailQueue] 5 emails de onboarding agendados para ${email} (tenant: ${tenantId.substring(0, 8)}...)`);
+        console.log(`📧 [EmailQueue] ${inserted} emails de onboarding agendados para ${email} (tenant: ${tenantId.substring(0, 8)}...)`);
     } catch (err) {
         // Fail-safe: não impacta signup se falhar
-        console.error('❌ [EmailQueue] Erro ao agendar emails:', err.message);
+        console.error('❌ [EmailQueue] Erro ao agendar emails:', err.message, err.stack);
     }
 }
 

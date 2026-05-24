@@ -35,7 +35,8 @@ try {
 }
 
 try {
-    emailService = require('./email-service');
+    const emailModule = require('./email-service');
+    emailService = emailModule.emailService || emailModule;
 } catch (e) {
     console.warn('⚠️ [Signup] email-service não disponível');
     emailService = null;
