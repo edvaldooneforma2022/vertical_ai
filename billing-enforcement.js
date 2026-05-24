@@ -96,7 +96,40 @@ function createBillingEnforcement(billingManager) {
                 });
             }
 
-            // 4. Tracking de uso (fire-and-forget, não bloqueia a request)
+            // 4. Verificar limites de BILLING (mensagens/extrações)
+            try {
+                const usageType = req.path.includes('chat') ? 'messages'
+                    : req.path.includes('extract') ? 'extractions'
+                        : null;
+
+                if (usageType && billingManager.canUseFeature) {
+                    const allowed = await billingManager.canUseFeature(tenantId, usageType);
+                    if (!allowed) {
+                        const subscription = await billingManager.getSubscription(tenantId);
+                        const limits = await billingManager.getRemainingLimits(tenantId);
+                        console.warn(`🚫 [BILLING] Limite de ${usageType} atingido: tenant ${tenantId.substring(0, 8)}... (plano: ${subscription.planId})`);
+                        return res.status(429).json({
+                            success: false,
+                            error: usageType === 'messages'
+                                ? 'Limite de mensagens atingido para seu plano. Faça upgrade para continuar.'
+                                : 'Limite de extrações atingido para seu plano. Faça upgrade para continuar.',
+                            code: 'BILLING_LIMIT_EXCEEDED',
+                            billing: {
+                                feature: usageType,
+                                planId: subscription.planId,
+                                planName: subscription.plan?.name || 'Gratuito',
+                                limits,
+                                upgradeUrl: '/pricing'
+                            }
+                        });
+                    }
+                }
+            } catch (billingErr) {
+                // Fail-open: se billing check falhar, permite acesso
+                console.warn('⚠️ [BILLING ENFORCEMENT] Erro no check de limites, fail-open:', billingErr.message);
+            }
+
+            // 5. Tracking de uso (fire-and-forget, não bloqueia a request)
             _trackUsageAsync(billingManager, tenantId, req.path);
 
             // Adicionar info de billing ao request para uso downstream

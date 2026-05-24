@@ -3896,6 +3896,80 @@ app.get("/excluir-dados", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "excluir-dados.html"));
 });
 
+// ===== BILLING LIMITS API (para dashboard "Atualizar Limites") =====
+app.get("/api/billing/limits", async (req, res) => {
+    try {
+        const apiKey = req.query.apiKey || req.session?.validatedApiKey || req.headers['x-api-key'];
+        if (!apiKey) {
+            return res.status(401).json({ success: false, error: 'API Key obrigatória' });
+        }
+
+        const { billingManager, PLANS } = require('./billing');
+        const subscription = await billingManager.getSubscription(apiKey);
+        const plan = subscription.plan || PLANS.free;
+        const usage = billingManager.getUsage(apiKey);
+
+        // Contar chatbots existentes do tenant
+        let chatbotsCount = 0;
+        try {
+            const { db, USE_POSTGRES } = require('./database');
+            if (db && USE_POSTGRES) {
+                const result = await db.query(
+                    `SELECT COUNT(*) as count FROM chatbots WHERE api_key = $1`,
+                    [apiKey]
+                );
+                const rows = result.rows || result;
+                chatbotsCount = parseInt(rows[0]?.count || '0');
+            }
+        } catch (e) {
+            // Silencioso — contagem de chatbots é best-effort
+        }
+
+        res.json({
+            success: true,
+            planName: plan.name || 'Gratuito',
+            planId: subscription.planId || 'free',
+            limits: {
+                messages: {
+                    used: usage.messages || 0,
+                    limit: plan.features.maxMessagesPerMonth
+                },
+                extractions: {
+                    used: usage.extractions || 0,
+                    limit: plan.features.maxExtractions
+                },
+                chatbots: {
+                    used: chatbotsCount,
+                    limit: plan.features.maxChatbots
+                }
+            },
+            features: {
+                whatsappEnabled: plan.features.whatsappEnabled || false,
+                webhooksEnabled: plan.features.webhooksEnabled || false,
+                apiAccess: plan.features.apiAccess || false,
+                removePoweredBy: plan.features.removePoweredBy || false,
+                customBranding: plan.features.customBranding || false,
+                whiteLabel: plan.features.whiteLabel || false,
+                advancedAnalytics: plan.features.advancedAnalytics || false
+            }
+        });
+    } catch (err) {
+        console.error('❌ [Billing] Erro em /api/billing/limits:', err.message);
+        // Fallback para Free
+        res.json({
+            success: true,
+            planName: 'Gratuito',
+            planId: 'free',
+            limits: {
+                messages: { used: 0, limit: 100 },
+                extractions: { used: 0, limit: 3 },
+                chatbots: { used: 0, limit: 1 }
+            },
+            features: {}
+        });
+    }
+});
+
 // ===== ROTAS DE ADMINISTRAÇÃO DE LEADS =====
 // 🔒 Anti-storm: evita múltiplas leituras simultâneas de leads
 let _leadsRequestInFlight = false;
@@ -11396,6 +11470,43 @@ try {
                     success: false,
                     error: 'API Key is required'
                 });
+            }
+
+            // 🛡️ BILLING: Verificar limite de chatbots do plano
+            try {
+                const { billingManager } = require('./billing');
+                const subscription = await billingManager.getSubscription(apiKey);
+                const plan = subscription.plan;
+                const maxChatbots = plan?.features?.maxChatbots || 1;
+
+                if (maxChatbots !== -1) {
+                    const { db, USE_POSTGRES } = require('./database');
+                    if (db && USE_POSTGRES) {
+                        const countResult = await db.query(
+                            `SELECT COUNT(*) as count FROM chatbots WHERE api_key = $1`,
+                            [apiKey]
+                        );
+                        const rows = countResult.rows || countResult;
+                        const currentCount = parseInt(rows[0]?.count || '0');
+                        if (currentCount >= maxChatbots) {
+                            logger.warn(`🚫 [BILLING] Limite de chatbots atingido: ${currentCount}/${maxChatbots} (tenant: ${apiKey.substring(0, 8)}... plano: ${subscription.planId})`);
+                            return res.status(429).json({
+                                success: false,
+                                error: `Limite de ${maxChatbots} chatbot(s) atingido para o plano ${plan?.name || 'Gratuito'}. Faça upgrade para criar mais.`,
+                                code: 'CHATBOT_LIMIT_EXCEEDED',
+                                billing: {
+                                    current: currentCount,
+                                    limit: maxChatbots,
+                                    planId: subscription.planId,
+                                    upgradeUrl: '/pricing'
+                                }
+                            });
+                        }
+                    }
+                }
+            } catch (billingErr) {
+                // Fail-open: se billing check falhar, permite criar
+                logger.warn('⚠️ [BILLING] Erro ao verificar limite de chatbots, fail-open:', billingErr.message);
             }
 
             if (!robotName || !salesUrl) {
