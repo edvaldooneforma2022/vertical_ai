@@ -3871,6 +3871,18 @@ app.get("/app", (req, res) => {
 });
 
 
+app.get("/pricing.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "pricing.html"));
+});
+
+app.get("/pricing", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "pricing.html"));
+});
+
+app.get("/checkout-success.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "checkout-success.html"));
+});
+
 app.get("/privacy.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "privacy.html"));
 });
