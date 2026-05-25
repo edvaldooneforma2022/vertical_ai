@@ -35,6 +35,8 @@ function createBillingEnforcement(billingManager) {
         try {
             // Extrair tenantId do request (múltiplas fontes possíveis)
             const tenantId = req.tenantId ||
+                req.session?.validatedApiKey ||
+                req.body?.apiKey ||
                 req.headers['x-tenant-id'] ||
                 req.query.apiKey ||
                 req.query.api_key ||

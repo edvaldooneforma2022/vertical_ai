@@ -3907,7 +3907,7 @@ app.get("/api/billing/limits", async (req, res) => {
         const { billingManager, PLANS } = require('./billing');
         const subscription = await billingManager.getSubscription(apiKey);
         const plan = subscription.plan || PLANS.free;
-        const usage = billingManager.getUsage(apiKey);
+        const usage = await billingManager.getUsage(apiKey);
 
         // Contar chatbots existentes do tenant
         let chatbotsCount = 0;

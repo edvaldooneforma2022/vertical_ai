@@ -66,7 +66,7 @@ function registerStripeRoutes(app) {
             }
 
             const subscription = await billingManager.getSubscription(apiKey);
-            const usage = billingManager.getUsage(apiKey);
+            const usage = await billingManager.getUsage(apiKey);
             const limits = await billingManager.getRemainingLimits(apiKey);
 
             res.json({

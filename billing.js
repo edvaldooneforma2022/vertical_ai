@@ -390,23 +390,50 @@ class BillingManager {
     }
 
     /**
-     * Obter uso atual
+     * Obter uso atual (com fallback para DB)
      */
-    getUsage(userId) {
+    async getUsage(userId) {
         const now = new Date();
         const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-        if (!this.usageTracking.has(userId)) {
-            return {
-                messages: 0,
-                extractions: 0,
-                apiCalls: 0,
-                webhookCalls: 0
-            };
+        // 1. Checar memória primeiro
+        if (this.usageTracking.has(userId)) {
+            const userUsage = this.usageTracking.get(userId);
+            const monthData = userUsage.get(monthKey);
+            if (monthData && (monthData.messages > 0 || monthData.extractions > 0)) {
+                return monthData;
+            }
         }
 
-        const userUsage = this.usageTracking.get(userId);
-        return userUsage.get(monthKey) || {
+        // 2. Fallback: buscar do banco (após restart do server, memória está vazia)
+        try {
+            const { db, USE_POSTGRES } = require('./database');
+            if (db && USE_POSTGRES) {
+                const result = await db.query(
+                    `SELECT messages, extractions, api_calls FROM billing_usage WHERE tenant_id = $1 AND period = $2 LIMIT 1`,
+                    [userId, monthKey]
+                );
+                const rows = result.rows || result;
+                if (rows.length > 0) {
+                    const dbUsage = {
+                        messages: parseInt(rows[0].messages || '0'),
+                        extractions: parseInt(rows[0].extractions || '0'),
+                        apiCalls: parseInt(rows[0].api_calls || '0'),
+                        webhookCalls: 0
+                    };
+                    // Sincronizar memória com DB
+                    if (!this.usageTracking.has(userId)) {
+                        this.usageTracking.set(userId, new Map());
+                    }
+                    this.usageTracking.get(userId).set(monthKey, dbUsage);
+                    return dbUsage;
+                }
+            }
+        } catch (e) {
+            // Silencioso — DB é best-effort
+        }
+
+        return {
             messages: 0,
             extractions: 0,
             apiCalls: 0,
@@ -420,7 +447,7 @@ class BillingManager {
     async canUseFeature(userId, feature, amount = 1) {
         const subscription = await this.getSubscription(userId);
         const plan = subscription.plan || PLANS.free;
-        const usage = this.getUsage(userId);
+        const usage = await this.getUsage(userId);
 
         // Verificar limites do plano
         switch (feature) {
@@ -455,7 +482,7 @@ class BillingManager {
     async getRemainingLimits(userId) {
         const subscription = await this.getSubscription(userId);
         const plan = subscription.plan;
-        const usage = this.getUsage(userId);
+        const usage = await this.getUsage(userId);
 
         return {
             messages: {
