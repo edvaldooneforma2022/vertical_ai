@@ -3914,12 +3914,25 @@ app.get("/api/billing/limits", async (req, res) => {
         try {
             const { db, USE_POSTGRES } = require('./database');
             if (db && USE_POSTGRES) {
-                const result = await db.query(
-                    `SELECT COUNT(*) as count FROM chatbots WHERE api_key = $1`,
-                    [apiKey]
-                );
-                const rows = result.rows || result;
-                chatbotsCount = parseInt(rows[0]?.count || '0');
+                // Tentar short_urls primeiro (tabela principal de assistentes)
+                try {
+                    const result = await db.query(
+                        `SELECT COUNT(*) as count FROM short_urls WHERE api_key = $1`,
+                        [apiKey]
+                    );
+                    const rows = result.rows || result;
+                    chatbotsCount = parseInt(rows[0]?.count || '0');
+                } catch (e1) {
+                    // Fallback: tabela chatbots
+                    try {
+                        const result2 = await db.query(
+                            `SELECT COUNT(*) as count FROM chatbots WHERE api_key = $1`,
+                            [apiKey]
+                        );
+                        const rows2 = result2.rows || result2;
+                        chatbotsCount = parseInt(rows2[0]?.count || '0');
+                    } catch (e2) { /* silencioso */ }
+                }
             }
         } catch (e) {
             // Silencioso — contagem de chatbots é best-effort
@@ -11482,10 +11495,18 @@ try {
                 if (maxChatbots !== -1) {
                     const { db, USE_POSTGRES } = require('./database');
                     if (db && USE_POSTGRES) {
-                        const countResult = await db.query(
-                            `SELECT COUNT(*) as count FROM chatbots WHERE api_key = $1`,
-                            [apiKey]
-                        );
+                        let countResult;
+                        try {
+                            countResult = await db.query(
+                                `SELECT COUNT(*) as count FROM short_urls WHERE api_key = $1`,
+                                [apiKey]
+                            );
+                        } catch(e) {
+                            countResult = await db.query(
+                                `SELECT COUNT(*) as count FROM chatbots WHERE api_key = $1`,
+                                [apiKey]
+                            );
+                        }
                         const rows = countResult.rows || countResult;
                         const currentCount = parseInt(rows[0]?.count || '0');
                         if (currentCount >= maxChatbots) {
@@ -11620,9 +11641,10 @@ try {
     // Fallback seguro: retorna [] se banco falhar — zero impacto em funcionalidades existentes
     app.get('/api/assistants', async (req, res) => {
         try {
-            // Priorizar req.query.apiKey para evitar conflito de sessão (TENANCY SAFE)
-            const apiKey = req.query.apiKey || (req.session && req.session.validatedApiKey);
-            if (!apiKey) return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            // Priorizar sessão para evitar conflito (TENANCY SAFE)
+            const apiKey = req.session?.validatedApiKey || req.query.apiKey;
+            const tenantUuid = req.session?.tenantId;
+            if (!apiKey && !tenantUuid) return res.status(401).json({ success: false, error: 'API Key não fornecida' });
             try {
                 if (featureFlags && featureFlags.isEnabled('FEATURE_MEUS_ASSISTENTES') === false) {
                     return res.status(403).json({ success: false, error: 'Funcionalidade desabilitada' });
@@ -11657,14 +11679,15 @@ try {
                 const leadSys = getLeadSystem(apiKey);
                 totalLeads = leadSys.getLeads().length;
             } catch (leadsErr) {
-                console.warn('⚠️ [Assistentes] Erro ao contar leads (fallback=0):', leadsErr.message);
+                // Silencioso — leads é best-effort
             }
 
-            console.log(`🤖 [Assistentes] GET - Tenant ${apiKey.substring(0, 8)}... → ${assistants.length} assistentes, ${totalLeads} leads`);
+            console.log(`🤖 [Assistentes] GET - Tenant ${(apiKey || tenantUuid || '').substring(0, 8)}... → ${assistants.length} assistentes, ${totalLeads} leads`);
             res.json({ success: true, assistants, total: assistants.length, totalLeads });
         } catch (error) {
             console.error('🤖 [Assistentes] Erro no GET:', error.message);
-            res.status(500).json({ success: false, error: error.message });
+            // Retornar lista vazia ao invés de erro 500 (graceful degradation)
+            res.json({ success: true, assistants: [], total: 0, totalLeads: 0 });
         }
     });
 
