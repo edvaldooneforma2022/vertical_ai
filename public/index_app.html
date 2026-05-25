@@ -2015,6 +2015,8 @@
             }
             // Sempre chamar loadDashboardStats, mesmo que apiKey não tenha sido encontrada (fallback original)
             loadDashboardStats();
+            // 🛡️ BILLING: Carregar limites e features do plano para gating de tabs
+            try { loadBillingLimits(); } catch(e) {}
         }
 
         // ===== SAFE PATCH - BUG-DASH-001: Carregar estatísticas reais do backend =====
@@ -3080,10 +3082,23 @@
                         </div>
                     </div>
 
-                    <button onclick="loadBillingLimits()"
-                        style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%;">
-                        🔄 Atualizar Limites
-                    </button>
+                    <!-- Banner de upgrade (visível quando limites atingidos) -->
+                    <div id="billing-upgrade-banner" style="display:none; background:linear-gradient(135deg,#7c3aed,#3b82f6); padding:1.5rem; border-radius:12px; margin-bottom:1rem; text-align:center;">
+                        <p style="color:white; font-size:1.1rem; font-weight:600; margin-bottom:0.5rem;" id="billing-upgrade-msg">⚠️ Seus limites foram atingidos!</p>
+                        <p style="color:#e2e8f0; font-size:0.9rem; margin-bottom:1rem;">Faça upgrade para continuar usando todos os recursos</p>
+                        <a href="/pricing" target="_blank" style="background:#10b981; color:white; padding:0.8rem 2rem; border-radius:8px; text-decoration:none; font-weight:700; display:inline-block;">🚀 Ver Planos e Fazer Upgrade</a>
+                    </div>
+
+                    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                        <button onclick="loadBillingLimits()"
+                            style="background:#3b82f6; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; flex:1;">
+                            🔄 Atualizar Limites
+                        </button>
+                        <a href="/pricing" target="_blank"
+                            style="background:#7c3aed; color:white; border:none; padding:1rem 2rem; border-radius:12px; cursor:pointer; font-weight:600; flex:1; text-align:center; text-decoration:none;">
+                            🚀 Upgrade de Plano
+                        </a>
+                    </div>
                 </div>
             </div>
 
@@ -3615,7 +3630,31 @@
             document.getElementById('newSystemsPanel').style.display = 'none';
         }
 
+        // 🛡️ BILLING GATING: Features por plano (carregadas via loadBillingLimits)
+        window._planFeatures = window._planFeatures || {};
+        window._planId = window._planId || 'free';
+
+        // Tabs que requerem plano específico
+        const TAB_PLAN_REQUIREMENTS = {
+            'whatsapp': { feature: 'whatsappEnabled', minPlan: 'Pro' },
+            'whitelabel': { feature: 'customBranding', minPlan: 'Pro' },
+            'webhooks': { feature: 'webhooksEnabled', minPlan: 'Starter' }
+        };
+
         function showNewTab(tabName) {
+            // 🛡️ BILLING GATING: Verificar se tab é permitida pelo plano
+            try {
+                const requirement = TAB_PLAN_REQUIREMENTS[tabName];
+                if (requirement && window._planFeatures) {
+                    const allowed = window._planFeatures[requirement.feature];
+                    if (allowed === false) {
+                        showToast(`🔒 Recurso bloqueado — disponível a partir do plano ${requirement.minPlan}. Faça upgrade em /pricing`, 'warning');
+                        // Redirecionar para tab billing
+                        tabName = 'billing';
+                    }
+                }
+            } catch(e) { /* fail-open: se erro, permite acesso */ }
+
             // Esconder todos os conteúdos
             document.querySelectorAll('.new-tab-content').forEach(el => el.style.display = 'none');
 
@@ -4777,6 +4816,10 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // Salvar features do plano para gating de tabs
+                    window._planFeatures = data.features || {};
+                    window._planId = data.planId || 'free';
+
                     // Atualizar elementos do DOM
                     document.getElementById('billing-plan-name').textContent = data.planName || 'Gratuito';
 
@@ -4784,14 +4827,49 @@
                     const msgUsed = data.limits.messages.used || 0;
                     document.getElementById('billing-messages-usage').textContent = `${msgUsed} / ${msgLimit}`;
 
+                    // Colorir vermelho se limite atingido
+                    if (msgLimit !== '∞' && msgUsed >= msgLimit) {
+                        document.getElementById('billing-messages-usage').style.color = '#ef4444';
+                    } else {
+                        document.getElementById('billing-messages-usage').style.color = '#10b981';
+                    }
+
                     const extLimit = data.limits.extractions.limit === -1 ? '∞' : data.limits.extractions.limit;
                     const extUsed = data.limits.extractions.used || 0;
                     document.getElementById('billing-extractions-usage').textContent = `${extUsed} / ${extLimit}`;
 
-                    const chatbotsLimit = data.limits.chatbots.limit === -1 ? '∞' : data.limits.chatbots.limit;
-                    document.getElementById('billing-chatbots-limit').textContent = `Máx: ${chatbotsLimit}`;
+                    if (extLimit !== '∞' && extUsed >= extLimit) {
+                        document.getElementById('billing-extractions-usage').style.color = '#ef4444';
+                    } else {
+                        document.getElementById('billing-extractions-usage').style.color = '#f59e0b';
+                    }
 
-                    console.log(`✅ Billing carregado: Plano ${data.planName}`);
+                    const chatbotsLimit = data.limits.chatbots.limit === -1 ? '∞' : data.limits.chatbots.limit;
+                    const chatbotsUsed = data.limits.chatbots.used || 0;
+                    document.getElementById('billing-chatbots-limit').textContent = `${chatbotsUsed} / ${chatbotsLimit === '∞' ? '∞' : chatbotsLimit}`;
+
+                    // Mostrar banner de upgrade se limites atingidos
+                    const banner = document.getElementById('billing-upgrade-banner');
+                    const bannerMsg = document.getElementById('billing-upgrade-msg');
+                    const msgsExceeded = msgLimit !== '∞' && msgUsed >= msgLimit;
+                    const extsExceeded = extLimit !== '∞' && extUsed >= extLimit;
+                    const botsExceeded = chatbotsLimit !== '∞' && chatbotsUsed >= chatbotsLimit;
+
+                    if (msgsExceeded || extsExceeded || botsExceeded) {
+                        const exceeded = [];
+                        if (msgsExceeded) exceeded.push('mensagens');
+                        if (extsExceeded) exceeded.push('extrações');
+                        if (botsExceeded) exceeded.push('chatbots');
+                        bannerMsg.textContent = `⚠️ Limite de ${exceeded.join(', ')} atingido!`;
+                        banner.style.display = 'block';
+                    } else {
+                        banner.style.display = 'none';
+                    }
+
+                    // Marcar tabs bloqueadas visualmente
+                    try { applyTabGatingStyles(); } catch(e) {}
+
+                    console.log(`✅ Billing carregado: Plano ${data.planName} | Features:`, data.features);
                 } else {
                     throw new Error('Resposta sem sucesso');
                 }
@@ -4800,9 +4878,27 @@
                 // Fallback para valores padrão (plano Free)
                 document.getElementById('billing-plan-name').textContent = 'Gratuito';
                 document.getElementById('billing-messages-usage').textContent = '0 / 100';
-                document.getElementById('billing-extractions-usage').textContent = '0 / 10';
-                document.getElementById('billing-chatbots-limit').textContent = 'Máx: 1';
+                document.getElementById('billing-extractions-usage').textContent = '0 / 3';
+                document.getElementById('billing-chatbots-limit').textContent = '0 / 1';
             }
+        }
+
+        // 🛡️ Aplicar estilos visuais de bloqueio nas tabs
+        function applyTabGatingStyles() {
+            document.querySelectorAll('.new-tab').forEach(btn => {
+                const onclickStr = btn.getAttribute('onclick') || '';
+                const match = onclickStr.match(/showNewTab\('(\w+)'\)/);
+                if (!match) return;
+                const tabId = match[1];
+                const req = TAB_PLAN_REQUIREMENTS[tabId];
+                if (req && window._planFeatures[req.feature] === false) {
+                    btn.style.opacity = '0.5';
+                    btn.title = `🔒 Requer plano ${req.minPlan}`;
+                } else {
+                    btn.style.opacity = '1';
+                    btn.title = '';
+                }
+            });
         }
 
         // Carregar FAQs ao abrir a tab
