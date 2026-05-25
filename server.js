@@ -3888,6 +3888,14 @@ app.get("/checkout-success.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "checkout-success.html"));
 });
 
+// 📖 Central de Ajuda + Comunidade (rotas amigáveis)
+app.get("/ajuda", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "ajuda.html"));
+});
+app.get("/comunidade", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "comunidade.html"));
+});
+
 app.get("/privacy.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "privacy.html"));
 });

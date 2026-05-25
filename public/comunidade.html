@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comunidade Oficial — LinkMágico™</title>
+    <meta name="description" content="Entre na Comunidade Oficial do LinkMágico™. Tire dúvidas, compartilhe resultados, aprenda estratégias e acompanhe atualizações.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+        /* === NAV === */
+        .nav { position: sticky; top: 0; z-index: 100; background: rgba(15,23,42,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(59,130,246,0.15); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; color: #60a5fa; }
+        .nav-brand i { font-size: 1.3rem; }
+        .nav-back { color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; display: flex; align-items: center; gap: 6px; }
+        .nav-back:hover { color: #60a5fa; }
+
+        /* === HERO === */
+        .hero { text-align: center; padding: 60px 24px 50px; background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(139,92,246,0.08) 50%, rgba(16,185,129,0.05) 100%); position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 40%, rgba(59,130,246,0.06) 0%, transparent 50%), radial-gradient(circle at 70% 60%, rgba(139,92,246,0.05) 0%, transparent 50%); animation: heroFloat 15s ease-in-out infinite; }
+        @keyframes heroFloat { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-2%,2%); } }
+        .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 20px; position: relative; }
+        .hero-badge-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: dotPulse 2s infinite; }
+        @keyframes dotPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .hero h1 { font-size: 2.5rem; font-weight: 900; background: linear-gradient(135deg, #60a5fa, #a78bfa, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 16px; position: relative; line-height: 1.2; }
+        .hero p { font-size: 1.1rem; color: #94a3b8; max-width: 600px; margin: 0 auto 30px; line-height: 1.6; position: relative; }
+        .hero-cta { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 16px 36px; border-radius: 14px; font-size: 1.1rem; font-weight: 700; text-decoration: none; transition: all 0.3s; box-shadow: 0 8px 25px rgba(59,130,246,0.3); }
+        .hero-cta:hover { transform: translateY(-3px); box-shadow: 0 12px 35px rgba(59,130,246,0.4); }
+        .hero-cta:active { transform: translateY(0); }
+
+        /* === CONTAINER === */
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+        /* === SECTIONS === */
+        .section { padding: 60px 0; }
+        .section-title { text-align: center; font-size: 1.8rem; font-weight: 800; margin-bottom: 12px; color: #f1f5f9; }
+        .section-subtitle { text-align: center; font-size: 0.95rem; color: #64748b; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+
+        /* === BENEFITS GRID === */
+        .benefits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+        .benefit-card { background: rgba(30,41,59,0.6); border: 1px solid rgba(59,130,246,0.12); border-radius: 14px; padding: 22px 20px; text-align: center; transition: all 0.3s; }
+        .benefit-card:hover { transform: translateY(-4px); border-color: rgba(59,130,246,0.3); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+        .benefit-icon { font-size: 1.6rem; margin-bottom: 10px; }
+        .benefit-title { font-size: 0.92rem; font-weight: 700; color: #e2e8f0; margin-bottom: 6px; }
+        .benefit-desc { font-size: 0.78rem; color: #64748b; line-height: 1.4; }
+
+        /* === CHANNELS GRID === */
+        .channels-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .channel-card { background: rgba(30,41,59,0.5); border-radius: 16px; padding: 28px 24px; transition: all 0.3s; position: relative; overflow: hidden; border: 1px solid transparent; }
+        .channel-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 16px 16px 0 0; }
+        .channel-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.3); }
+
+        .channel-card.blue { border-color: rgba(59,130,246,0.25); }
+        .channel-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .channel-card.blue:hover { border-color: rgba(59,130,246,0.5); }
+
+        .channel-card.green { border-color: rgba(16,185,129,0.25); }
+        .channel-card.green::before { background: linear-gradient(90deg, #10b981, #34d399); }
+        .channel-card.green:hover { border-color: rgba(16,185,129,0.5); }
+
+        .channel-card.purple { border-color: rgba(139,92,246,0.25); }
+        .channel-card.purple::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+        .channel-card.purple:hover { border-color: rgba(139,92,246,0.5); }
+
+        .channel-card.gray { border-color: rgba(100,116,139,0.25); }
+        .channel-card.gray::before { background: linear-gradient(90deg, #64748b, #94a3b8); }
+        .channel-card.gray:hover { border-color: rgba(100,116,139,0.5); }
+
+        .channel-card.navy { border-color: rgba(30,58,138,0.4); }
+        .channel-card.navy::before { background: linear-gradient(90deg, #1e3a8a, #3b82f6); }
+        .channel-card.navy:hover { border-color: rgba(30,58,138,0.7); }
+
+        .channel-card.orange { border-color: rgba(249,115,22,0.25); }
+        .channel-card.orange::before { background: linear-gradient(90deg, #f97316, #fb923c); }
+        .channel-card.orange:hover { border-color: rgba(249,115,22,0.5); }
+
+        .channel-card.cyan { border-color: rgba(6,182,212,0.25); }
+        .channel-card.cyan::before { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
+        .channel-card.cyan:hover { border-color: rgba(6,182,212,0.5); }
+
+        .channel-card.featured { grid-column: 1 / -1; background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.08)); border: 2px solid rgba(59,130,246,0.3); }
+        .channel-card.featured:hover { border-color: rgba(59,130,246,0.6); }
+
+        .channel-emoji { font-size: 2rem; margin-bottom: 12px; }
+        .channel-title { font-size: 1.15rem; font-weight: 800; color: #f1f5f9; margin-bottom: 8px; }
+        .channel-desc { font-size: 0.88rem; color: #94a3b8; line-height: 1.6; margin-bottom: 14px; }
+        .channel-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .channel-tag { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 500; }
+        .channel-links { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+        .channel-link { color: #60a5fa; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px; transition: color 0.2s; }
+        .channel-link:hover { color: #93c5fd; }
+
+        /* === WHY SECTION === */
+        .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .why-card { background: rgba(30,41,59,0.5); border: 1px solid rgba(59,130,246,0.1); border-radius: 16px; padding: 30px 24px; text-align: center; transition: all 0.3s; }
+        .why-card:hover { transform: translateY(-4px); border-color: rgba(59,130,246,0.25); }
+        .why-emoji { font-size: 2.5rem; margin-bottom: 14px; }
+        .why-title { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
+        .why-desc { font-size: 0.85rem; color: #64748b; line-height: 1.5; }
+
+        /* === CTA FINAL === */
+        .cta-section { text-align: center; padding: 60px 24px; background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08)); border-radius: 24px; margin: 40px 0 60px; border: 1px solid rgba(59,130,246,0.15); }
+        .cta-section h2 { font-size: 2rem; font-weight: 900; color: #f1f5f9; margin-bottom: 12px; }
+        .cta-section p { font-size: 1rem; color: #94a3b8; margin-bottom: 30px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+        .cta-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .cta-primary { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 16px 36px; border-radius: 14px; font-size: 1.1rem; font-weight: 700; text-decoration: none; transition: all 0.3s; box-shadow: 0 8px 25px rgba(59,130,246,0.3); border: none; cursor: pointer; }
+        .cta-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 35px rgba(59,130,246,0.4); }
+        .cta-secondary { display: inline-flex; align-items: center; gap: 8px; background: rgba(30,41,59,0.8); color: #94a3b8; padding: 14px 28px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; text-decoration: none; border: 1px solid rgba(59,130,246,0.2); transition: all 0.3s; }
+        .cta-secondary:hover { color: #e2e8f0; border-color: rgba(59,130,246,0.4); transform: translateY(-2px); }
+
+        /* === FOOTER === */
+        .footer { text-align: center; padding: 30px 24px; border-top: 1px solid rgba(59,130,246,0.1); color: #475569; font-size: 0.8rem; }
+        .footer a { color: #64748b; text-decoration: none; transition: color 0.2s; }
+        .footer a:hover { color: #60a5fa; }
+        .footer-links { display: flex; gap: 20px; justify-content: center; margin-top: 10px; }
+
+        /* === ANIMATIONS === */
+        .fade-up { opacity: 0; transform: translateY(30px); transition: all 0.6s ease-out; }
+        .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.8rem; }
+            .hero p { font-size: 0.95rem; }
+            .benefits-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .channels-grid { grid-template-columns: 1fr; }
+            .channel-card.featured { grid-column: 1; }
+            .why-grid { grid-template-columns: 1fr; }
+            .section-title { font-size: 1.4rem; }
+            .cta-section h2 { font-size: 1.5rem; }
+            .cta-buttons { flex-direction: column; align-items: center; }
+        }
+        @media (max-width: 480px) {
+            .benefits-grid { grid-template-columns: 1fr; }
+            .hero { padding: 40px 16px 30px; }
+            .hero-cta { padding: 14px 28px; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- NAV -->
+    <nav class="nav">
+        <div class="nav-brand"><i class="fas fa-comments"></i> Comunidade LinkMágico™</div>
+        <a href="/app" class="nav-back"><i class="fas fa-arrow-left"></i> Voltar ao Painel</a>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-badge"><span class="hero-badge-dot"></span> Comunidade Ativa</div>
+        <h1>Comunidade Oficial<br>LinkMágico™</h1>
+        <p>O ecossistema vivo de quem transforma páginas em vendedores automáticos com IA. Tire dúvidas, compartilhe resultados e cresça junto.</p>
+        <a href="#canais" class="hero-cta"><i class="fas fa-rocket"></i> Explorar a Comunidade</a>
+    </section>
+
+    <!-- O QUE VOCÊ ENCONTRA -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title fade-up">O que você encontra aqui</h2>
+            <p class="section-subtitle fade-up">Um espaço completo para aprender, compartilhar e evoluir com o LinkMágico™</p>
+            <div class="benefits-grid">
+                <div class="benefit-card fade-up">
+                    <div class="benefit-icon">💬</div>
+                    <div class="benefit-title">Tire dúvidas</div>
+                    <div class="benefit-desc">Com a comunidade e equipe oficial</div>
+                </div>
+                <div class="benefit-card fade-up">
+                    <div class="benefit-icon">📊</div>
+                    <div class="benefit-title">Compartilhe resultados</div>
+                    <div class="benefit-desc">Prints, leads e conversões reais</div>
+                </div>
+                <div class="benefit-card fade-up">
+                    <div class="benefit-icon">🧪</div>
+                    <div class="benefit-title">Mostre seus testes</div>
+                    <div class="benefit-desc">Veja como outros estão usando</div>
+                </div>
+                <div class="benefit-card fade-up">
+                    <div class="benefit-icon">🎯</div>
+                    <div class="benefit-title">Aprenda estratégias</div>
+                    <div class="benefit-desc">Dicas de conversão com IA</div>
+                </div>
+                <div class="benefit-card fade-up">
+                    <div class="benefit-icon">🔔</div>
+                    <div class="benefit-title">Acompanhe atualizações</div>
+                    <div class="benefit-desc">Novos recursos e melhorias</div>
+                </div>
+                <div class="benefit-card fade-up">
+                    <div class="benefit-icon">🤖</div>
+                    <div class="benefit-title">Veja automações reais</div>
+                    <div class="benefit-desc">A IA funcionando de verdade</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CANAIS -->
+    <section class="section" id="canais" style="padding-top: 20px;">
+        <div class="container">
+            <h2 class="section-title fade-up">Canais da Comunidade</h2>
+            <p class="section-subtitle fade-up">Cada canal tem um propósito. Explore e participe!</p>
+
+            <div class="channels-grid">
+                <!-- COMECE AQUI (featured) -->
+                <div class="channel-card featured blue fade-up">
+                    <div class="channel-emoji">🚀</div>
+                    <div class="channel-title">Comece Aqui</div>
+                    <div class="channel-desc">Tutoriais rápidos para ativar, configurar e testar seu primeiro assistente. O ponto de partida para quem acabou de chegar.</div>
+                    <div class="channel-tags">
+                        <span class="channel-tag">Tutorial Inicial</span>
+                        <span class="channel-tag">Configuração</span>
+                        <span class="channel-tag">Primeiro Teste</span>
+                    </div>
+                    <div class="channel-links">
+                        <a href="/app" class="channel-link"><i class="fas fa-tachometer-alt"></i> Acessar Dashboard</a>
+                        <a href="/ajuda" class="channel-link"><i class="fas fa-book"></i> Central de Ajuda</a>
+                    </div>
+                </div>
+
+                <!-- RESULTADOS -->
+                <div class="channel-card green fade-up">
+                    <div class="channel-emoji">🏆</div>
+                    <div class="channel-title">Resultados</div>
+                    <div class="channel-desc">Espaço para postar prints de leads, testes e conversas da IA. Prova social orgânica de quem está usando e obtendo resultados.</div>
+                    <div class="channel-tags">
+                        <span class="channel-tag">Prints</span>
+                        <span class="channel-tag">Leads</span>
+                        <span class="channel-tag">Conversões</span>
+                        <span class="channel-tag">Prova Social</span>
+                    </div>
+                </div>
+
+                <!-- AUTOMAÇÕES -->
+                <div class="channel-card purple fade-up">
+                    <div class="channel-emoji">⚡</div>
+                    <div class="channel-title">Automações</div>
+                    <div class="channel-desc">Exemplos de prompts, configurações avançadas, fluxos de conversão e ideias criativas de uso da plataforma.</div>
+                    <div class="channel-tags">
+                        <span class="channel-tag">Prompts</span>
+                        <span class="channel-tag">Fluxos</span>
+                        <span class="channel-tag">Configurações</span>
+                        <span class="channel-tag">Ideias</span>
+                    </div>
+                </div>
+
+                <!-- DÚVIDAS -->
+                <div class="channel-card gray fade-up">
+                    <div class="channel-emoji">❓</div>
+                    <div class="channel-title">Dúvidas</div>
+                    <div class="channel-desc">Canal para suporte técnico, erros e dúvidas operacionais. A comunidade e equipe ajudam você.</div>
+                    <div class="channel-tags">
+                        <span class="channel-tag">Suporte</span>
+                        <span class="channel-tag">Erros</span>
+                        <span class="channel-tag">Dúvidas Técnicas</span>
+                    </div>
+                </div>
+
+                <!-- NOVIDADES -->
+                <div class="channel-card navy fade-up">
+                    <div class="channel-emoji">📢</div>
+                    <div class="channel-title">Novidades</div>
+                    <div class="channel-desc">Atualizações oficiais, melhorias na plataforma, novas funções e anúncios. Sensação de software vivo e em evolução.</div>
+                    <div class="channel-tags">
+                        <span class="channel-tag">Updates</span>
+                        <span class="channel-tag">Novas Funções</span>
+                        <span class="channel-tag">Anúncios</span>
+                    </div>
+                </div>
+
+                <!-- CRIATIVOS & MARKETING -->
+                <div class="channel-card orange fade-up">
+                    <div class="channel-emoji">🎨</div>
+                    <div class="channel-title">Criativos & Marketing</div>
+                    <div class="channel-desc">Hooks, reels, anúncios e exemplos de criativos que funcionam. Transforme o LinkMágico™ em movimento e tribo.</div>
+                    <div class="channel-tags">
+                        <span class="channel-tag">Hooks</span>
+                        <span class="channel-tag">Reels</span>
+                        <span class="channel-tag">Anúncios</span>
+                        <span class="channel-tag">Criativos</span>
+                    </div>
+                </div>
+
+                <!-- BASTIDORES -->
+                <div class="channel-card cyan fade-up">
+                    <div class="channel-emoji">💡</div>
+                    <div class="channel-title">Bastidores</div>
+                    <div class="channel-desc">Testes internos, prints de desenvolvimento, erros corrigidos e ideias futuras. Transparência que gera confiança.</div>
+                    <div class="channel-tags">
+                        <span class="channel-tag">Dev Updates</span>
+                        <span class="channel-tag">Transparência</span>
+                        <span class="channel-tag">Roadmap</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- POR QUE PARTICIPAR -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title fade-up">Por que participar?</h2>
+            <p class="section-subtitle fade-up">Mais do que suporte — é um ecossistema de crescimento</p>
+            <div class="why-grid">
+                <div class="why-card fade-up">
+                    <div class="why-emoji">🏢</div>
+                    <div class="why-title">Percepção de produto real</div>
+                    <div class="why-desc">Comunidade ativa = software sério. Faça parte de algo que funciona e está em constante evolução.</div>
+                </div>
+                <div class="why-card fade-up">
+                    <div class="why-emoji">🤝</div>
+                    <div class="why-title">Autoridade e confiança</div>
+                    <div class="why-desc">Bastidores transparentes geram trust. Veja o que está sendo construído por dentro.</div>
+                </div>
+                <div class="why-card fade-up">
+                    <div class="why-emoji">📈</div>
+                    <div class="why-title">Crescimento conjunto</div>
+                    <div class="why-desc">Estratégias compartilhadas = resultados melhores para todos. Cresça junto com a comunidade.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="section">
+        <div class="container">
+            <div class="cta-section fade-up">
+                <h2>Pronto para fazer parte?</h2>
+                <p>Entre na comunidade e comece a transformar suas páginas em máquinas de venda com IA.</p>
+                <div class="cta-buttons">
+                    <a href="https://chat.whatsapp.com/SEUGRUPAQUI" target="_blank" rel="noopener" class="cta-primary"><i class="fas fa-rocket"></i> Entrar na Comunidade Agora</a>
+                    <a href="/ajuda" class="cta-secondary"><i class="fas fa-book"></i> Ir para a Central de Ajuda</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>© 2024-2026 LinkMágico™ — Todos os direitos reservados.</p>
+        <div class="footer-links">
+            <a href="/ajuda">📖 Central de Ajuda</a>
+            <a href="/app">🎛️ Painel</a>
+            <a href="/pricing">💳 Planos</a>
+        </div>
+    </footer>
+
+    <!-- INTERSECTION OBSERVER ANIMATIONS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fade-up animation on scroll
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+            document.querySelectorAll('.fade-up').forEach(function(el) {
+                observer.observe(el);
+            });
+
+            // Smooth scroll for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var target = document.querySelector(this.getAttribute('href'));
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
