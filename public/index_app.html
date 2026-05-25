@@ -1642,40 +1642,87 @@
                 </div>
             </div>
 
-            <!-- ONBOARDING: Checklist visual de primeiro uso (Item 2) -->
+            <!-- 🚀 ONBOARDING ATIVO v2.0 — Guia interativo de primeiro uso -->
             <div id="onboardingChecklist"
-                style="background:linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08)); border:1px solid rgba(59,130,246,0.2); border-radius:16px; padding:20px 24px; margin-bottom:1.5rem;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-                    <h3 style="color:#60a5fa; font-size:1rem; font-weight:700; margin:0;">🚀 Primeiros Passos</h3>
-                    <button onclick="document.getElementById('onboardingChecklist').style.display='none'"
+                style="background:linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08)); border:1px solid rgba(59,130,246,0.2); border-radius:16px; padding:20px 24px; margin-bottom:1.5rem; transition:all 0.3s;">
+                <!-- Header com progresso -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                    <h3 style="color:#60a5fa; font-size:1rem; font-weight:700; margin:0;">🚀 Ative seu Assistente em 3 Passos</h3>
+                    <button onclick="dismissOnboarding()"
                         style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem; padding:4px 8px;"
-                        title="Fechar checklist">✕ Fechar</button>
+                        title="Minimizar">✕</button>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <div id="obStep1"
-                        style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(30,41,59,0.4);">
-                        <span id="obCheck1"
-                            style="width:22px;height:22px;border-radius:50%;border:2px solid #475569;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;flex-shrink:0;">✓</span>
-                        <span style="color:#cbd5e1; font-size:0.88rem;">Definir objetivo do assistente (nome + URL da
-                            página)</span>
+                <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 12px 0;">Leva menos de 2 minutos. O modo automático já vem ativado! ⚡</p>
+
+                <!-- Barra de progresso animada -->
+                <div style="background:rgba(30,41,59,0.6); border-radius:10px; height:8px; margin-bottom:10px; overflow:hidden;">
+                    <div id="obProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#3b82f6,#8b5cf6,#10b981); border-radius:10px; transition:width 0.6s ease-in-out;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:14px;">
+                    <span id="obProgressText" style="color:#94a3b8; font-size:0.75rem;">0 de 3 completos</span>
+                    <span id="obProgressPct" style="color:#60a5fa; font-size:0.75rem; font-weight:700;">0%</span>
+                </div>
+
+                <!-- 3 Steps essenciais -->
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Step 1: Nome do Assistente -->
+                    <div id="obStep1" class="ob-step" onclick="focusStep(1)"
+                        style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; background:rgba(59,130,246,0.1); cursor:pointer; transition:all 0.3s; border:2px solid rgba(59,130,246,0.3);">
+                        <span id="obCheck1" class="ob-check"
+                            style="width:28px;height:28px;border-radius:50%;border:2px solid #3b82f6;display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;flex-shrink:0;transition:all 0.3s;background:rgba(59,130,246,0.1);">✓</span>
+                        <div style="flex:1;">
+                            <span style="color:#e2e8f0; font-size:0.92rem; font-weight:700;">❶ Dê um nome ao assistente</span>
+                            <div style="color:#93c5fd; font-size:0.75rem; margin-top:2px;">👆 Clique aqui → campo "Nome do Assistente" ao lado</div>
+                        </div>
                     </div>
-                    <div id="obStep2"
-                        style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(30,41,59,0.4);">
-                        <span id="obCheck2"
-                            style="width:22px;height:22px;border-radius:50%;border:2px solid #475569;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;flex-shrink:0;">✓</span>
-                        <span style="color:#cbd5e1; font-size:0.88rem;">Cadastrar pelo menos 3 FAQs na Base de
-                            Conhecimento</span>
+
+                    <!-- Step 2: URL -->
+                    <div id="obStep2" class="ob-step" onclick="focusStep(2)"
+                        style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; background:rgba(30,41,59,0.4); cursor:pointer; transition:all 0.3s; border:1px solid transparent;">
+                        <span id="obCheck2" class="ob-check"
+                            style="width:28px;height:28px;border-radius:50%;border:2px solid #475569;display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;flex-shrink:0;transition:all 0.3s;">✓</span>
+                        <div style="flex:1;">
+                            <span style="color:#cbd5e1; font-size:0.92rem; font-weight:600;">❷ Cole a URL do seu site</span>
+                            <div style="color:#64748b; font-size:0.75rem; margin-top:2px;">Página de vendas ou site — a IA extrai o conteúdo automaticamente</div>
+                        </div>
                     </div>
-                    <div id="obStep3"
-                        style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(30,41,59,0.4);">
-                        <span id="obCheck3"
-                            style="width:22px;height:22px;border-radius:50%;border:2px solid #475569;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;flex-shrink:0;">✓</span>
-                        <span style="color:#cbd5e1; font-size:0.88rem;">Gerar o link do assistente (clicar em "Ativar
-                            Assistente")</span>
+
+                    <!-- Step 3: Ativar -->
+                    <div id="obStep3" class="ob-step" onclick="focusStep(3)"
+                        style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; background:rgba(30,41,59,0.4); cursor:pointer; transition:all 0.3s; border:1px solid transparent;">
+                        <span id="obCheck3" class="ob-check"
+                            style="width:28px;height:28px;border-radius:50%;border:2px solid #475569;display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;flex-shrink:0;transition:all 0.3s;">✓</span>
+                        <div style="flex:1;">
+                            <span style="color:#cbd5e1; font-size:0.92rem; font-weight:600;">❸ Clique em "Ativar Assistente IA" 🟢</span>
+                            <div style="color:#64748b; font-size:0.75rem; margin-top:2px;">O botão verde gera seu link + widget prontos para usar!</div>
+                        </div>
                     </div>
                 </div>
-                <p style="color:#10b981; font-size:0.75rem; margin:12px 0 0 0; text-align:center;">✅ Complete os passos
-                    acima para ativar seu assistente com máximo potencial.</p>
+
+                <!-- Check-in de uso contextual -->
+                <div id="obCheckin" style="display:none; margin-top:14px; padding:12px 16px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:12px; text-align:center;">
+                    <span id="obCheckinText" style="color:#6ee7b7; font-size:0.85rem; font-weight:600;"></span>
+                </div>
+
+                <!-- Conquista (gamificação) -->
+                <div id="obAchievement" style="display:none; margin-top:12px; padding:10px 16px; background:linear-gradient(135deg, rgba(245,158,11,0.1), rgba(249,115,22,0.1)); border:1px solid rgba(245,158,11,0.3); border-radius:12px; text-align:center;">
+                    <span id="obAchievementText" style="color:#fbbf24; font-size:0.85rem; font-weight:700;"></span>
+                </div>
+
+                <!-- Comunidade + Ajuda -->
+                <div style="margin-top:14px; text-align:center; display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+                    <a href="https://linkmagico.app.br/comunidade" target="_blank" rel="noopener"
+                        style="color:#8b5cf6; font-size:0.78rem; text-decoration:none; transition:color 0.2s;"
+                        onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='#8b5cf6'">
+                        💬 Comunidade de suporte
+                    </a>
+                    <span style="color:#334155;">|</span>
+                    <a href="https://linkmagico.app.br/ajuda" target="_blank" rel="noopener"
+                        style="color:#60a5fa; font-size:0.78rem; text-decoration:none; transition:color 0.2s;"
+                        onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">
+                        📖 Central de Ajuda
+                    </a>
+                </div>
             </div>
 
 
@@ -6051,33 +6098,80 @@
 
     </script>
 
-    <!-- ONBOARDING: Script de status visual + checklist (Item 2 + 5) -->
+    <!-- ONBOARDING ATIVO v2.0: Script de progresso + gamificação + check-in -->
     <script>
+        // 🚀 ONBOARDING ATIVO v2.0 — Funções globais
+        function focusStep(num) {
+            try {
+                if (num === 1) {
+                    const el = document.getElementById('robotName');
+                    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); el.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.4)'; setTimeout(() => el.style.boxShadow = '', 2000); }
+                } else if (num === 2) {
+                    const el = document.getElementById('salesUrl');
+                    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); el.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.4)'; setTimeout(() => el.style.boxShadow = '', 2000); }
+                } else if (num === 3) {
+                    const btn = document.querySelector('[onclick*="ativarAssistente"], .btn-activate, #activateButton');
+                    if (btn) { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); btn.style.boxShadow = '0 0 0 4px rgba(16,185,129,0.5)'; setTimeout(() => btn.style.boxShadow = '', 2500); }
+                }
+            } catch(e) {}
+        }
+
+        function dismissOnboarding() {
+            try {
+                const el = document.getElementById('onboardingChecklist');
+                if (el) { el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; setTimeout(() => el.style.display = 'none', 300); }
+                localStorage.setItem('lm_onboarding_dismissed', 'true');
+            } catch(e) {}
+        }
+
         (function onboardingUX() {
+            // Restaurar estado minimizado
+            try {
+                if (localStorage.getItem('lm_onboarding_dismissed') === 'true') {
+                    const el = document.getElementById('onboardingChecklist');
+                    // Mostrar novamente se não completou todos os passos
+                    const linkSection = document.getElementById('chatbotLinkSection');
+                    if (linkSection && linkSection.classList.contains('active')) {
+                        if (el) el.style.display = 'none';
+                    }
+                }
+            } catch(e) {}
+
+            const obState = { steps: [false, false, false], achievements: [] };
+
             // === CHECKLIST: Observar estado e marcar passos ===
             function updateOnboardingChecklist() {
                 try {
-                    // Passo 1: Nome + URL preenchidos
+                    let changed = false;
+
+                    // Passo 1: Nome preenchido
                     const nameVal = document.getElementById('robotName')?.value?.trim();
-                    const urlVal = document.getElementById('salesUrl')?.value?.trim();
-                    if (nameVal && urlVal) {
+                    if (nameVal && nameVal.length >= 2 && !obState.steps[0]) {
+                        obState.steps[0] = true;
                         markStep(1, true);
+                        highlightNext(2);
+                        changed = true;
                     }
 
-                    // Passo 2: FAQs >= 3 (checa o container de FAQs)
-                    const faqContainer = document.getElementById('faqs-container');
-                    if (faqContainer && !faqContainer.textContent.includes('Nenhuma FAQ')) {
-                        const faqItems = faqContainer.querySelectorAll('div[style*="background:#334155"]');
-                        if (faqItems.length >= 3) {
-                            markStep(2, true);
-                        }
+                    // Passo 2: URL preenchida
+                    const urlVal = document.getElementById('salesUrl')?.value?.trim();
+                    if (urlVal && urlVal.startsWith('http') && !obState.steps[1]) {
+                        obState.steps[1] = true;
+                        markStep(2, true);
+                        highlightNext(3);
+                        changed = true;
                     }
 
-                    // Passo 3: Link gerado (chatbotLinkSection ativo)
+                    // Passo 3: Link gerado (assistente ativado)
                     const linkSection = document.getElementById('chatbotLinkSection');
-                    if (linkSection && linkSection.classList.contains('active')) {
+                    if (linkSection && linkSection.classList.contains('active') && !obState.steps[2]) {
+                        obState.steps[2] = true;
                         markStep(3, true);
+                        changed = true;
+                        showAchievement('🎉 Parabéns! Seu assistente está ativo e pronto para vender!');
                     }
+
+                    if (changed) updateProgress();
 
                     // === STATUS BAR (Item 5) ===
                     const activeCount = document.getElementById('activeChatbots')?.textContent?.trim();
@@ -6093,10 +6187,17 @@
                     if (linkUrl && linkUrl.textContent.trim() && linkUrl.textContent.trim() !== '') {
                         if (obLink) {
                             obLink.style.display = 'inline-flex';
-                            document.getElementById('obLinkText').textContent = 'Link gerado ✓';
-                            document.getElementById('obLinkText').style.color = '#22c55e';
+                            const obLinkText = document.getElementById('obLinkText');
+                            if (obLinkText) { obLinkText.textContent = 'Link gerado ✓'; obLinkText.style.color = '#22c55e'; }
                         }
                     }
+
+                    // Check-in contextual
+                    updateCheckin();
+
+                    // Gamificação: conquistas baseadas em uso
+                    checkUsageAchievements();
+
                 } catch (e) {
                     console.warn('ONBOARDING: checklist update error (safe)', e);
                 }
@@ -6110,8 +6211,107 @@
                     check.style.background = '#22c55e';
                     check.style.borderColor = '#22c55e';
                     check.style.color = '#fff';
-                    step.style.opacity = '0.7';
+                    step.style.background = 'rgba(16,185,129,0.1)';
+                    step.style.borderColor = 'rgba(16,185,129,0.3)';
                 }
+            }
+
+            function highlightNext(num) {
+                const step = document.getElementById('obStep' + num);
+                if (!step) return;
+                step.style.background = 'rgba(59,130,246,0.1)';
+                step.style.borderColor = 'rgba(59,130,246,0.3)';
+                // Animar arrow
+                step.querySelector('div > span:first-child').style.color = '#e2e8f0';
+            }
+
+            function updateProgress() {
+                const completed = obState.steps.filter(Boolean).length;
+                const pct = Math.round((completed / 3) * 100);
+                const bar = document.getElementById('obProgressBar');
+                const text = document.getElementById('obProgressText');
+                const pctEl = document.getElementById('obProgressPct');
+                if (bar) bar.style.width = pct + '%';
+                if (text) text.textContent = completed + ' de 3 completos';
+                if (pctEl) pctEl.textContent = pct + '%';
+
+                // 100% completo: trocar cor para verde
+                if (completed === 3) {
+                    if (bar) bar.style.background = 'linear-gradient(90deg,#10b981,#22c55e)';
+                    if (pctEl) { pctEl.textContent = '✅ 100%'; pctEl.style.color = '#22c55e'; }
+                }
+            }
+
+            function updateCheckin() {
+                const checkinEl = document.getElementById('obCheckin');
+                const checkinText = document.getElementById('obCheckinText');
+                if (!checkinEl || !checkinText) return;
+
+                const completed = obState.steps.filter(Boolean).length;
+
+                if (completed === 0) {
+                    checkinEl.style.display = 'block';
+                    checkinEl.style.background = 'rgba(245,158,11,0.1)';
+                    checkinEl.style.borderColor = 'rgba(245,158,11,0.3)';
+                    checkinText.style.color = '#fbbf24';
+                    checkinText.textContent = '👋 Você ainda não começou! Clique no Passo 1 para iniciar.';
+                } else if (completed === 1) {
+                    checkinEl.style.display = 'block';
+                    checkinEl.style.background = 'rgba(59,130,246,0.1)';
+                    checkinEl.style.borderColor = 'rgba(59,130,246,0.3)';
+                    checkinText.style.color = '#93c5fd';
+                    checkinText.textContent = '👏 Ótimo! Agora cole a URL da sua página no Passo 2.';
+                } else if (completed === 2) {
+                    checkinEl.style.display = 'block';
+                    checkinEl.style.background = 'rgba(139,92,246,0.1)';
+                    checkinEl.style.borderColor = 'rgba(139,92,246,0.3)';
+                    checkinText.style.color = '#c4b5fd';
+                    checkinText.textContent = '🔥 Quase lá! Clique no botão verde "Ativar Assistente IA"!';
+                } else {
+                    checkinEl.style.display = 'block';
+                    checkinEl.style.background = 'rgba(16,185,129,0.1)';
+                    checkinEl.style.borderColor = 'rgba(16,185,129,0.3)';
+                    checkinText.style.color = '#6ee7b7';
+                    checkinText.textContent = '🚀 Perfeito! Seu assistente está vendendo por você 24/7!';
+                }
+            }
+
+            function showAchievement(text) {
+                const el = document.getElementById('obAchievement');
+                const textEl = document.getElementById('obAchievementText');
+                if (!el || !textEl) return;
+                textEl.textContent = text;
+                el.style.display = 'block';
+            }
+
+            function checkUsageAchievements() {
+                try {
+                    // Conquista: leads capturados
+                    const leadsCount = document.getElementById('totalLeads')?.textContent?.trim();
+                    if (leadsCount && parseInt(leadsCount) > 0 && !obState.achievements.includes('first_lead')) {
+                        obState.achievements.push('first_lead');
+                        showAchievement('🏆 Primeiro lead capturado! Sua IA está trabalhando!');
+                    }
+                    if (leadsCount && parseInt(leadsCount) >= 10 && !obState.achievements.includes('ten_leads')) {
+                        obState.achievements.push('ten_leads');
+                        showAchievement('🔥 10 leads capturados! Seu funil está aquecendo!');
+                    }
+                    if (leadsCount && parseInt(leadsCount) >= 50 && !obState.achievements.includes('fifty_leads')) {
+                        obState.achievements.push('fifty_leads');
+                        showAchievement('🏅 50 leads! Você é um mestre do funil conversacional!');
+                    }
+
+                    // Conquista: mensagens respondidas
+                    const msgsCount = document.getElementById('totalMessages')?.textContent?.trim();
+                    if (msgsCount && parseInt(msgsCount) >= 50 && !obState.achievements.includes('fifty_msgs')) {
+                        obState.achievements.push('fifty_msgs');
+                        showAchievement('💬 Seu assistente já respondeu 50 perguntas!');
+                    }
+                    if (msgsCount && parseInt(msgsCount) >= 200 && !obState.achievements.includes('twohundred_msgs')) {
+                        obState.achievements.push('twohundred_msgs');
+                        showAchievement('⚡ 200 respostas automáticas! Economia de horas de trabalho!');
+                    }
+                } catch(e) {}
             }
 
             // Atualizar a cada 3 segundos (leitura passiva do DOM, zero impacto)
