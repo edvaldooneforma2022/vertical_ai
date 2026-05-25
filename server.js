@@ -10398,6 +10398,27 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         .lm-powered-by{text-align:center;padding:8px 16px;background:rgba(0,0,0,0.03);border-top:1px solid rgba(0,0,0,0.06);flex-shrink:0}
         .lm-powered-by a{color:#94a3b8;text-decoration:none;font-size:0.72rem;font-weight:500;letter-spacing:0.02em;transition:color .2s;display:inline-flex;align-items:center;gap:4px}
         .lm-powered-by a:hover{color:#7c3aed}
+        /* 🔥 WARMING SCREEN — Tela de aquecimento pré-formulário */
+        .warming-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;text-align:center;flex:1;overflow-y:auto;animation:warmingFadeIn 0.6s ease-out}
+        @keyframes warmingFadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .warming-emoji{font-size:3.5rem;margin-bottom:12px;animation:warmingPulse 2s infinite}
+        @keyframes warmingPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+        .warming-headline{font-size:1.35rem;font-weight:800;color:#1e293b;margin-bottom:8px;line-height:1.3}
+        .warming-subtitle{font-size:0.92rem;color:#64748b;margin-bottom:24px;line-height:1.5;max-width:320px}
+        .warming-benefits{text-align:left;width:100%;max-width:320px;margin-bottom:24px}
+        .warming-benefit{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;margin-bottom:8px;background:rgba(59,130,246,0.06);border-radius:12px;transition:transform 0.2s}
+        .warming-benefit:hover{transform:translateX(4px)}
+        .warming-benefit-icon{font-size:1.2rem;flex-shrink:0;margin-top:1px}
+        .warming-benefit-text{font-size:0.88rem;color:#334155;font-weight:500;line-height:1.4}
+        .warming-social{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:20px;color:#64748b;font-size:0.8rem}
+        .warming-social-dot{width:8px;height:8px;background:#10b981;border-radius:50%;animation:warmingDot 1.5s infinite}
+        @keyframes warmingDot{0%,100%{opacity:1}50%{opacity:0.4}}
+        .warming-cta{width:100%;max-width:320px;background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;border:none;padding:16px 24px;border-radius:14px;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all 0.3s;box-shadow:0 4px 15px rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;gap:8px}
+        .warming-cta:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(59,130,246,0.4)}
+        .warming-cta:active{transform:translateY(0)}
+        .warming-skip{background:none;border:none;color:#94a3b8;font-size:0.78rem;margin-top:12px;cursor:pointer;transition:color 0.2s;padding:8px}
+        .warming-skip:hover{color:#64748b}
+        @media (max-width:768px){.warming-screen{padding:20px 16px}.warming-headline{font-size:1.15rem}.warming-cta{font-size:1rem;padding:14px 20px}}
     </style>
 </head>
 <body>
@@ -10408,9 +10429,23 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             <div class="subtitle">Estou aqui para tirar todas as suas dúvidas</div>
         </div>
         ${botoesFixos}
-        <div class="lead-form" id="leadForm">
-            <h3>🎯 Vamos começar!</h3>
-            <p>Deixe seus dados para uma experiência personalizada</p>
+        <!-- 🔥 WARMING SCREEN — Tela de aquecimento pré-formulário (FEATURE_WARMING_SCREEN) -->
+        <div class="warming-screen" id="warmingScreen">
+            <div class="warming-emoji">🤖</div>
+            <div class="warming-headline">Assistente Virtual ${escapeForJS(companyBrand !== 'LinkMágico' ? companyBrand : '')}</div>
+            <div class="warming-subtitle">Olá! Sou o assistente virtual ${escapeForJS(companyBrand !== 'LinkMágico' ? 'da ' + companyBrand : '')}. Estou aqui para te ajudar de forma rápida e personalizada.</div>
+            <div class="warming-benefits">
+                <div class="warming-benefit"><span class="warming-benefit-icon">💬</span><span class="warming-benefit-text">Tire suas dúvidas instantaneamente</span></div>
+                <div class="warming-benefit"><span class="warming-benefit-icon">🎯</span><span class="warming-benefit-text">Receba orientações personalizadas</span></div>
+                <div class="warming-benefit"><span class="warming-benefit-icon">⚡</span><span class="warming-benefit-text">Atendimento 24h, rápido e eficiente</span></div>
+            </div>
+            <div class="warming-social"><span class="warming-social-dot"></span> Atendimento ao vivo agora</div>
+            <button class="warming-cta" id="warmingCta">🚀 Quero Começar!</button>
+            <button class="warming-skip" id="warmingSkip">Já tenho meus dados → pular</button>
+        </div>
+        <div class="lead-form" id="leadForm" style="display:none">
+            <h3>🎯 Quase lá!</h3>
+            <p>Seus dados para uma experiência ainda melhor</p>
             <input type="text" id="leadName" placeholder="Seu nome completo">
             <input type="email" id="leadEmail" placeholder="Seu melhor email" required>
             <input type="tel" id="leadPhone" placeholder="Seu WhatsApp (opcional)">
@@ -10450,6 +10485,29 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         let schedSlots = null;
         let schedSelectedDate = null;
         let schedSelectedTime = null;
+
+        // 🔥 WARMING SCREEN — Transição warming → formulário (ZERO impacto em chat/IA/sales)
+        try {
+            const warmingScreen = document.getElementById('warmingScreen');
+            const warmingCta = document.getElementById('warmingCta');
+            const warmingSkip = document.getElementById('warmingSkip');
+            function showLeadForm() {
+                try {
+                    if (warmingScreen) warmingScreen.style.display = 'none';
+                    if (leadForm) leadForm.style.display = 'block';
+                } catch(e) { /* fallback: formulário já visível */ }
+            }
+            if (warmingCta) warmingCta.addEventListener('click', showLeadForm);
+            if (warmingSkip) warmingSkip.addEventListener('click', showLeadForm);
+            // Fallback: se warming falhar, mostrar form direto
+            if (!warmingScreen || !warmingCta) {
+                if (leadForm) leadForm.style.display = 'block';
+            }
+        } catch(warmingErr) {
+            // FALLBACK TOTAL: se warming crashar, mostrar formulário (comportamento original)
+            try { document.getElementById('leadForm').style.display = 'block'; } catch(e) {}
+            console.warn('⚠️ Warming screen fallback:', warmingErr.message);
+        }
 
         // SAFE PATCH - SCHED-010: Função para criar calendário visual
         function iniciarAgendamento() {
@@ -10735,6 +10793,20 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         .contact-button i{margin-right:5px}
         .cta-link{display:inline-block;background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white!important;text-decoration:none;padding:10px 20px;border-radius:25px;font-weight:600;margin:8px 4px;transition:all .3s;box-shadow:0 4px 12px rgba(0,0,0,0.15);cursor:pointer}
         .cta-link:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
+        /* 🔥 WARMING SCREEN INLINE */
+        .warming-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 18px;text-align:center;flex:1;overflow-y:auto;animation:warmFade 0.5s ease-out}
+        @keyframes warmFade{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+        .warming-emoji{font-size:2.8rem;margin-bottom:10px;animation:warmPulse 2s infinite}
+        @keyframes warmPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+        .warming-headline{font-size:1.1rem;font-weight:700;color:#1e293b;margin-bottom:6px}
+        .warming-subtitle{font-size:0.82rem;color:#64748b;margin-bottom:16px;line-height:1.4}
+        .warming-benefits{text-align:left;width:100%;margin-bottom:16px}
+        .warming-benefit{display:flex;align-items:center;gap:8px;padding:7px 10px;margin-bottom:5px;background:rgba(59,130,246,0.06);border-radius:8px;font-size:0.82rem;color:#334155}
+        .warming-social{font-size:0.75rem;color:#64748b;margin-bottom:14px}
+        .warming-cta{width:100%;background:linear-gradient(135deg,#3b82f6 0%,#1e40af 100%);color:white;border:none;padding:13px;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 4px 12px rgba(59,130,246,0.3)}
+        .warming-cta:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(59,130,246,0.4)}
+        .warming-skip{background:none;border:none;color:#94a3b8;font-size:0.72rem;margin-top:8px;cursor:pointer;padding:6px}
+        .warming-skip:hover{color:#64748b}
     </style>
 </head>
 <body>
@@ -10744,9 +10816,23 @@ function generateChatbotHTML({ robotName, url, instructions }) {
             <div class="subtitle">Estou aqui para tirar todas as suas dúvidas</div>
             <div class="status-online">Online</div>
         </div>
-        <div class="lead-form" id="leadForm">
-            <h3>🎯 Vamos começar!</h3>
-            <p style="margin-bottom:15px;color:#64748b">Deixe seus dados para uma experiência personalizada</p>
+        <!-- 🔥 WARMING SCREEN INLINE -->
+        <div class="warming-screen" id="warmingScreen">
+            <div class="warming-emoji">🤖</div>
+            <div class="warming-headline">Assistente ${escapedRobotName}</div>
+            <div class="warming-subtitle">Olá! Estou aqui para te ajudar de forma rápida e personalizada.</div>
+            <div class="warming-benefits">
+                <div class="warming-benefit">💬 Tire dúvidas instantaneamente</div>
+                <div class="warming-benefit">🎯 Orientações personalizadas</div>
+                <div class="warming-benefit">⚡ Atendimento 24h</div>
+            </div>
+            <div class="warming-social">🟢 Online agora</div>
+            <button class="warming-cta" id="warmingCta">🚀 Quero Começar!</button>
+            <button class="warming-skip" id="warmingSkip">pular →</button>
+        </div>
+        <div class="lead-form" id="leadForm" style="display:none">
+            <h3>🎯 Quase lá!</h3>
+            <p style="margin-bottom:15px;color:#64748b">Seus dados para uma experiência personalizada</p>
             <input type="text" id="leadName" placeholder="Seu nome completo">
             <input type="email" id="leadEmail" placeholder="Seu melhor email" required>
             <input type="tel" id="leadPhone" placeholder="Seu WhatsApp (opcional)">
@@ -10787,6 +10873,15 @@ function generateChatbotHTML({ robotName, url, instructions }) {
         let isTyping = false;
         let leadId = null;
         const currentApiKey = "${apiKey || ''}";
+
+        // 🔥 WARMING SCREEN INLINE — Transição warming → form
+        try {
+            const ws = document.getElementById('warmingScreen');
+            function showForm() { try { ws.style.display='none'; leadForm.style.display='block'; } catch(e){} }
+            document.getElementById('warmingCta')?.addEventListener('click', showForm);
+            document.getElementById('warmingSkip')?.addEventListener('click', showForm);
+            if (!ws) { leadForm.style.display = 'block'; }
+        } catch(e) { try { leadForm.style.display='block'; } catch(x){} }
 
         // Capturar lead
         startChatBtn.addEventListener('click', async function() {
