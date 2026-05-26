@@ -315,6 +315,30 @@ footer a{color:var(--text-muted)}
 
 <hr class="divider">
 
+<!-- DEMOS PRÉ-CONFIGURADAS -->
+<section class="section" style="padding-bottom:30px">
+  <div class="section-title">⚡ Demos ao Vivo — Veja Funcionando Agora</div>
+  <div class="section-sub">Clique e veja o chat respondendo clientes reais de cada nicho. Sem cadastro, sem formulário.</div>
+  <div class="channels-grid" style="max-width:640px;margin:0 auto;grid-template-columns:repeat(3,1fr)">
+    <a href="/demo.html?nicho=infoproduto&nome=Academia+Digital+Pro" class="channel-card" style="text-decoration:none;cursor:pointer">
+      <div class="channel-icon">📚</div>
+      <div class="channel-name">Curso Digital</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px">Infoproduto</div>
+    </a>
+    <a href="/demo.html?nicho=negocio_local&nome=Clínica+Bella+Estética" class="channel-card" style="text-decoration:none;cursor:pointer">
+      <div class="channel-icon">🏥</div>
+      <div class="channel-name">Clínica Estética</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px">Negócio Local</div>
+    </a>
+    <a href="/demo.html?nicho=ecommerce&nome=TechStore+Brasil" class="channel-card" style="text-decoration:none;cursor:pointer">
+      <div class="channel-icon">🛍️</div>
+      <div class="channel-name">Loja Virtual</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px">E-commerce</div>
+    </a>
+  </div>
+</section>
+
+<hr class="divider">
 <!-- DEMO ZONE -->
 <section id="demo-zone">
   <div class="section-title">Teste o sistema agora</div>
@@ -1262,6 +1286,32 @@ document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key===
     console.log('[V2.0] Sensor de intenção inicializado');
   } catch(e) {
     console.log('[V2.0] Intent sensor fallback:', e.message);
+  }
+})();
+
+// =====================================================
+// AUTO-START VIA QUERY PARAMS (Feature: Demos Pré-Configuradas)
+// Ex: /demo.html?nicho=infoproduto&nome=Academia+Digital+Pro
+// =====================================================
+(function() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const paramNicho = params.get('nicho');
+    const paramNome = params.get('nome');
+    if (paramNicho && NICHOS[paramNicho]) {
+      nichoAtual = paramNicho;
+      negocioNome = paramNome || NICHOS[paramNicho].nome;
+      // Pular direto para loading → chat (sem steps 1-3)
+      setTimeout(function() {
+        iniciarLoading();
+        // Scroll suave para a demo
+        var dz = document.getElementById('demo-zone');
+        if (dz) dz.scrollIntoView({behavior:'smooth'});
+      }, 600);
+      console.log('[DEMO-AUTO] Iniciando demo pré-configurada:', paramNicho, negocioNome);
+    }
+  } catch(e) {
+    console.log('[DEMO-AUTO] Fallback para fluxo normal:', e.message);
   }
 })();
 </script>

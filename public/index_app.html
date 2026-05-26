@@ -1769,13 +1769,13 @@
                         <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="leadsToday">0</span> Hoje
                         </div>
                     </div>
-                    <div class="analytics-card">
+                    <div class="analytics-card" style="border:1px solid rgba(16,185,129,0.2); background:linear-gradient(135deg, rgba(16,185,129,0.05), rgba(30,41,59,0.5));">
                         <div class="card-header">
-                            <span class="card-title">Taxa de Sucesso</span>
-                            <div class="card-icon"><i class="fas fa-check-circle"></i></div>
+                            <span class="card-title">📈 Conversões</span>
+                            <div class="card-icon" style="background:rgba(16,185,129,0.15);"><i class="fas fa-chart-line" style="color:#10b981;"></i></div>
                         </div>
-                        <div class="card-value">100%</div>
-                        <div class="card-change"><i class="fas fa-arrow-up"></i> Extração de dados</div>
+                        <div class="card-value" id="conversionRate" style="color:#10b981;">0%</div>
+                        <div class="card-change"><i class="fas fa-mouse-pointer"></i> <span id="convCtaClicks">0</span> CTAs · <span id="convCheckoutClicks">0</span> Checkouts</div>
                     </div>
                 </div>
             </div>
@@ -5478,6 +5478,26 @@
                     document.getElementById('messagesSent').textContent = messagesToday;
 
                     console.log(`📊 Dashboard atualizado: ${totalLeads} leads (${leadsToday} hoje), ${conversationsToday} conversas hoje, ${messagesToday} mensagens hoje`);
+                }
+
+                // 📈 Carregar métricas de conversão
+                try {
+                    const convResp = await fetch('/api/conversion-stats', { credentials: 'include' });
+                    if (convResp.ok) {
+                        const convData = await convResp.json();
+                        if (convData.success && convData.stats) {
+                            const s = convData.stats;
+                            const rateEl = document.getElementById('conversionRate');
+                            const ctaEl = document.getElementById('convCtaClicks');
+                            const chkEl = document.getElementById('convCheckoutClicks');
+                            if (rateEl) rateEl.textContent = s.conversionRate || '0%';
+                            if (ctaEl) ctaEl.textContent = s.totalCtaClicks || 0;
+                            if (chkEl) chkEl.textContent = s.totalCheckoutClicks || 0;
+                            console.log(`📈 Conversões: ${s.totalCtaClicks} CTAs, ${s.totalCheckoutClicks} checkouts, taxa ${s.conversionRate}`);
+                        }
+                    }
+                } catch(convErr) {
+                    console.log('📈 Conversões: sem dados ainda');
                 }
             } catch (error) {
                 console.error('Erro ao carregar leads do dashboard:', error);

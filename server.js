@@ -3888,12 +3888,138 @@ app.get("/checkout-success.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "checkout-success.html"));
 });
 
-// 📖 Central de Ajuda + Comunidade (rotas amigáveis)
+// 📖 Central de Ajuda + Comunidade + API Docs (rotas amigáveis)
 app.get("/ajuda", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "ajuda.html"));
 });
 app.get("/comunidade", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "comunidade.html"));
+});
+app.get("/api-docs", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "api-docs.html"));
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// 📈 CONVERSION TRACKING — Métricas de Outcome (Vendas Geradas)
+// Persiste em JSON por tenant. Zero impacto nas funcionalidades existentes.
+// ═══════════════════════════════════════════════════════════════════
+const CONVERSIONS_DIR = path.join(__dirname, "data", "conversions");
+try { if (!fs.existsSync(CONVERSIONS_DIR)) fs.mkdirSync(CONVERSIONS_DIR, { recursive: true }); } catch(e) { console.warn("[CONVERSION] ⚠️ Não foi possível criar diretório:", e.message); }
+
+function _getConversionFilePath(apiKey) {
+    const safeKey = String(apiKey || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 40);
+    return path.join(CONVERSIONS_DIR, `conv_${safeKey}.json`);
+}
+
+function _loadConversions(apiKey) {
+    try {
+        const filePath = _getConversionFilePath(apiKey);
+        if (fs.existsSync(filePath)) {
+            return JSON.parse(fs.readFileSync(filePath, "utf8"));
+        }
+    } catch(e) { console.warn("[CONVERSION] ⚠️ Erro ao carregar:", e.message); }
+    return { events: [], createdAt: new Date().toISOString() };
+}
+
+function _saveConversions(apiKey, data) {
+    try {
+        const filePath = _getConversionFilePath(apiKey);
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+    } catch(e) { console.warn("[CONVERSION] ⚠️ Erro ao salvar:", e.message); }
+}
+
+// POST /api/track-conversion — Rastreia cliques em CTA/checkout (público, sem auth)
+app.post("/api/track-conversion", (req, res) => {
+    try {
+        const { apiKey, type, url, leadId } = req.body || {};
+        if (!apiKey || !type) {
+            return res.status(400).json({ success: false, error: "apiKey e type são obrigatórios" });
+        }
+        const validTypes = ["cta_click", "checkout_click"];
+        if (!validTypes.includes(type)) {
+            return res.status(400).json({ success: false, error: "type deve ser: " + validTypes.join(", ") });
+        }
+
+        const data = _loadConversions(apiKey);
+        data.events.push({
+            type,
+            url: url || null,
+            leadId: leadId || null,
+            timestamp: new Date().toISOString(),
+            ip: req.ip
+        });
+
+        // Limitar a 10.000 eventos por tenant (FIFO)
+        if (data.events.length > 10000) {
+            data.events = data.events.slice(-10000);
+        }
+
+        _saveConversions(apiKey, data);
+        console.log(`[CONVERSION] 📈 ${type} registrado para tenant ${apiKey.substring(0,8)}...`);
+        res.json({ success: true, tracked: type });
+    } catch(e) {
+        console.error("[CONVERSION] ❌ Erro:", e.message);
+        res.status(500).json({ success: false, error: "Erro interno" });
+    }
+});
+
+// GET /api/conversion-stats — Métricas de conversão (requer auth)
+app.get("/api/conversion-stats", requireApiKey, (req, res) => {
+    try {
+        const apiKey = req.session?.validatedApiKey || req.query.apiKey || req.headers["x-api-key"];
+        if (!apiKey) return res.status(401).json({ success: false, error: "API Key necessária" });
+
+        const data = _loadConversions(apiKey);
+        const events = data.events || [];
+
+        const totalCtaClicks = events.filter(e => e.type === "cta_click").length;
+        const totalCheckoutClicks = events.filter(e => e.type === "checkout_click").length;
+        const conversionRate = totalCtaClicks > 0 ? ((totalCheckoutClicks / totalCtaClicks) * 100).toFixed(1) + "%" : "0%";
+
+        // Últimos 7 dias
+        const now = new Date();
+        const last7days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split("T")[0];
+            const dayEvents = events.filter(e => e.timestamp && e.timestamp.startsWith(dateStr));
+            last7days.push({
+                date: dateStr,
+                cta: dayEvents.filter(e => e.type === "cta_click").length,
+                checkout: dayEvents.filter(e => e.type === "checkout_click").length
+            });
+        }
+
+        // Últimos 30 dias (para dashboard)
+        const last30days = [];
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split("T")[0];
+            const dayEvents = events.filter(e => e.timestamp && e.timestamp.startsWith(dateStr));
+            last30days.push({
+                date: dateStr,
+                cta: dayEvents.filter(e => e.type === "cta_click").length,
+                checkout: dayEvents.filter(e => e.type === "checkout_click").length
+            });
+        }
+
+        res.json({
+            success: true,
+            stats: {
+                totalCtaClicks,
+                totalCheckoutClicks,
+                conversionRate,
+                totalEvents: events.length,
+                last7days,
+                last30days
+            }
+        });
+    } catch(e) {
+        console.error("[CONVERSION] ❌ Erro stats:", e.message);
+        res.status(500).json({ success: false, error: "Erro interno" });
+    }
 });
 
 app.get("/privacy.html", (req, res) => {
@@ -10703,6 +10829,33 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             }
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            // 📈 CONVERSION TRACKING: Injetar tracking nos links CTA
+            if (!isUser) {
+                try {
+                    var ctaLinks = messageDiv.querySelectorAll('a[href]');
+                    ctaLinks.forEach(function(link) {
+                        var href = link.getAttribute('href') || '';
+                        if (href && href.startsWith('http') && !link.dataset.tracked) {
+                            link.dataset.tracked = 'true';
+                            var isCheckout = /checkout|pay\\.|compra|comprar|buy|assinar|hotmart|kiwify|monetizze|eduzz|stripe|pagar/i.test(href);
+                            link.addEventListener('click', function() {
+                                try {
+                                    fetch('/api/track-conversion', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            apiKey: currentApiKey,
+                                            type: isCheckout ? 'checkout_click' : 'cta_click',
+                                            url: href,
+                                            leadId: leadId || null
+                                        })
+                                    }).catch(function(){});
+                                } catch(e) {}
+                            });
+                        }
+                    });
+                } catch(trackErr) {}
+            }
         }
 
         async function sendMessage() {

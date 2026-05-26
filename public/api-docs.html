@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation — LinkMágico™</title>
+    <meta name="description" content="Documentação da API pública do LinkMágico™. Integre chatbots, capture leads e processe mensagens via API REST.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Inter',sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh}
+        code,pre,.mono{font-family:'JetBrains Mono',monospace}
+
+        .nav{position:sticky;top:0;z-index:100;background:rgba(10,14,26,0.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(59,130,246,0.15);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+        .nav-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.1rem;color:#60a5fa}
+        .nav-back{color:#94a3b8;text-decoration:none;font-size:.85rem;font-weight:500;transition:color .2s;display:flex;align-items:center;gap:6px}
+        .nav-back:hover{color:#60a5fa}
+
+        .container{max-width:900px;margin:0 auto;padding:0 24px}
+
+        .hero{text-align:center;padding:50px 24px 40px;background:linear-gradient(135deg,rgba(59,130,246,0.06),rgba(16,185,129,0.04))}
+        .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;padding:5px 14px;border-radius:20px;font-size:.75rem;font-weight:600;margin-bottom:16px}
+        .hero h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+        .hero p{color:#94a3b8;font-size:1rem;max-width:550px;margin:0 auto;line-height:1.6}
+
+        .section{padding:40px 0}
+        .section-title{font-size:1.4rem;font-weight:800;color:#f1f5f9;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+        .section-desc{color:#64748b;font-size:.9rem;margin-bottom:24px;line-height:1.5}
+
+        .auth-box{background:rgba(30,41,59,0.6);border:1px solid rgba(59,130,246,0.2);border-radius:14px;padding:24px;margin-bottom:30px}
+        .auth-box h3{font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:12px}
+        .auth-methods{display:flex;flex-direction:column;gap:8px}
+        .auth-method{display:flex;align-items:center;gap:10px;font-size:.88rem;color:#94a3b8}
+        .auth-method code{background:rgba(59,130,246,0.12);color:#60a5fa;padding:2px 8px;border-radius:6px;font-size:.8rem}
+        .auth-note{margin-top:12px;font-size:.82rem;color:#f59e0b;display:flex;align-items:center;gap:6px}
+
+        .endpoint{background:rgba(30,41,59,0.5);border:1px solid rgba(255,255,255,0.06);border-radius:16px;margin-bottom:20px;overflow:hidden;transition:border-color .2s}
+        .endpoint:hover{border-color:rgba(59,130,246,0.25)}
+        .endpoint-header{padding:18px 22px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+        .method-badge{padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:700;letter-spacing:.04em;font-family:'JetBrains Mono',monospace}
+        .method-post{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3)}
+        .method-get{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
+        .endpoint-path{font-family:'JetBrains Mono',monospace;font-size:.9rem;font-weight:600;color:#e2e8f0}
+        .endpoint-desc{font-size:.78rem;color:#64748b;margin-left:auto}
+        .endpoint-arrow{color:#64748b;transition:transform .25s;font-size:.85rem}
+        .endpoint.open .endpoint-arrow{transform:rotate(180deg)}
+        .endpoint-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+        .endpoint.open .endpoint-body{max-height:2000px}
+        .endpoint-content{padding:0 22px 22px;border-top:1px solid rgba(255,255,255,0.04)}
+
+        .code-block{position:relative;background:#0d1117;border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin:12px 0;overflow:hidden}
+        .code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.04);font-size:.72rem;color:#64748b}
+        .code-copy{background:none;border:1px solid rgba(255,255,255,0.1);color:#94a3b8;padding:3px 10px;border-radius:6px;font-size:.7rem;cursor:pointer;transition:all .2s;font-family:inherit}
+        .code-copy:hover{border-color:#60a5fa;color:#60a5fa}
+        .code-body{padding:14px;font-size:.82rem;line-height:1.6;overflow-x:auto;white-space:pre}
+        .code-body .key{color:#7dd3fc}.code-body .str{color:#6ee7b7}.code-body .num{color:#fbbf24}.code-body .comment{color:#64748b}
+
+        .param-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.84rem}
+        .param-table th{text-align:left;padding:8px 12px;color:#64748b;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid rgba(255,255,255,0.06)}
+        .param-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.03);color:#94a3b8}
+        .param-table td:first-child{color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:500}
+        .param-required{color:#f87171;font-size:.7rem;font-weight:600}
+        .param-optional{color:#64748b;font-size:.7rem}
+
+        .label{font-size:.8rem;font-weight:600;color:#94a3b8;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+
+        .rate-limit-box{background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:12px;padding:18px 20px;margin-top:20px}
+        .rate-limit-box h3{font-size:.95rem;font-weight:700;color:#fb923c;margin-bottom:8px}
+        .rate-limit-box p{font-size:.84rem;color:#94a3b8;line-height:1.5}
+
+        .footer{text-align:center;padding:30px 24px;border-top:1px solid rgba(59,130,246,0.1);color:#475569;font-size:.8rem}
+        .footer a{color:#64748b;text-decoration:none;transition:color .2s}
+        .footer a:hover{color:#60a5fa}
+        .footer-links{display:flex;gap:20px;justify-content:center;margin-top:10px}
+
+        @media(max-width:768px){
+            .hero h1{font-size:1.7rem}
+            .endpoint-header{flex-wrap:wrap;gap:8px}
+            .endpoint-desc{margin-left:0;width:100%}
+            .param-table{font-size:.78rem}
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-brand"><i class="fas fa-code"></i> API LinkMágico™</div>
+        <a href="/app" class="nav-back"><i class="fas fa-arrow-left"></i> Voltar ao Painel</a>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-badge"><i class="fas fa-plug"></i> REST API v1</div>
+        <h1>API Documentation</h1>
+        <p>Integre o LinkMágico™ ao seu sistema. Capture leads, processe mensagens e gerencie assistentes via API REST.</p>
+    </section>
+
+    <div class="container">
+        <!-- AUTH -->
+        <section class="section">
+            <div class="section-title"><i class="fas fa-key" style="color:#f59e0b"></i> Autenticação</div>
+            <div class="section-desc">Todas as requisições autenticadas requerem sua API Key.</div>
+            <div class="auth-box">
+                <h3>Como autenticar</h3>
+                <div class="auth-methods">
+                    <div class="auth-method"><i class="fas fa-check" style="color:#10b981"></i> Header: <code>X-API-Key: sua_api_key</code></div>
+                    <div class="auth-method"><i class="fas fa-check" style="color:#10b981"></i> Query param: <code>?apiKey=sua_api_key</code></div>
+                    <div class="auth-method"><i class="fas fa-check" style="color:#10b981"></i> Body JSON: <code>"apiKey": "sua_api_key"</code></div>
+                </div>
+                <div class="auth-note"><i class="fas fa-info-circle"></i> Obtenha sua API Key no painel administrativo → campo "Sua API Key"</div>
+            </div>
+        </section>
+
+        <!-- ENDPOINTS -->
+        <section class="section" style="padding-top:0">
+            <div class="section-title"><i class="fas fa-route" style="color:#3b82f6"></i> Endpoints</div>
+            <div class="section-desc">Clique em cada endpoint para ver detalhes, parâmetros e exemplos.</div>
+
+            <!-- 1. Capture Lead -->
+            <div class="endpoint" onclick="this.classList.toggle('open')">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/api/capture-lead</span>
+                    <span class="endpoint-desc">Capturar um novo lead</span>
+                    <i class="fas fa-chevron-down endpoint-arrow"></i>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-content">
+                        <p class="label">Parâmetros (Body JSON)</p>
+                        <table class="param-table">
+                            <thead><tr><th>Campo</th><th>Tipo</th><th>Obrigatório</th><th>Descrição</th></tr></thead>
+                            <tbody>
+                                <tr><td>nome</td><td>string</td><td><span class="param-required">Sim</span></td><td>Nome do lead</td></tr>
+                                <tr><td>email</td><td>string</td><td><span class="param-optional">Não</span></td><td>Email do lead</td></tr>
+                                <tr><td>telefone</td><td>string</td><td><span class="param-optional">Não</span></td><td>Telefone (formato E.164)</td></tr>
+                                <tr><td>url_origem</td><td>string</td><td><span class="param-optional">Não</span></td><td>URL de onde o lead veio</td></tr>
+                                <tr><td>robotName</td><td>string</td><td><span class="param-optional">Não</span></td><td>Nome do assistente</td></tr>
+                            </tbody>
+                        </table>
+                        <p class="label">Exemplo — cURL</p>
+                        <div class="code-block">
+                            <div class="code-header"><span>bash</span><button class="code-copy" onclick="event.stopPropagation();copiar(this)">Copiar</button></div>
+                            <pre class="code-body"><span class="comment"># Capturar um lead</span>
+curl -X POST https://linkmagico.app.br/api/capture-lead \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -H <span class="str">"X-API-Key: SUA_API_KEY"</span> \
+  -d <span class="str">'{
+    "nome": "João Silva",
+    "email": "joao@email.com",
+    "telefone": "+5511999999999",
+    "url_origem": "https://meusite.com"
+  }'</span></pre>
+                        </div>
+                        <p class="label">Resposta (200 OK)</p>
+                        <div class="code-block">
+                            <div class="code-header"><span>json</span></div>
+                            <pre class="code-body">{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"leadId"</span>: <span class="str">"lead_abc123"</span>,
+  <span class="key">"message"</span>: <span class="str">"Lead capturado com sucesso"</span>
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Process Chat -->
+            <div class="endpoint" onclick="this.classList.toggle('open')">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/api/process-chat-inteligente</span>
+                    <span class="endpoint-desc">Enviar mensagem ao chat IA</span>
+                    <i class="fas fa-chevron-down endpoint-arrow"></i>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-content">
+                        <p class="label">Parâmetros (Body JSON)</p>
+                        <table class="param-table">
+                            <thead><tr><th>Campo</th><th>Tipo</th><th>Obrigatório</th><th>Descrição</th></tr></thead>
+                            <tbody>
+                                <tr><td>message</td><td>string</td><td><span class="param-required">Sim</span></td><td>Mensagem do usuário</td></tr>
+                                <tr><td>robotName</td><td>string</td><td><span class="param-required">Sim</span></td><td>Nome do assistente</td></tr>
+                                <tr><td>leadId</td><td>string</td><td><span class="param-optional">Não</span></td><td>ID do lead (para contexto)</td></tr>
+                                <tr><td>conversationId</td><td>string</td><td><span class="param-optional">Não</span></td><td>ID da conversa (continuidade)</td></tr>
+                            </tbody>
+                        </table>
+                        <p class="label">Exemplo — JavaScript (fetch)</p>
+                        <div class="code-block">
+                            <div class="code-header"><span>javascript</span><button class="code-copy" onclick="event.stopPropagation();copiar(this)">Copiar</button></div>
+                            <pre class="code-body"><span class="key">const</span> response = <span class="key">await</span> fetch(<span class="str">'https://linkmagico.app.br/api/process-chat-inteligente'</span>, {
+  method: <span class="str">'POST'</span>,
+  headers: {
+    <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+    <span class="str">'X-API-Key'</span>: <span class="str">'SUA_API_KEY'</span>
+  },
+  body: JSON.stringify({
+    message: <span class="str">'Quero saber sobre o produto'</span>,
+    robotName: <span class="str">'MeuAssistente'</span>
+  })
+});
+<span class="key">const</span> data = <span class="key">await</span> response.json();
+console.log(data.response); <span class="comment">// Resposta da IA</span></pre>
+                        </div>
+                        <p class="label">Resposta (200 OK)</p>
+                        <div class="code-block">
+                            <div class="code-header"><span>json</span></div>
+                            <pre class="code-body">{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"response"</span>: <span class="str">"Olá! Posso ajudar com informações..."</span>,
+  <span class="key">"conversationId"</span>: <span class="str">"conv_xyz789"</span>
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Track Conversion -->
+            <div class="endpoint" onclick="this.classList.toggle('open')">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/api/track-conversion</span>
+                    <span class="endpoint-desc">Rastrear evento de conversão</span>
+                    <i class="fas fa-chevron-down endpoint-arrow"></i>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-content">
+                        <p class="label">Parâmetros (Body JSON)</p>
+                        <table class="param-table">
+                            <thead><tr><th>Campo</th><th>Tipo</th><th>Obrigatório</th><th>Descrição</th></tr></thead>
+                            <tbody>
+                                <tr><td>apiKey</td><td>string</td><td><span class="param-required">Sim</span></td><td>API Key do tenant</td></tr>
+                                <tr><td>type</td><td>string</td><td><span class="param-required">Sim</span></td><td>"cta_click" ou "checkout_click"</td></tr>
+                                <tr><td>url</td><td>string</td><td><span class="param-optional">Não</span></td><td>URL do link clicado</td></tr>
+                                <tr><td>leadId</td><td>string</td><td><span class="param-optional">Não</span></td><td>ID do lead que clicou</td></tr>
+                            </tbody>
+                        </table>
+                        <p class="label">Exemplo — cURL</p>
+                        <div class="code-block">
+                            <div class="code-header"><span>bash</span><button class="code-copy" onclick="event.stopPropagation();copiar(this)">Copiar</button></div>
+                            <pre class="code-body">curl -X POST https://linkmagico.app.br/api/track-conversion \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "apiKey": "SUA_API_KEY",
+    "type": "checkout_click",
+    "url": "https://pay.hotmart.com/xxx"
+  }'</span></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Conversion Stats -->
+            <div class="endpoint" onclick="this.classList.toggle('open')">
+                <div class="endpoint-header">
+                    <span class="method-badge method-get">GET</span>
+                    <span class="endpoint-path">/api/conversion-stats</span>
+                    <span class="endpoint-desc">Métricas de conversão do tenant</span>
+                    <i class="fas fa-chevron-down endpoint-arrow"></i>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-content">
+                        <p class="label">Autenticação</p>
+                        <p style="font-size:.84rem;color:#94a3b8;margin-bottom:12px">Requer <code>X-API-Key</code> ou <code>?apiKey=</code></p>
+                        <p class="label">Resposta (200 OK)</p>
+                        <div class="code-block">
+                            <div class="code-header"><span>json</span></div>
+                            <pre class="code-body">{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"stats"</span>: {
+    <span class="key">"totalCtaClicks"</span>: <span class="num">142</span>,
+    <span class="key">"totalCheckoutClicks"</span>: <span class="num">38</span>,
+    <span class="key">"conversionRate"</span>: <span class="str">"26.8%"</span>,
+    <span class="key">"last7days"</span>: [
+      { <span class="key">"date"</span>: <span class="str">"2026-05-20"</span>, <span class="key">"cta"</span>: <span class="num">22</span>, <span class="key">"checkout"</span>: <span class="num">6</span> }
+    ]
+  }
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Backup -->
+            <div class="endpoint" onclick="this.classList.toggle('open')">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/admin/leads/backup/create</span>
+                    <span class="endpoint-desc">Criar backup dos leads</span>
+                    <i class="fas fa-chevron-down endpoint-arrow"></i>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-content">
+                        <p class="label">Autenticação</p>
+                        <p style="font-size:.84rem;color:#94a3b8;margin-bottom:12px">Requer <code>X-API-Key</code></p>
+                        <p class="label">Exemplo — cURL</p>
+                        <div class="code-block">
+                            <div class="code-header"><span>bash</span><button class="code-copy" onclick="event.stopPropagation();copiar(this)">Copiar</button></div>
+                            <pre class="code-body">curl -X POST https://linkmagico.app.br/admin/leads/backup/create \
+  -H <span class="str">"X-API-Key: SUA_API_KEY"</span></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RATE LIMITS -->
+        <section class="section" style="padding-top:0">
+            <div class="rate-limit-box">
+                <h3><i class="fas fa-tachometer-alt"></i> Rate Limits</h3>
+                <p>As chamadas à API são limitadas conforme seu plano:</p>
+                <table class="param-table" style="margin-top:12px">
+                    <thead><tr><th>Plano</th><th>Mensagens/mês</th><th>Chatbots</th><th>Leads</th></tr></thead>
+                    <tbody>
+                        <tr><td>Starter</td><td>500</td><td>1</td><td>100</td></tr>
+                        <tr><td>Pro</td><td>2.000</td><td>3</td><td>500</td></tr>
+                        <tr><td>Scale</td><td>10.000</td><td>10</td><td>2.000</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <p>© 2024-2026 LinkMágico™ — Todos os direitos reservados.</p>
+        <div class="footer-links">
+            <a href="/ajuda">📖 Central de Ajuda</a>
+            <a href="/app">🎛️ Painel</a>
+            <a href="/comunidade">💬 Comunidade</a>
+        </div>
+    </footer>
+
+    <script>
+    function copiar(btn) {
+        var block = btn.closest('.code-block');
+        var code = block.querySelector('.code-body').textContent;
+        navigator.clipboard.writeText(code).then(function() {
+            btn.textContent = '✓ Copiado!';
+            btn.style.color = '#10b981';
+            btn.style.borderColor = '#10b981';
+            setTimeout(function() {
+                btn.textContent = 'Copiar';
+                btn.style.color = '';
+                btn.style.borderColor = '';
+            }, 2000);
+        });
+    }
+    </script>
+</body>
+</html>
