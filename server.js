@@ -3638,13 +3638,18 @@ async function requireApiKey(req, res, next) {
         "/api/process-chat-inteligente",
         "/api/chat-universal",
         "/api/track-event",
+        "/api/track-conversion",
         "/signup.html",
         "/signup-success.html",
         "/pricing.html",
         "/pricing",
         "/checkout-success.html",
         "/api/billing/plans",
-        "/api/stripe/webhook"
+        "/api/stripe/webhook",
+        "/demo.html",
+        "/ajuda", "/ajuda.html",
+        "/comunidade", "/comunidade.html",
+        "/api-docs", "/api-docs.html"
     ];
 
     if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/") || req.path.startsWith("/api/admin/") || req.path.startsWith("/api/auth/")) {
@@ -3888,7 +3893,7 @@ app.get("/checkout-success.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "checkout-success.html"));
 });
 
-// 📖 Central de Ajuda + Comunidade + API Docs (rotas amigáveis)
+// 📖 Central de Ajuda + Comunidade + API Docs + Demo (rotas amigáveis/públicas)
 app.get("/ajuda", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "ajuda.html"));
 });
@@ -3897,6 +3902,9 @@ app.get("/comunidade", (req, res) => {
 });
 app.get("/api-docs", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "api-docs.html"));
+});
+app.get("/demo.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "demo.html"));
 });
 
 // ═══════════════════════════════════════════════════════════════════
