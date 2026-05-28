@@ -83,6 +83,153 @@ function setupAdminRoutes(app) {
         }
     });
 
+    // ===== PLANOS & STRIPE (V8.0) =====
+
+    app.get('/api/admin/billing/plans', async (req, res) => {
+        try {
+            const { PLANS } = require('./billing');
+
+            // Stripe Price IDs das env vars
+            const STRIPE_PRICES = {
+                starter: process.env.STRIPE_PRICE_STARTER || '',
+                pro: process.env.STRIPE_PRICE_PRO || '',
+                business: process.env.STRIPE_PRICE_BUSINESS || ''
+            };
+
+            const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+            const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+            const appUrl = process.env.APP_URL || process.env.PLATFORM_URL || '';
+
+            // Mascarar chaves por segurança
+            function maskKey(key) {
+                if (!key) return '';
+                if (key.length <= 8) return '****';
+                return key.substring(0, 7) + '••••••••' + key.substring(key.length - 4);
+            }
+
+            const plans = Object.values(PLANS).map(p => ({
+                id: p.id,
+                name: p.name,
+                price: p.price,
+                currency: p.currency,
+                interval: p.interval,
+                features: p.features,
+                limits: p.limits,
+                stripePriceId: STRIPE_PRICES[p.id] || null
+            }));
+
+            res.json({
+                success: true,
+                data: {
+                    plans,
+                    stripe: {
+                        enabled: !!stripeSecretKey,
+                        secretKeyMasked: maskKey(stripeSecretKey),
+                        webhookSecretMasked: maskKey(webhookSecret),
+                        prices: STRIPE_PRICES,
+                        appUrl: appUrl || 'Não definida'
+                    }
+                }
+            });
+
+            console.log('📋 [ADMIN] Planos listados com sucesso');
+        } catch (error) {
+            console.error('❌ [ADMIN] Erro ao listar planos:', error.message);
+            res.status(500).json({ success: false, error: 'Erro ao listar planos' });
+        }
+    });
+
+    app.post('/api/admin/billing/change-plan', async (req, res) => {
+        try {
+            const { tenantId, newPlan } = req.body || {};
+
+            if (!tenantId || !newPlan) {
+                return res.status(400).json({ success: false, error: 'tenantId e newPlan obrigatórios' });
+            }
+
+            const { PLANS, billingManager } = require('./billing');
+
+            // Resolver aliases (professional→pro, enterprise→business)
+            const PLAN_ALIASES = { 'professional': 'pro', 'enterprise': 'business' };
+            const resolvedPlan = PLAN_ALIASES[newPlan] || newPlan;
+
+            if (!PLANS[resolvedPlan]) {
+                return res.status(400).json({ success: false, error: `Plano '${newPlan}' não existe. Válidos: ${Object.keys(PLANS).join(', ')}` });
+            }
+
+            // 1. Tentar atualizar no banco de dados
+            let dbUpdated = false;
+            try {
+                const { db, USE_POSTGRES } = require('./database');
+                if (db && USE_POSTGRES) {
+                    // Tentar primeiro pelo ID do tenant
+                    let result = await db.query(
+                        `UPDATE tenants SET plan = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+                        [resolvedPlan, tenantId]
+                    );
+                    let rowCount = result.rowCount || (result.rows ? result.rows.length : 0);
+
+                    // Se não achou pelo ID, tentar pela API Key
+                    if (rowCount === 0) {
+                        result = await db.query(
+                            `UPDATE tenants SET plan = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT tenant_id FROM api_keys WHERE key_value = $2 AND active = true LIMIT 1)`,
+                            [resolvedPlan, tenantId]
+                        );
+                        rowCount = result.rowCount || 0;
+                    }
+
+                    if (rowCount > 0) {
+                        dbUpdated = true;
+                        console.log(`✅ [ADMIN] Plano alterado no DB: ${tenantId.substring(0, 12)}... → ${resolvedPlan}`);
+                    } else {
+                        console.warn(`⚠️ [ADMIN] Tenant não encontrado no DB: ${tenantId.substring(0, 12)}...`);
+                    }
+                }
+            } catch (dbErr) {
+                console.error('❌ [ADMIN] Erro ao atualizar plano no DB:', dbErr.message);
+            }
+
+            // 2. Atualizar billing in-memory (fallback seguro)
+            try {
+                await billingManager.upgradePlan(tenantId, resolvedPlan);
+                console.log(`✅ [ADMIN] Plano atualizado in-memory: ${tenantId.substring(0, 12)}... → ${resolvedPlan}`);
+            } catch (memErr) {
+                console.warn('⚠️ [ADMIN] Erro ao atualizar billing in-memory:', memErr.message);
+            }
+
+            // 3. Registrar evento de audit (best-effort)
+            try {
+                const ledger = getAuditLedger();
+                await ledger.recordEvent({
+                    tenantId,
+                    eventType: 'admin_plan_change',
+                    planId: resolvedPlan,
+                    amountCents: Math.round((PLANS[resolvedPlan]?.price || 0) * 100),
+                    source: 'admin_dashboard',
+                    newState: { plan: resolvedPlan, status: 'active' },
+                    metadata: { changedBy: 'admin', previousAction: 'manual_change' }
+                });
+            } catch (e) {
+                // Audit é best-effort — não bloqueia
+            }
+
+            res.json({
+                success: true,
+                message: `Plano alterado para ${PLANS[resolvedPlan].name} (${resolvedPlan})`,
+                dbUpdated,
+                plan: {
+                    id: resolvedPlan,
+                    name: PLANS[resolvedPlan].name,
+                    price: PLANS[resolvedPlan].price
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ [ADMIN] Erro ao alterar plano:', error.message);
+            res.status(500).json({ success: false, error: 'Erro ao alterar plano: ' + error.message });
+        }
+    });
+
     // ===== MÉTRICAS FINANCEIRAS =====
 
     app.get('/api/admin/billing/metrics', async (req, res) => {

@@ -712,7 +712,7 @@
             <div class="header-left">
                 <button class="btn-back" onclick="window.history.back()">← Voltar</button>
                 <h1>💰 Admin Billing</h1>
-                <span class="badge">V7.0</span>
+                <span class="badge">V8.0</span>
             </div>
             <div class="refresh-indicator">
                 <div class="pulse"></div><span id="refreshStatus">Auto-refresh: 30s</span>
@@ -724,6 +724,7 @@
             <button class="tab" data-tab="usage" onclick="switchTab('usage')">👥 Tenants & Uso</button>
             <button class="tab" data-tab="quarantine" onclick="switchTab('quarantine')">🚫 Quarentena</button>
             <button class="tab" data-tab="keys" onclick="switchTab('keys')">🔑 API Keys</button>
+            <button class="tab" data-tab="plans" onclick="switchTab('plans')">💳 Planos & Stripe</button>
             <button class="tab" data-tab="alerts" onclick="switchTab('alerts')">🔔 Alertas & Health</button>
         </div>
 
@@ -816,6 +817,44 @@
                 <div id="keysResults" style="margin-top:16px"></div>
             </div>
 
+            <!-- TAB: PLANOS & STRIPE -->
+            <div id="tab-plans" class="tab-panel">
+                <div class="section-header">
+                    <h2>💳 Planos & Configuração Stripe</h2>
+                    <button class="btn btn-primary btn-sm" onclick="loadPlans()">🔄 Atualizar</button>
+                </div>
+
+                <!-- Stripe Status -->
+                <div class="card" style="margin-bottom:20px;border-left:4px solid var(--accent)">
+                    <div style="font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px">⚡ Status do Stripe <span id="stripeStatusBadge" class="status-badge info">Carregando...</span></div>
+                    <div id="stripeKeysInfo" style="font-size:.85rem;color:var(--text-secondary)">Verificando configuração...</div>
+                </div>
+
+                <!-- Plans Grid -->
+                <div id="plansGrid" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))"></div>
+
+                <!-- Alterar Plano de Tenant -->
+                <div class="card" style="margin-top:20px">
+                    <div style="font-weight:700;margin-bottom:12px">🔧 Alterar Plano de Tenant</div>
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                        <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0">
+                            <label>Tenant ID ou API Key</label>
+                            <input type="text" id="changePlanTenantInput" placeholder="UUID do tenant ou API Key">
+                        </div>
+                        <div class="form-group" style="min-width:140px;margin-bottom:0">
+                            <label>Novo Plano</label>
+                            <select id="changePlanSelect" style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:.9rem">
+                                <option value="free">Free (R$ 0)</option>
+                                <option value="starter">Starter (R$ 29)</option>
+                                <option value="pro">Pro (R$ 69)</option>
+                                <option value="business">Business (R$ 97)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="changeTenantPlan()">💾 Alterar Plano</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- TAB: ALERTAS & HEALTH -->
             <div id="tab-alerts" class="tab-panel">
                 <div class="section-header">
@@ -855,9 +894,10 @@
             <div class="form-group"><label>Plano</label>
                 <select id="newKeyPlan"
                     style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:.9rem">
-                    <option value="starter">Starter</option>
-                    <option value="professional">Professional</option>
-                    <option value="enterprise">Enterprise</option>
+                    <option value="free">Free (R$ 0)</option>
+                    <option value="starter" selected>Starter (R$ 29)</option>
+                    <option value="pro">Pro (R$ 69)</option>
+                    <option value="business">Business (R$ 97)</option>
                 </select>
             </div>
             <div class="form-group"><label>Escopos (separados por vírgula, vazio = acesso total)</label><input
@@ -946,7 +986,7 @@
 
         // ===== LOAD ALL DATA =====
         async function loadAllData() {
-            await Promise.all([loadOverview(), loadUsage(), loadQuarantine(), loadAlerts()]);
+            await Promise.all([loadOverview(), loadUsage(), loadQuarantine(), loadAlerts(), loadPlans()]);
         }
 
         // ===== TAB 1: OVERVIEW =====
@@ -1037,7 +1077,7 @@
                 empty.style.display = 'none';
                 tbody.innerHTML = tenantList.map(t => {
                     // Calculando % de uso (simplificado baseado nos limites do billing.js)
-                    const limits = { 'free': 100, 'starter': 1000, 'professional': 5000, 'enterprise': 1000000 };
+                    const limits = { 'free': 100, 'starter': 1000, 'pro': 5000, 'business': 1000000 };
                     const limit = limits[t.plan] || 1000;
                     const messages = parseInt(t.messages || 0);
                     const pct = Math.min((messages / limit) * 100, 100);
@@ -1233,6 +1273,85 @@
                 </div>
             </div>`;
                 }).join('');
+            }
+        }
+
+        // ===== TAB 6: PLANOS & STRIPE =====
+        async function loadPlans() {
+            try {
+                const res = await api('/api/admin/billing/plans');
+                const data = res.data || {};
+                const plans = data.plans || [];
+                const stripe = data.stripe || {};
+
+                // Stripe status
+                const statusBadge = document.getElementById('stripeStatusBadge');
+                const keysInfo = document.getElementById('stripeKeysInfo');
+                if (statusBadge && keysInfo) {
+                    if (stripe.enabled) {
+                        statusBadge.className = 'status-badge healthy';
+                        statusBadge.textContent = '✅ Ativo';
+                    } else {
+                        statusBadge.className = 'status-badge warning';
+                        statusBadge.textContent = '⚠️ Não Configurado';
+                    }
+                    keysInfo.innerHTML = `
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+                            <div><strong>Secret Key:</strong> ${stripe.secretKeyMasked || 'Não definida'}</div>
+                            <div><strong>Webhook Secret:</strong> ${stripe.webhookSecretMasked || 'Não definida'}</div>
+                            <div><strong>Price Starter:</strong> <code style="color:var(--warning)">${stripe.prices?.starter || '—'}</code></div>
+                            <div><strong>Price Pro:</strong> <code style="color:var(--warning)">${stripe.prices?.pro || '—'}</code></div>
+                            <div><strong>Price Business:</strong> <code style="color:var(--warning)">${stripe.prices?.business || '—'}</code></div>
+                            <div><strong>App URL:</strong> <code style="color:var(--info)">${stripe.appUrl || '—'}</code></div>
+                        </div>
+                    `;
+                }
+
+                // Plans grid
+                const grid = document.getElementById('plansGrid');
+                if (grid && plans.length > 0) {
+                    const colors = { free: 'var(--success)', starter: 'var(--info)', pro: 'var(--accent)', business: 'var(--warning)' };
+                    grid.innerHTML = plans.map(p => {
+                        const color = colors[p.id] || 'var(--text-primary)';
+                        const featureList = p.features ? Object.entries(p.features).filter(([k,v]) => v === true || v === -1 || (typeof v === 'number' && v > 0)).slice(0, 5).map(([k,v]) => {
+                            const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+                            return `<div style="font-size:.75rem;color:var(--text-muted)">✓ ${label}${typeof v === 'number' && v > 0 && v !== -1 ? ': ' + v : v === -1 ? ': ∞' : ''}</div>`;
+                        }).join('') : '';
+                        return `
+                            <div class="card" style="border-top:3px solid ${color};text-align:center">
+                                <div style="font-size:1.1rem;font-weight:700;margin-bottom:4px">${p.name}</div>
+                                <div style="font-size:2rem;font-weight:800;color:${color};margin-bottom:4px">${p.price === 0 ? 'Grátis' : 'R$ ' + p.price}</div>
+                                <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px">${p.price > 0 ? '/' + (p.interval || 'mês') : 'para sempre'}</div>
+                                <div style="text-align:left;padding-top:8px;border-top:1px solid var(--border)">${featureList}</div>
+                                ${p.stripePriceId ? '<div style="margin-top:8px;font-size:.7rem;color:var(--success)">✅ Stripe: ' + p.stripePriceId.substring(0, 16) + '...</div>' : p.price > 0 ? '<div style="margin-top:8px;font-size:.7rem;color:var(--danger)">⚠️ Sem Stripe Price ID</div>' : ''}
+                            </div>
+                        `;
+                    }).join('');
+                } else if (grid) {
+                    grid.innerHTML = '<div class="empty-state"><div class="icon">💳</div><p>Nenhum plano configurado</p></div>';
+                }
+            } catch (err) {
+                console.error('Erro ao carregar planos:', err);
+            }
+        }
+
+        async function changeTenantPlan() {
+            const tenantId = document.getElementById('changePlanTenantInput')?.value?.trim();
+            const newPlan = document.getElementById('changePlanSelect')?.value;
+            if (!tenantId) { showToast('⚠️ Informe o Tenant ID ou API Key', 'warning'); return; }
+            if (!newPlan) { showToast('⚠️ Selecione um plano', 'warning'); return; }
+            if (!confirm(`Alterar plano do tenant ${tenantId.substring(0, 12)}... para ${newPlan.toUpperCase()}?`)) return;
+
+            const res = await api('/api/admin/billing/change-plan', {
+                method: 'POST',
+                body: JSON.stringify({ tenantId, newPlan })
+            });
+            if (res.success) {
+                showToast(`✅ Plano alterado para ${newPlan.toUpperCase()} com sucesso!`, 'success');
+                loadOverview();
+                loadUsage();
+            } else {
+                showToast('❌ Erro: ' + (res.error || 'Falha ao alterar plano'), 'danger');
             }
         }
 
