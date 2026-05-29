@@ -204,10 +204,12 @@
             border: 1px solid var(--glass-border);
             border-radius: 24px;
             padding: 2rem;
-            height: fit-content;
             box-shadow: var(--shadow-xl);
             position: sticky;
-            top: 120px;
+            top: 80px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+            scrollbar-width: thin;
         }
 
         .panel-header {
@@ -1644,10 +1646,16 @@
 
             <!-- 🚀 ONBOARDING ATIVO v2.0 — Guia interativo de primeiro uso -->
             <div id="onboardingChecklist"
-                style="background:linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08)); border:1px solid rgba(59,130,246,0.2); border-radius:16px; padding:20px 24px; margin-bottom:1.5rem; transition:all 0.3s;">
+                style="background:linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08)); border:2px solid rgba(59,130,246,0.35); border-radius:16px; padding:20px 24px; margin-bottom:1.5rem; transition:all 0.3s; box-shadow: 0 0 20px rgba(59,130,246,0.1); position:relative;">
                 <!-- Header com progresso -->
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-                    <h3 style="color:#60a5fa; font-size:1rem; font-weight:700; margin:0;">🚀 Ative seu Assistente em 3 Passos</h3>
+                    <h3 style="color:#60a5fa; font-size:1rem; font-weight:700; margin:0; display:flex; align-items:center; gap:10px;">🚀 Ative seu Assistente em 3 Passos <span id="obStartHereBadge" style="background:linear-gradient(135deg,#f59e0b,#ef4444); color:#fff; font-size:0.65rem; font-weight:800; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; animation:obPulseGlow 2s ease-in-out infinite; white-space:nowrap;">👉 Comece aqui</span></h3>
+                    <style>
+                        @keyframes obPulseGlow {
+                            0%, 100% { box-shadow: 0 0 8px rgba(245,158,11,0.4); transform: scale(1); }
+                            50% { box-shadow: 0 0 20px rgba(245,158,11,0.8); transform: scale(1.05); }
+                        }
+                    </style>
                     <button onclick="dismissOnboarding()"
                         style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem; padding:4px 8px;"
                         title="Minimizar">✕</button>
