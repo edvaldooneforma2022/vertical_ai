@@ -1,9 +1,10 @@
 /**
- * 📊 BILLING METRICS - Link Mágico
+ * 📊 BILLING METRICS - Link Mágico V8.0
  * Métricas de negócio e operacionais do sistema de billing.
  * 
  * MRR, churn, LTV, uso por plano, faturamento diário, etc.
- * Usa as tabelas billing_events e billing_subscriptions.
+ * Fonte de verdade: tabela 'tenants' (planos reais).
+ * Fallback: billing_subscriptions (legado).
  */
 
 class BillingMetrics {
@@ -40,33 +41,70 @@ class BillingMetrics {
 
     /**
      * Stats de assinaturas (ativas, por plano)
+     * V8.0: Consulta tabela 'tenants' (fonte da verdade) com fallback para billing_subscriptions
      */
     async _getSubscriptionStats() {
-        const result = await this.db.query(`
-            SELECT 
-                plan_id,
-                status,
-                COUNT(*) as count,
-                SUM(COALESCE(amount_cents, 0)) as total_amount_cents
-            FROM billing_subscriptions
-            GROUP BY plan_id, status
-            ORDER BY plan_id
-        `);
+        // Preços reais dos planos (sincronizado com billing.js)
+        const PLAN_PRICES_CENTS = { free: 0, starter: 2900, pro: 6900, business: 9700 };
 
-        const total = result.rows.reduce((sum, r) => sum + parseInt(r.count), 0);
-        const active = result.rows
-            .filter(r => r.status === 'active')
-            .reduce((sum, r) => sum + parseInt(r.count), 0);
-        const totalAmountCents = result.rows
-            .filter(r => r.status === 'active')
-            .reduce((sum, r) => sum + parseInt(r.total_amount_cents || 0), 0);
+        // 1. Tentar tabela 'tenants' (fonte da verdade)
+        try {
+            const result = await this.db.query(`
+                SELECT 
+                    COALESCE(plan, 'free') as plan_id,
+                    status,
+                    COUNT(*) as count
+                FROM tenants
+                GROUP BY plan, status
+                ORDER BY plan
+            `);
 
-        return {
-            total,
-            active,
-            totalAmountCents,
-            byPlan: result.rows
-        };
+            if (result.rows && result.rows.length > 0) {
+                const total = result.rows.reduce((sum, r) => sum + parseInt(r.count), 0);
+                const active = result.rows
+                    .filter(r => r.status === 'active' || !r.status)
+                    .reduce((sum, r) => sum + parseInt(r.count), 0);
+                const totalAmountCents = result.rows
+                    .filter(r => r.status === 'active' || !r.status)
+                    .reduce((sum, r) => {
+                        const planId = (r.plan_id || 'free').toLowerCase();
+                        const priceCents = PLAN_PRICES_CENTS[planId] || 0;
+                        return sum + (parseInt(r.count) * priceCents);
+                    }, 0);
+
+                console.log(`📊 [BILLING METRICS] Stats carregadas da tabela 'tenants': ${total} tenants, ${active} ativos, MRR R$ ${(totalAmountCents / 100).toFixed(2)}`);
+                return { total, active, totalAmountCents, byPlan: result.rows, source: 'tenants' };
+            }
+        } catch (e) {
+            console.warn('⚠️ [BILLING METRICS] Fallback para billing_subscriptions:', e.message);
+        }
+
+        // 2. Fallback: billing_subscriptions (legado)
+        try {
+            const result = await this.db.query(`
+                SELECT 
+                    plan_id,
+                    status,
+                    COUNT(*) as count,
+                    SUM(COALESCE(amount_cents, 0)) as total_amount_cents
+                FROM billing_subscriptions
+                GROUP BY plan_id, status
+                ORDER BY plan_id
+            `);
+
+            const total = result.rows.reduce((sum, r) => sum + parseInt(r.count), 0);
+            const active = result.rows
+                .filter(r => r.status === 'active')
+                .reduce((sum, r) => sum + parseInt(r.count), 0);
+            const totalAmountCents = result.rows
+                .filter(r => r.status === 'active')
+                .reduce((sum, r) => sum + parseInt(r.total_amount_cents || 0), 0);
+
+            return { total, active, totalAmountCents, byPlan: result.rows, source: 'billing_subscriptions' };
+        } catch (e2) {
+            console.error('❌ [BILLING METRICS] Ambas as tabelas falharam:', e2.message);
+            return { total: 0, active: 0, totalAmountCents: 0, byPlan: [], source: 'error' };
+        }
     }
 
     /**
@@ -113,6 +151,7 @@ class BillingMetrics {
 
     /**
      * Uso agregado por plano
+     * V8.0: Consulta tabela 'tenants' (fonte da verdade) com fallback para billing_subscriptions
      */
     async getUsageSummary() {
         if (!this.enabled) return { byPlan: [], byTenant: [] };
@@ -120,7 +159,49 @@ class BillingMetrics {
         try {
             const currentPeriod = new Date().toISOString().substring(0, 7); // YYYY-MM
 
-            // 1. Resumo por Plano
+            // 1. Tentar com tabela 'tenants' (fonte da verdade)
+            try {
+                const planResult = await this.db.query(`
+                    SELECT 
+                        COALESCE(t.plan, 'free') as plan,
+                        COUNT(DISTINCT t.id) as tenants,
+                        COALESCE(SUM(bu.messages), 0) as messages,
+                        COALESCE(SUM(bu.extractions), 0) as extractions,
+                        COALESCE(SUM(bu.api_calls), 0) as api_calls
+                    FROM tenants t
+                    LEFT JOIN api_keys ak ON t.id = ak.tenant_id AND ak.active = true
+                    LEFT JOIN billing_usage bu ON ak.key_value = bu.tenant_id AND bu.period = $1
+                    WHERE t.status = 'active' OR t.status IS NULL
+                    GROUP BY t.plan
+                    ORDER BY t.plan
+                `, [currentPeriod]);
+
+                const tenantResult = await this.db.query(`
+                    SELECT 
+                        t.id as "tenantId",
+                        COALESCE(t.plan, 'free') as plan,
+                        t.name,
+                        t.email,
+                        COALESCE(bu.messages, 0) as messages,
+                        COALESCE(bu.extractions, 0) as extractions,
+                        COALESCE(bu.api_calls, 0) as api_calls
+                    FROM tenants t
+                    LEFT JOIN api_keys ak ON t.id = ak.tenant_id AND ak.active = true
+                    LEFT JOIN billing_usage bu ON ak.key_value = bu.tenant_id AND bu.period = $1
+                    WHERE t.status = 'active' OR t.status IS NULL
+                    ORDER BY messages DESC, t.id ASC
+                    LIMIT 100
+                `, [currentPeriod]);
+
+                if (planResult.rows && planResult.rows.length > 0) {
+                    console.log(`📊 [BILLING METRICS] Usage carregado da tabela 'tenants': ${planResult.rows.length} planos`);
+                    return { byPlan: planResult.rows, byTenant: tenantResult.rows, source: 'tenants' };
+                }
+            } catch (tenantErr) {
+                console.warn('⚠️ [BILLING METRICS] Fallback usage para billing_subscriptions:', tenantErr.message);
+            }
+
+            // 2. Fallback: billing_subscriptions (legado)
             const planResult = await this.db.query(`
                 SELECT 
                     bs.plan_id as plan,
@@ -134,7 +215,6 @@ class BillingMetrics {
                 ORDER BY bs.plan_id
             `, [currentPeriod]);
 
-            // 2. Detalhes por Tenant (incluindo os com uso zero)
             const tenantResult = await this.db.query(`
                 SELECT 
                     bs.tenant_id as "tenantId",
@@ -148,10 +228,7 @@ class BillingMetrics {
                 LIMIT 100
             `, [currentPeriod]);
 
-            return {
-                byPlan: planResult.rows,
-                byTenant: tenantResult.rows
-            };
+            return { byPlan: planResult.rows, byTenant: tenantResult.rows, source: 'billing_subscriptions' };
         } catch (error) {
             console.error('❌ [BILLING METRICS] Erro ao calcular uso:', error.message);
             return { byPlan: [], byTenant: [] };
