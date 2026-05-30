@@ -288,7 +288,27 @@ async function handleSignup(req, res) {
             console.warn('⚠️ [Signup] Falha ao agendar onboarding (não crítico):', e.message);
         }
 
-        // 11. Sucesso!
+        // 11.5 SAFE PATCH - AUTO-LOGIN: Criar sessão server-side para acesso direto ao /app
+        try {
+            if (req.session) {
+                req.session.tenantId = tenantId;
+                req.session.validatedApiKey = apiKey;
+                req.session.plan = plano;
+                req.session.status = 'active';
+                req.session.clientData = {
+                    id: tenantId,
+                    name: clientName,
+                    plan: plano,
+                    status: 'active',
+                    apiKey: apiKey
+                };
+                console.log(`🔑 [Signup] Auto-login: sessão criada para ${clientName}`);
+            }
+        } catch (sessErr) {
+            console.warn('⚠️ [Signup] Falha no auto-login (não crítico):', sessErr.message);
+        }
+
+        // 12. Sucesso!
         console.log(`🎉 [Signup] Cadastro concluído! ${clientName} — Plano Free — Key: ${apiKey.substring(0, 9)}...`);
 
         return res.status(201).json({
