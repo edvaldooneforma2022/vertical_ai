@@ -4034,8 +4034,62 @@ app.get("/privacy.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "privacy.html"));
 });
 
+// ===== TERMOS E PRIVACIDADE (domínio próprio) =====
+app.get("/termos.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "termos.html"));
+});
+app.get("/termos", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "termos.html"));
+});
+app.get("/privacidade.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "privacidade.html"));
+});
+app.get("/privacidade", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "privacidade.html"));
+});
+
 app.get("/excluir-dados", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "excluir-dados.html"));
+});
+
+// ===== PUBLIC STATS API (contadores reais para o site — sem auth) =====
+app.get("/api/analytics/public-stats", async (req, res) => {
+    try {
+        const dataDir = path.join(__dirname, "data");
+        let totalLeads = 0;
+        let totalAssistants = 0;
+        let totalConversations = 0;
+
+        // Contar dados reais de todos os tenants
+        if (fs.existsSync(dataDir)) {
+            const files = fs.readdirSync(dataDir).filter(f => f.endsWith(".json"));
+            totalAssistants = files.length;
+
+            for (const file of files) {
+                try {
+                    const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), "utf-8"));
+                    if (data.leads && Array.isArray(data.leads)) {
+                        totalLeads += data.leads.length;
+                    }
+                    if (data.conversations && typeof data.conversations === "object") {
+                        totalConversations += Object.keys(data.conversations).length;
+                    }
+                } catch (e) { /* skip corrupted files */ }
+            }
+        }
+
+        res.set("Cache-Control", "public, max-age=300"); // cache 5min
+        res.json({
+            success: true,
+            totalLeads,
+            totalAssistants,
+            totalConversations,
+            updatedAt: new Date().toISOString()
+        });
+    } catch (err) {
+        console.error("[public-stats] Erro:", err.message);
+        res.json({ success: false, totalLeads: 0, totalAssistants: 0, totalConversations: 0 });
+    }
 });
 
 // ===== BILLING LIMITS API (para dashboard "Atualizar Limites") =====

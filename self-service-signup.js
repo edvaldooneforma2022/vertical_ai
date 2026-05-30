@@ -147,7 +147,7 @@ async function handleSignup(req, res) {
         }
 
         // 1. Validar dados de entrada
-        const { email, password, name } = req.body || {};
+        const { email, password, name, whatsapp } = req.body || {};
 
         if (!email || !password) {
             return res.status(400).json({
@@ -213,16 +213,17 @@ async function handleSignup(req, res) {
         const clientName = (name || '').trim() || email.split('@')[0];
         const plano = 'free';
 
-        console.log(`🆓 [Signup] Novo cadastro self-service — ${clientName} (${email})`);
+        const whatsappClean = (whatsapp || '').replace(/\D/g, '').trim() || null;
+        console.log(`🆓 [Signup] Novo cadastro self-service — ${clientName} (${email})${whatsappClean ? ` | WhatsApp: ${whatsappClean}` : ''}`);
 
         // 6. Salvar no banco de dados
         if (db) {
             try {
                 // Criar tenant
                 const insertTenant = USE_POSTGRES
-                    ? `INSERT INTO tenants (id, name, email, plan, status, password_hash, signup_source) VALUES ($1, $2, $3, $4, $5, $6, $7)`
-                    : `INSERT INTO tenants (id, name, email, plan, status, password_hash, signup_source) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-                await db.query(insertTenant, [tenantId, clientName, email.trim().toLowerCase(), plano, 'active', passwordHash, 'self_service']);
+                    ? `INSERT INTO tenants (id, name, email, plan, status, password_hash, signup_source, phone) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+                    : `INSERT INTO tenants (id, name, email, plan, status, password_hash, signup_source, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+                await db.query(insertTenant, [tenantId, clientName, email.trim().toLowerCase(), plano, 'active', passwordHash, 'self_service', whatsappClean]);
 
                 // Criar API key
                 const insertKey = USE_POSTGRES
@@ -263,7 +264,7 @@ async function handleSignup(req, res) {
                 tenantId, eventType: 'signup_self_service', planId: plano,
                 amountCents: 0, source: 'self_service',
                 newState: { plan: plano, status: 'active' },
-                metadata: { email: email.trim().toLowerCase(), name: clientName }
+                metadata: { email: email.trim().toLowerCase(), name: clientName, whatsapp: whatsappClean }
             });
         } catch (e) {
             // Silencioso — audit é best-effort
