@@ -15,6 +15,7 @@
  * Rotas:
  *   POST /api/auth/login — Login com email + senha → sessão
  *   POST /api/auth/session-check — Verificar se há sessão ativa
+ *   POST /api/auth/set-password — Definir senha (para contas Hotmart sem senha)
  */
 
 // Tentar carregar bcryptjs (fallback seguro se não disponível)
@@ -137,12 +138,13 @@ async function handleLogin(req, res) {
 
         const user = rows[0];
 
-        // 4. Verificar se tem password_hash (pode ser conta antiga sem senha)
+        // 4. Verificar se tem password_hash (pode ser conta Hotmart sem senha)
         if (!user.password_hash) {
             console.log(`🔐 [Auth Login] Conta sem senha definida: ${email}`);
             return res.status(401).json({
                 success: false,
-                error: 'Esta conta não possui senha. Use sua API Key para acessar, ou entre em contato com o suporte.'
+                error: 'Esta conta ainda não possui senha. Acesse pelo tab "API Key", depois defina sua senha no painel.',
+                needsPassword: true
             });
         }
 
@@ -230,6 +232,108 @@ async function handleSessionCheck(req, res) {
 }
 
 /**
+ * Definir senha (para contas criadas via Hotmart ou sem senha)
+ * Requer sessão ativa (autenticado via API Key)
+ */
+async function handleSetPassword(req, res) {
+    try {
+        // 0. Verificar dependências
+        if (!bcrypt) {
+            return res.status(503).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+
+        if (!db) {
+            return res.status(503).json({
+                success: false,
+                error: 'Banco de dados não disponível'
+            });
+        }
+
+        // 1. Verificar se está autenticado (via sessão = logado por API Key)
+        const tenantId = req.session?.tenantId;
+        const apiKey = req.session?.validatedApiKey;
+
+        if (!tenantId || !apiKey) {
+            return res.status(401).json({
+                success: false,
+                error: 'Você precisa estar logado para definir uma senha. Acesse com sua API Key primeiro.'
+            });
+        }
+
+        // 2. Validar nova senha
+        const { password } = req.body || {};
+
+        if (!password || password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: 'Senha deve ter no mínimo 6 caracteres'
+            });
+        }
+
+        // 3. Verificar se a conta já tem senha
+        let existingHash = null;
+        try {
+            const checkQuery = USE_POSTGRES
+                ? `SELECT password_hash FROM tenants WHERE id = $1 LIMIT 1`
+                : `SELECT password_hash FROM tenants WHERE id = ? LIMIT 1`;
+            const checkResult = await db.query(checkQuery, [tenantId]);
+            const rows = checkResult.rows || checkResult;
+            if (rows.length > 0) {
+                existingHash = rows[0].password_hash;
+            }
+        } catch (e) {
+            console.warn('⚠️ [Auth SetPassword] Erro ao verificar senha existente:', e.message);
+        }
+
+        if (existingHash) {
+            // Conta já tem senha — exigir senha atual para alterar
+            const { currentPassword } = req.body || {};
+            if (!currentPassword) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Sua conta já possui senha. Informe a senha atual para alterá-la.',
+                    hasExistingPassword: true
+                });
+            }
+
+            const currentValid = await bcrypt.compare(currentPassword, existingHash);
+            if (!currentValid) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Senha atual incorreta'
+                });
+            }
+        }
+
+        // 4. Hashear e salvar nova senha
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        const updateQuery = USE_POSTGRES
+            ? `UPDATE tenants SET password_hash = $1 WHERE id = $2`
+            : `UPDATE tenants SET password_hash = ? WHERE id = ?`;
+
+        await db.query(updateQuery, [passwordHash, tenantId]);
+
+        console.log(`✅ [Auth SetPassword] Senha ${existingHash ? 'alterada' : 'definida'} para tenant: ${tenantId.substring(0, 8)}...`);
+
+        return res.json({
+            success: true,
+            message: existingHash ? 'Senha alterada com sucesso!' : 'Senha definida com sucesso! Agora você pode fazer login com email e senha.'
+        });
+
+    } catch (error) {
+        console.error('❌ [Auth SetPassword] Erro:', error.message);
+        return res.status(500).json({
+            success: false,
+            error: 'Erro interno. Tente novamente.'
+        });
+    }
+}
+
+/**
  * Registra rotas de login no Express app
  */
 function registerLoginRoutes(app) {
@@ -239,11 +343,15 @@ function registerLoginRoutes(app) {
     // POST /api/auth/session-check — Verificar sessão ativa
     app.post('/api/auth/session-check', handleSessionCheck);
 
-    console.log('🔐 [Auth Login] Rotas registradas: POST /api/auth/login, POST /api/auth/session-check');
+    // POST /api/auth/set-password — Definir ou alterar senha
+    app.post('/api/auth/set-password', handleSetPassword);
+
+    console.log('🔐 [Auth Login] Rotas registradas: /api/auth/login, /session-check, /set-password');
 }
 
 module.exports = {
     registerLoginRoutes,
     handleLogin,
-    handleSessionCheck
+    handleSessionCheck,
+    handleSetPassword
 };

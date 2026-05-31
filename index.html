@@ -211,6 +211,93 @@
             text-decoration: underline;
         }
         
+        /* SAFE PATCH — Banner definir senha */
+        .set-password-banner {
+            display: none;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 16px;
+            padding: 1.2rem 1.5rem;
+            margin: 0 2rem 1rem;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .set-password-banner .spb-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 0.75rem;
+        }
+        
+        .set-password-banner .spb-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #f59e0b;
+        }
+        
+        .set-password-banner .spb-close {
+            background: none;
+            border: none;
+            color: var(--dark-text-muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 4px;
+        }
+        
+        .set-password-banner .spb-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .set-password-banner .spb-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.6rem 1rem;
+            border: 1px solid var(--dark-border);
+            border-radius: 10px;
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+        
+        .set-password-banner .spb-input:focus {
+            outline: none;
+            border-color: #f59e0b;
+        }
+        
+        .set-password-banner .spb-btn {
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .set-password-banner .spb-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        
+        .set-password-banner .spb-msg {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+        
+        .set-password-banner .spb-msg.success { color: var(--success); }
+        .set-password-banner .spb-msg.error { color: var(--error); }
+        
         .api-key-input {
             width: 100%;
             padding: 1rem 1.5rem;
@@ -752,7 +839,7 @@
                     <div class="logo-text">
                         <h1>
                             LinkMágico
-                            <span class="version-badge">v6.0</span>
+                            <span class="version-badge">v7.0</span>
                         </h1>
                     </div>
                 </div>
@@ -768,6 +855,19 @@
                 </div>
             </div>
         </header>
+
+        <!-- SAFE PATCH — Banner para definir senha (contas Hotmart) -->
+        <div class="set-password-banner" id="setPasswordBanner">
+            <div class="spb-header">
+                <span class="spb-title">🔑 Defina uma senha para acessar mais rápido no futuro</span>
+                <button class="spb-close" onclick="document.getElementById('setPasswordBanner').style.display='none'">×</button>
+            </div>
+            <div class="spb-form">
+                <input type="password" class="spb-input" id="newPasswordInput" placeholder="Nova senha (mínimo 6 caracteres)" minlength="6">
+                <button class="spb-btn" id="setPasswordBtn" onclick="handleSetPassword()">Definir Senha</button>
+            </div>
+            <div class="spb-msg" id="setPasswordMsg"></div>
+        </div>
 
         <div class="main-container">
             <aside class="control-panel">
@@ -903,6 +1003,72 @@
 
         // ===== FIM SAFE PATCH Login Email/Senha =====
 
+        // SAFE PATCH — Verificar se conta precisa definir senha (contas Hotmart)
+        async function checkNeedsPassword() {
+            try {
+                // Só mostrar banner se logou via API Key (não por email)
+                if (!apiKey) return;
+                var resp = await fetch('/api/auth/set-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: '' }) // Vai retornar erro de validação
+                });
+                var data = await resp.json();
+                // Se retornou hasExistingPassword, conta já tem senha — não mostrar
+                // Se retornou 401 (não autenticado), ignorar
+                // Se retornou erro de validação (400), significa que está autenticado e PODE definir
+                if (resp.status === 400 && !data.hasExistingPassword) {
+                    document.getElementById('setPasswordBanner').style.display = 'block';
+                }
+            } catch(e) {
+                // Silencioso
+            }
+        }
+
+        // Definir senha
+        async function handleSetPassword() {
+            var passInput = document.getElementById('newPasswordInput');
+            var btn = document.getElementById('setPasswordBtn');
+            var msg = document.getElementById('setPasswordMsg');
+            var password = passInput.value;
+
+            if (!password || password.length < 6) {
+                msg.className = 'spb-msg error';
+                msg.textContent = 'Senha deve ter no mínimo 6 caracteres';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+
+            try {
+                var resp = await fetch('/api/auth/set-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password })
+                });
+
+                var data = await resp.json();
+
+                if (data.success) {
+                    msg.className = 'spb-msg success';
+                    msg.textContent = '✅ ' + data.message;
+                    setTimeout(function() {
+                        document.getElementById('setPasswordBanner').style.display = 'none';
+                    }, 3000);
+                } else {
+                    msg.className = 'spb-msg error';
+                    msg.textContent = data.error || 'Erro ao definir senha';
+                }
+            } catch(e) {
+                msg.className = 'spb-msg error';
+                msg.textContent = 'Erro de conexão. Tente novamente.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Definir Senha';
+            }
+        }
+
         const authScreen = document.getElementById('authScreen');
         const mainApp = document.getElementById('mainApp');
         const authForm = document.getElementById('authForm');
@@ -939,6 +1105,8 @@
                     localStorage.setItem('linkmagico_key', key);
                     authScreen.style.display = 'none';
                     mainApp.style.display = 'block';
+                    // SAFE PATCH — Verificar se precisa definir senha
+                    setTimeout(checkNeedsPassword, 1000);
                 } else {
                     const data = await response.json();
                     showAuthError(data.reason || 'API Key inválida');
