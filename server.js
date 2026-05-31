@@ -3698,6 +3698,17 @@ async function requireApiKey(req, res, next) {
     return res.redirect("/");
 }
 
+// ===== WIDGET TOKEN MIDDLEWARE (ANTES do requireApiKey) =====
+if (process.env.FEATURE_WIDGET_TOKEN !== 'false') {
+    try {
+        const widgetToken = require('./widget-token');
+        widgetToken.registerWidgetTokenMiddleware(app);
+        console.log('🔐 Widget Token middleware ativo');
+    } catch (e) {
+        console.warn('⚠️ Widget Token middleware não disponível:', e.message);
+    }
+}
+
 app.use(requireApiKey);
 
 // ===== Health Check (para UptimeRobot e monitoramento) =====
@@ -12195,6 +12206,21 @@ try {
             console.log('🔐 Login por Email/Senha habilitado');
         } catch (e) {
             console.warn('⚠️ Auth Login não disponível:', e.message);
+        }
+    }
+
+    // ===== WIDGET TOKEN ROUTES (Feature Flag) =====
+    if (process.env.FEATURE_WIDGET_TOKEN !== 'false') {
+        try {
+            const widgetToken = require('./widget-token');
+            widgetToken.registerWidgetTokenRoutes(app);
+            // Migration: garantir que coluna widget_token existe
+            widgetToken.ensureWidgetTokenColumn().catch(e => {
+                console.warn('⚠️ Widget Token migration:', e.message);
+            });
+            console.log('🔐 Widget Token rotas habilitadas');
+        } catch (e) {
+            console.warn('⚠️ Widget Token não disponível:', e.message);
         }
     }
 
