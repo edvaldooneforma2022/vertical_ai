@@ -108,6 +108,109 @@
             gap: 1.5rem;
         }
         
+        /* SAFE PATCH — Tabs de Login (aditivo, não impacta auth existente) */
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            background: var(--dark-surface);
+            border-radius: 14px;
+            padding: 4px;
+            border: 1px solid var(--dark-border);
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 11px;
+            background: transparent;
+            color: var(--dark-text-muted);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .auth-tab:hover {
+            color: var(--dark-text-secondary);
+        }
+        
+        .auth-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .auth-tab-content {
+            display: none;
+        }
+        
+        .auth-tab-content.active {
+            display: block;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            border: 2px solid var(--dark-border);
+            border-radius: 12px;
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            font-size: 0.92rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            margin-bottom: 0.75rem;
+        }
+        
+        .login-input::placeholder {
+            color: var(--dark-text-muted);
+        }
+        
+        .login-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 1rem 0;
+            color: var(--dark-text-muted);
+            font-size: 0.8rem;
+        }
+        
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--dark-border);
+        }
+        
+        .auth-signup-link {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--dark-text-muted);
+        }
+        
+        .auth-signup-link a {
+            color: var(--primary-light);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .auth-signup-link a:hover {
+            text-decoration: underline;
+        }
+        
         .api-key-input {
             width: 100%;
             padding: 1rem 1.5rem;
@@ -569,33 +672,73 @@
             <div class="auth-icon">
                 <i class="fas fa-lock"></i>
             </div>
-            <h2 class="auth-title">LinkMágico v6.0</h2>
-            <p class="auth-subtitle">Sistema protegido - Insira sua API Key</p>
+            <h2 class="auth-title">LinkMágico v7.0</h2>
+            <p class="auth-subtitle">Acesse seu painel de controle</p>
             
-            <form class="auth-form" id="authForm">
-                <input 
-                    type="text" 
-                    class="api-key-input" 
-                    id="apiKeyInput" 
-                    placeholder="lm_xxxxxxxxxxxx"
-                    autocomplete="off"
-                    required
-                >
-                <button type="submit" class="auth-button" id="authButton">
-                    <i class="fas fa-sign-in-alt"></i> Acessar Sistema
+            <!-- SAFE PATCH — Tabs: Email/Senha e API Key -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabEmail" onclick="switchAuthTab('email')">
+                    <i class="fas fa-envelope"></i> Email
                 </button>
-            </form>
+                <button class="auth-tab" id="tabApiKey" onclick="switchAuthTab('apikey')">
+                    <i class="fas fa-key"></i> API Key
+                </button>
+            </div>
+            
+            <!-- Tab 1: Login por Email/Senha -->
+            <div class="auth-tab-content active" id="tabContentEmail">
+                <form class="auth-form" id="loginForm" onsubmit="return false;">
+                    <input 
+                        type="email" 
+                        class="login-input" 
+                        id="loginEmail" 
+                        placeholder="seu@email.com"
+                        autocomplete="email"
+                        required
+                    >
+                    <input 
+                        type="password" 
+                        class="login-input" 
+                        id="loginPassword" 
+                        placeholder="Sua senha"
+                        autocomplete="current-password"
+                        required
+                    >
+                    <button type="submit" class="auth-button" id="loginButton" onclick="handleEmailLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Entrar
+                    </button>
+                </form>
+                <div class="auth-signup-link">
+                    Não tem conta? <a href="/signup.html">Criar conta grátis →</a>
+                </div>
+            </div>
+            
+            <!-- Tab 2: Login por API Key (código original preservado) -->
+            <div class="auth-tab-content" id="tabContentApiKey">
+                <form class="auth-form" id="authForm">
+                    <input 
+                        type="text" 
+                        class="api-key-input" 
+                        id="apiKeyInput" 
+                        placeholder="LMV7-XXXX-XXXX-XXXX"
+                        autocomplete="off"
+                        required
+                    >
+                    <button type="submit" class="auth-button" id="authButton">
+                        <i class="fas fa-sign-in-alt"></i> Acessar com API Key
+                    </button>
+                </form>
+                <div class="auth-help">
+                    <h4><i class="fas fa-info-circle"></i> Onde encontrar sua API Key:</h4>
+                    <ul>
+                        <li>No email de boas-vindas do cadastro</li>
+                        <li>Formato: LMV7-XXXX-XXXX-XXXX</li>
+                        <li>Mantenha sua chave em segurança</li>
+                    </ul>
+                </div>
+            </div>
             
             <div class="auth-error" id="authError"></div>
-            
-            <div class="auth-help">
-                <h4><i class="fas fa-info-circle"></i> Como obter acesso:</h4>
-                <ul>
-                    <li>Entre em contato com o administrador</li>
-                    <li>Sua API Key começa com "lm_"</li>
-                    <li>Mantenha sua chave em segurança</li>
-                </ul>
-            </div>
         </div>
     </div>
 
@@ -681,6 +824,85 @@
         let extractedData = null;
         let chatHistory = [];
 
+        // ===== SAFE PATCH — Login por Email/Senha (aditivo) =====
+
+        // Alternar entre tabs
+        function switchAuthTab(tab) {
+            document.getElementById('tabEmail').classList.toggle('active', tab === 'email');
+            document.getElementById('tabApiKey').classList.toggle('active', tab === 'apikey');
+            document.getElementById('tabContentEmail').classList.toggle('active', tab === 'email');
+            document.getElementById('tabContentApiKey').classList.toggle('active', tab === 'apikey');
+            // Limpar erro ao trocar de tab
+            authError.style.display = 'none';
+        }
+
+        // Login por email/senha
+        async function handleEmailLogin() {
+            var emailEl = document.getElementById('loginEmail');
+            var passEl = document.getElementById('loginPassword');
+            var loginBtn = document.getElementById('loginButton');
+            var email = emailEl.value.trim();
+            var password = passEl.value;
+
+            if (!email || !password) {
+                showAuthError('Preencha email e senha.');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="loading"></span> Entrando...';
+
+            try {
+                var response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                var data = await response.json();
+
+                if (data.success && data.apiKey) {
+                    apiKey = data.apiKey;
+                    localStorage.setItem('linkmagico_key', data.apiKey);
+                    authScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                } else {
+                    showAuthError(data.error || 'Email ou senha incorretos');
+                }
+            } catch (error) {
+                showAuthError('Erro ao conectar. Tente novamente.');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+            }
+        }
+
+        // Enter no formulário de email/senha
+        document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleEmailLogin();
+            }
+        });
+
+        // SAFE PATCH — Auto-login via sessão ativa (não impacta fluxo existente)
+        (async function checkSession() {
+            try {
+                var resp = await fetch('/api/auth/session-check', { method: 'POST' });
+                var data = await resp.json();
+                if (data.success && data.authenticated && data.apiKey) {
+                    apiKey = data.apiKey;
+                    localStorage.setItem('linkmagico_key', data.apiKey);
+                    authScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                }
+            } catch (e) {
+                // Silencioso — fallback para login manual
+            }
+        })();
+
+        // ===== FIM SAFE PATCH Login Email/Senha =====
+
         const authScreen = document.getElementById('authScreen');
         const mainApp = document.getElementById('mainApp');
         const authForm = document.getElementById('authForm');
@@ -699,8 +921,8 @@
             e.preventDefault();
             const key = apiKeyInput.value.trim();
             
-            if (!key || !key.startsWith('lm_')) {
-                showAuthError('API Key inválida. Deve começar com "lm_"');
+            if (!key || (!key.startsWith('lm_') && !key.startsWith('LMV7-'))) {
+                showAuthError('API Key inválida. Formato esperado: LMV7-XXXX-XXXX-XXXX');
                 return;
             }
             
@@ -876,7 +1098,7 @@
         <a href="/criar-link?ref=index_footer" style="color:#60a5fa;font-weight:600;text-decoration:none;font-size:.85rem">✨ Criar meu LinkMágico</a>
         <a href="/public/demo.html" style="color:#60a5fa;font-weight:600;text-decoration:none;font-size:.85rem">🎯 Ver Demonstração</a>
       </div>
-      <p>© 2025 Link Mágico · <a href="/public/politica-de-privacidade.html" style="color:#94a3b8">Privacidade</a> · <a href="/public/termos-de-uso.html" style="color:#94a3b8">Termos</a></p>
+      <p>© 2026 Link Mágico · <a href="/public/politica-de-privacidade.html" style="color:#94a3b8">Privacidade</a> · <a href="/public/termos-de-uso.html" style="color:#94a3b8">Termos</a></p>
     </footer>
 </body>
 </html>

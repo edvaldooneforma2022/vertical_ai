@@ -12187,6 +12187,17 @@ try {
         }
     }
 
+    // ===== EMAIL/SENHA LOGIN (Feature Flag) =====
+    if (process.env.FEATURE_EMAIL_LOGIN !== 'false') {
+        try {
+            const authLogin = require('./auth-login');
+            authLogin.registerLoginRoutes(app);
+            console.log('🔐 Login por Email/Senha habilitado');
+        } catch (e) {
+            console.warn('⚠️ Auth Login não disponível:', e.message);
+        }
+    }
+
     // ===== EMAIL QUEUE WORKER - Onboarding Automatizado =====
     if (process.env.FEATURE_ONBOARDING_EMAILS !== 'false') {
         try {
