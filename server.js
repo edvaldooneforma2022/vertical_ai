@@ -3649,7 +3649,12 @@ async function requireApiKey(req, res, next) {
         "/demo.html",
         "/ajuda", "/ajuda.html",
         "/comunidade", "/comunidade.html",
-        "/api-docs", "/api-docs.html"
+        "/api-docs", "/api-docs.html",
+        "/termos.html", "/termos",
+        "/privacidade.html", "/privacidade",
+        "/privacy.html",
+        "/excluir-dados",
+        "/api/analytics/public-stats"
     ];
 
     if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/") || req.path.startsWith("/api/admin/") || req.path.startsWith("/api/auth/")) {
