@@ -22,7 +22,7 @@ const PLANS = {
         interval: 'month',
         features: {
             maxChatbots: 1,
-            maxMessagesPerMonth: 100,
+            maxMessagesPerMonth: 500,
             maxExtractions: 3,
             cacheEnabled: false,
             analyticsRetention: 7,
