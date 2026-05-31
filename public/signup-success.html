@@ -273,13 +273,16 @@
     <div class="success-header">
         <div class="success-icon">🎉</div>
         <h1>Conta criada com sucesso!</h1>
-        <p>Sua API Key foi gerada. Copie-a e guarde em local seguro.</p>
+        <p>Tudo pronto! Clique abaixo para acessar seu painel.</p>
     </div>
 
     <div id="successContent" style="display:none">
-        <div class="success-card">
+
+        <a href="/app" class="btn-panel" id="panelBtn">🚀 Acessar meu painel agora</a>
+
+        <div class="success-card" style="margin-top:20px">
             <div class="api-key-section">
-                <div class="api-key-label">🔑 Sua API Key</div>
+                <div class="api-key-label">🔑 Sua API Key (guarde como backup)</div>
                 <div class="api-key-box">
                     <div class="api-key-value" id="apiKeyDisplay">—</div>
                     <button class="btn-copy" id="copyBtn" onclick="copyKey()">📋 Copiar</button>
@@ -290,28 +293,26 @@
                 <div class="step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>Copie sua API Key</h3>
-                        <p>Clique em "Copiar" acima. Você também recebeu por email.</p>
+                        <h3>Acesse seu painel agora</h3>
+                        <p>Clique no botão acima. Você já está logado automaticamente!</p>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h3>Acesse o painel</h3>
-                        <p>Clique no botão abaixo para abrir seu painel de controle.</p>
+                        <h3>Cole o link da sua página</h3>
+                        <p>O LinkMágico aprende seu negócio e cria um vendedor automático em minutos.</p>
                     </div>
                 </div>
                 <div class="step">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <h3>Cole o link da sua página</h3>
-                        <p>O LinkMágico aprende seu negócio e cria um vendedor automático em minutos.</p>
+                        <h3>Guarde sua API Key (backup)</h3>
+                        <p>Sua API Key está acima caso precise no futuro. Também enviamos por email.</p>
                     </div>
                 </div>
             </div>
         </div>
-
-        <a href="/app" class="btn-panel" id="panelBtn">🚀 Acessar meu painel</a>
 
         <div class="plan-info">
             <span><span class="value">100</span> msgs/mês</span>

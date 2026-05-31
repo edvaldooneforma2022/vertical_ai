@@ -429,6 +429,72 @@
             .comparison-table { font-size: 0.75rem; }
             .comparison-table th, .comparison-table td { padding: 10px 8px; }
         }
+
+        /* SAFE PATCH — Modal API Key */
+        .apikey-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .apikey-modal-overlay.show { display: flex; }
+        .apikey-modal {
+            background: #12121a;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+        }
+        .apikey-modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #f0f0f5; }
+        .apikey-modal p { font-size: 0.85rem; color: #8888a0; margin-bottom: 20px; line-height: 1.5; }
+        .apikey-modal input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid rgba(124,58,237,0.3);
+            border-radius: 12px;
+            background: #1a1a2e;
+            color: #34d399;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .apikey-modal input:focus { outline: none; border-color: #7c3aed; }
+        .apikey-modal input::placeholder { color: #555; font-weight: 400; font-family: inherit; }
+        .apikey-modal .modal-btns { display: flex; gap: 10px; }
+        .apikey-modal .modal-btns button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .apikey-modal .btn-confirm {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: white;
+        }
+        .apikey-modal .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,58,237,0.3); }
+        .apikey-modal .btn-cancel {
+            background: rgba(255,255,255,0.06);
+            color: #8888a0;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .apikey-modal .btn-cancel:hover { background: rgba(255,255,255,0.1); }
+        .apikey-modal .modal-signup { margin-top: 16px; font-size: 0.82rem; color: #8888a0; }
+        .apikey-modal .modal-signup a { color: #a78bfa; text-decoration: none; font-weight: 600; }
+        .apikey-modal .modal-signup a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -592,34 +658,65 @@
         // Verificar se usuário está logado (tem API Key na session)
         function getApiKey() {
             try {
-                return sessionStorage.getItem('lm_api_key') || localStorage.getItem('lm_api_key') || '';
+                return sessionStorage.getItem('lm_api_key') || localStorage.getItem('lm_api_key') || localStorage.getItem('linkmagico_key') || '';
             } catch (e) {
                 return '';
             }
         }
 
-        // Prompt para API Key se não logado
+        // SAFE PATCH — Modal ao invés de prompt()
+        let _pendingPlanId = null;
+
         function promptApiKey() {
-            const key = prompt('Para assinar, informe sua API Key.\nSe ainda não tem, crie uma conta grátis primeiro.');
-            if (key && key.startsWith('LMV7-')) {
-                try {
-                    sessionStorage.setItem('lm_api_key', key);
-                    localStorage.setItem('lm_api_key', key);
-                } catch (e) {}
-                return key;
-            }
-            return null;
+            return null; // Agora usa modal assíncrono
         }
+
+        function showApiKeyModal(planId) {
+            _pendingPlanId = planId;
+            document.getElementById('modalApiKeyInput').value = '';
+            document.getElementById('apikeyModal').classList.add('show');
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById('apikeyModal').classList.remove('show');
+            _pendingPlanId = null;
+        }
+
+        function confirmApiKeyModal() {
+            var input = document.getElementById('modalApiKeyInput');
+            var key = input.value.trim();
+            if (!key || (!key.startsWith('LMV7-') && !key.startsWith('lm_'))) {
+                input.style.borderColor = '#ef4444';
+                setTimeout(function() { input.style.borderColor = 'rgba(124,58,237,0.3)'; }, 2000);
+                return;
+            }
+            try {
+                sessionStorage.setItem('lm_api_key', key);
+                localStorage.setItem('lm_api_key', key);
+                localStorage.setItem('linkmagico_key', key);
+            } catch(e) {}
+            closeApiKeyModal();
+            if (_pendingPlanId) {
+                subscribe(_pendingPlanId);
+            }
+        }
+
+        // Enter no modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.getElementById('apikeyModal').classList.contains('show')) {
+                confirmApiKeyModal();
+            }
+            if (e.key === 'Escape') {
+                closeApiKeyModal();
+            }
+        });
 
         async function subscribe(planId) {
             let apiKey = getApiKey();
 
             if (!apiKey) {
-                apiKey = promptApiKey();
-                if (!apiKey) {
-                    showToast('API Key obrigatória para assinar. Crie uma conta grátis primeiro.');
-                    return;
-                }
+                showApiKeyModal(planId);
+                return;
             }
 
             const btn = document.getElementById('btn-' + planId);
@@ -666,5 +763,19 @@
             setTimeout(() => showToast('Checkout cancelado. Você pode tentar novamente quando quiser.'), 500);
         }
     </script>
+
+<!-- SAFE PATCH — Modal API Key -->
+<div class="apikey-modal-overlay" id="apikeyModal">
+    <div class="apikey-modal">
+        <h3>🔑 Informe sua API Key</h3>
+        <p>Para assinar um plano, insira a API Key que você recebeu no cadastro.</p>
+        <input type="text" id="modalApiKeyInput" placeholder="LMV7-XXXX-XXXX-XXXX" autocomplete="off">
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeApiKeyModal()">Cancelar</button>
+            <button class="btn-confirm" onclick="confirmApiKeyModal()">Continuar</button>
+        </div>
+        <div class="modal-signup">Não tem conta? <a href="/signup.html">Criar conta grátis →</a></div>
+    </div>
+</div>
 </body>
 </html>
