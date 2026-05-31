@@ -495,6 +495,35 @@
         .apikey-modal .modal-signup { margin-top: 16px; font-size: 0.82rem; color: #8888a0; }
         .apikey-modal .modal-signup a { color: #a78bfa; text-decoration: none; font-weight: 600; }
         .apikey-modal .modal-signup a:hover { text-decoration: underline; }
+
+        /* SAFE PATCH — Trial Banner */
+        .trial-banner {
+            display: none;
+            margin-top: 10px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.08));
+            border: 1px solid rgba(251,191,36,0.25);
+            border-radius: 12px;
+            text-align: center;
+        }
+        .trial-banner.show { display: block; }
+        .trial-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .trial-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,158,11,0.3); }
+        .trial-info { font-size: 0.72rem; color: #f59e0b; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -564,6 +593,10 @@
                 <li><span class="icon check">✓</span> Suporte prioritário</li>
             </ul>
             <button class="plan-cta primary" onclick="subscribe('pro')" id="btn-pro">Assinar Pro</button>
+            <div class="trial-banner" id="trialBanner">
+                <button class="trial-btn" onclick="subscribeTrial()" id="btn-trial">🎁 Testar Pro GRÁTIS por 7 dias</button>
+                <div class="trial-info">Sem cobrança nos primeiros 7 dias. Cancele quando quiser.</div>
+            </div>
         </div>
 
         <!-- BUSINESS -->
@@ -746,6 +779,62 @@
                 btn.textContent = originalText;
             }
         }
+
+        // SAFE PATCH — Trial 7 dias
+        async function subscribeTrial() {
+            let apiKey = getApiKey();
+            if (!apiKey) {
+                showApiKeyModal('pro');
+                return;
+            }
+
+            const btn = document.getElementById('btn-trial');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = 'Redirecionando...';
+
+            try {
+                const resp = await fetch('/api/billing/create-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey, planId: 'pro', trial: true })
+                });
+
+                const data = await resp.json();
+
+                if (data.success && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    showToast(data.error || 'Erro ao iniciar trial');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            } catch (err) {
+                showToast('Erro de conexão. Tente novamente.');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // Checar elegibilidade do trial ao carregar
+        async function checkTrialEligibility() {
+            try {
+                var apiKey = getApiKey();
+                if (!apiKey) return; // Sem API key, não mostrar trial
+
+                var resp = await fetch('/api/billing/trial-eligible?apiKey=' + encodeURIComponent(apiKey));
+                var data = await resp.json();
+
+                if (data.success && data.eligible) {
+                    var banner = document.getElementById('trialBanner');
+                    if (banner) banner.classList.add('show');
+                }
+            } catch (e) {
+                // Silencioso — trial é bonus, não obrigatório
+            }
+        }
+        // Executar após carregamento
+        setTimeout(checkTrialEligibility, 1000);
 
         function toggleFaq(el) {
             el.parentElement.classList.toggle('open');

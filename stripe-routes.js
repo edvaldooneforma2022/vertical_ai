@@ -22,6 +22,8 @@ const STRIPE_PRICES = {
 };
 
 const APP_URL = process.env.APP_URL || process.env.PLATFORM_URL || 'https://linkmagico.app.br';
+const TRIAL_DAYS = parseInt(process.env.STRIPE_TRIAL_DAYS || '7', 10);
+const TRIAL_PLAN = process.env.STRIPE_TRIAL_PLAN || 'pro'; // Plano oferecido no trial
 
 /**
  * Registra rotas Stripe no Express app
@@ -37,6 +39,92 @@ function registerStripeRoutes(app) {
         console.error('❌ [Stripe Routes] Falha ao inicializar Stripe:', err.message);
         return;
     }
+
+    // ─── MIGRATION: coluna trial_used ────────────────────────────────────────
+    (async () => {
+        try {
+            const { db, USE_POSTGRES } = require('./database');
+            if (db && USE_POSTGRES) {
+                await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT false`);
+                await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_started_at TIMESTAMP`);
+                console.log('✅ [Stripe Trial] Colunas trial_used e trial_started_at verificadas');
+            }
+        } catch (e) {
+            if (!e.message.includes('already exists')) {
+                console.warn('⚠️ [Stripe Trial] Migration:', e.message);
+            }
+        }
+    })();
+
+    // ─── GET /api/billing/trial-eligible — Verifica se pode usar trial ───────
+    app.get('/api/billing/trial-eligible', async (req, res) => {
+        try {
+            if (process.env.FEATURE_TRIAL !== undefined && process.env.FEATURE_TRIAL === 'false') {
+                return res.json({ success: true, eligible: false, reason: 'Trial desabilitado' });
+            }
+
+            const apiKey = req.query.apiKey || req.session?.validatedApiKey;
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key obrigatória' });
+            }
+
+            const { db, USE_POSTGRES } = require('./database');
+            if (!db || !USE_POSTGRES) {
+                return res.json({ success: true, eligible: false, reason: 'DB não disponível' });
+            }
+
+            // 1. Buscar tenant
+            const result = await db.query(
+                `SELECT t.plan, t.trial_used, t.email 
+                 FROM tenants t JOIN api_keys ak ON t.id = ak.tenant_id 
+                 WHERE ak.key_value = $1 AND ak.active = true LIMIT 1`,
+                [apiKey]
+            );
+            const rows = result.rows || result;
+
+            if (rows.length === 0) {
+                return res.json({ success: true, eligible: false, reason: 'Tenant não encontrado' });
+            }
+
+            const tenant = rows[0];
+
+            // 2. Verificar: já usou trial?
+            if (tenant.trial_used) {
+                return res.json({ success: true, eligible: false, reason: 'Trial já utilizado', trialPlan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
+            }
+
+            // 3. Verificar: já é pagante?
+            if (tenant.plan && tenant.plan !== 'free') {
+                return res.json({ success: true, eligible: false, reason: 'Já possui plano pago', trialPlan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
+            }
+
+            // 4. Verificar: email já usou trial em OUTRA conta?
+            if (tenant.email) {
+                const emailCheck = await db.query(
+                    `SELECT COUNT(*) as count FROM tenants WHERE email = $1 AND trial_used = true`,
+                    [tenant.email]
+                );
+                const emailRows = emailCheck.rows || emailCheck;
+                if (parseInt(emailRows[0]?.count || '0') > 0) {
+                    return res.json({ success: true, eligible: false, reason: 'Email já utilizou trial', trialPlan: TRIAL_PLAN, trialDays: TRIAL_DAYS });
+                }
+            }
+
+            // 5. Elegível!
+            return res.json({
+                success: true,
+                eligible: true,
+                trialPlan: TRIAL_PLAN,
+                trialDays: TRIAL_DAYS,
+                planName: PLANS[TRIAL_PLAN]?.name || 'Pro',
+                planFeatures: PLANS[TRIAL_PLAN]?.features || {}
+            });
+
+        } catch (err) {
+            console.error('❌ [Stripe Trial] Erro ao verificar elegibilidade:', err.message);
+            return res.json({ success: true, eligible: false, reason: 'Erro interno' });
+        }
+    });
 
     // ─── GET /api/billing/plans — Lista planos (público) ─────────────────────
     app.get('/api/billing/plans', (req, res) => {
@@ -115,6 +203,42 @@ function registerStripeRoutes(app) {
                 console.warn('⚠️ [Stripe] Não conseguiu buscar email do tenant:', e.message);
             }
 
+            // SAFE PATCH — Trial 7 dias
+            const isTrial = req.body.trial === true && planId === TRIAL_PLAN;
+            let trialEligible = false;
+
+            if (isTrial && process.env.FEATURE_TRIAL !== 'false') {
+                try {
+                    const { db: trialDb, USE_POSTGRES: trialPG } = require('./database');
+                    if (trialDb && trialPG) {
+                        const trialCheck = await trialDb.query(
+                            `SELECT t.trial_used, t.email FROM tenants t JOIN api_keys ak ON t.id = ak.tenant_id WHERE ak.key_value = $1 AND ak.active = true LIMIT 1`,
+                            [apiKey]
+                        );
+                        const trialRows = trialCheck.rows || trialCheck;
+                        if (trialRows.length > 0 && !trialRows[0].trial_used) {
+                            // Checar email duplicado
+                            const email = trialRows[0].email;
+                            if (email) {
+                                const emailDup = await trialDb.query(
+                                    `SELECT COUNT(*) as count FROM tenants WHERE email = $1 AND trial_used = true`,
+                                    [email]
+                                );
+                                const dupRows = emailDup.rows || emailDup;
+                                if (parseInt(dupRows[0]?.count || '0') === 0) {
+                                    trialEligible = true;
+                                }
+                            } else {
+                                trialEligible = true; // Sem email, permitir
+                            }
+                        }
+                    }
+                } catch (trialErr) {
+                    console.warn('⚠️ [Stripe Trial] Erro ao verificar trial:', trialErr.message);
+                    // Fallback: não oferece trial (seguro)
+                }
+            }
+
             const sessionParams = {
                 payment_method_types: ['card'],
                 mode: 'subscription',
@@ -122,15 +246,24 @@ function registerStripeRoutes(app) {
                     price: STRIPE_PRICES[planId],
                     quantity: 1
                 }],
-                success_url: `${APP_URL}/checkout-success.html?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`,
+                success_url: `${APP_URL}/checkout-success.html?session_id={CHECKOUT_SESSION_ID}&plan=${planId}${trialEligible ? '&trial=true' : ''}`,
                 cancel_url: `${APP_URL}/pricing.html?cancelled=true`,
                 client_reference_id: apiKey,
                 metadata: {
                     apiKey,
                     planId,
-                    source: 'linkmagico_pricing'
+                    source: 'linkmagico_pricing',
+                    trial: trialEligible ? 'true' : 'false'
                 }
             };
+
+            // Adicionar trial period se elegível
+            if (trialEligible) {
+                sessionParams.subscription_data = {
+                    trial_period_days: TRIAL_DAYS
+                };
+                console.log(`🎁 [Stripe Trial] Trial ${TRIAL_DAYS} dias para: ${apiKey.substring(0, 9)}...`);
+            }
 
             if (customerEmail) {
                 sessionParams.customer_email = customerEmail;
@@ -223,7 +356,25 @@ async function handleCheckoutCompleted(session) {
             return;
         }
 
-        console.log(`💳 [Stripe Webhook] Checkout completado: ${apiKey.substring(0, 9)}... → plano ${planId}`);
+        const isTrial = session.metadata?.trial === 'true';
+        console.log(`💳 [Stripe Webhook] Checkout completado: ${apiKey.substring(0, 9)}... → plano ${planId}${isTrial ? ' (TRIAL ' + TRIAL_DAYS + 'd)' : ''}`);
+
+        // 0. Marcar trial_used se aplicável
+        if (isTrial) {
+            try {
+                const { db: tDb, USE_POSTGRES: tPG } = require('./database');
+                if (tDb && tPG) {
+                    await tDb.query(
+                        `UPDATE tenants SET trial_used = true, trial_started_at = CURRENT_TIMESTAMP 
+                         WHERE id = (SELECT tenant_id FROM api_keys WHERE key_value = $1 AND active = true LIMIT 1)`,
+                        [apiKey]
+                    );
+                    console.log(`🔒 [Stripe Trial] trial_used marcado para: ${apiKey.substring(0, 9)}...`);
+                }
+            } catch (trialMarkErr) {
+                console.error('⚠️ [Stripe Trial] Erro ao marcar trial_used:', trialMarkErr.message);
+            }
+        }
 
         // 1. Atualizar plano no banco
         try {
