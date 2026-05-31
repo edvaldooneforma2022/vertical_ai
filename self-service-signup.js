@@ -219,11 +219,11 @@ async function handleSignup(req, res) {
         // 6. Salvar no banco de dados
         if (db) {
             try {
-                // Criar tenant
+                // Criar tenant (schema original — sem coluna phone)
                 const insertTenant = USE_POSTGRES
-                    ? `INSERT INTO tenants (id, name, email, plan, status, password_hash, signup_source, phone) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
-                    : `INSERT INTO tenants (id, name, email, plan, status, password_hash, signup_source, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-                await db.query(insertTenant, [tenantId, clientName, email.trim().toLowerCase(), plano, 'active', passwordHash, 'self_service', whatsappClean]);
+                    ? `INSERT INTO tenants (id, name, email, plan, status, password_hash, signup_source) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+                    : `INSERT INTO tenants (id, name, email, plan, status, password_hash, signup_source) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                await db.query(insertTenant, [tenantId, clientName, email.trim().toLowerCase(), plano, 'active', passwordHash, 'self_service']);
 
                 // Criar API key
                 const insertKey = USE_POSTGRES
@@ -232,6 +232,19 @@ async function handleSignup(req, res) {
                 await db.query(insertKey, [apiKeyId, tenantId, apiKey, keyHash, USE_POSTGRES ? true : 1]);
 
                 console.log(`✅ [Signup] Tenant + API key salvos no banco`);
+
+                // Salvar WhatsApp separadamente (fallback seguro — coluna pode não existir)
+                if (whatsappClean) {
+                    try {
+                        const updatePhone = USE_POSTGRES
+                            ? `UPDATE tenants SET phone = $1 WHERE id = $2`
+                            : `UPDATE tenants SET phone = ? WHERE id = ?`;
+                        await db.query(updatePhone, [whatsappClean, tenantId]);
+                        console.log(`📱 [Signup] WhatsApp salvo: ${whatsappClean}`);
+                    } catch (phoneErr) {
+                        console.warn(`⚠️ [Signup] Coluna phone não disponível (não crítico): ${phoneErr.message}`);
+                    }
+                }
             } catch (dbError) {
                 // Verificar se é erro de email duplicado (race condition)
                 if (dbError.message && (dbError.message.includes('unique') || dbError.message.includes('duplicate') || dbError.message.includes('UNIQUE'))) {
