@@ -10241,17 +10241,22 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.warn('[V19/V18.4] ⚠️ Erro:', _v19ApplyErr.message);
         }
 
-        // 🎯 CHAT FIRST — Avaliar se deve disparar captura inline
+        // 🎯 CHAT FIRST — Avaliar se deve disparar captura inline (OBSERVER ONLY — não altera resposta/intent/CTA)
         let _leadCaptureResult = { shouldCapture: false };
         try {
             if (_chatFirstEnabled && _leadCaptureScore && conversationId && !req.body.leadId) {
-                _leadCaptureResult = _leadCaptureScore.evaluateCapture(conversationId, {
+                _leadCaptureResult = _leadCaptureScore.evaluateCapture({
+                    conversationId: conversationId,
                     message: message,
-                    intent: inteligencias?.intencao_compra ? 'comprar' : (inteligencias?.comparacao ? 'comparar' : 'informacao'),
-                    journeyStage: journeyStage || 'descoberta',
-                    hasCheckoutLink: !!(processedPageData?.checkoutLink),
-                    ctaPresent: !!_intCta
+                    dcIntent: inteligencias?.intencao_compra ? 'buy' : (inteligencias?.objecao ? 'objection' : (inteligencias?.curioso ? 'interest' : 'info')),
+                    inteligencias: inteligencias,
+                    ctaCandidate: !!_intCta,
+                    checkoutCandidate: !!(processedPageData?.checkoutLink && inteligencias?.intencao_compra)
                 });
+                console.log(`🎯 [CHAT-FIRST-DEBUG] conv=${conversationId?.substring(0,12)} score=${_leadCaptureResult.score} shouldCapture=${_leadCaptureResult.shouldCapture} signals=[${(_leadCaptureResult.newSignals||[]).join(',')}] msg="${message?.substring(0,40)}"`);
+                if (_leadCaptureResult.shouldCapture) {
+                    console.log(`🎯 [CHAT-FIRST-DEBUG] ✅ CAPTURA DISPARADA! captureMessage="${_leadCaptureResult.captureMessage}" context=${_leadCaptureResult.captureContext}`);
+                }
             }
         } catch (_lcErr) {
             console.warn('[CHAT-FIRST] Lead Capture Score erro (não crítico):', _lcErr.message);
