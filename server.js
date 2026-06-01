@@ -8179,6 +8179,38 @@ app.post("/api/capture-lead", async (req, res) => {
     }
 });
 
+// 🎯 CHAT FIRST — Vincular mensagens pré-captura ao lead retroativamente
+// Observer puro: não altera fluxo, apenas grava histórico que seria perdido
+app.post("/api/link-conversation", async (req, res) => {
+    try {
+        const apiKey = req.body.apiKey || req.session?.validatedApiKey;
+        if (!apiKey) return res.status(401).json({ success: false, error: "API Key não fornecida" });
+        const { leadId, conversationId, messages } = req.body;
+        if (!leadId || !Array.isArray(messages)) return res.status(400).json({ success: false, error: "leadId e messages são obrigatórios" });
+        const leadSystem = getLeadSystem(apiKey);
+        const lead = leadSystem.getLeadById(leadId);
+        if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado" });
+        // Gravar mensagens pré-captura no histórico do lead
+        let synced = 0;
+        for (const msg of messages.slice(0, 50)) { // Limitar a 50 mensagens
+            if (msg.message && msg.message.trim()) {
+                leadSystem.updateLeadConversation(leadId, msg.message.trim(), !!msg.isUser);
+                synced++;
+            }
+        }
+        // Vincular conversationId se não existir
+        if (conversationId && !lead.conversationId) {
+            lead.conversationId = conversationId;
+            leadSystem.saveLeads();
+        }
+        console.log(`🎯 [CHAT-FIRST] Retroactive sync: ${synced} mensagens vinculadas ao lead ${leadId?.substring(0,8)}`);
+        res.json({ success: true, synced });
+    } catch (error) {
+        console.error("❌ [CHAT-FIRST] Erro no link-conversation:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ===== 📅 ENDPOINT: Buscar agendamentos de um lead =====
 app.get("/api/appointments/:leadId", async (req, res) => {
     const apiKey = req.session.validatedApiKey || req.query.apiKey ||
@@ -10979,7 +11011,20 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 try {
                     var r = await fetch('/api/capture-lead', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome:nm||'Não informado', email:em||'Não informado', telefone:ph||'Não informado', url_origem:window.location.href, robotName:robotName, conversationId:sessionConversationId, apiKey:currentApiKey }) });
                     var d = await r.json();
-                    if (d.success) { leadId=d.lead.id; inlineCaptured=true; captureDiv.innerHTML='<div class="inline-capture-msg" style="color:#059669;margin:0">✅ Contato registrado! Continuando...</div>'; setTimeout(function(){captureDiv.style.display="none";},3000); }
+                    if (d.success) { leadId=d.lead.id; inlineCaptured=true; captureDiv.innerHTML='<div class="inline-capture-msg" style="color:#059669;margin:0">✅ Contato registrado! Continuando...</div>'; setTimeout(function(){captureDiv.style.display="none";},3000);
+                        // 🎯 CHAT FIRST: Retroactive sync — vincular mensagens pré-captura ao lead
+                        try {
+                            var prevMsgs = [];
+                            var allMsgDivs = chatMessages.querySelectorAll('.chat-message');
+                            allMsgDivs.forEach(function(div) {
+                                if (div.classList.contains('inline-capture')) return;
+                                prevMsgs.push({ message: div.textContent.trim().substring(0, 500), isUser: div.classList.contains('user') });
+                            });
+                            if (prevMsgs.length > 0) {
+                                fetch('/api/link-conversation', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ leadId: leadId, conversationId: sessionConversationId, messages: prevMsgs, apiKey: currentApiKey }) }).catch(function(){});
+                            }
+                        } catch(syncErr) { console.warn('Sync err:', syncErr); }
+                    }
                     else { this.textContent='Registrar contato'; this.disabled=false; }
                 } catch(err) { this.textContent='Registrar contato'; this.disabled=false; }
             });
