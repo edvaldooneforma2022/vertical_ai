@@ -12251,6 +12251,46 @@ try {
         console.log('⚠️ Stripe desabilitado (STRIPE_SECRET_KEY não configurada)');
     }
 
+    // ===== CHATBOT TEMPLATES (Feature Flag) =====
+    if (process.env.FEATURE_TEMPLATES !== 'false') {
+        try {
+            const { registerTemplateRoutes } = require('./chatbot-templates');
+            registerTemplateRoutes(app);
+            console.log('📋 Chatbot Templates habilitado');
+        } catch (e) {
+            console.warn('⚠️ Chatbot Templates não disponível:', e.message);
+        }
+    }
+
+    // ===== PROGRAMA DE AFILIADOS (Feature Flag) =====
+    if (process.env.FEATURE_AFFILIATES !== 'false') {
+        try {
+            const { registerAffiliateRoutes, ensureAffiliatesTables } = require('./affiliate-program');
+            registerAffiliateRoutes(app);
+            ensureAffiliatesTables().catch(e => {
+                console.warn('⚠️ [Affiliates] Migration:', e.message);
+            });
+            console.log('🤝 Programa de Afiliados habilitado');
+        } catch (e) {
+            console.warn('⚠️ Programa de Afiliados não disponível:', e.message);
+        }
+    }
+
+    // ===== WEEKLY REPORT (Feature Flag) =====
+    if (process.env.FEATURE_WEEKLY_REPORT !== 'false') {
+        try {
+            const { scheduleWeeklyReports } = require('./weekly-report');
+            // Agendar para executar 1x por semana (segunda-feira 9h)
+            const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+            setInterval(scheduleWeeklyReports, WEEK_MS);
+            // Primeira execução: 30s após boot (para testar)
+            setTimeout(scheduleWeeklyReports, 30000);
+            console.log('📊 Weekly Report habilitado (interval: 7 dias)');
+        } catch (e) {
+            console.warn('⚠️ Weekly Report não disponível:', e.message);
+        }
+    }
+
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
 
