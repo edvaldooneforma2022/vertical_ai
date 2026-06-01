@@ -585,6 +585,22 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 🎯 LEAD CAPTURE SCORE — Captura Inteligente Orientada por Intenção
+// Avalia maturidade comercial da conversa usando inteligência existente
+// Feature flag: FEATURE_CHAT_FIRST
+// ═══════════════════════════════════════════════════════════════════
+let _leadCaptureScore = null;
+let _chatFirstEnabled = false;
+try {
+    _leadCaptureScore = require('./lib/lead-capture-score');
+    _chatFirstEnabled = (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_CHAT_FIRST'))
+        || process.env.FEATURE_CHAT_FIRST !== 'false'; // default: true
+    console.log(`🎯 [CHAT-FIRST] Lead Capture Score carregado (enabled=${_chatFirstEnabled})`);
+} catch (e) {
+    console.log('🎯 [CHAT-FIRST] Lead Capture Score não disponível (não crítico):', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // 🔒 CONCURRENCY LIMIT + OOM GUARD — Proteção de memória
 // Limita páginas Puppeteer simultâneas + detecta memória crítica
 // ═══════════════════════════════════════════════════════════════════
@@ -10225,6 +10241,22 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.warn('[V19/V18.4] ⚠️ Erro:', _v19ApplyErr.message);
         }
 
+        // 🎯 CHAT FIRST — Avaliar se deve disparar captura inline
+        let _leadCaptureResult = { shouldCapture: false };
+        try {
+            if (_chatFirstEnabled && _leadCaptureScore && conversationId && !req.body.leadId) {
+                _leadCaptureResult = _leadCaptureScore.evaluateCapture(conversationId, {
+                    message: message,
+                    intent: inteligencias?.intencao_compra ? 'comprar' : (inteligencias?.comparacao ? 'comparar' : 'informacao'),
+                    journeyStage: journeyStage || 'descoberta',
+                    hasCheckoutLink: !!(processedPageData?.checkoutLink),
+                    ctaPresent: !!_intCta
+                });
+            }
+        } catch (_lcErr) {
+            console.warn('[CHAT-FIRST] Lead Capture Score erro (não crítico):', _lcErr.message);
+        }
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -10236,6 +10268,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             journeyStage: journeyStage,
             bonuses_detected: processedPageData?.bonuses_detected || [],
             contatos: processedPageData?.contatos || {},
+            leadCapture: _leadCaptureResult,
             metadata: {
                 hasPageData: !!processedPageData,
                 contentLength: processedPageData?.cleanText?.length || 0,
@@ -10631,6 +10664,18 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         .warming-skip{background:none;border:none;color:#94a3b8;font-size:0.78rem;margin-top:12px;cursor:pointer;transition:color 0.2s;padding:8px}
         .warming-skip:hover{color:#64748b}
         @media (max-width:768px){.warming-screen{padding:20px 16px}.warming-headline{font-size:1.15rem}.warming-cta{font-size:1rem;padding:14px 20px}}
+        /* 🎯 CHAT FIRST — Captura inline dentro do chat */
+        .inline-capture{background:linear-gradient(135deg,#f0f9ff 0%,#e8f4fd 100%);border:1px solid #bae6fd;border-radius:16px;padding:18px 16px;margin:8px 0;max-width:90%;align-self:flex-start;animation:inlineCaptureIn 0.5s ease-out}
+        @keyframes inlineCaptureIn{from{opacity:0;transform:translateY(10px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .inline-capture-msg{font-size:0.9rem;color:#1e40af;font-weight:500;margin-bottom:12px;line-height:1.4}
+        .inline-capture input{width:100%;padding:10px 14px;margin-bottom:8px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;font-family:'Inter',sans-serif;transition:border-color 0.2s;background:white}
+        .inline-capture input:focus{border-color:${primaryColor};outline:none;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+        .inline-capture input::placeholder{color:#94a3b8}
+        .inline-capture-actions{display:flex;gap:8px;margin-top:4px}
+        .inline-capture-submit{flex:1;background:linear-gradient(135deg,${primaryColor} 0%,${secondaryColor} 100%);color:white;border:none;padding:10px 16px;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif}
+        .inline-capture-submit:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,0.3)}
+        .inline-capture-dismiss{background:none;border:none;color:#94a3b8;font-size:0.78rem;cursor:pointer;padding:8px 12px;transition:color 0.2s;font-family:'Inter',sans-serif;white-space:nowrap}
+        .inline-capture-dismiss:hover{color:#64748b}
     </style>
 </head>
 <body>
@@ -10652,8 +10697,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 <div class="warming-benefit"><span class="warming-benefit-icon">⚡</span><span class="warming-benefit-text">Atendimento 24h, rápido e eficiente</span></div>
             </div>
             <div class="warming-social"><span class="warming-social-dot"></span> Atendimento ao vivo agora</div>
-            <button class="warming-cta" id="warmingCta">🚀 Quero Começar!</button>
-            <button class="warming-skip" id="warmingSkip">Já tenho meus dados → pular</button>
+            <button class="warming-cta" id="warmingCta">💬 Iniciar Conversa</button>
         </div>
         <div class="lead-form" id="leadForm" style="display:none">
             <h3>🎯 Quase lá!</h3>
@@ -10698,27 +10742,47 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         let schedSelectedDate = null;
         let schedSelectedTime = null;
 
-        // 🔥 WARMING SCREEN — Transição warming → formulário (ZERO impacto em chat/IA/sales)
+        // 🎯 CHAT FIRST — Feature flag controlada pelo servidor
+        const CHAT_FIRST = ${_chatFirstEnabled ? 'true' : 'false'};
+        let inlineCaptureShown = false;
+        let inlineCaptured = false;
+
+        // ═══ FLUXO DE ENTRADA — Bifurca entre Chat First e Legado ═══
         try {
             const warmingScreen = document.getElementById('warmingScreen');
             const warmingCta = document.getElementById('warmingCta');
-            const warmingSkip = document.getElementById('warmingSkip');
-            function showLeadForm() {
-                try {
-                    if (warmingScreen) warmingScreen.style.display = 'none';
+            if (CHAT_FIRST) {
+                function startChatFirst() {
+                    try {
+                        if (warmingScreen) warmingScreen.style.display = 'none';
+                        if (chatMessages) chatMessages.style.display = 'flex';
+                        if (chatInputContainer) chatInputContainer.style.display = 'flex';
+                        if (messageInput) setTimeout(function() { messageInput.focus(); }, 300);
+                    } catch(e) {}
+                }
+                if (warmingCta) warmingCta.addEventListener('click', startChatFirst);
+                if (!warmingScreen || !warmingCta) startChatFirst();
+            } else {
+                function showLeadForm() {
+                    try {
+                        if (warmingScreen) warmingScreen.style.display = 'none';
+                        if (leadForm) leadForm.style.display = 'block';
+                    } catch(e) {}
+                }
+                if (warmingCta) warmingCta.addEventListener('click', showLeadForm);
+                if (!warmingScreen || !warmingCta) {
                     if (leadForm) leadForm.style.display = 'block';
-                } catch(e) { /* fallback: formulário já visível */ }
-            }
-            if (warmingCta) warmingCta.addEventListener('click', showLeadForm);
-            if (warmingSkip) warmingSkip.addEventListener('click', showLeadForm);
-            // Fallback: se warming falhar, mostrar form direto
-            if (!warmingScreen || !warmingCta) {
-                if (leadForm) leadForm.style.display = 'block';
+                }
             }
         } catch(warmingErr) {
-            // FALLBACK TOTAL: se warming crashar, mostrar formulário (comportamento original)
-            try { document.getElementById('leadForm').style.display = 'block'; } catch(e) {}
-            console.warn('⚠️ Warming screen fallback:', warmingErr.message);
+            try {
+                if (CHAT_FIRST) {
+                    document.getElementById('chatMessages').style.display = 'flex';
+                    document.getElementById('chatInputContainer').style.display = 'flex';
+                } else {
+                    document.getElementById('leadForm').style.display = 'block';
+                }
+            } catch(e) {}
         }
 
         // SAFE PATCH - SCHED-010: Função para criar calendário visual
@@ -10885,6 +10949,40 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             }
         });
 
+        // ═══ 🎯 CHAT FIRST — Captura inline (dentro do chat, não-bloqueante) ═══
+        function showInlineCapture(captureMessage) {
+            if (inlineCaptureShown || inlineCaptured || !CHAT_FIRST) return;
+            inlineCaptureShown = true;
+            var captureDiv = document.createElement('div');
+            captureDiv.className = 'inline-capture';
+            captureDiv.innerHTML = '<div class="inline-capture-msg">' + (captureMessage || 'Posso guardar seu contato para continuarmos depois?') + '</div>'
+                + '<input type="text" id="inlineName" placeholder="Seu nome">'
+                + '<input type="tel" id="inlinePhone" placeholder="Seu WhatsApp">'
+                + '<input type="email" id="inlineEmail" placeholder="Seu email (opcional)">'
+                + '<div class="inline-capture-actions">'
+                + '<button class="inline-capture-submit" id="inlineCaptureSubmit">Registrar contato</button>'
+                + '<button class="inline-capture-dismiss" id="inlineCaptureDismiss">Continuar sem informar</button>'
+                + '</div>';
+            chatMessages.appendChild(captureDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            document.getElementById('inlineCaptureSubmit').addEventListener('click', async function() {
+                var nm = document.getElementById('inlineName').value.trim();
+                var ph = document.getElementById('inlinePhone').value.trim();
+                var em = document.getElementById('inlineEmail').value.trim();
+                if (!ph && !em) { document.getElementById('inlinePhone').style.borderColor='#ef4444'; return; }
+                this.disabled = true; this.textContent = '⏳ Registrando...';
+                try {
+                    var r = await fetch('/api/capture-lead', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome:nm||'Não informado', email:em||'Não informado', telefone:ph||'Não informado', url_origem:window.location.href, robotName:robotName, conversationId:sessionConversationId, apiKey:currentApiKey }) });
+                    var d = await r.json();
+                    if (d.success) { leadId=d.lead.id; inlineCaptured=true; captureDiv.innerHTML='<div class="inline-capture-msg" style="color:#059669;margin:0">✅ Contato registrado! Continuando...</div>'; setTimeout(function(){captureDiv.style.display="none";},3000); }
+                    else { this.textContent='Registrar contato'; this.disabled=false; }
+                } catch(err) { this.textContent='Registrar contato'; this.disabled=false; }
+            });
+            document.getElementById('inlineCaptureDismiss').addEventListener('click', function() {
+                captureDiv.style.display = 'none'; inlineCaptured = true;
+            });
+        }
+
         // 🎯 BUG-FIX-006/007: Processar URLs como botões CTA clicáveis
         ${PROCESS_MESSAGE_CONTENT_JS}
 
@@ -10960,6 +11058,10 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 const data = await response.json();
                 if (data.success) {
                     addMessage(data.response, false);
+                    // 🎯 CHAT FIRST: Verificar se o backend sinalizou captura
+                    if (CHAT_FIRST && data.leadCapture && data.leadCapture.shouldCapture && !inlineCaptured) {
+                        setTimeout(function() { showInlineCapture(data.leadCapture.captureMessage); }, 800);
+                    }
                 } else {
                     addMessage('Desculpe, ocorreu um erro. Tente novamente.', false);
                 }
@@ -10977,8 +11079,8 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             if (e.key === 'Enter') sendMessage();
         });
 
-        // Auto-focus no primeiro campo do formulário
-        document.getElementById('leadName').focus();
+        // Auto-focus: Chat First não foca nada na warming, Legado foca no nome
+        if (!CHAT_FIRST) { try { document.getElementById('leadName').focus(); } catch(e) {} }
     </script>
 </body>
 </html>`;
