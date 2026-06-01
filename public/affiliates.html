@@ -394,7 +394,15 @@
 (function() {
     function getApiKey() {
         try {
-            return sessionStorage.getItem('lm_api_key') || localStorage.getItem('lm_api_key') || localStorage.getItem('linkmagico_key') || '';
+            // 1. URL param (vindo do painel)
+            var params = new URLSearchParams(window.location.search);
+            var fromUrl = params.get('apiKey');
+            if (fromUrl) {
+                localStorage.setItem('lm_api_key', fromUrl);
+                return fromUrl;
+            }
+            // 2. Storage (todas as chaves possíveis)
+            return sessionStorage.getItem('lm_api_key') || localStorage.getItem('lm_api_key') || localStorage.getItem('linkmagico_key') || localStorage.getItem('linkmagico_api_key') || '';
         } catch(e) { return ''; }
     }
 
