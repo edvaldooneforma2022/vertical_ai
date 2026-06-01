@@ -428,6 +428,18 @@ async function handleCheckoutCompleted(session) {
             // Audit é best-effort
         }
 
+        // 4. SAFE PATCH — Registrar comissão de afiliado (se indicado por alguém)
+        try {
+            const { registerCommission } = require('./affiliate-program');
+            const amountCents = Math.round((PLANS[planId]?.price || 0) * 100);
+            if (amountCents > 0) {
+                await registerCommission(apiKey, planId, amountCents);
+            }
+        } catch (e) {
+            // Fail-safe: webhook funciona mesmo se afiliados falhar
+            console.warn('⚠️ [Stripe Webhook] Falha ao registrar comissão afiliado (não crítico):', e.message);
+        }
+
         console.log(`🎉 [Stripe] Upgrade concluído: ${apiKey.substring(0, 9)}... → ${planId} (${PLANS[planId]?.name || planId})`);
 
     } catch (err) {

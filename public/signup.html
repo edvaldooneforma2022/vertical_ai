@@ -399,10 +399,12 @@
         btn.disabled = true;
 
         try {
+            // SAFE PATCH — capturar código de referral (afiliados)
+            var refCode = new URLSearchParams(window.location.search).get('ref') || '';
             var res = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email, password: password, name: name, whatsapp: whatsapp })
+                body: JSON.stringify({ email: email, password: password, name: name, whatsapp: whatsapp, ref: refCode })
             });
 
             var data = await res.json();

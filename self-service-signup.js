@@ -302,6 +302,19 @@ async function handleSignup(req, res) {
             console.warn('⚠️ [Signup] Falha ao agendar onboarding (não crítico):', e.message);
         }
 
+        // 10.6 SAFE PATCH — Registrar referral (Programa de Afiliados)
+        try {
+            const refCode = (req.body.ref || req.body.referral || '').trim();
+            if (refCode && refCode.startsWith('ref_')) {
+                const { registerReferral } = require('./affiliate-program');
+                await registerReferral(tenantId, refCode);
+                console.log(`🤝 [Signup] Referral registrado: ${refCode} → ${tenantId.substring(0, 8)}...`);
+            }
+        } catch (e) {
+            // Fail-safe: signup funciona mesmo se afiliados falhar
+            console.warn('⚠️ [Signup] Falha ao registrar referral (não crítico):', e.message);
+        }
+
         // 11.5 SAFE PATCH - AUTO-LOGIN: Criar sessão server-side para acesso direto ao /app
         try {
             if (req.session) {
