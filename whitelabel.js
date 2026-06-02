@@ -69,8 +69,9 @@ class WhitelabelManager {
 
     // Verificar se plano permite whitelabel
     canUseWhitelabel(planType) {
-        const allowedPlans = ['professional', 'empresarial'];
-        return allowedPlans.includes(planType.toLowerCase());
+        // FIX-WL-001: Nomes corretos (billing.js usa 'pro'/'business') + aliases antigos para backward compat
+        const allowedPlans = ['pro', 'business', 'professional', 'empresarial'];
+        return allowedPlans.includes((planType || '').toLowerCase());
     }
 
     // Salvar configurações de whitelabel
@@ -294,7 +295,11 @@ class WhitelabelManager {
     // Remover configurações de whitelabel
     async removeSettings(chatbotId) {
         try {
-            const query = `DELETE FROM whitelabel_settings WHERE chatbot_id = ?`;
+            // FIX-WL-002: Suporte PostgreSQL (mesmo padrão de saveSettings/getSettings)
+            const USE_POSTGRES = process.env.DATABASE_URL || process.env.USE_POSTGRES === 'true';
+            const query = USE_POSTGRES
+                ? `DELETE FROM whitelabel_settings WHERE chatbot_id = $1`
+                : `DELETE FROM whitelabel_settings WHERE chatbot_id = ?`;
             await DatabaseHelpers.run(query, [chatbotId]);
 
             console.log(`✅ Whitelabel removido para chatbot ${chatbotId}`);
@@ -411,9 +416,9 @@ class WhitelabelManager {
 
     // Alias methods for backward compatibility with server.js
     // server.js chama saveConfig/getConfig mas os métodos reais são saveSettings/getSettings
-    async saveConfig(chatbotId, config) {
-        // Usar 'professional' como plano padrão para permitir whitelabel
-        return await this.saveSettings(chatbotId, config, 'professional');
+    async saveConfig(chatbotId, config, planType) {
+        // FIX-WL-003: Repassar planType real quando disponível; fallback 'pro' para manter compat
+        return await this.saveSettings(chatbotId, config, planType || 'pro');
     }
 
     async getConfig(chatbotId) {

@@ -3446,6 +3446,18 @@
                             placeholder="Ex: Olá! 👋 Bem-vindo à nossa empresa! Como posso ajudar?"
                             style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1.5rem; resize:vertical; font-family:inherit;"></textarea>
 
+                        <!-- FIX-WL-004: Toggle Powered By (visível apenas para Pro/Business) -->
+                        <div id="wl-powered-by-container" style="display:none; background:#0f172a; padding:1rem 1.5rem; border-radius:10px; margin-bottom:1.5rem; border:1px solid #334155;">
+                            <label style="display:flex; align-items:center; gap:0.75rem; cursor:pointer; color:#cbd5e1; font-weight:600;">
+                                <input type="checkbox" id="wl-show-powered-by" checked
+                                    style="width:18px; height:18px; accent-color:#7c3aed; cursor:pointer;">
+                                Exibir "Powered by Link Mágico"
+                            </label>
+                            <p style="color:#64748b; font-size:0.8rem; margin:0.5rem 0 0 2rem;">
+                                Desmarque para remover o selo "Powered by" do widget. Exclusivo para planos Pro e Business.
+                            </p>
+                        </div>
+
                         <button onclick="saveWhitelabel()" id="wl-save-btn"
                             style="background:#3b82f6; color:white; border:none; padding:1rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; width:100%; font-size:1rem;">
                             💾 Salvar Configuração
@@ -5240,6 +5252,14 @@
                 welcomeMessage: document.getElementById('wl-welcome').value
             };
 
+            // FIX-WL-004: Incluir showPoweredBy se o toggle estiver visível (Pro/Business)
+            try {
+                const poweredByContainer = document.getElementById('wl-powered-by-container');
+                if (poweredByContainer && poweredByContainer.style.display !== 'none') {
+                    config.showPoweredBy = document.getElementById('wl-show-powered-by').checked;
+                }
+            } catch(e) { /* fail-safe */ }
+
             const statusEl = document.getElementById('wl-status');
 
             try {
@@ -5330,10 +5350,26 @@
                     if (config.secondaryColor) document.getElementById('wl-secondary').value = config.secondaryColor;
                     if (config.welcomeMessage) document.getElementById('wl-welcome').value = config.welcomeMessage;
 
+                    // FIX-WL-004: Preencher toggle showPoweredBy
+                    try {
+                        const poweredByCheckbox = document.getElementById('wl-show-powered-by');
+                        if (poweredByCheckbox && config.showPoweredBy !== undefined) {
+                            poweredByCheckbox.checked = config.showPoweredBy !== false;
+                        }
+                    } catch(e) { /* fail-safe */ }
+
                     // Atualizar preview com valores carregados
                     updateWhitelabelPreview(config);
                     console.log('📋 Configuração Whitelabel carregada para tenant:', chatbotId);
                 }
+
+                // FIX-WL-004: Mostrar toggle showPoweredBy se plano permite (Pro/Business)
+                try {
+                    const container = document.getElementById('wl-powered-by-container');
+                    if (container && window._planFeatures && window._planFeatures.removePoweredBy === true) {
+                        container.style.display = 'block';
+                    }
+                } catch(e) { /* fail-safe */ }
             } catch (error) {
                 console.warn('Não foi possível carregar config whitelabel:', error);
             }
