@@ -10273,6 +10273,29 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.warn('[V19/V18.4] ⚠️ Erro:', _v19ApplyErr.message);
         }
 
+        // 🔍 [PIPELINE-DIAG] Log completo para comparação CHAT_FIRST vs LEGADO
+        console.log(`\n🔍 ═══ [PIPELINE-DIAG] ═══════════════════════════════`);
+        console.log(`🔍 msg="${message?.substring(0,60)}"`);
+        console.log(`🔍 chatFirstEnabled=${_chatFirstEnabled}`);
+        console.log(`🔍 leadId=${leadId || 'NULL'} | conversationId=${conversationId?.substring(0,12) || 'NULL'}`);
+        console.log(`🔍 intentDetected=${JSON.stringify({
+            intencao_compra: !!inteligencias?.intencao_compra,
+            objecao: !!inteligencias?.objecao,
+            curioso: !!inteligencias?.curioso,
+            sair: !!inteligencias?.sair,
+            comparacao: !!inteligencias?.comparacao,
+            suporte: !!inteligencias?.suporte
+        })}`);
+        console.log(`🔍 journeyStage=${journeyStage || 'N/A'}`);
+        console.log(`🔍 analiseEmocional=${JSON.stringify({ emocao: analiseEmocional?.emocao, intensidade: analiseEmocional?.intensidade })}`);
+        console.log(`🔍 personalidade=${personalidade || 'N/A'}`);
+        console.log(`🔍 knowledgeBase=${processedPageData?.title ? 'LOADED ('+processedPageData.title.substring(0,40)+')' : 'EMPTY'}`);
+        console.log(`🔍 pageDataMethod=${processedPageData?.method || 'none'}`);
+        console.log(`🔍 hasCheckoutLink=${!!processedPageData?.checkoutLink}`);
+        console.log(`🔍 ctaResult=${_intCta ? JSON.stringify({type:_intCta.type,label:_intCta.label?.substring(0,30)}).substring(0,80) : 'NULL'}`);
+        console.log(`🔍 finalResponse="${finalResponse?.substring(0,80)}..."`);
+        console.log(`🔍 ════════════════════════════════════════════════════\n`);
+
         // 🎯 CHAT FIRST — Avaliar se deve disparar captura inline (OBSERVER ONLY — não altera resposta/intent/CTA)
         let _leadCaptureResult = { shouldCapture: false };
         try {
