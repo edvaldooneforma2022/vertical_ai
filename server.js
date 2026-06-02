@@ -11807,7 +11807,36 @@ try {
         try {
             const { chatbotId } = req.params;
             const config = req.body;
-            await whitelabelManager.saveConfig(chatbotId, config);
+
+            // FIX-WL-005: Verificação server-side do plano antes de salvar WhiteLabel
+            // Impede que Free/Starter salvem config de whitelabel via API direta
+            let tenantPlan = 'free';
+            try {
+                const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey;
+                if (apiKey) {
+                    const subscription = await billingManager.getSubscription(apiKey);
+                    tenantPlan = subscription?.planId || 'free';
+                    const plan = billingManager.getPlan(tenantPlan);
+
+                    // Verificar se plano permite customBranding (Pro/Business)
+                    if (plan && plan.features && !plan.features.customBranding) {
+                        console.warn(`🔒 [Whitelabel] Plano '${tenantPlan}' não permite whitelabel. Tenant: ${apiKey.substring(0, 8)}...`);
+                        return res.status(403).json({
+                            success: false,
+                            error: 'WhiteLabel disponível apenas nos planos Pro e Business. Faça upgrade em /pricing',
+                            planId: tenantPlan,
+                            requiredPlan: 'pro'
+                        });
+                    }
+                }
+            } catch (billingErr) {
+                // Fail-open: se billing falhar, permite acesso (não trava o sistema)
+                console.warn('⚠️ [Whitelabel] Billing check fail-open:', billingErr.message);
+            }
+
+            // Repassar planType real para validação interna do whitelabelManager (FIX-WL-003)
+            await whitelabelManager.saveConfig(chatbotId, config, tenantPlan);
+            console.log(`🎨 [Whitelabel] Config salva com sucesso para chatbot ${chatbotId} (plano: ${tenantPlan})`);
             res.json({ success: true, config });
         } catch (error) {
             logger.error('Erro ao salvar config whitelabel:', error);

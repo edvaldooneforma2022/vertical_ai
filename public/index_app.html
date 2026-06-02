@@ -5284,6 +5284,12 @@
                 if (data.success) {
                     statusEl.innerHTML = '<span style="color:#10b981;">✅ Configuração salva com sucesso!</span>';
                     setTimeout(() => { statusEl.innerHTML = ''; }, 3000);
+                } else if (response.status === 403) {
+                    // FIX-WL-005: Plano não permite whitelabel — mostrar upgrade
+                    statusEl.innerHTML = '<div style="background:#7c3aed22; padding:1rem; border-radius:8px; border:1px solid #7c3aed;">' +
+                        '<span style="color:#c084fc; font-weight:600;">🔒 ' + (data.error || 'Recurso bloqueado') + '</span><br>' +
+                        '<a href="/pricing" target="_blank" style="color:#10b981; font-weight:600; text-decoration:underline; margin-top:0.5rem; display:inline-block;">🚀 Ver Planos e Fazer Upgrade</a>' +
+                        '</div>';
                 } else {
                     statusEl.innerHTML = '<span style="color:#ef4444;">❌ Erro ao salvar: ' + (data.error || 'Desconhecido') + '</span>';
                 }
