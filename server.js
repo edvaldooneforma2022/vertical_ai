@@ -2329,7 +2329,9 @@ class SistemaCapturaInteligencias {
             bonus: false,
             detalhesBonus: false,
             experiencia: false,
-            suporte: false
+            suporte: false,
+            intencao_compra: false,
+            sair: false
         };
 
         const mensagemLower = mensagem.toLowerCase();
@@ -2360,10 +2362,11 @@ class SistemaCapturaInteligencias {
         }
 
         // Detectar perguntas sobre bônus
+        // FIX: 'extra' agora usa word boundary para evitar false positive com 'extração'
         if (mensagemLower.includes('bônus') ||
             mensagemLower.includes('bonus') ||
             mensagemLower.includes('vantagem') ||
-            mensagemLower.includes('extra') ||
+            /\bextra\b/.test(mensagemLower) ||
             mensagemLower.includes('brinde') ||
             mensagemLower.includes('presente') ||
             mensagemLower.includes('grátis') ||
@@ -2401,6 +2404,40 @@ class SistemaCapturaInteligencias {
             mensagemLower.includes('assistência') ||
             mensagemLower.includes('assistencia')) {
             inteligencias.suporte = true;
+        }
+
+        // Detectar intenção de compra/contratação
+        if (mensagemLower.includes('contratar') ||
+            mensagemLower.includes('contratação') ||
+            mensagemLower.includes('contratacao') ||
+            mensagemLower.includes('quero comprar') ||
+            mensagemLower.includes('vou comprar') ||
+            mensagemLower.includes('onde pago') ||
+            mensagemLower.includes('como assino') ||
+            mensagemLower.includes('quero ativar') ||
+            mensagemLower.includes('vamos fechar') ||
+            mensagemLower.includes('quero começar') ||
+            mensagemLower.includes('quero comecar') ||
+            mensagemLower.includes('quero assinar') ||
+            mensagemLower.includes('como compro') ||
+            mensagemLower.includes('quero adquirir') ||
+            mensagemLower.includes('como faço para comprar') ||
+            mensagemLower.includes('como faco para comprar')) {
+            inteligencias.intencao_compra = true;
+        }
+
+        // Detectar despedida/encerramento
+        if (mensagemLower.includes('tchau') ||
+            mensagemLower.includes('até logo') ||
+            mensagemLower.includes('ate logo') ||
+            mensagemLower.includes('até mais') ||
+            mensagemLower.includes('ate mais') ||
+            mensagemLower.includes('bye') ||
+            mensagemLower.includes('adeus') ||
+            mensagemLower.includes('falou') ||
+            mensagemLower.includes('valeu') ||
+            /^(obrigad[oa]|muito obrigad[oa]|brigad[oa])/.test(mensagemLower.trim())) {
+            inteligencias.sair = true;
         }
 
         console.log(`🎯 Intenções detectadas:`, inteligencias);
@@ -6031,15 +6068,31 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         }
 
         // ═══ V13.0.3: HARD SUPPORT OVERRIDE (TOPO ABSOLUTO — ANTES DE TUDO) ═══
-        // Se usuário pede suporte/atendente → retorno IMEDIATO, sem IA, sem pipeline
+        // FIX: Distinguir pergunta informativa ("Você é humano?") de solicitação de transferência ("Quero falar com humano")
         try {
             const _hardMsg = cleanUserMessage.toLowerCase();
-            if (
+            // Perguntas informativas sobre IA/humano → NÃO interceptar, deixar IA responder
+            const _isInformationalAboutAI = /^(voc[eê]|tu|isso|este|essa|este chat)\s+(é|e|es|seria|parece)\s+(um[a]?\s+)?(humano|ia|rob[oô]|intelig[eê]ncia|m[aá]quina|bot|chatbot|gpt|artificial)/i.test(cleanUserMessage) ||
+                /^(é|e)\s+(um[a]?\s+)?(humano|ia|rob[oô]|bot|chatbot)/i.test(cleanUserMessage) ||
+                /\?\s*$/.test(cleanUserMessage.trim()) && /(humano|rob[oô]|ia|intelig[eê]ncia artificial|bot|chatbot)/i.test(cleanUserMessage) && !/(falar|quero|preciso|chamar|conectar|transferir)/i.test(cleanUserMessage);
+            
+            if (_isInformationalAboutAI) {
+                console.log(`[V13-HARD-SUPPORT] ℹ️ Pergunta informativa sobre IA — NÃO interceptar: "${cleanUserMessage.substring(0,50)}"`);
+                // Deixar o pipeline responder naturalmente
+            } else if (
                 _hardMsg.includes('falar com algu') ||
-                _hardMsg.includes('atendente') ||
-                _hardMsg.includes('suporte') ||
-                _hardMsg.includes('humano') ||
-                _hardMsg.includes('pessoa real')
+                _hardMsg.includes('quero um atendente') ||
+                _hardMsg.includes('quero atendente') ||
+                _hardMsg.includes('chamar atendente') ||
+                _hardMsg.includes('transferir para') ||
+                _hardMsg.includes('quero falar com humano') ||
+                _hardMsg.includes('quero um humano') ||
+                _hardMsg.includes('preciso de um humano') ||
+                _hardMsg.includes('falar com humano') ||
+                _hardMsg.includes('pessoa real') ||
+                _hardMsg.includes('tem algu[eé]m da equipe') ||
+                _hardMsg.includes('falar com suporte') ||
+                _hardMsg.includes('quero suporte')
             ) {
                 // Buscar WhatsApp em TODOS os locais possíveis do pageData
                 const _hardWhatsApp = 
@@ -6056,7 +6109,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 const _hardResponse = _hardWhatsAppUrl
                     ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_hardWhatsAppUrl}\n\nEles vão te ajudar rapidinho 🙌`
                     : `Perfeito 👍 nosso time está pronto para te atender.\n\nDigite sua dúvida aqui mesmo que vou te ajudar! 🙌`;
-                console.log(`[V13-HARD-SUPPORT] 🚀 Interceptado | whatsapp=${_hardWhatsAppUrl || 'N/A'} | contatos=${JSON.stringify(pageData?.contatos || 'null').substring(0, 100)}`);
+                console.log(`[V13-HARD-SUPPORT] 🚀 Handoff ativado | whatsapp=${_hardWhatsAppUrl || 'N/A'} | msg="${cleanUserMessage.substring(0,50)}"`);
                 return _hardResponse;
             }
         } catch (_hardErr) {
@@ -9426,8 +9479,15 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // 📅 [SCHED-PRIORITY-001] detectarAgendamento agora roda ANTES do KB-FIRST (linhas 5217-5267)
         // Se chegou aqui, significa que NÃO é agendamento. Prosseguir com inteligências.
 
-        // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES FORAM DETECTADAS
-        if (Object.values(inteligencias).some(val => val === true)) {
+        // 👋 DESPEDIDA: Se sair=true (e nenhuma outra intenção forte), gerar goodbye
+        if (inteligencias.sair && !inteligencias.intencao_compra && !inteligencias.contatoDireto) {
+            finalResponse = "Foi um prazer conversar com você! 😊 Se precisar de algo mais, estarei por aqui. Até logo! 👋";
+            console.log(`👋 [GOODBYE] Despedida detectada para: "${message?.substring(0,40)}"`);
+        }
+        // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES DE CONTATO/BONUS/SITE FORAM DETECTADAS
+        // FIX: intencao_compra e sair NÃO devem triggerar o path hardcoded
+        // intencao_compra vai para a LLM (que tem contexto do produto)
+        else if (Object.entries(inteligencias).some(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair')) {
             const contatos = processedPageData?.contatos || {};
 
             // Gerar resposta base com empatia
