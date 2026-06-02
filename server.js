@@ -9292,13 +9292,18 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 (processedPageData?.contatos?.whatsapp && processedPageData.contatos.whatsapp[0]) || null;
 
             // ═══ SUPORTE HARD OVERRIDE (ANTES DE TUDO) ═══
-            const _iSupportKw = ['atendente', 'suporte', 'falar com alguem', 'falar com alguém', 'humano', 'preciso de ajuda', 'falar com pessoa', 'pessoa real', 'quero falar', 'falar com voce', 'falar com você', 'contato humano', 'alguem de verdade', 'alguém de verdade'];
-            if (_iSupportKw.some(k => _iMsg.includes(k))) {
-                console.log('[PRE-KB] 🚀 SUPPORT INTERCEPT — bypass KB/IA/tudo');
+            // FIX: Distinguir pergunta informativa ("Você é humano?") de solicitação de transferência
+            const _isInfoAboutAI = /^(voc[eê]|tu|isso|este|essa|este chat)\s+(e|é|es|seria|parece)\s+(um[a]?\s+)?(humano|ia|rob[oô]|intelig[eê]ncia|m[aá]quina|bot|chatbot|gpt|artificial)/i.test(message) ||
+                /^(e|é)\s+(um[a]?\s+)?(humano|ia|rob[oô]|bot|chatbot)/i.test(message) ||
+                (/\?\s*$/.test((message||'').trim()) && /(humano|rob[oô]|ia|intelig[eê]ncia artificial|bot|chatbot)/i.test(message) && !/(falar|quero|preciso|chamar|conectar|transferir)/i.test(message));
+            
+            const _iSupportKw = ['quero um atendente', 'quero atendente', 'chamar atendente', 'falar com alguem', 'falar com alguém', 'quero falar com humano', 'falar com humano', 'preciso de um humano', 'quero um humano', 'falar com pessoa', 'pessoa real', 'falar com suporte', 'quero suporte', 'contato humano', 'alguem de verdade', 'alguém de verdade', 'transferir para'];
+            if (!_isInfoAboutAI && _iSupportKw.some(k => _iMsg.includes(k))) {
+                console.log('[PRE-KB] 🚀 SUPPORT INTERCEPT — handoff ativado');
                 try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
                 const _iSupportResp = _iWhatsApp
                     ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_iWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
-                    : `Perfeito 👍 você pode falar com alguém direto pelo site.\n\n👉 É só clicar no botão de WhatsApp que fica no canto da tela.\n\nSe preferir, mande uma mensagem aqui que eu te ajudo no que puder 🙌`;
+                    : `Perfeito 👍 nosso time está pronto para te atender.\n\nDigite sua dúvida aqui mesmo que vou te ajudar! 🙌`;
                 return res.json({
                     success: true,
                     response: _iSupportResp,
