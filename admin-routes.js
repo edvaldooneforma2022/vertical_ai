@@ -189,10 +189,36 @@ function setupAdminRoutes(app) {
                 console.error('❌ [ADMIN] Erro ao atualizar plano no DB:', dbErr.message);
             }
 
-            // 2. Atualizar billing in-memory (fallback seguro)
+            // 2. Atualizar billing in-memory para TODAS as API keys do tenant
+            // FIX-ADMIN-002: billingManager indexa por key_value, não por tenant UUID
             try {
+                // Atualizar pelo tenantId (pode funcionar se usado como userId)
                 await billingManager.upgradePlan(tenantId, resolvedPlan);
-                console.log(`✅ [ADMIN] Plano atualizado in-memory: ${tenantId.substring(0, 12)}... → ${resolvedPlan}`);
+                console.log(`✅ [ADMIN] Plano atualizado in-memory (tenantId): ${tenantId.substring(0, 12)}... → ${resolvedPlan}`);
+
+                // Também atualizar por TODAS as API keys ativas desse tenant
+                try {
+                    const { db: dbConn } = require('./database');
+                    if (dbConn) {
+                        const keysResult = await dbConn.query(
+                            `SELECT key_value FROM api_keys WHERE tenant_id = $1 AND active = true`,
+                            [tenantId]
+                        );
+                        const keyRows = keysResult.rows || keysResult;
+                        for (const row of keyRows) {
+                            if (row.key_value) {
+                                await billingManager.upgradePlan(row.key_value, resolvedPlan);
+                                console.log(`💳 [ADMIN] Billing atualizado para key: ${row.key_value.substring(0, 12)}... → ${resolvedPlan}`);
+                            }
+                        }
+                        // Se o input era uma API key (não UUID), atualizar diretamente
+                        if (tenantId.startsWith('lm_')) {
+                            await billingManager.upgradePlan(tenantId, resolvedPlan);
+                        }
+                    }
+                } catch (keysErr) {
+                    console.warn('⚠️ [ADMIN] Keys in-memory parcial:', keysErr.message);
+                }
             } catch (memErr) {
                 console.warn('⚠️ [ADMIN] Erro ao atualizar billing in-memory:', memErr.message);
             }
@@ -316,18 +342,28 @@ function setupAdminRoutes(app) {
             const keyManager = getApiKeyManager();
             const { name, scopes, allowedIps, allowedDomains, expiresInDays, email, plan } = req.body;
             const tenantId = req.params.tenantId;
+            const resolvedPlan = plan || 'starter';
 
-            // Auto-criar tenant se não existir (permite criar clientes novos direto pelo Admin Billing)
+            // Auto-criar tenant se não existir, OU atualizar plano se já existir
+            // FIX-ADMIN-001: Garante que o plano selecionado no Admin é aplicado ao tenant
             try {
                 const db = keyManager.db;
                 if (db) {
-                    const existing = await db.query('SELECT id FROM tenants WHERE id = $1', [tenantId]);
+                    const existing = await db.query('SELECT id, plan FROM tenants WHERE id = $1', [tenantId]);
                     if (existing.rows.length === 0) {
+                        // Tenant novo — criar com plano selecionado
                         await db.query(
                             'INSERT INTO tenants (id, name, email, plan, status) VALUES ($1, $2, $3, $4, $5)',
-                            [tenantId, name || 'Tenant Manual', email || '', plan || 'starter', 'active']
+                            [tenantId, name || 'Tenant Manual', email || '', resolvedPlan, 'active']
                         );
-                        console.log(`✅ [ADMIN] Tenant auto-criado: ${tenantId} (${name || 'Tenant Manual'})`);
+                        console.log(`✅ [ADMIN] Tenant auto-criado: ${tenantId} (${name || 'Tenant Manual'}) → plano: ${resolvedPlan}`);
+                    } else if (plan && existing.rows[0].plan !== resolvedPlan) {
+                        // Tenant existente mas plano diferente do selecionado — atualizar
+                        await db.query(
+                            'UPDATE tenants SET plan = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                            [resolvedPlan, tenantId]
+                        );
+                        console.log(`✅ [ADMIN] Plano atualizado para tenant existente: ${tenantId} → ${existing.rows[0].plan} → ${resolvedPlan}`);
                     }
                 }
             } catch (tenantErr) {
@@ -339,7 +375,19 @@ function setupAdminRoutes(app) {
                 scopes, allowedIps, allowedDomains, expiresInDays
             });
 
-            res.json({ success: true, key: newKey, tenantId });
+            // FIX-ADMIN-001: Atualizar billingManager in-memory para que o plano
+            // tenha efeito imediato (sem precisar reiniciar o servidor)
+            try {
+                const { billingManager } = require('./billing');
+                if (billingManager && newKey?.rawKey) {
+                    await billingManager.upgradePlan(newKey.rawKey, resolvedPlan);
+                    console.log(`💳 [ADMIN] Billing in-memory atualizado: key ${newKey.rawKey.substring(0, 12)}... → plano ${resolvedPlan}`);
+                }
+            } catch (billingErr) {
+                console.warn('⚠️ [ADMIN] Billing in-memory não atualizado (não crítico):', billingErr.message);
+            }
+
+            res.json({ success: true, key: newKey, tenantId, plan: resolvedPlan });
         } catch (error) {
             console.error('❌ [ADMIN] Erro ao criar key:', error.message);
             res.status(500).json({ success: false, error: error.message });
