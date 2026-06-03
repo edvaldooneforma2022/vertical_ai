@@ -15,16 +15,16 @@ info:
     - Chat: 60 mensagens/minuto
     - Extração: 10 requisições/minuto
     - Auth: 5 tentativas/15 minutos
-  version: 7.0.0
+  version: 8.0.0
   contact:
     name: LinkMágico Support
-    url: https://vertical-ai-dktu.onrender.com
+    url: https://linkmagico.app.br
   license:
     name: ISC
     
 servers:
-  - url: https://vertical-ai-dktu.onrender.com
-    description: Produção (Render)
+  - url: https://linkmagico.app.br
+    description: Produção
   - url: http://localhost:11235
     description: Desenvolvimento Local
 
@@ -43,6 +43,8 @@ tags:
     description: Extração de dados de páginas web
   - name: Sistema
     description: Status e informações do sistema
+  - name: Conversões
+    description: Tracking de conversão e métricas de checkout
 
 paths:
   /validate-api-key:
@@ -464,6 +466,176 @@ paths:
                     type: string
                     example: "ok"
                   timestamp:
+                    type: string
+
+  /api/track-conversion:
+    post:
+      tags:
+        - Conversões
+      summary: Rastrear evento de conversão
+      description: |
+        Registra cliques em CTAs e links de checkout. O widget faz isso
+        automaticamente, mas pode ser chamado manualmente para integrações.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [cta_click, checkout_click]
+                  example: "checkout_click"
+                url:
+                  type: string
+                  format: uri
+                  example: "https://pay.hotmart.com/G103177435I"
+                leadId:
+                  type: string
+                robotName:
+                  type: string
+      responses:
+        '200':
+          description: Evento registrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/conversion-stats:
+    get:
+      tags:
+        - Conversões
+      summary: Métricas de conversão
+      description: |
+        Retorna estatísticas de conversão do tenant: total CTAs,
+        total checkouts, taxa de conversão, dados dos últimos 7 e 30 dias.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Estatísticas de conversão
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stats:
+                    type: object
+                    properties:
+                      totalCta:
+                        type: integer
+                        example: 142
+                      totalCheckout:
+                        type: integer
+                        example: 38
+                      conversionRate:
+                        type: number
+                        example: 26.8
+                      last7days:
+                        type: array
+                        items:
+                          type: object
+                      last30days:
+                        type: array
+                        items:
+                          type: object
+
+  /api/confirm-checkout:
+    post:
+      tags:
+        - Conversões
+      summary: Confirmar link de checkout
+      description: |
+        Salva ou confirma o link de checkout associado ao tenant.
+        Usado para garantir que a IA sempre tenha o link correto de compra.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - apiKey
+                - checkoutUrl
+              properties:
+                apiKey:
+                  type: string
+                  example: "LMV7-VX9Z-ZSR1-DONX"
+                checkoutUrl:
+                  type: string
+                  format: uri
+                  example: "https://pay.hotmart.com/G103177435I"
+                source:
+                  type: string
+                  enum: [user_confirmed, auto_detected]
+                  example: "user_confirmed"
+                salesUrl:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Checkout salvo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: "Checkout salvo com sucesso"
+
+  /api/checkout-status:
+    get:
+      tags:
+        - Conversões
+      summary: Status do checkout
+      description: Retorna se o tenant tem checkout configurado e qual é o link.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: apiKey
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "LMV7-VX9Z-ZSR1-DONX"
+        - name: salesUrl
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status do checkout
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  hasCheckout:
+                    type: boolean
+                  checkoutUrl:
+                    type: string
+                  source:
                     type: string
 
   /api/system/status:
