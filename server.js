@@ -10872,11 +10872,34 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
         let inlineCaptureShown = false;
         let inlineCaptured = false;
 
-        // ═══ FLUXO DE ENTRADA — Bifurca entre Chat First e Legado ═══
+        // ═══ FLUXO DE ENTRADA — Bypass da warming screen (V8.1) ═══
+        // FIX-WARM-001: Warming screen removida — chat inicia direto
+        // A captura de dados agora é feita de forma conversacional (inline capture)
+        // HTML/CSS da warming mantido para reversibilidade via SKIP_WARMING = false
+        const SKIP_WARMING = true; // Feature flag: false = volta ao comportamento antigo
         try {
             const warmingScreen = document.getElementById('warmingScreen');
             const warmingCta = document.getElementById('warmingCta');
-            if (CHAT_FIRST) {
+
+            if (SKIP_WARMING) {
+                // ── Bypass total: esconde warming, inicia chat direto ──
+                try {
+                    if (warmingScreen) warmingScreen.style.display = 'none';
+                    if (CHAT_FIRST) {
+                        if (chatMessages) chatMessages.style.display = 'flex';
+                        if (chatInputContainer) chatInputContainer.style.display = 'flex';
+                        if (messageInput) setTimeout(function() { messageInput.focus(); }, 300);
+                    } else {
+                        // Legado: pula warming E pula formulário — vai direto pro chat
+                        if (chatMessages) chatMessages.style.display = 'flex';
+                        if (chatInputContainer) chatInputContainer.style.display = 'flex';
+                        if (messageInput) setTimeout(function() { messageInput.focus(); }, 300);
+                    }
+                } catch(bypassErr) {
+                    console.warn('[WARM] Bypass fallback:', bypassErr.message);
+                }
+            } else if (CHAT_FIRST) {
+                // ── Comportamento antigo Chat First (warming → chat) ──
                 function startChatFirst() {
                     try {
                         if (warmingScreen) warmingScreen.style.display = 'none';
@@ -10888,6 +10911,7 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
                 if (warmingCta) warmingCta.addEventListener('click', startChatFirst);
                 if (!warmingScreen || !warmingCta) startChatFirst();
             } else {
+                // ── Comportamento antigo Legado (warming → formulário) ──
                 function showLeadForm() {
                     try {
                         if (warmingScreen) warmingScreen.style.display = 'none';
