@@ -136,7 +136,7 @@ class EmailService {
                 Acesse o treinamento completo para aproveitar ao máximo a plataforma:
               </p>
               <div style="text-align:center;margin:12px 0 0;">
-                <a href="https://site.linkmagico.app.br/BEMVINDO" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:600;">Acessar Treinamento →</a>
+                <a href="https://site.linkmagico.app.br/BEMVINDO.html" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:600;">Acessar Treinamento →</a>
               </div>
             </div>
             <!-- CTA Button -->
@@ -180,7 +180,7 @@ Obrigado por adquirir o Link Mágico! Sua chave de acesso está pronta:
 3. Clique em "Validar" e comece a usar!
 
 🎓 Treinamento Exclusivo:
-Acesse o treinamento completo: https://site.linkmagico.app.br/BEMVINDO
+Acesse o treinamento completo: https://site.linkmagico.app.br/BEMVINDO.html
 
 ⚠️ Importante: Guarde esta chave com segurança. Ela é pessoal e intransferível.
 
