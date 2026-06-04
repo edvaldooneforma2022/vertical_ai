@@ -4122,30 +4122,61 @@ app.get("/excluir-dados", (req, res) => {
 });
 
 // ===== PUBLIC STATS API (contadores reais para o site — sem auth) =====
+// BUGFIX: Lendo das fontes reais (tenants/ + PostgreSQL + V14) em vez de data/*.json
 app.get("/api/analytics/public-stats", async (req, res) => {
     try {
-        const dataDir = path.join(__dirname, "data");
         let totalLeads = 0;
         let totalAssistants = 0;
         let totalConversations = 0;
 
-        // Contar dados reais de todos os tenants
-        if (fs.existsSync(dataDir)) {
-            const files = fs.readdirSync(dataDir).filter(f => f.endsWith(".json"));
-            totalAssistants = files.length;
-
-            for (const file of files) {
-                try {
-                    const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), "utf-8"));
-                    if (data.leads && Array.isArray(data.leads)) {
-                        totalLeads += data.leads.length;
-                    }
-                    if (data.conversations && typeof data.conversations === "object") {
-                        totalConversations += Object.keys(data.conversations).length;
-                    }
-                } catch (e) { /* skip corrupted files */ }
+        // 1. Contar leads de data/tenants/leads-*.json (fonte real — mesma do dashboard)
+        try {
+            const tenantsDir = path.join(__dirname, "data", "tenants");
+            if (fs.existsSync(tenantsDir)) {
+                const leadFiles = fs.readdirSync(tenantsDir).filter(f => f.startsWith("leads-") && f.endsWith(".json"));
+                for (const file of leadFiles) {
+                    try {
+                        const data = JSON.parse(fs.readFileSync(path.join(tenantsDir, file), "utf-8"));
+                        if (Array.isArray(data)) {
+                            totalLeads += data.length;
+                        }
+                    } catch (e) { /* skip corrupted files */ }
+                }
             }
+        } catch (e) {
+            console.warn("[public-stats] Erro ao ler leads dos tenants:", e.message);
         }
+
+        // 2. Contar assistentes via PostgreSQL (fonte real — tabela short_urls)
+        try {
+            if (USE_POSTGRES && db) {
+                const result = await db.query("SELECT COUNT(*) as count FROM short_urls");
+                totalAssistants = parseInt(result.rows[0].count) || 0;
+            }
+        } catch (e) {
+            console.warn("[public-stats] Fallback assistentes: PostgreSQL indisponível:", e.message);
+        }
+        // Fallback: contar arquivos de leads como proxy de tenants ativos
+        if (totalAssistants === 0) {
+            try {
+                const tenantsDir = path.join(__dirname, "data", "tenants");
+                if (fs.existsSync(tenantsDir)) {
+                    totalAssistants = fs.readdirSync(tenantsDir).filter(f => f.startsWith("leads-") && f.endsWith(".json")).length;
+                }
+            } catch (e) { /* silent fallback */ }
+        }
+
+        // 3. Contar conversas via V14 ContextLayer (em memória — mesma fonte do log do servidor)
+        try {
+            if (_v14ContextLayer && typeof _v14ContextLayer.getStats === 'function') {
+                const stats = _v14ContextLayer.getStats();
+                totalConversations = stats.activeSessions || stats.totalMessages || 0;
+            }
+        } catch (e) {
+            console.warn("[public-stats] Fallback conversas: V14 indisponível:", e.message);
+        }
+
+        console.log(`[public-stats] 📊 Leads=${totalLeads} | Assistants=${totalAssistants} | Conversations=${totalConversations}`);
 
         res.set("Cache-Control", "public, max-age=300"); // cache 5min
         res.json({
