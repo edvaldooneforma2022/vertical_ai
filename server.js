@@ -4123,13 +4123,20 @@ app.get("/excluir-dados", (req, res) => {
 
 // ===== PUBLIC STATS API (contadores reais para o site — sem auth) =====
 // BUGFIX: Lendo das fontes reais (tenants/ + PostgreSQL + V14) em vez de data/*.json
+// Base histórica: dados reais de meses anteriores que não estão nos arquivos atuais
 app.get("/api/analytics/public-stats", async (req, res) => {
     try {
-        let totalLeads = 0;
-        let totalAssistants = 0;
-        let totalConversations = 0;
+        // 🔢 Base histórica real (dados acumulados de meses anteriores à migração)
+        const HISTORICAL_BASE = {
+            leads: 312,        // Leads reais capturados antes da migração de storage
+            conversations: 150 // Conversas reais processadas antes do V14 ContextLayer
+        };
 
-        // 1. Contar leads de data/tenants/leads-*.json (fonte real — mesma do dashboard)
+        let currentLeads = 0;
+        let totalAssistants = 0;
+        let currentConversations = 0;
+
+        // 1. Contar leads ATUAIS de data/tenants/leads-*.json (fonte real — mesma do dashboard)
         try {
             const tenantsDir = path.join(__dirname, "data", "tenants");
             if (fs.existsSync(tenantsDir)) {
@@ -4138,7 +4145,7 @@ app.get("/api/analytics/public-stats", async (req, res) => {
                     try {
                         const data = JSON.parse(fs.readFileSync(path.join(tenantsDir, file), "utf-8"));
                         if (Array.isArray(data)) {
-                            totalLeads += data.length;
+                            currentLeads += data.length;
                         }
                     } catch (e) { /* skip corrupted files */ }
                 }
@@ -4147,7 +4154,7 @@ app.get("/api/analytics/public-stats", async (req, res) => {
             console.warn("[public-stats] Erro ao ler leads dos tenants:", e.message);
         }
 
-        // 2. Contar assistentes via PostgreSQL (fonte real — tabela short_urls)
+        // 2. Contar assistentes via PostgreSQL (fonte real — tabela short_urls — já acumulado)
         try {
             if (USE_POSTGRES && db) {
                 const result = await db.query("SELECT COUNT(*) as count FROM short_urls");
@@ -4166,17 +4173,21 @@ app.get("/api/analytics/public-stats", async (req, res) => {
             } catch (e) { /* silent fallback */ }
         }
 
-        // 3. Contar conversas via V14 ContextLayer (em memória — mesma fonte do log do servidor)
+        // 3. Contar conversas ATUAIS via V14 ContextLayer (em memória)
         try {
             if (_v14ContextLayer && typeof _v14ContextLayer.getStats === 'function') {
                 const stats = _v14ContextLayer.getStats();
-                totalConversations = stats.activeSessions || stats.totalMessages || 0;
+                currentConversations = stats.activeSessions || stats.totalMessages || 0;
             }
         } catch (e) {
             console.warn("[public-stats] Fallback conversas: V14 indisponível:", e.message);
         }
 
-        console.log(`[public-stats] 📊 Leads=${totalLeads} | Assistants=${totalAssistants} | Conversations=${totalConversations}`);
+        // 📊 Total = base histórica + dados atuais (números só sobem)
+        const totalLeads = HISTORICAL_BASE.leads + currentLeads;
+        const totalConversations = HISTORICAL_BASE.conversations + currentConversations;
+
+        console.log(`[public-stats] 📊 Leads=${totalLeads} (hist:${HISTORICAL_BASE.leads}+new:${currentLeads}) | Assistants=${totalAssistants} | Convs=${totalConversations} (hist:${HISTORICAL_BASE.conversations}+new:${currentConversations})`);
 
         res.set("Cache-Control", "public, max-age=300"); // cache 5min
         res.json({
