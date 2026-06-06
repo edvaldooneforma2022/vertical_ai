@@ -9535,32 +9535,23 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         if (inteligencias.sair && !inteligencias.intencao_compra && !inteligencias.contatoDireto) {
             finalResponse = "Foi um prazer conversar com você! 😊 Se precisar de algo mais, estarei por aqui. Até logo! 👋";
             console.log(`👋 [GOODBYE] Despedida detectada para: "${message?.substring(0,40)}"`);
-        }
-        // 🎯 USAR SISTEMA INTELIGENTE SE INTENÇÕES DE CONTATO/BONUS/SITE FORAM DETECTADAS
-        // FIX: intencao_compra e sair NÃO devem triggerar o path hardcoded
-        // intencao_compra vai para a LLM (que tem contexto do produto)
-        else if (Object.entries(inteligencias).some(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair')) {
-            const contatos = processedPageData?.contatos || {};
-
-            // Gerar resposta base com empatia
-            const respostaEmpatica = superInteligencia.gerarRespostaEmpatica(
-                message,
-                analiseEmocional,
-                personalidade,
-                contatos
-            );
-
-            // Combinar com resposta contextual
-            const respostaContextual = sistemaInteligencias.gerarRespostaContextual(
-                inteligencias,
-                contatos,
-                journeyStage
-            );
-
-            finalResponse = respostaEmpatica + respostaContextual;
-            console.log(`🎭 Resposta emocional inteligente gerada`);
         } else {
-            // 🎯 USAR SISTEMA ORIGINAL COM MELHORIAS EMOCIONAIS
+            // ================================================================
+            // 🔬 [V20] CAMADA 5 REBAIXADA: OBSERVADORA (não mais interceptadora)
+            // As flags continuam sendo detectadas e logadas como sinais.
+            // A LLM SEMPRE responde. Nenhum bypass hardcoded.
+            // PRE-KB BUY e PRE-KB SUPPORT continuam ativos ACIMA deste bloco.
+            // ================================================================
+            let _v20_wouldBypass = false;
+            let _v20_legacyReason = 'NONE';
+            if (Object.entries(inteligencias).some(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair')) {
+                _v20_wouldBypass = true;
+                const _v20_trig = Object.entries(inteligencias).find(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair');
+                _v20_legacyReason = _v20_trig ? _v20_trig[0] : 'UNKNOWN';
+                console.log(`🔬 [V20-OBSERVER] Camada 5 detectou flags mas NÃO interceptou. wouldBypassLegacy=true legacyReason="${_v20_legacyReason}" flags=${JSON.stringify(inteligencias)}`);
+            }
+
+            // 🎯 LLM SEMPRE RESPONDE (generateAIResponse)
             // 🎯 FEATURE_CLEAN_CHAT_V2: Passar robotName como chatbotId para busca de FAQs
             const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
 
@@ -10429,25 +10420,22 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.warn('[CHAT-FIRST] Lead Capture Score erro (não crítico):', _lcErr.message);
         }
 
-        let _audit_layer = 'GENERATE_AI_RESPONSE';
-        let _audit_reason = 'NONE';
-        let _audit_gen_ai = true;
-        let _audit_bypass = false;
-
+        // ================================================================
+        // 🔬 [AUDIT-LLM-BYPASS-V20] Telemetria comparativa
+        // Registra o que a Camada 5 antiga TERIA feito vs o que V20 faz
+        // ================================================================
+        let _v20a_wouldBypass = false;
+        let _v20a_legacyReason = 'NONE';
         if (inteligencias.sair && !inteligencias.intencao_compra && !inteligencias.contatoDireto) {
-            _audit_layer = 'CAPTURAR_INTELIGENCIAS';
-            _audit_reason = 'sair';
-            _audit_gen_ai = false;
-            _audit_bypass = true;
+            _v20a_wouldBypass = true;
+            _v20a_legacyReason = 'sair';
         } else if (Object.entries(inteligencias).some(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair')) {
-            _audit_layer = 'CAPTURAR_INTELIGENCIAS';
-            const trig = Object.entries(inteligencias).find(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair');
-            _audit_reason = trig ? trig[0] : 'UNKNOWN';
-            _audit_gen_ai = false;
-            _audit_bypass = true;
+            _v20a_wouldBypass = true;
+            const _v20a_trig = Object.entries(inteligencias).find(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair');
+            _v20a_legacyReason = _v20a_trig ? _v20a_trig[0] : 'UNKNOWN';
         }
 
-        console.log(`\n[AUDIT-LLM-BYPASS]\nmessage="${(message||'').replace(/"/g, "'")}"\nconversationId="${conversationId||''}"\nleadId="${leadId||''}"\ninteligencias=${JSON.stringify(inteligencias)}\nbypassLLM=${_audit_bypass}\nbypassReason="${_audit_reason}"\nresponseLayer="${_audit_layer}"\ngenerateAIResponseExecuted=${_audit_gen_ai}\nfinalResponsePreview="${(finalResponse||'').substring(0, 120).replace(/\n/g, ' ')}"\n[/AUDIT-LLM-BYPASS]\n`);
+        console.log(`\n[AUDIT-LLM-BYPASS-V20]\nmessage="${(message||'').replace(/"/g, "'")}"\nconversationId="${conversationId||''}"\nleadId="${leadId||''}"\ninteligencias=${JSON.stringify(inteligencias)}\nwouldBypassLegacy=${_v20a_wouldBypass}\nlegacyReason="${_v20a_legacyReason}"\ngenerateAIResponseExecuted=true\nfinalResponsePreview="${(finalResponse||'').substring(0, 120).replace(/\n/g, ' ')}"\n[/AUDIT-LLM-BYPASS-V20]\n`);
 
         return res.json({
             success: true,

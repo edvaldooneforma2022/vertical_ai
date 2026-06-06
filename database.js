@@ -1429,6 +1429,33 @@ const DatabaseHelpers = {
     // ===== CRUD para tenant_leads =====
 
     /**
+     * 🛡️ [V20-FIX] Sanitizar strings para remover Unicode surrogates órfãos
+     * Resolve erro PostgreSQL 22P02: "Unicode low surrogate must follow a high surrogate"
+     * Causa: emojis cortados pela metade ao truncar strings ou dados do widget
+     */
+    _sanitizeForJson(value) {
+        if (typeof value === 'string') {
+            // Remove surrogates órfãos (high sem low, ou low sem high)
+            return value.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+        }
+        if (Array.isArray(value)) {
+            return value.map(item => {
+                if (typeof item === 'string') return this._sanitizeForJson(item);
+                if (typeof item === 'object' && item !== null) return JSON.parse(this._sanitizeForJson(JSON.stringify(item)));
+                return item;
+            });
+        }
+        if (typeof value === 'object' && value !== null) {
+            try {
+                return JSON.parse(this._sanitizeForJson(JSON.stringify(value)));
+            } catch (_) {
+                return value;
+            }
+        }
+        return value;
+    },
+
+    /**
      * Salvar lead no PostgreSQL/SQLite
      */
     async saveLead(apiKey, leadData) {
@@ -1443,18 +1470,23 @@ const DatabaseHelpers = {
             : `INSERT OR REPLACE INTO tenant_leads (id, api_key, nome, email, telefone, message, url_origem, source, status, metadata, conversations, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
 
+        // 🛡️ [V20-FIX] Sanitizar dados antes de persistir no PostgreSQL
+        const safeMeta = this._sanitizeForJson(leadData.metadata || {});
+        const safeConvs = this._sanitizeForJson(leadData.conversations || []);
+        const safeMessage = this._sanitizeForJson(leadData.message || null);
+
         const params = [
             leadData.id,
             apiKey,
             leadData.nome || null,
             leadData.email || null,
             leadData.telefone || null,
-            leadData.message || null,
+            safeMessage,
             leadData.url_origem || null,
             leadData.source || 'widget',
             leadData.status || 'novo',
-            JSON.stringify(leadData.metadata || {}),
-            JSON.stringify(leadData.conversations || [])
+            JSON.stringify(safeMeta),
+            JSON.stringify(safeConvs)
         ];
 
         const result = await db.query(query, params);
@@ -1575,13 +1607,13 @@ const DatabaseHelpers = {
             ? [
                 apiKey, leadId,
                 data.nome, data.email, data.telefone, data.status,
-                data.metadata ? JSON.stringify(data.metadata) : null,
-                data.conversations ? JSON.stringify(data.conversations) : null
+                data.metadata ? JSON.stringify(this._sanitizeForJson(data.metadata)) : null,
+                data.conversations ? JSON.stringify(this._sanitizeForJson(data.conversations)) : null
             ]
             : [
                 data.nome, data.email, data.telefone, data.status,
-                data.metadata ? JSON.stringify(data.metadata) : null,
-                data.conversations ? JSON.stringify(data.conversations) : null,
+                data.metadata ? JSON.stringify(this._sanitizeForJson(data.metadata)) : null,
+                data.conversations ? JSON.stringify(this._sanitizeForJson(data.conversations)) : null,
                 apiKey, leadId
             ];
 
