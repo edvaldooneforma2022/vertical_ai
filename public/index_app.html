@@ -1361,6 +1361,23 @@
         .v113-checkout-input-row button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.3)}
         .v113-checkout-input-row button:disabled{opacity:0.5;cursor:not-allowed;transform:none}
         .v113-checkout-hint{color:#64748b;font-size:0.75rem;margin-top:6px}
+
+        /* 🎬 QUICK START VIDEO — Card de vídeo do fundador (isolado, sem impacto) */
+        .qsv__card{background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(59,130,246,0.08));border:1.5px solid rgba(16,185,129,0.25);border-radius:16px;padding:20px;margin-bottom:1.5rem;position:relative;animation:qsv__fadeIn .4s ease}
+        @keyframes qsv__fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .qsv__header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+        .qsv__badge{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,0.15);color:#34d399;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 12px;border-radius:20px;border:1px solid rgba(16,185,129,0.3)}
+        .qsv__badge i{font-size:.45rem;animation:pulse 2s infinite}
+        .qsv__close{background:none;border:none;color:#64748b;cursor:pointer;font-size:1.1rem;padding:4px 8px;border-radius:6px;transition:all .2s}
+        .qsv__close:hover{color:#e2e8f0;background:rgba(100,116,139,0.2)}
+        .qsv__title{color:#e2e8f0;font-size:1rem;font-weight:700;margin-bottom:4px}
+        .qsv__subtitle{color:#94a3b8;font-size:.8rem;line-height:1.5;margin-bottom:14px}
+        .qsv__subtitle strong{color:#cbd5e1}
+        .qsv__video-wrap{position:relative;width:100%;border-radius:12px;overflow:hidden;background:#0f172a;border:1px solid rgba(71,85,105,0.4);aspect-ratio:9/16;max-height:420px;margin:0 auto}
+        .qsv__video-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+        .qsv__footer{margin-top:12px;text-align:center}
+        .qsv__footer-text{color:#64748b;font-size:.72rem;font-style:italic}
+        @media(max-width:768px){.qsv__video-wrap{max-height:360px}}
     </style>
 </head>
 
@@ -1765,6 +1782,39 @@
                 }
                 </script>
             </div>
+
+            <!-- 🎬 QUICK START VIDEO — Vídeo do Fundador (incremental, isolado, reversível) -->
+            <div id="qsvCard" class="qsv__card">
+                <div class="qsv__header">
+                    <span class="qsv__badge"><i class="fas fa-circle"></i> 🎬 GUIA RÁPIDO</span>
+                    <button class="qsv__close" onclick="dismissQSV()" title="Fechar para sempre">✕</button>
+                </div>
+                <div class="qsv__title">Ative seu vendedor automático em 3 passos</div>
+                <p class="qsv__subtitle"><strong>Edvaldo</strong>, fundador do LinkMágico, explica como configurar em menos de 2 minutos. Assista antes de começar — facilita tudo!</p>
+                <div class="qsv__video-wrap">
+                    <iframe src="https://www.youtube.com/embed/ojyRs7k_IcQ" title="Como ativar seu assistente LinkMágico em 3 passos" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+                </div>
+                <div class="qsv__footer">
+                    <span class="qsv__footer-text">⏱️ Vídeo curto • Sem compromisso • Veja e comece a usar</span>
+                </div>
+            </div>
+            <script>
+            // SAFE PATCH — QSV: Lógica de dismiss com localStorage (isolado, sem impacto)
+            try {
+                if (localStorage.getItem('lm_qsv_dismissed') === '1') {
+                    var qsvEl = document.getElementById('qsvCard');
+                    if (qsvEl) qsvEl.style.display = 'none';
+                }
+            } catch(e) { console.warn('[QSV] localStorage indisponível:', e.message); }
+            function dismissQSV() {
+                try {
+                    var qsvEl = document.getElementById('qsvCard');
+                    if (qsvEl) { qsvEl.style.opacity = '0'; qsvEl.style.transform = 'translateY(-10px)'; qsvEl.style.transition = 'all 0.3s ease'; setTimeout(function() { qsvEl.style.display = 'none'; }, 300); }
+                    localStorage.setItem('lm_qsv_dismissed', '1');
+                    console.log('[QSV] ✅ Vídeo dismissed permanentemente');
+                } catch(e) { console.warn('[QSV] Erro ao dismissar:', e.message); }
+            }
+            </script>
 
 
             <!-- UX-005: Card motivacional quando não há assistente ativo -->
