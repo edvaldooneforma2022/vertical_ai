@@ -9297,6 +9297,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                     console.warn('⚠️ [CALENDAR] Erro ao gerar hash público:', hashErr.message);
                 }
 
+                console.log(`\n[AUDIT-LLM-BYPASS]\nmessage="${(message||'').replace(/"/g, "'")}"\nconversationId="${conversationId||''}"\nleadId="${leadId||''}"\ninteligencias=${JSON.stringify(sistemaInteligencias.capturarInteligencias(message||''))}\nbypassLLM=true\nbypassReason="SCHED-PRIORITY"\nresponseLayer="SCHED-PRIORITY"\ngenerateAIResponseExecuted=false\nfinalResponsePreview="${(respostaAgendamentoEarly||'').substring(0, 120).replace(/\n/g, ' ')}"\n[/AUDIT-LLM-BYPASS]\n`);
                 return res.json({
                     success: true,
                     response: respostaAgendamentoEarly,
@@ -9346,6 +9347,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 const _iSupportResp = _iWhatsApp
                     ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_iWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
                     : `Perfeito 👍 nosso time está pronto para te atender.\n\nDigite sua dúvida aqui mesmo que vou te ajudar! 🙌`;
+                console.log(`\n[AUDIT-LLM-BYPASS]\nmessage="${(message||'').replace(/"/g, "'")}"\nconversationId="${conversationId||''}"\nleadId="${leadId||''}"\ninteligencias=${JSON.stringify(sistemaInteligencias.capturarInteligencias(message||''))}\nbypassLLM=true\nbypassReason="PRE-KB-SUPPORT"\nresponseLayer="PRE-KB-SUPPORT"\ngenerateAIResponseExecuted=false\nfinalResponsePreview="${(_iSupportResp||'').substring(0, 120).replace(/\n/g, ' ')}"\n[/AUDIT-LLM-BYPASS]\n`);
                 return res.json({
                     success: true,
                     response: _iSupportResp,
@@ -9392,9 +9394,11 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             if (_iIsBuyMsg && _iCheckoutLink) {
                 console.log('[PRE-KB] 🔥 BUY INTERCEPT — checkout direto, bypass KB');
                 try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
+                const _iBuyResp = `Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_iCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`;
+                console.log(`\n[AUDIT-LLM-BYPASS]\nmessage="${(message||'').replace(/"/g, "'")}"\nconversationId="${conversationId||''}"\nleadId="${leadId||''}"\ninteligencias=${JSON.stringify(sistemaInteligencias.capturarInteligencias(message||''))}\nbypassLLM=true\nbypassReason="PRE-KB-BUY"\nresponseLayer="PRE-KB-BUY"\ngenerateAIResponseExecuted=false\nfinalResponsePreview="${(_iBuyResp||'').substring(0, 120).replace(/\n/g, ' ')}"\n[/AUDIT-LLM-BYPASS]\n`);
                 return res.json({
                     success: true,
-                    response: `Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\n${_iCheckoutLink}\n━━━━━━━━━━━━━━━━━━━`,
+                    response: _iBuyResp,
                     inteligenciasDetectadas: {},
                     analiseEmocional: {},
                     journeyStage: 'checkout',
@@ -9473,6 +9477,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             try { billingManager.trackUsage(apiKey, 'messages'); } catch (_) {}
 
             console.log(`📚 [KB-FIRST] Resposta via FAQ direta — bypass total de agendamento/inteligências/IA`);
+            console.log(`\n[AUDIT-LLM-BYPASS]\nmessage="${(message||'').replace(/"/g, "'")}"\nconversationId="${conversationId||''}"\nleadId="${leadId||''}"\ninteligencias=${JSON.stringify(sistemaInteligencias.capturarInteligencias(message||''))}\nbypassLLM=true\nbypassReason="KB-FIRST"\nresponseLayer="KB-FIRST"\ngenerateAIResponseExecuted=false\nfinalResponsePreview="${(kbDirectAnswer||'').substring(0, 120).replace(/\n/g, ' ')}"\n[/AUDIT-LLM-BYPASS]\n`);
             return res.json({
                 success: true,
                 response: kbDirectAnswer,
@@ -10423,6 +10428,26 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         } catch (_lcErr) {
             console.warn('[CHAT-FIRST] Lead Capture Score erro (não crítico):', _lcErr.message);
         }
+
+        let _audit_layer = 'GENERATE_AI_RESPONSE';
+        let _audit_reason = 'NONE';
+        let _audit_gen_ai = true;
+        let _audit_bypass = false;
+
+        if (inteligencias.sair && !inteligencias.intencao_compra && !inteligencias.contatoDireto) {
+            _audit_layer = 'CAPTURAR_INTELIGENCIAS';
+            _audit_reason = 'sair';
+            _audit_gen_ai = false;
+            _audit_bypass = true;
+        } else if (Object.entries(inteligencias).some(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair')) {
+            _audit_layer = 'CAPTURAR_INTELIGENCIAS';
+            const trig = Object.entries(inteligencias).find(([k, v]) => v === true && k !== 'intencao_compra' && k !== 'sair');
+            _audit_reason = trig ? trig[0] : 'UNKNOWN';
+            _audit_gen_ai = false;
+            _audit_bypass = true;
+        }
+
+        console.log(`\n[AUDIT-LLM-BYPASS]\nmessage="${(message||'').replace(/"/g, "'")}"\nconversationId="${conversationId||''}"\nleadId="${leadId||''}"\ninteligencias=${JSON.stringify(inteligencias)}\nbypassLLM=${_audit_bypass}\nbypassReason="${_audit_reason}"\nresponseLayer="${_audit_layer}"\ngenerateAIResponseExecuted=${_audit_gen_ai}\nfinalResponsePreview="${(finalResponse||'').substring(0, 120).replace(/\n/g, ' ')}"\n[/AUDIT-LLM-BYPASS]\n`);
 
         return res.json({
             success: true,
