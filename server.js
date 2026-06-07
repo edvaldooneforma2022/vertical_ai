@@ -3593,7 +3593,8 @@ let sessionConfig = {
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000,
-        httpOnly: true
+        httpOnly: true,
+        sameSite: 'lax'
     }
 };
 
@@ -3685,7 +3686,7 @@ async function requireApiKey(req, res, next) {
     // 1. Rotas Públicas (Bypass)
     const publicPaths = [
         "/", "/validate-api-key", "/chat.html", "/chatbot",
-        "/api/system/status", "/health", "/healthz", "/api/webhooks/hotmart",
+        "/health", "/healthz", "/api/webhooks/hotmart",
         "/api/webhooks/hotmart/status",
         "/api/capture-lead",
         "/api/process-chat-inteligente",
@@ -8137,7 +8138,18 @@ app.get("/health", (req, res) => {
 
 // Rota de status para o dashboard (alias para /health)
 app.get("/api/system/status", (req, res) => {
-    // Reutiliza a lógica de /health
+    // 🔒 SECURITY HARDENING: Versão reduzida para requests não autenticados
+    const isAuthenticated = !!(req.session?.tenantId || req.session?.validatedApiKey);
+
+    if (!isAuthenticated) {
+        // Versão pública: apenas health check (sem métricas internas)
+        return res.json({
+            status: "healthy",
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    // Versão completa: apenas para usuários autenticados
     const uptime = process.uptime();
     const avgResponseTime = analytics.responseTimeHistory.length > 0 ?
         Math.round(analytics.responseTimeHistory.reduce((a, b) => a + b, 0) / analytics.responseTimeHistory.length) : 0;
