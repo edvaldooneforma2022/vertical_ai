@@ -3634,7 +3634,7 @@ app.use(cors({
         // Permitir todas as origens (modo SaaS para widgets externos)
         return callback(null, true);
     },
-    credentials: true,
+    credentials: false,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"]
 }));
