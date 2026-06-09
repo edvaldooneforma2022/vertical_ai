@@ -762,20 +762,21 @@
                     <h2>👥 Uso por Plano</h2>
                 </div>
                 <div class="stats-grid" id="usageKpis"></div>
-                <div class="section-header" style="margin-top:8px">
+                <div class="section-header" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <h2>📊 Breakdown por Tenant</h2>
+                    <input type="text" id="tenantSearch" placeholder="🔍 Buscar email, nome ou ID..." style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-primary); min-width: 250px; font-size: 0.9rem;" onkeyup="renderTenantsTable()">
                 </div>
                 <div class="card" style="overflow-x:auto">
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>Tenant ID</th>
-                                <th>Nome</th>
-                                <th>Email</th>
-                                <th>Plano</th>
-                                <th>Mensagens</th>
-                                <th>Extrações</th>
-                                <th>API Calls</th>
+                                <th style="cursor:pointer; user-select:none;" onclick="sortTenants('name')" title="Ordenar por Nome">Nome ↕</th>
+                                <th style="cursor:pointer; user-select:none;" onclick="sortTenants('email')" title="Ordenar por Email">Email ↕</th>
+                                <th style="cursor:pointer; user-select:none;" onclick="sortTenants('plan')" title="Ordenar por Plano">Plano ↕</th>
+                                <th style="cursor:pointer; user-select:none;" onclick="sortTenants('messages')" title="Ordenar por Mensagens">Mensagens ↕</th>
+                                <th style="cursor:pointer; user-select:none;" onclick="sortTenants('extractions')" title="Ordenar por Extrações">Extrações ↕</th>
+                                <th style="cursor:pointer; user-select:none;" onclick="sortTenants('api_calls')" title="Ordenar por API Calls">API Calls ↕</th>
                                 <th>% Uso</th>
                             </tr>
                         </thead>
@@ -1074,16 +1075,62 @@
             }
 
             // 2. Tabela de Tenants
+            allTenants = tenantList;
+            tenantSortCol = 'messages';
+            tenantSortDir = -1;
+            renderTenantsTable();
+        }
+
+        // Variáveis globais para busca e ordenação
+        let allTenants = [];
+        let tenantSortCol = 'messages';
+        let tenantSortDir = -1; // -1 = decrescente, 1 = crescente
+
+        function sortTenants(col) {
+            if (tenantSortCol === col) {
+                tenantSortDir *= -1;
+            } else {
+                tenantSortCol = col;
+                tenantSortDir = (col === 'messages' || col === 'extractions' || col === 'api_calls') ? -1 : 1;
+            }
+            renderTenantsTable();
+        }
+
+        function renderTenantsTable() {
             const tbody = document.getElementById('usageBody');
             const empty = document.getElementById('usageEmpty');
+            const search = (document.getElementById('tenantSearch')?.value || '').toLowerCase();
 
-            if (tenantList.length === 0) {
+            let filtered = allTenants.filter(t => {
+                if (!search) return true;
+                return (t.name || '').toLowerCase().includes(search) || 
+                       (t.email || '').toLowerCase().includes(search) ||
+                       (t.tenantId || t.tenant_id || '').toLowerCase().includes(search);
+            });
+
+            filtered.sort((a, b) => {
+                let valA = a[tenantSortCol] || '';
+                let valB = b[tenantSortCol] || '';
+                
+                if (tenantSortCol === 'messages' || tenantSortCol === 'extractions' || tenantSortCol === 'api_calls') {
+                    valA = parseInt(valA) || 0;
+                    valB = parseInt(valB) || 0;
+                } else if (tenantSortCol === 'name' || tenantSortCol === 'email' || tenantSortCol === 'plan') {
+                    valA = String(valA).toLowerCase();
+                    valB = String(valB).toLowerCase();
+                }
+                
+                if (valA < valB) return -1 * tenantSortDir;
+                if (valA > valB) return 1 * tenantSortDir;
+                return 0;
+            });
+
+            if (filtered.length === 0) {
                 tbody.innerHTML = '';
                 empty.style.display = 'block';
             } else {
                 empty.style.display = 'none';
-                tbody.innerHTML = tenantList.map(t => {
-                    // Calculando % de uso (simplificado baseado nos limites do billing.js)
+                tbody.innerHTML = filtered.map(t => {
                     const limits = { 'free': 100, 'starter': 1000, 'pro': 5000, 'business': 1000000 };
                     const limit = limits[t.plan] || 1000;
                     const messages = parseInt(t.messages || 0);
