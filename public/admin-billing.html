@@ -1031,13 +1031,18 @@
                 empty.style.display = 'block';
             } else {
                 empty.style.display = 'none';
-                tbody.innerHTML = events.map(e => `<tr>
+                tbody.innerHTML = events.map(e => {
+                    const desc = e.description || e.details || (e.plan_id ? `Plano: ${e.plan_id}` : (e.source || '-'));
+                    const amountCents = e.amount_cents || e.amountCents || 0;
+                    const amountBRL = amountCents > 0 ? (amountCents / 100) : (e.amount || 0);
+                    return `<tr>
             <td>${fmtDate(e.created_at || e.timestamp)}</td>
             <td><span class="status-badge info">${e.event_type || e.type || '-'}</span></td>
             <td style="font-family:monospace;font-size:.8rem">${shortId(e.tenant_id || e.tenantId)}</td>
-            <td>${e.description || e.details || '-'}</td>
-            <td style="color:var(--success);font-weight:600">${e.amount ? 'R$ ' + fmt(e.amount) : '-'}</td>
-        </tr>`).join('');
+            <td>${desc}</td>
+            <td style="color:var(--success);font-weight:600">${amountBRL > 0 ? 'R$ ' + fmt(amountBRL) : '-'}</td>
+        </tr>`;
+                }).join('');
             }
         }
 

@@ -117,7 +117,7 @@ class BillingMetrics {
                 COUNT(*) as payment_count,
                 AVG(amount_cents) as avg_cents
             FROM billing_events
-            WHERE (event_type = 'payment_succeeded' OR event_type = 'subscription_created')
+            WHERE (event_type = 'payment_succeeded' OR event_type = 'subscription_created' OR event_type = 'stripe_checkout_completed')
             AND created_at >= CURRENT_DATE - INTERVAL '30 days'
         `);
 
