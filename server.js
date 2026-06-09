@@ -11090,23 +11090,146 @@ function generateFullChatbotHTML(pageData = {}, robotName = 'Assistente IA', cus
             document.getElementById('sched-confirm-btn').disabled = false;
         }
 
+        // SAFE PATCH - SCHED-LEAD-001: Todo agendamento exige lead válido
+        // Reutiliza /api/capture-lead (syncLeadToCRM → pipeline → follow-up)
+        // Zero duplicação de lógica, zero alteração no backend
         async function confirmScheduling() {
             if (!schedSelectedDate || !schedSelectedTime) return;
             var btn = document.getElementById('sched-confirm-btn');
             btn.disabled = true;
             btn.textContent = '⏳ Confirmando...';
+
             try {
+                // Se não tem lead capturado, interceptar e pedir dados antes de agendar
+                if (!leadId) {
+                    btn.textContent = '✅ Confirmar Agendamento';
+                    btn.disabled = true;
+
+                    // Verificar se já existe um formulário de captura para agendamento ativo
+                    if (document.getElementById('schedCaptureForm')) return;
+
+                    var captureDiv = document.createElement('div');
+                    captureDiv.className = 'inline-capture';
+                    captureDiv.id = 'schedCaptureForm';
+                    captureDiv.innerHTML = '<div class="inline-capture-msg">📋 Para confirmar seu agendamento, precisamos do seu contato:</div>'
+                        + '<input type="text" id="schedCaptureName" placeholder="Seu nome">'
+                        + '<input type="tel" id="schedCapturePhone" placeholder="Seu WhatsApp (obrigatório)">'
+                        + '<input type="email" id="schedCaptureEmail" placeholder="Seu email (opcional)">'
+                        + '<div class="inline-capture-actions">'
+                        + '<button class="inline-capture-submit" id="schedCaptureSubmit">📅 Confirmar Agendamento</button>'
+                        + '</div>';
+
+                    // Inserir logo após o calendário
+                    var calendarEl = btn.parentElement;
+                    if (calendarEl) {
+                        calendarEl.appendChild(captureDiv);
+                    } else {
+                        chatMessages.appendChild(captureDiv);
+                    }
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                    // Handler do botão de captura + agendamento
+                    document.getElementById('schedCaptureSubmit').addEventListener('click', async function() {
+                        var nm = document.getElementById('schedCaptureName').value.trim();
+                        var ph = document.getElementById('schedCapturePhone').value.trim();
+                        var em = document.getElementById('schedCaptureEmail').value.trim();
+
+                        // Validação: WhatsApp obrigatório
+                        if (!ph) {
+                            document.getElementById('schedCapturePhone').style.borderColor = '#ef4444';
+                            document.getElementById('schedCapturePhone').focus();
+                            return;
+                        }
+
+                        this.disabled = true;
+                        this.textContent = '⏳ Registrando e agendando...';
+
+                        try {
+                            // 1. Capturar lead via endpoint existente (syncLeadToCRM incluso)
+                            var captureResp = await fetch('/api/capture-lead', {
+                                method: 'POST',
+                                headers: {'Content-Type':'application/json'},
+                                body: JSON.stringify({
+                                    nome: nm || 'Não informado',
+                                    email: em || 'Não informado',
+                                    telefone: ph || 'Não informado',
+                                    url_origem: window.location.href,
+                                    robotName: robotName,
+                                    conversationId: sessionConversationId,
+                                    apiKey: currentApiKey
+                                })
+                            });
+                            var captureData = await captureResp.json();
+
+                            if (!captureData.success) {
+                                this.textContent = '📅 Confirmar Agendamento';
+                                this.disabled = false;
+                                return;
+                            }
+
+                            // 2. Atualizar leadId global
+                            leadId = captureData.lead.id;
+                            inlineCaptured = true;
+                            console.log('📅 [SCHED-LEAD-001] Lead capturado para agendamento: ' + leadId);
+
+                            // 3. Retroactive sync — vincular mensagens pré-captura ao lead
+                            try {
+                                var prevMsgs = [];
+                                var allMsgDivs = chatMessages.querySelectorAll('.chat-message');
+                                allMsgDivs.forEach(function(div) {
+                                    if (div.classList.contains('inline-capture')) return;
+                                    prevMsgs.push({ message: div.textContent.trim().substring(0, 500), isUser: div.classList.contains('user') });
+                                });
+                                if (prevMsgs.length > 0) {
+                                    fetch('/api/link-conversation', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ leadId: leadId, conversationId: sessionConversationId, messages: prevMsgs, apiKey: currentApiKey }) }).catch(function(){});
+                                }
+                            } catch(syncErr) { console.warn('Sync err:', syncErr); }
+
+                            // 4. Agora sim, fazer o booking com leadId válido
+                            var calHash = await getCalendarHash();
+                            var bookResp = await fetch('/api/public/book/' + calHash, {
+                                method: 'POST',
+                                headers: {'Content-Type':'application/json'},
+                                body: JSON.stringify({
+                                    name: nm || 'Não informado',
+                                    email: em || 'Não informado',
+                                    phone: ph || '',
+                                    leadId: leadId,
+                                    date: schedSelectedDate.date,
+                                    time: schedSelectedTime,
+                                    notes: 'Agendado via calendário do chatbot'
+                                })
+                            });
+                            var bookData = await bookResp.json();
+
+                            if (bookData.success) {
+                                captureDiv.innerHTML = '<div class="inline-capture-msg" style="color:#059669;margin:0">✅ Contato registrado e agendamento confirmado!</div>';
+                                btn.textContent = '✅ Agendamento Confirmado!';
+                                btn.style.background = '#059669';
+                                addMessage('✅ **Agendamento confirmado!** ' + schedSelectedDate.dayName + ' ' + schedSelectedDate.date.split('-').reverse().join('/') + ' às ' + schedSelectedTime + '. Nossa equipe entrará em contato para confirmar. 🎉', false);
+                                setTimeout(function() { captureDiv.style.display = 'none'; }, 3000);
+                            } else {
+                                this.textContent = '📅 Confirmar Agendamento';
+                                this.disabled = false;
+                            }
+                        } catch(err) {
+                            console.error('📅 [SCHED-LEAD-001] Erro:', err);
+                            this.textContent = '📅 Confirmar Agendamento';
+                            this.disabled = false;
+                        }
+                    });
+                    return; // Aguardar preenchimento do formulário
+                }
+
+                // Lead já existe — prosseguir direto com o agendamento
                 var calHash = await getCalendarHash();
-                var leadName = document.getElementById('leadName') ? document.getElementById('leadName').value : '';
-                var leadEmail = document.getElementById('leadEmail') ? document.getElementById('leadEmail').value : '';
-                var leadPhone = document.getElementById('leadPhone') ? document.getElementById('leadPhone').value : '';
                 var resp = await fetch('/api/public/book/' + calHash, {
                     method: 'POST',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({
-                        name: leadName,
-                        email: leadEmail,
-                        phone: leadPhone,
+                        name: '',
+                        email: '',
+                        phone: '',
                         leadId: leadId,
                         date: schedSelectedDate.date,
                         time: schedSelectedTime,
