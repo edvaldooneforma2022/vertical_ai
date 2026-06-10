@@ -187,7 +187,8 @@ class WhatsAppChannel {
         try {
             // 1. Resolver ou criar lead pelo telefone
             const lead = await this._resolveLeadByPhone(apiKey, phone, pushName);
-            const conversationId = this._makeConversationId(phone, apiKey);
+            // GARANTIA OMNICHANNEL (CENÁRIO B): Priorizar o conversationId do CRM (Widget) para unificar a memória da IA
+            const conversationId = lead?.conversationId || this._makeConversationId(phone, apiKey);
 
             // 2. Registrar mensagem de entrada
             await this._logMessage({
