@@ -1616,6 +1616,28 @@
                 </div>
             </div>
 
+            <!-- ═══ SAFE PATCH — WA-CHANNEL-003: Seção WhatsApp na Página Principal ═══ -->
+            <!-- Aparece após ativar o assistente. Mostra status e link para configuração. -->
+            <div id="waChannelSection" style="display:none; background:rgba(15,23,42,0.6); border:1px solid rgba(37,211,102,0.25); border-radius:12px; padding:16px; margin-top:12px; transition:all 0.3s ease;">
+                <h4 style="color:#25d366; font-size:0.9rem; margin:0 0 10px 0; display:flex; align-items:center; gap:8px;">
+                    <i class="fab fa-whatsapp"></i> WhatsApp Canal
+                    <span id="waChannelBadge" style="background:rgba(245,158,11,0.15); color:#fbbf24; font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase;">Não conectado</span>
+                </h4>
+                <p style="color:#94a3b8; font-size:0.82rem; margin:0 0 12px 0; line-height:1.5;">
+                    Conecte o WhatsApp para que a mesma IA atenda seus clientes por lá — com o mesmo CRM, pipeline e memória.
+                </p>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button id="waChannelConnectBtn" onclick="openWhatsAppConfig()"
+                        style="flex:1; background:linear-gradient(135deg,#25d366,#128C7E); color:white; border:none; border-radius:8px; padding:10px 16px; font-size:0.82rem; font-weight:600; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <i class="fab fa-whatsapp"></i> Configurar WhatsApp
+                    </button>
+                </div>
+                <p style="color:#475569; font-size:0.72rem; margin:8px 0 0 0; font-style:italic;">
+                    ✨ A mesma IA. O mesmo CRM. O mesmo pipeline. Mais um canal.
+                </p>
+            </div>
+            <!-- /WA-CHANNEL-003 -->
+
             <div class="social-grid">
                 <button class="social-btn whatsapp" id="shareWhatsApp"><i class="fab fa-whatsapp"></i> WhatsApp</button>
                 <button class="social-btn instagram" id="shareInstagram"><i class="fab fa-instagram"></i>
@@ -6577,6 +6599,123 @@
             Ao utilizar a plataforma, você concorda com os <a href="#" style="color:#60a5fa;">Termos de Uso</a>.
         </p>
     </div>
+
+    <!-- ═══ SAFE PATCH — WA-CHANNEL-003: JS para seção WhatsApp Canal ═══ -->
+    <script>
+    // WA-CHANNEL-003: Controle da seção WhatsApp Canal na página principal
+    (function() {
+        'use strict';
+
+        // Abre Sistemas Avançados diretamente na aba WhatsApp
+        window.openWhatsAppConfig = function() {
+            try {
+                if (typeof openNewSystems === 'function') {
+                    openNewSystems();
+                }
+                setTimeout(function() {
+                    if (typeof showNewTab === 'function') {
+                        showNewTab('whatsapp');
+                    }
+                }, 300);
+                console.log('[WA-CHANNEL-003] ✅ Aberto Sistemas Avançados > WhatsApp');
+            } catch(e) {
+                console.warn('[WA-CHANNEL-003] Erro ao abrir config:', e.message);
+                // Fallback: scroll to bottom onde está o botão "Novos Sistemas"
+                var btn = document.getElementById('openNewSystemsBtn');
+                if (btn) btn.click();
+            }
+        };
+
+        // Mostrar seção WhatsApp quando assistente for ativado
+        function showWaChannelSection() {
+            try {
+                var section = document.getElementById('waChannelSection');
+                if (section) {
+                    section.style.display = 'block';
+                    section.style.opacity = '0';
+                    section.style.transform = 'translateY(10px)';
+                    setTimeout(function() {
+                        section.style.opacity = '1';
+                        section.style.transform = 'translateY(0)';
+                    }, 50);
+                }
+            } catch(e) {
+                console.warn('[WA-CHANNEL-003] Erro ao mostrar seção:', e.message);
+            }
+        }
+
+        // Verificar status do WhatsApp e atualizar badge
+        function checkWaStatus() {
+            try {
+                var apiKey = (document.getElementById('apiKeyInput') && document.getElementById('apiKeyInput').value.trim())
+                    || localStorage.getItem('linkmagico_api_key')
+                    || localStorage.getItem('lm_api_key')
+                    || '';
+                if (!apiKey) return;
+
+                fetch('/api/whatsapp/status?apiKey=' + encodeURIComponent(apiKey))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        var badge = document.getElementById('waChannelBadge');
+                        var btn = document.getElementById('waChannelConnectBtn');
+                        if (!badge) return;
+
+                        if (data.connected || data.status === 'connected') {
+                            badge.textContent = '✅ Conectado';
+                            badge.style.background = 'rgba(16,185,129,0.15)';
+                            badge.style.color = '#34d399';
+                            if (btn) {
+                                btn.innerHTML = '<i class="fab fa-whatsapp"></i> Gerenciar WhatsApp';
+                                btn.style.background = 'linear-gradient(135deg,#128C7E,#075E54)';
+                            }
+                            console.log('[WA-CHANNEL-003] ✅ WhatsApp conectado');
+                        } else {
+                            badge.textContent = 'Não conectado';
+                            badge.style.background = 'rgba(245,158,11,0.15)';
+                            badge.style.color = '#fbbf24';
+                        }
+                    })
+                    .catch(function(e) {
+                        console.log('[WA-CHANNEL-003] Status check silencioso:', e.message);
+                    });
+            } catch(e) {
+                // Silencioso
+            }
+        }
+
+        // Hook: detectar ativação do assistente
+        var _waOriginalShowToast = window.showToast;
+        if (typeof _waOriginalShowToast === 'function') {
+            window.showToast = function(msg, type) {
+                _waOriginalShowToast.apply(this, arguments);
+                try {
+                    if (type === 'success' && msg && msg.indexOf('ativado') > -1) {
+                        showWaChannelSection();
+                        setTimeout(checkWaStatus, 500);
+                    }
+                } catch(e) {}
+            };
+        }
+
+        // Se a página carregar com assistente já ativo (chatbotLinkSection.active)
+        var _waCheckInterval = setInterval(function() {
+            try {
+                var linkSection = document.getElementById('chatbotLinkSection');
+                if (linkSection && linkSection.classList.contains('active')) {
+                    showWaChannelSection();
+                    checkWaStatus();
+                    clearInterval(_waCheckInterval);
+                }
+            } catch(e) { clearInterval(_waCheckInterval); }
+        }, 1000);
+
+        // Limpar interval após 30s
+        setTimeout(function() { clearInterval(_waCheckInterval); }, 30000);
+
+        console.log('[WA-CHANNEL-003] ✅ WhatsApp Canal section carregado');
+    })();
+    </script>
+    <!-- /WA-CHANNEL-003 JS -->
 
 </body>
 
