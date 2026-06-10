@@ -12523,6 +12523,20 @@ try {
     require('./whatsapp-routes')(app, logger);  // Carrega e registra rotas WhatsApp multi-tenant
     console.log('✅ Rotas Multi-Tenant WhatsApp integradas');
 
+    // ===== CANAL WHATSAPP NATIVO (WA-CHANNEL-001) =====
+    try {
+        const { registerWhatsAppChannel } = require('./whatsapp-channel');
+        registerWhatsAppChannel(app, {
+            db,
+            USE_POSTGRES,
+            getLeadSystem,
+            whatsappManager,
+            analytics
+        });
+    } catch (waChannelErr) {
+        console.warn('⚠️ [WA-CHANNEL] Canal WhatsApp não carregado (não bloqueia):', waChannelErr.message);
+    }
+
     // ===== MULTI-TENANT CHATGPT ROUTES (NOVO) =====
     require('./chatgpt-routes')(app, logger);  // Carrega e registra rotas ChatGPT multi-tenant
     console.log('✅ Rotas Multi-Tenant ChatGPT integradas');

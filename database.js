@@ -298,6 +298,48 @@ async function initializeDatabase() {
         `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS updated_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP`,
 
         // ═══════════════════════════════════════════════════════
+        // WA-CHANNEL-001 — Canal WhatsApp Nativo
+        // ═══════════════════════════════════════════════════════
+
+        // Novas colunas em tenant_leads (identificação omnichannel)
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS wa_phone VARCHAR(50)`,
+        `ALTER TABLE tenant_leads ADD COLUMN IF NOT EXISTS channel VARCHAR(20) DEFAULT 'widget'`,
+
+        // Novas colunas em whatsapp_settings (canal bidirecional)
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS channel_enabled ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'}`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS channel_mode VARCHAR(20) DEFAULT 'auto'`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS webhook_secret VARCHAR(255)`,
+
+        // Tabela de mensagens WhatsApp (log completo bidirecional)
+        `CREATE TABLE IF NOT EXISTS whatsapp_messages (
+            id VARCHAR(255) PRIMARY KEY,
+            tenant_id VARCHAR(255) NOT NULL,
+            api_key VARCHAR(255) NOT NULL,
+            wa_message_id VARCHAR(255),
+            wa_phone VARCHAR(50) NOT NULL,
+            direction VARCHAR(10) NOT NULL,
+            message_type VARCHAR(20) DEFAULT 'text',
+            content TEXT,
+            media_url TEXT,
+            lead_id VARCHAR(255),
+            conversation_id VARCHAR(255),
+            provider VARCHAR(20),
+            status VARCHAR(20) DEFAULT 'delivered',
+            metadata ${USE_POSTGRES ? "JSONB DEFAULT '{}'" : "TEXT DEFAULT '{}'"},
+            created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Índices para whatsapp_messages
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_phone ON whatsapp_messages(wa_phone)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_tenant ON whatsapp_messages(api_key)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_lead ON whatsapp_messages(lead_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_conv ON whatsapp_messages(conversation_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_created ON whatsapp_messages(created_at)`,
+
+        // Índice para busca de lead por wa_phone
+        `CREATE INDEX IF NOT EXISTS idx_tenant_leads_wa_phone ON tenant_leads(wa_phone)`,
+
+        // ═══════════════════════════════════════════════════════
         // V9 BLINDADA — ÍNDICES DE PERFORMANCE ADICIONAIS
         // ═══════════════════════════════════════════════════════
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_created ON tenant_leads(created_at)`,
