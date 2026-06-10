@@ -676,6 +676,28 @@ try {
     console.log('⚠️ [V14.1] Context Layer não disponível:', e.message);
 }
 
+// ═════════════════════════════════════════════════════════════════
+// SAFE PATCH — WA-CHANNEL-002: Identidade Híbrida Sessão → Identidade
+// Antes da captura: chave = session:<conversationId>
+// Após captura:     chave = lead:<leadId>
+// NUNCA usa chatbotId (compartilhado) como fallback.
+// ═════════════════════════════════════════════════════════════════
+function buildIdentityKey(leadId, conversationId) {
+    try {
+        if (leadId) {
+            return `lead:${leadId}`;
+        }
+        if (conversationId) {
+            return `session:${conversationId}`;
+        }
+        // Fallback seguro: ID único efêmero (NUNCA chatbotId compartilhado)
+        return `session:anon_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    } catch (_bikErr) {
+        return `session:fallback_${Date.now()}`;
+    }
+}
+console.log('✅ [WA-CHANNEL-002] buildIdentityKey registrado (identidade híbrida sessão→lead)');
+
 // 🧠 Assistant Diagnostic System
 let _assistantDiagnostic = null;
 try {
@@ -6198,12 +6220,13 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     const _v17CtxEnabled = _v14ContextLayer &&
                         (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
                     if (_v17CtxEnabled) {
-                        const _v17ConvId = (pageData && pageData.conversationId) || leadId || chatbotId || null;
+                        // WA-CHANNEL-002: Identidade híbrida (lead > session, NUNCA chatbotId)
+                        const _v17ConvId = buildIdentityKey(leadId, (pageData && pageData.conversationId));
                         if (_v17ConvId) {
                             const _v17CtxHistory = _v14ContextLayer.getMessagesForLLM(_v17ConvId, 6);
                             if (_v17CtxHistory.length > 0) {
                                 _v17History = _v17CtxHistory;
-                                console.log(`🧠 [V17] V14 histórico real: ${_v17History.length} msgs`);
+                                console.log(`🧠 [V17] V14 histórico real: ${_v17History.length} msgs | key=${_v17ConvId.substring(0, 20)}`);
                             }
                         }
                     }
@@ -6258,11 +6281,13 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     const _v17SaveEnabled = _v14ContextLayer &&
                         (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
                     if (_v17SaveEnabled) {
-                        const _v17ConvId = (pageData && pageData.conversationId) || leadId || chatbotId || null;
+                        // WA-CHANNEL-002: Identidade híbrida (lead > session, NUNCA chatbotId)
+                        const _v17ConvId = buildIdentityKey(leadId, (pageData && pageData.conversationId));
                         if (_v17ConvId) {
                             _v14ContextLayer.addMessage(_v17ConvId, 'user', cleanUserMessage);
                             _v14ContextLayer.addMessage(_v17ConvId, 'assistant', _v17Response);
                             _v14ContextLayer.saveProductInfo(_v17ConvId, pageData);
+                            console.log(`🔑 [WA-CHANNEL-002] V17 write | key=${_v17ConvId.substring(0, 25)}`);
                         }
                     }
                 } catch (_v17SaveErr) {
@@ -6647,7 +6672,9 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 console.log(`[V13] 🧩 1/6 Intent: ${_v13Intent.intent} (conf=${_v13Intent.confidence}) | pattern=${_v13Intent.matchedPattern}`);
 
                 // ─── PASSO 2: STATE MANAGER (score + máquina de estados) ───
-                const _v13ConvId = (pageData && pageData.conversationId) || leadId || `v13_${Date.now()}`;
+                // WA-CHANNEL-002: Identidade híbrida (lead > session, NUNCA chatbotId)
+                const _v13ConvId = buildIdentityKey(leadId, (pageData && pageData.conversationId));
+                console.log(`🔑 [WA-CHANNEL-002] V13 state | key=${_v13ConvId.substring(0, 25)}`);
                 const _v13StateResult = _v13StateManager.updateState(_v13ConvId, _v13Intent.intent, cleanUserMessage);
                 console.log(`[V13] 🧩 2/6 State: ${_v13StateResult.stage} (score=${_v13StateResult.score}) ${_v13StateResult.transition ? '⚡ ' + _v13StateResult.transition : ''}`);
 
@@ -8497,23 +8524,33 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             console.warn('[V18-GUARD@chat-universal] Erro (sem impacto):', _v18Err.message);
         }
 
-        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
+        // WA-CHANNEL-002: Injetar conversationId no pageData para que buildIdentityKey
+        // dentro de generateAIResponse tenha a sessão disponível para visitantes anônimos.
+        try {
+            if (conversationId && processedPageData && !processedPageData.conversationId) {
+                processedPageData.conversationId = conversationId;
+            }
+        } catch (_bikInjectErr) { /* silencioso */ }
+
+        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, effectiveLeadId || leadId, apiKey, robotName || null);
 
         // ═══ V14.1: SALVAR NO HISTÓRICO (para endpoint chat-universal / pipeline legado) ═══
         try {
             const _v14CuEnabled = _v14ContextLayer &&
                 (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
-            if (_v14CuEnabled && conversationId) {
+            // WA-CHANNEL-002: Usar identidade híbrida (lead > session)
+            const _v14CuIdentityKey = buildIdentityKey(effectiveLeadId, conversationId);
+            if (_v14CuEnabled && _v14CuIdentityKey) {
                 // Nota: Se V13 pipeline rodou, ele já salvou internamente.
                 // Aqui salvamos para o caso do pipeline legado V0-V12 ter respondido.
-                const _v14CuHist = _v14ContextLayer.getHistory(conversationId);
+                const _v14CuHist = _v14ContextLayer.getHistory(_v14CuIdentityKey);
                 const _v14CuLastUser = _v14CuHist.length > 0 ? _v14CuHist[_v14CuHist.length - 1] : null;
                 // Só salvar se o V13 não salvou ainda (evitar duplicata)
                 if (!_v14CuLastUser || _v14CuLastUser.content !== message.substring(0, 500)) {
-                    _v14ContextLayer.addMessage(conversationId, 'user', message);
-                    _v14ContextLayer.addMessage(conversationId, 'assistant', aiResponse);
-                    _v14ContextLayer.saveProductInfo(conversationId, processedPageData);
-                    console.log(`[V14.1@chat-universal] 📝 Histórico salvo | conv=${conversationId.substring(0, 8)}...`);
+                    _v14ContextLayer.addMessage(_v14CuIdentityKey, 'user', message);
+                    _v14ContextLayer.addMessage(_v14CuIdentityKey, 'assistant', aiResponse);
+                    _v14ContextLayer.saveProductInfo(_v14CuIdentityKey, processedPageData);
+                    console.log(`🔑 [WA-CHANNEL-002] chat-universal write | key=${_v14CuIdentityKey.substring(0, 25)}`);
                 }
             }
         } catch (_v14CuErr) {
@@ -9565,7 +9602,13 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
 
             // 🎯 LLM SEMPRE RESPONDE (generateAIResponse)
             // 🎯 FEATURE_CLEAN_CHAT_V2: Passar robotName como chatbotId para busca de FAQs
-            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, leadId, apiKey, robotName || null);
+            // WA-CHANNEL-002: Injetar conversationId no pageData para buildIdentityKey
+            try {
+                if (conversationId && processedPageData && !processedPageData.conversationId) {
+                    processedPageData.conversationId = conversationId;
+                }
+            } catch (_bikInjectErr) { /* silencioso */ }
+            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, effectiveLeadId || leadId, apiKey, robotName || null);
 
             // 🎯 FEATURE_CLEAN_CHAT_V2: Pular pós-processamento emocional quando flag ativa
             if (process.env.FEATURE_CLEAN_CHAT_V2 === 'true' || (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_CLEAN_CHAT_V2'))) {
@@ -9593,14 +9636,16 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         try {
             const _v14PciEnabled = _v14ContextLayer &&
                 (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
-            if (_v14PciEnabled && conversationId) {
-                const _v14PciHist = _v14ContextLayer.getHistory(conversationId);
+            // WA-CHANNEL-002: Usar identidade híbrida (lead > session)
+            const _v14PciIdentityKey = buildIdentityKey(effectiveLeadId, conversationId);
+            if (_v14PciEnabled && _v14PciIdentityKey) {
+                const _v14PciHist = _v14ContextLayer.getHistory(_v14PciIdentityKey);
                 const _v14PciLast = _v14PciHist.length > 0 ? _v14PciHist[_v14PciHist.length - 1] : null;
                 if (!_v14PciLast || _v14PciLast.content !== message.substring(0, 500)) {
-                    _v14ContextLayer.addMessage(conversationId, 'user', message);
-                    _v14ContextLayer.addMessage(conversationId, 'assistant', finalResponse);
-                    _v14ContextLayer.saveProductInfo(conversationId, processedPageData);
-                    console.log(`[V14.1@chat-inteligente] 📝 Histórico salvo | conv=${conversationId.substring(0, 8)}...`);
+                    _v14ContextLayer.addMessage(_v14PciIdentityKey, 'user', message);
+                    _v14ContextLayer.addMessage(_v14PciIdentityKey, 'assistant', finalResponse);
+                    _v14ContextLayer.saveProductInfo(_v14PciIdentityKey, processedPageData);
+                    console.log(`🔑 [WA-CHANNEL-002] chat-inteligente write | key=${_v14PciIdentityKey.substring(0, 25)}`);
                 }
             }
         } catch (_v14PciErr) {
