@@ -340,6 +340,20 @@ async function initializeDatabase() {
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_wa_phone ON tenant_leads(wa_phone)`,
 
         // ═══════════════════════════════════════════════════════
+        // WA-SAAS-001 — Camada SaaS WhatsApp (Evolution Central)
+        // Colunas adicionais em whatsapp_settings para modo SaaS
+        // ═══════════════════════════════════════════════════════
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS saas_instance_name VARCHAR(50)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS saas_phone VARCHAR(50)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS saas_push_name VARCHAR(255)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS connection_state VARCHAR(20) DEFAULT 'disconnected'`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS connected_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'}`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS last_seen ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'}`,
+
+        // Índice para resolver instância SaaS no webhook global
+        `CREATE INDEX IF NOT EXISTS idx_wa_saas_instance ON whatsapp_settings(saas_instance_name)`,
+
+        // ═══════════════════════════════════════════════════════
         // V9 BLINDADA — ÍNDICES DE PERFORMANCE ADICIONAIS
         // ═══════════════════════════════════════════════════════
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_created ON tenant_leads(created_at)`,

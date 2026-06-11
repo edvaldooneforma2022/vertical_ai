@@ -3329,72 +3329,410 @@
             <!-- Tab WhatsApp -->
             <div id="tab-whatsapp" class="new-tab-content" style="display:none;">
                 <div style="background:#1e293b; padding:2rem; border-radius:16px;">
-                    <h2 style="color:#60a5fa; margin-bottom:1rem;">📱 Integração WhatsApp (Multi-Tenant)</h2>
-                    <p style="color:#cbd5e1; margin-bottom:1.5rem;">Configure suas próprias credenciais</p>
 
-                    <div id="whatsapp-current-status"
-                        style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Status Atual</h3>
-                        <div id="whatsapp-settings-status" style="color:#94a3b8;">Carregando configurações...</div>
-                    </div>
+                    <!-- ═══ SEÇÃO 1: CONEXÃO RÁPIDA (SaaS) ═══ -->
+                    <div id="waSaasSection">
+                        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">
+                            <div style="width:48px;height:48px;background:linear-gradient(135deg,#25d366,#128C7E);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fab fa-whatsapp" style="font-size:1.5rem;color:white;"></i>
+                            </div>
+                            <div>
+                                <h2 style="color:#f1f5f9; margin:0; font-size:1.3rem;">Conecte seu WhatsApp</h2>
+                                <p style="color:#94a3b8; margin:0; font-size:0.85rem;">em menos de 1 minuto</p>
+                            </div>
+                        </div>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:1.5rem;">A mesma IA que atende no seu site, agora atendendo no WhatsApp — com o mesmo CRM, memória e pipeline de vendas.</p>
 
-                    <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Escolha o Provedor</h3>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                            <button id="btn-twilio" onclick="selectProvider('twilio')"
-                                style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
-                                <strong>Twilio</strong>
-                            </button>
-                            <button id="btn-evolution" onclick="selectProvider('evolution')"
-                                style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
-                                <strong>Evolution API</strong>
-                            </button>
+                        <!-- Card de Status -->
+                        <div id="waSaasStatusCard" style="background:linear-gradient(135deg,#0f172a,#1e293b); border:1px solid #334155; padding:1.5rem; border-radius:16px; margin-bottom:1.5rem;">
+                            <!-- Estado: Desconectado -->
+                            <div id="waSaasStateDisconnected">
+                                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+                                    <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+                                    <span style="color:#fbbf24;font-weight:600;">WhatsApp não conectado</span>
+                                </div>
+                                <button id="waSaasConnectBtn" onclick="waSaasConnect()"
+                                    style="width:100%;background:linear-gradient(135deg,#25d366,#128C7E);color:white;border:none;padding:1rem 1.5rem;border-radius:12px;cursor:pointer;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;transition:all 0.3s;">
+                                    <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Gerar QR Code do WhatsApp
+                                </button>
+                            </div>
+
+                            <!-- Estado: Conectando (QR Code) -->
+                            <div id="waSaasStateConnecting" style="display:none;">
+                                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+                                    <span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;display:inline-block;animation:pulse 1.5s infinite;"></span>
+                                    <span style="color:#60a5fa;font-weight:600;">Aguardando escaneamento...</span>
+                                </div>
+                                <div id="waSaasQrContainer" style="background:white;border-radius:16px;padding:1.5rem;text-align:center;margin-bottom:1rem;">
+                                    <img id="waSaasQrImage" src="" alt="QR Code WhatsApp"
+                                        style="max-width:280px;width:100%;border-radius:8px;" />
+                                </div>
+                                <p style="color:#94a3b8;font-size:0.8rem;text-align:center;">
+                                    Abra o WhatsApp no celular → Menu (⋮) → Aparelhos conectados → Conectar aparelho → Escaneie o código acima
+                                </p>
+                            </div>
+
+                            <!-- Estado: Conectado -->
+                            <div id="waSaasStateConnected" style="display:none;">
+                                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+                                    <span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+                                    <span style="color:#34d399;font-weight:600;">✅ WhatsApp conectado</span>
+                                </div>
+                                <div style="background:#0f172a;border-radius:12px;padding:1rem;margin-bottom:1rem;">
+                                    <div style="display:grid;grid-template-columns:auto 1fr;gap:0.5rem 1rem;align-items:center;">
+                                        <span style="color:#64748b;font-size:0.8rem;">Número:</span>
+                                        <span id="waSaasPhone" style="color:#f1f5f9;font-weight:600;">—</span>
+                                        <span style="color:#64748b;font-size:0.8rem;">Nome:</span>
+                                        <span id="waSaasPushName" style="color:#cbd5e1;">—</span>
+                                        <span style="color:#64748b;font-size:0.8rem;">Instância:</span>
+                                        <span id="waSaasInstance" style="color:#475569;font-size:0.75rem;font-family:monospace;">—</span>
+                                    </div>
+                                </div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                                    <button onclick="waSaasDisconnect()"
+                                        style="background:#334155;color:#f87171;border:1px solid #475569;padding:0.75rem;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
+                                        Desconectar
+                                    </button>
+                                    <button onclick="waSaasReconnect()"
+                                        style="background:#334155;color:#60a5fa;border:1px solid #475569;padding:0.75rem;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
+                                        🔄 Reconectar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Estado: Carregando -->
+                            <div id="waSaasStateLoading" style="display:none;text-align:center;padding:2rem;">
+                                <div style="width:40px;height:40px;border:3px solid #334155;border-top-color:#25d366;border-radius:50%;margin:0 auto 1rem;animation:spin 1s linear infinite;"></div>
+                                <span style="color:#94a3b8;" id="waSaasLoadingText">Conectando...</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Config Twilio -->
-                    <div id="form-twilio"
-                        style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Twilio</h3>
-                        <input type="text" id="twilio-sid" placeholder="Account SID"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="password" id="twilio-token" placeholder="Auth Token"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="text" id="twilio-number" placeholder="Twilio Number (ex: +1234567890)"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="text" id="twilio-notification-phone"
-                            placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
-                    </div>
-
-                    <!-- Config Evolution -->
-                    <div id="form-evolution"
-                        style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                        <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Evolution API</h3>
-                        <input type="text" id="evolution-url" placeholder="API URL (ex: https://api.suadominio.com)"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="password" id="evolution-key" placeholder="API Key"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="text" id="evolution-instance" placeholder="Instance Name"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                        <input type="text" id="evolution-notification-phone"
-                            placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
-                    </div>
-
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                        <button onclick="saveWhatsAppSettings()"
-                            style="background:#3b82f6; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                            💾 Salvar Configuração
+                    <!-- ═══ SEÇÃO 2: CONFIGURAÇÃO AVANÇADA (Accordion) ═══ -->
+                    <div style="border-top:1px solid #334155; padding-top:1rem; margin-top:0.5rem;">
+                        <button id="waAdvancedToggle" onclick="toggleWaAdvanced()"
+                            style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;">
+                            <i class="fas fa-chevron-right" id="waAdvancedChevron" style="font-size:0.6rem;transition:transform 0.3s;"></i>
+                            Usar minhas próprias credenciais (Avançado)
                         </button>
-                        <button onclick="testWhatsAppConnection()"
-                            style="background:#25d366; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                            🧪 Testar Conexão
-                        </button>
+
+                        <div id="waAdvancedContent" style="display:none; margin-top:1rem;">
+                            <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:1rem;">
+                                Se você possui sua própria instância Evolution API ou conta Twilio, configure aqui.
+                            </p>
+
+                            <!-- Escolha do Provedor (formulário original preservado 100%) -->
+                            <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                                <h3 style="color:#cbd5e1; margin-bottom:1rem;">Escolha o Provedor</h3>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                                    <button id="btn-twilio" onclick="selectProvider('twilio')"
+                                        style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
+                                        <strong>Twilio</strong>
+                                    </button>
+                                    <button id="btn-evolution" onclick="selectProvider('evolution')"
+                                        style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
+                                        <strong>Evolution API</strong>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Config Twilio -->
+                            <div id="form-twilio"
+                                style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                                <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Twilio</h3>
+                                <input type="text" id="twilio-sid" placeholder="Account SID"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                                <input type="password" id="twilio-token" placeholder="Auth Token"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                                <input type="text" id="twilio-number" placeholder="Twilio Number (ex: +1234567890)"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                                <input type="text" id="twilio-notification-phone"
+                                    placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
+                            </div>
+
+                            <!-- Config Evolution -->
+                            <div id="form-evolution"
+                                style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                                <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Evolution API</h3>
+                                <input type="text" id="evolution-url" placeholder="API URL (ex: https://api.suadominio.com)"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                                <input type="password" id="evolution-key" placeholder="API Key"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                                <input type="text" id="evolution-instance" placeholder="Instance Name"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
+                                <input type="text" id="evolution-notification-phone"
+                                    placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                                <button onclick="saveWhatsAppSettings()"
+                                    style="background:#3b82f6; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                                    💾 Salvar Configuração
+                                </button>
+                                <button onclick="testWhatsAppConnection()"
+                                    style="background:#25d366; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                                    🧪 Testar Conexão
+                                </button>
+                            </div>
+                        </div>
                     </div>
-
-
                 </div>
+
+                <!-- ═══ WA-SAAS-001: JavaScript da Conexão Rápida ═══ -->
+                <script>
+                (function() {
+                    'use strict';
+
+                    var _waSaasPolling = null;
+
+                    // Helpers
+                    function _waResolveApiKey() {
+                        try {
+                            return (document.getElementById('apiKeyInput') && document.getElementById('apiKeyInput').value.trim())
+                                || localStorage.getItem('linkmagico_api_key')
+                                || localStorage.getItem('lm_api_key')
+                                || '';
+                        } catch(e) { return ''; }
+                    }
+
+                    function _waSetState(state) {
+                        try {
+                            ['Disconnected','Connecting','Connected','Loading'].forEach(function(s) {
+                                var el = document.getElementById('waSaasState' + s);
+                                if (el) el.style.display = 'none';
+                            });
+                            var target = document.getElementById('waSaasState' + state);
+                            if (target) target.style.display = 'block';
+                        } catch(e) { console.warn('[WA-SAAS] Erro ao mudar estado:', e.message); }
+                    }
+
+                    function _waStopPolling() {
+                        if (_waSaasPolling) {
+                            clearInterval(_waSaasPolling);
+                            _waSaasPolling = null;
+                        }
+                    }
+
+                    function _waStartPolling() {
+                        _waStopPolling();
+                        _waSaasPolling = setInterval(function() {
+                            _waCheckStatus(true);
+                        }, 5000);
+                        // Auto-stop após 3 minutos
+                        setTimeout(_waStopPolling, 180000);
+                    }
+
+                    function _waFormatPhone(phone) {
+                        if (!phone) return '—';
+                        var clean = phone.replace(/\D/g, '');
+                        if (clean.length === 13) {
+                            return '+' + clean.substring(0,2) + ' ' + clean.substring(2,4) + ' ' + clean.substring(4,9) + '-' + clean.substring(9);
+                        }
+                        return phone;
+                    }
+
+                    // Conectar (Gerar QR Code)
+                    window.waSaasConnect = async function() {
+                        try {
+                            var apiKey = _waResolveApiKey();
+                            if (!apiKey) {
+                                if (typeof showToast === 'function') showToast('Ative um assistente primeiro', 'error');
+                                return;
+                            }
+
+                            _waSetState('Loading');
+                            document.getElementById('waSaasLoadingText').textContent = 'Criando conexão WhatsApp...';
+
+                            var resp = await fetch('/api/whatsapp/saas/connect', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ apiKey: apiKey }),
+                                credentials: 'include'
+                            });
+                            var data = await resp.json();
+
+                            if (!data.success) {
+                                _waSetState('Disconnected');
+                                if (typeof showToast === 'function') showToast(data.error || 'Erro ao conectar', 'error');
+                                return;
+                            }
+
+                            if (data.qrcode) {
+                                var qrImg = document.getElementById('waSaasQrImage');
+                                if (qrImg) {
+                                    // QR pode ser base64 puro ou com prefix
+                                    var src = data.qrcode.startsWith('data:') ? data.qrcode : 'data:image/png;base64,' + data.qrcode;
+                                    qrImg.src = src;
+                                }
+                                _waSetState('Connecting');
+                                _waStartPolling();
+                            } else {
+                                // Sem QR = possivelmente já conectado
+                                _waCheckStatus(false);
+                            }
+
+                            console.log('[WA-SAAS] ✅ Connect OK:', data.instanceName);
+                        } catch(e) {
+                            console.error('[WA-SAAS] Erro connect:', e);
+                            _waSetState('Disconnected');
+                            if (typeof showToast === 'function') showToast('Erro de rede ao conectar WhatsApp', 'error');
+                        }
+                    };
+
+                    // Verificar Status
+                    async function _waCheckStatus(silent) {
+                        try {
+                            var apiKey = _waResolveApiKey();
+                            if (!apiKey) return;
+
+                            var resp = await fetch('/api/whatsapp/saas/status?apiKey=' + encodeURIComponent(apiKey), {
+                                credentials: 'include'
+                            });
+                            var data = await resp.json();
+
+                            if (!data.success) return;
+
+                            if (data.status === 'connected') {
+                                _waStopPolling();
+                                _waSetState('Connected');
+                                document.getElementById('waSaasPhone').textContent = _waFormatPhone(data.phone);
+                                document.getElementById('waSaasPushName').textContent = data.pushName || '—';
+                                document.getElementById('waSaasInstance').textContent = data.instanceName || '—';
+
+                                // Atualizar badge na página principal também
+                                try {
+                                    var badge = document.getElementById('waChannelBadge');
+                                    if (badge) {
+                                        badge.textContent = '✅ Conectado';
+                                        badge.style.background = 'rgba(16,185,129,0.15)';
+                                        badge.style.color = '#34d399';
+                                    }
+                                } catch(e) {}
+
+                                if (!silent && typeof showToast === 'function') {
+                                    showToast('WhatsApp conectado com sucesso! 🎉', 'success');
+                                }
+                            } else if (data.status === 'not_configured') {
+                                _waSetState('Disconnected');
+                            }
+                            // Se 'connecting' ou 'disconnected' durante polling, manter estado atual
+                        } catch(e) {
+                            if (!silent) console.warn('[WA-SAAS] Erro status:', e.message);
+                        }
+                    }
+
+                    // Desconectar
+                    window.waSaasDisconnect = async function() {
+                        if (!confirm('Deseja desconectar o WhatsApp? Você poderá reconectar a qualquer momento.')) return;
+                        try {
+                            var apiKey = _waResolveApiKey();
+                            _waSetState('Loading');
+                            document.getElementById('waSaasLoadingText').textContent = 'Desconectando...';
+
+                            var resp = await fetch('/api/whatsapp/saas/disconnect', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ apiKey: apiKey }),
+                                credentials: 'include'
+                            });
+                            var data = await resp.json();
+
+                            _waSetState('Disconnected');
+                            if (typeof showToast === 'function') showToast(data.message || 'Desconectado', 'info');
+
+                            // Atualizar badge na página principal
+                            try {
+                                var badge = document.getElementById('waChannelBadge');
+                                if (badge) {
+                                    badge.textContent = 'Não conectado';
+                                    badge.style.background = 'rgba(245,158,11,0.15)';
+                                    badge.style.color = '#fbbf24';
+                                }
+                            } catch(e) {}
+                        } catch(e) {
+                            _waSetState('Disconnected');
+                            console.error('[WA-SAAS] Erro disconnect:', e);
+                        }
+                    };
+
+                    // Reconectar
+                    window.waSaasReconnect = async function() {
+                        try {
+                            var apiKey = _waResolveApiKey();
+                            _waSetState('Loading');
+                            document.getElementById('waSaasLoadingText').textContent = 'Gerando novo QR Code...';
+
+                            var resp = await fetch('/api/whatsapp/saas/reconnect', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ apiKey: apiKey }),
+                                credentials: 'include'
+                            });
+                            var data = await resp.json();
+
+                            if (data.status === 'already_connected') {
+                                _waCheckStatus(false);
+                                return;
+                            }
+
+                            if (data.qrcode) {
+                                var qrImg = document.getElementById('waSaasQrImage');
+                                if (qrImg) {
+                                    var src = data.qrcode.startsWith('data:') ? data.qrcode : 'data:image/png;base64,' + data.qrcode;
+                                    qrImg.src = src;
+                                }
+                                _waSetState('Connecting');
+                                _waStartPolling();
+                            } else {
+                                _waSetState('Disconnected');
+                                if (typeof showToast === 'function') showToast('Falha ao gerar QR Code', 'error');
+                            }
+                        } catch(e) {
+                            _waSetState('Disconnected');
+                            console.error('[WA-SAAS] Erro reconnect:', e);
+                        }
+                    };
+
+                    // Toggle Avançado
+                    window.toggleWaAdvanced = function() {
+                        try {
+                            var content = document.getElementById('waAdvancedContent');
+                            var chevron = document.getElementById('waAdvancedChevron');
+                            if (!content) return;
+                            if (content.style.display === 'none') {
+                                content.style.display = 'block';
+                                if (chevron) chevron.style.transform = 'rotate(90deg)';
+                            } else {
+                                content.style.display = 'none';
+                                if (chevron) chevron.style.transform = 'rotate(0deg)';
+                            }
+                        } catch(e) {}
+                    };
+
+                    // CSS do spinner
+                    if (!document.getElementById('waSaasCss')) {
+                        var style = document.createElement('style');
+                        style.id = 'waSaasCss';
+                        style.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+                        document.head.appendChild(style);
+                    }
+
+                    // Auto-check ao abrir a tab
+                    var _origShowNewTab = window.showNewTab;
+                    if (typeof _origShowNewTab === 'function') {
+                        window.showNewTab = function(tabName) {
+                            _origShowNewTab.apply(this, arguments);
+                            if (tabName === 'whatsapp') {
+                                setTimeout(function() { _waCheckStatus(true); }, 300);
+                            }
+                        };
+                    }
+
+                    console.log('[WA-SAAS] ✅ Frontend da Conexão Rápida carregado');
+                })();
+                </script>
             </div>
 
             <!-- Tab ChatGPT -->

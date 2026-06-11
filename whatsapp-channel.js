@@ -476,11 +476,12 @@ class WhatsAppChannel {
         try {
             const q = this.USE_POSTGRES
                 ? `SELECT api_key, notification_phone, is_active FROM whatsapp_settings
-                   WHERE evolution_instance_name = $1 AND is_active = true LIMIT 1`
+                   WHERE (evolution_instance_name = $1 OR saas_instance_name = $1) AND is_active = true LIMIT 1`
                 : `SELECT api_key, notification_phone, is_active FROM whatsapp_settings
-                   WHERE evolution_instance_name = ? AND is_active = 1 LIMIT 1`;
+                   WHERE (evolution_instance_name = ? OR saas_instance_name = ?) AND is_active = 1 LIMIT 1`;
 
-            const result = await this.db.query(q, [instanceName]);
+            const params = this.USE_POSTGRES ? [instanceName] : [instanceName, instanceName];
+            const result = await this.db.query(q, params);
             const row = (result.rows || result)[0];
 
             if (!row) return null;

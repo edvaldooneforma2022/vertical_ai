@@ -378,6 +378,23 @@ Continue assim! 🚀`
                     apiKey: settings.evolution_api_key,
                     instanceName: settings.evolution_instance_name
                 });
+            } else if (settings.provider === 'evolution_saas') {
+                // WA-SAAS-001: Modo SaaS — usa credenciais da Evolution Central
+                const centralUrl = process.env.CENTRAL_EVOLUTION_URL;
+                const centralKey = process.env.CENTRAL_EVOLUTION_API_KEY;
+                const saasInstance = settings.saas_instance_name || settings.evolution_instance_name;
+
+                if (centralUrl && centralKey && saasInstance) {
+                    tenantInstance.configureEvolution({
+                        apiUrl: centralUrl,
+                        apiKey: centralKey,
+                        instanceName: saasInstance
+                    });
+                    console.log(`📱 [WA-SAAS] Instância SaaS configurada para tenant ${apiKey} (${saasInstance})`);
+                } else {
+                    console.warn(`⚠️ [WA-SAAS] Tenant ${apiKey} é SaaS mas Evolution Central não está configurada`);
+                    return this; // Fallback para instância global
+                }
             }
 
             // Armazenar em cache

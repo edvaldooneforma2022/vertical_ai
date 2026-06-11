@@ -177,5 +177,417 @@ module.exports = function (app, logger) {
         }
     });
 
+    // ═══════════════════════════════════════════════════════════════
+    // WA-SAAS-001 — ROTAS SAAS (Evolution Central gerenciada pelo Link Mágico)
+    // Compatibilidade: Coexiste com rotas existentes (settings, test, delete)
+    // Segurança: Todas protegidas por apiKey + tenantId de sessão
+    // ═══════════════════════════════════════════════════════════════
+
+    const axios = require('axios');
+    const crypto = require('crypto');
+
+    // Config da Evolution Central (variáveis de ambiente)
+    const CENTRAL_EVOLUTION_URL = process.env.CENTRAL_EVOLUTION_URL || '';
+    const CENTRAL_EVOLUTION_API_KEY = process.env.CENTRAL_EVOLUTION_API_KEY || '';
+    const APP_URL = process.env.APP_URL || 'https://linkmagico.app.br';
+
+    // Helpers SaaS
+    function generateInstanceName(tenantId) {
+        // lm_<8 primeiros chars do tenantId> — permanente, não muda com API Key
+        const hash = tenantId.replace(/-/g, '').substring(0, 8).toLowerCase();
+        return `lm_${hash}`;
+    }
+
+    function isSaasConfigured() {
+        return !!(CENTRAL_EVOLUTION_URL && CENTRAL_EVOLUTION_API_KEY);
+    }
+
+    /**
+     * POST /api/whatsapp/saas/connect
+     * Cria instância na Evolution Central + retorna QR Code
+     * Proteção: idempotente (reutiliza instância existente)
+     */
+    app.post('/api/whatsapp/saas/connect', async (req, res) => {
+        try {
+            const apiKey = resolveApiKey(req);
+            const tenantId = req.session?.tenantId;
+
+            if (!apiKey || !tenantId) {
+                return res.status(401).json({ success: false, error: 'Autenticação necessária' });
+            }
+
+            if (!isSaasConfigured()) {
+                return res.status(503).json({
+                    success: false,
+                    error: 'Integração SaaS WhatsApp ainda não está disponível. Configure CENTRAL_EVOLUTION_URL e CENTRAL_EVOLUTION_API_KEY.'
+                });
+            }
+
+            const instanceName = generateInstanceName(tenantId);
+            logger.info(`📱 [WA-SAAS] Conectando tenant ${tenantId} → instância: ${instanceName}`);
+
+            // ═══ PROTEÇÃO CONTRA DUPLICAÇÃO ═══
+            // Verifica se instância já existe no DB
+            const existingSettings = await DatabaseHelpers.getWhatsAppSettings(apiKey);
+            const alreadyHasSaasInstance = existingSettings?.saas_instance_name === instanceName;
+
+            let instanceExists = false;
+
+            // Verificar se instância já existe na Evolution Central
+            try {
+                const checkResp = await axios.get(
+                    `${CENTRAL_EVOLUTION_URL}/instance/connectionState/${instanceName}`,
+                    { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 10000 }
+                );
+                instanceExists = true;
+                logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existe na Evolution (state: ${checkResp.data?.instance?.state || 'unknown'})`);
+            } catch (checkErr) {
+                // 404 = não existe, qualquer outro erro = tratar como não existe
+                instanceExists = false;
+                logger.info(`📱 [WA-SAAS] Instância ${instanceName} não encontrada, criando nova...`);
+            }
+
+            // Criar instância apenas se não existe
+            if (!instanceExists) {
+                try {
+                    await axios.post(
+                        `${CENTRAL_EVOLUTION_URL}/instance/create`,
+                        {
+                            instanceName,
+                            integration: 'WHATSAPP-BAILEYS',
+                            qrcode: true,
+                            webhook: {
+                                url: `${APP_URL}/api/webhook/evolution`,
+                                events: ['messages.upsert', 'connection.update'],
+                                webhook_by_events: false
+                            }
+                        },
+                        { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
+                    );
+                    logger.info(`📱 [WA-SAAS] ✅ Instância ${instanceName} criada com sucesso`);
+                } catch (createErr) {
+                    // Se erro é "instance already exists", tudo bem — idempotente
+                    if (createErr.response?.data?.message?.includes?.('already') ||
+                        createErr.response?.status === 409) {
+                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existia (idempotente)`);
+                        instanceExists = true;
+                    } else {
+                        logger.error(`📱 [WA-SAAS] ❌ Erro ao criar instância:`, createErr.response?.data || createErr.message);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Falha ao criar instância WhatsApp. Tente novamente.'
+                        });
+                    }
+                }
+            }
+
+            // Buscar QR Code
+            let qrcode = null;
+            try {
+                const qrResp = await axios.get(
+                    `${CENTRAL_EVOLUTION_URL}/instance/connect/${instanceName}`,
+                    { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
+                );
+                qrcode = qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || qrResp.data?.code || null;
+            } catch (qrErr) {
+                logger.warn(`📱 [WA-SAAS] Aviso ao buscar QR:`, qrErr.response?.data || qrErr.message);
+                // Se já conectado, não terá QR — isso é OK
+            }
+
+            // Salvar/atualizar no banco
+            try {
+                await DatabaseHelpers.saveWhatsAppSettings(apiKey, {
+                    provider: 'evolution_saas',
+                    evolutionApiUrl: CENTRAL_EVOLUTION_URL,
+                    evolutionApiKey: '', // Não salvar key central no tenant
+                    evolutionInstanceName: instanceName,
+                    notificationPhone: existingSettings?.notification_phone || null,
+                    isActive: true
+                });
+
+                // Atualizar colunas SaaS específicas
+                const USE_POSTGRES = !!process.env.DATABASE_URL;
+                const updateQuery = USE_POSTGRES
+                    ? `UPDATE whatsapp_settings SET saas_instance_name = $1, connection_state = $2, last_seen = CURRENT_TIMESTAMP WHERE api_key = $3`
+                    : `UPDATE whatsapp_settings SET saas_instance_name = ?, connection_state = ?, last_seen = datetime('now') WHERE api_key = ?`;
+                await DatabaseHelpers.query
+                    ? DatabaseHelpers.query(updateQuery, [instanceName, 'connecting', apiKey])
+                    : require('./database').db?.query(updateQuery, [instanceName, 'connecting', apiKey]);
+            } catch (dbErr) {
+                logger.warn(`📱 [WA-SAAS] Aviso ao salvar SaaS settings:`, dbErr.message);
+                // Não falhar — a instância já foi criada
+            }
+
+            // Invalidar cache
+            clearTenantCache(apiKey);
+
+            res.json({
+                success: true,
+                instanceName,
+                qrcode,
+                message: qrcode ? 'Escaneie o QR Code com seu WhatsApp' : 'Instância conectada ou aguardando QR'
+            });
+
+        } catch (error) {
+            logger.error('📱 [WA-SAAS] Erro no connect:', error);
+            res.status(500).json({ success: false, error: 'Erro interno ao conectar WhatsApp' });
+        }
+    });
+
+    /**
+     * GET /api/whatsapp/saas/status
+     * Status de conexão com phone, pushName, provider
+     */
+    app.get('/api/whatsapp/saas/status', async (req, res) => {
+        try {
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
+
+            // Buscar settings do DB
+            const settings = await DatabaseHelpers.getWhatsAppSettings(apiKey);
+            if (!settings?.saas_instance_name) {
+                return res.json({
+                    success: true,
+                    status: 'not_configured',
+                    message: 'WhatsApp SaaS não configurado para este tenant'
+                });
+            }
+
+            const instanceName = settings.saas_instance_name;
+
+            if (!isSaasConfigured()) {
+                return res.json({
+                    success: true,
+                    status: settings.connection_state || 'unknown',
+                    phone: settings.saas_phone || null,
+                    pushName: settings.saas_push_name || null,
+                    instanceName,
+                    provider: 'evolution_saas',
+                    message: 'Dados do cache local (Evolution Central indisponível)'
+                });
+            }
+
+            // Consultar Evolution Central
+            let state = 'disconnected';
+            let phone = settings.saas_phone || null;
+            let pushName = settings.saas_push_name || null;
+
+            try {
+                const stateResp = await axios.get(
+                    `${CENTRAL_EVOLUTION_URL}/instance/connectionState/${instanceName}`,
+                    { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 8000 }
+                );
+                state = stateResp.data?.instance?.state || 'disconnected';
+            } catch (stateErr) {
+                logger.warn(`📱 [WA-SAAS] Erro ao consultar estado:`, stateErr.message);
+                state = settings.connection_state || 'disconnected';
+            }
+
+            // Se conectado, buscar dados da instância (número, nome)
+            if (state === 'open') {
+                try {
+                    const infoResp = await axios.get(
+                        `${CENTRAL_EVOLUTION_URL}/instance/fetchInstances`,
+                        {
+                            headers: { apikey: CENTRAL_EVOLUTION_API_KEY },
+                            params: { instanceName },
+                            timeout: 8000
+                        }
+                    );
+                    const instanceData = Array.isArray(infoResp.data)
+                        ? infoResp.data.find(i => i.instance?.instanceName === instanceName)
+                        : infoResp.data;
+
+                    if (instanceData?.instance) {
+                        const owner = instanceData.instance.owner || '';
+                        if (owner) {
+                            phone = owner.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+                            phone = '+' + phone;
+                        }
+                        pushName = instanceData.instance.profileName || instanceData.instance.pushName || pushName;
+                    }
+                } catch (infoErr) {
+                    logger.warn(`📱 [WA-SAAS] Aviso ao buscar info da instância:`, infoErr.message);
+                }
+
+                // Atualizar DB com estado e dados
+                try {
+                    const USE_POSTGRES = !!process.env.DATABASE_URL;
+                    const uq = USE_POSTGRES
+                        ? `UPDATE whatsapp_settings SET connection_state = 'connected', saas_phone = $1, saas_push_name = $2, connected_at = CURRENT_TIMESTAMP, last_seen = CURRENT_TIMESTAMP WHERE api_key = $3`
+                        : `UPDATE whatsapp_settings SET connection_state = 'connected', saas_phone = ?, saas_push_name = ?, connected_at = datetime('now'), last_seen = datetime('now') WHERE api_key = ?`;
+                    const dbRef = require('./database');
+                    await (dbRef.db || dbRef).query(uq, [phone, pushName, apiKey]);
+                } catch (dbErr) {
+                    logger.warn(`📱 [WA-SAAS] Aviso ao atualizar status no DB:`, dbErr.message);
+                }
+            } else if (state === 'close' || state === 'disconnected') {
+                // Atualizar DB
+                try {
+                    const USE_POSTGRES = !!process.env.DATABASE_URL;
+                    const uq = USE_POSTGRES
+                        ? `UPDATE whatsapp_settings SET connection_state = 'disconnected', last_seen = CURRENT_TIMESTAMP WHERE api_key = $1`
+                        : `UPDATE whatsapp_settings SET connection_state = 'disconnected', last_seen = datetime('now') WHERE api_key = ?`;
+                    const dbRef = require('./database');
+                    await (dbRef.db || dbRef).query(uq, [apiKey]);
+                } catch (dbErr) { /* silencioso */ }
+            }
+
+            res.json({
+                success: true,
+                status: state === 'open' ? 'connected' : state === 'connecting' ? 'connecting' : 'disconnected',
+                phone,
+                pushName,
+                instanceName,
+                provider: 'evolution_saas',
+                connectedAt: settings.connected_at || null,
+                lastSeen: settings.last_seen || null
+            });
+
+        } catch (error) {
+            logger.error('📱 [WA-SAAS] Erro no status:', error);
+            res.status(500).json({ success: false, error: 'Erro ao consultar status' });
+        }
+    });
+
+    /**
+     * POST /api/whatsapp/saas/disconnect
+     * Logout da instância (NÃO deleta — preserva histórico)
+     */
+    app.post('/api/whatsapp/saas/disconnect', async (req, res) => {
+        try {
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
+
+            const settings = await DatabaseHelpers.getWhatsAppSettings(apiKey);
+            if (!settings?.saas_instance_name) {
+                return res.status(400).json({ success: false, error: 'Nenhuma instância SaaS configurada' });
+            }
+
+            const instanceName = settings.saas_instance_name;
+            logger.info(`📱 [WA-SAAS] Desconectando instância ${instanceName}...`);
+
+            // Logout na Evolution Central (NÃO delete!)
+            if (isSaasConfigured()) {
+                try {
+                    await axios.delete(
+                        `${CENTRAL_EVOLUTION_URL}/instance/logout/${instanceName}`,
+                        { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 10000 }
+                    );
+                    logger.info(`📱 [WA-SAAS] ✅ Logout realizado para ${instanceName}`);
+                } catch (logoutErr) {
+                    logger.warn(`📱 [WA-SAAS] Aviso no logout:`, logoutErr.response?.data || logoutErr.message);
+                    // Continuar mesmo com erro — atualizar DB de qualquer forma
+                }
+            }
+
+            // Atualizar DB: estado desconectado, manter instância
+            try {
+                const USE_POSTGRES = !!process.env.DATABASE_URL;
+                const uq = USE_POSTGRES
+                    ? `UPDATE whatsapp_settings SET connection_state = 'disconnected', connected_at = NULL, last_seen = CURRENT_TIMESTAMP WHERE api_key = $1`
+                    : `UPDATE whatsapp_settings SET connection_state = 'disconnected', connected_at = NULL, last_seen = datetime('now') WHERE api_key = ?`;
+                const dbRef = require('./database');
+                await (dbRef.db || dbRef).query(uq, [apiKey]);
+            } catch (dbErr) {
+                logger.warn(`📱 [WA-SAAS] Aviso ao atualizar DB após disconnect:`, dbErr.message);
+            }
+
+            // Invalidar cache
+            clearTenantCache(apiKey);
+
+            res.json({
+                success: true,
+                message: 'WhatsApp desconectado. Instância preservada para reconexão.'
+            });
+
+        } catch (error) {
+            logger.error('📱 [WA-SAAS] Erro no disconnect:', error);
+            res.status(500).json({ success: false, error: 'Erro ao desconectar' });
+        }
+    });
+
+    /**
+     * POST /api/whatsapp/saas/reconnect
+     * Reconectar instância existente (novo QR Code, sem criar nova instância)
+     */
+    app.post('/api/whatsapp/saas/reconnect', async (req, res) => {
+        try {
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
+
+            if (!isSaasConfigured()) {
+                return res.status(503).json({ success: false, error: 'Evolution Central não configurada' });
+            }
+
+            const settings = await DatabaseHelpers.getWhatsAppSettings(apiKey);
+            if (!settings?.saas_instance_name) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Nenhuma instância SaaS encontrada. Use /connect primeiro.'
+                });
+            }
+
+            const instanceName = settings.saas_instance_name;
+            logger.info(`📱 [WA-SAAS] Reconectando instância ${instanceName}...`);
+
+            // Buscar novo QR Code
+            let qrcode = null;
+            try {
+                const qrResp = await axios.get(
+                    `${CENTRAL_EVOLUTION_URL}/instance/connect/${instanceName}`,
+                    { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
+                );
+                qrcode = qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || qrResp.data?.code || null;
+            } catch (qrErr) {
+                // Se já conectado, a Evolution pode retornar erro
+                if (qrErr.response?.status === 400 || qrErr.response?.data?.message?.includes?.('connected')) {
+                    return res.json({
+                        success: true,
+                        status: 'already_connected',
+                        instanceName,
+                        message: 'WhatsApp já está conectado!'
+                    });
+                }
+                logger.error(`📱 [WA-SAAS] Erro ao buscar QR para reconexão:`, qrErr.response?.data || qrErr.message);
+                return res.status(500).json({ success: false, error: 'Falha ao gerar QR Code' });
+            }
+
+            // Atualizar estado
+            try {
+                const USE_POSTGRES = !!process.env.DATABASE_URL;
+                const uq = USE_POSTGRES
+                    ? `UPDATE whatsapp_settings SET connection_state = 'connecting', last_seen = CURRENT_TIMESTAMP WHERE api_key = $1`
+                    : `UPDATE whatsapp_settings SET connection_state = 'connecting', last_seen = datetime('now') WHERE api_key = ?`;
+                const dbRef = require('./database');
+                await (dbRef.db || dbRef).query(uq, [apiKey]);
+            } catch (dbErr) { /* silencioso */ }
+
+            clearTenantCache(apiKey);
+
+            res.json({
+                success: true,
+                instanceName,
+                qrcode,
+                message: 'Escaneie o novo QR Code para reconectar'
+            });
+
+        } catch (error) {
+            logger.error('📱 [WA-SAAS] Erro no reconnect:', error);
+            res.status(500).json({ success: false, error: 'Erro ao reconectar' });
+        }
+    });
+
     logger.info('✅ Rotas Multi-Tenant WhatsApp configuradas');
+    if (isSaasConfigured()) {
+        logger.info('📱 [WA-SAAS] ✅ Rotas SaaS ativas (Evolution Central: ' + CENTRAL_EVOLUTION_URL + ')');
+    } else {
+        logger.info('📱 [WA-SAAS] ⚠️ Rotas SaaS registradas mas Evolution Central não configurada');
+    }
 };
