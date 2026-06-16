@@ -3615,6 +3615,12 @@
                                     showToast('WhatsApp conectado com sucesso! 🎉', 'success');
                                 }
                             } else if (data.status === 'not_configured') {
+                                // PROTEÇÃO: se QR está visível (Connecting), NÃO esconder
+                                var qrState = document.getElementById('waSaasStateConnecting');
+                                if (qrState && qrState.style.display !== 'none') {
+                                    console.log('[WA-SAAS] Status not_configured mas QR visível — mantendo estado Connecting');
+                                    return; // Preservar QR na tela
+                                }
                                 _waSetState('Disconnected');
                             }
                             // Se 'connecting' ou 'disconnected' durante polling, manter estado atual
