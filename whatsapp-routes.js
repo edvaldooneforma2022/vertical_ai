@@ -198,6 +198,11 @@ module.exports = function (app, logger) {
         return `lm_${hash}`;
     }
 
+    // Evolution Go v0.7.1: cada instância recebe um token único
+    function generateInstanceToken(tenantId) {
+        return crypto.createHash('sha256').update(`lm_${tenantId}_${Date.now()}`).digest('hex').substring(0, 32).toUpperCase();
+    }
+
     function isSaasConfigured() {
         return !!(CENTRAL_EVOLUTION_URL && CENTRAL_EVOLUTION_API_KEY);
     }
@@ -233,16 +238,20 @@ module.exports = function (app, logger) {
 
             let instanceExists = false;
 
-            // Verificar se instância já existe na Evolution Central
+            // Evolution Go v0.7.1: verificar se instância já existe usando token salvo
+            let instanceToken = existingSettings?.evolution_api_key || null;
             try {
-                const checkResp = await axios.get(
-                    `${CENTRAL_EVOLUTION_URL}/instance/connectionState/${instanceName}`,
-                    { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 10000 }
-                );
-                instanceExists = true;
-                logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existe na Evolution (state: ${checkResp.data?.instance?.state || 'unknown'})`);
+                if (instanceToken) {
+                    const checkResp = await axios.get(
+                        `${CENTRAL_EVOLUTION_URL}/instance/status`,
+                        { headers: { apikey: instanceToken }, timeout: 10000 }
+                    );
+                    instanceExists = checkResp.data?.data?.Connected !== undefined;
+                    if (instanceExists) {
+                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existe (Connected: ${checkResp.data?.data?.Connected})`);
+                    }
+                }
             } catch (checkErr) {
-                // 404 = não existe, qualquer outro erro = tratar como não existe
                 instanceExists = false;
                 logger.info(`📱 [WA-SAAS] Instância ${instanceName} não encontrada, criando nova...`);
             }
@@ -250,24 +259,21 @@ module.exports = function (app, logger) {
             // Criar instância apenas se não existe
             if (!instanceExists) {
                 try {
+                    // Evolution Go v0.7.1: { name, token } + header apikey = GLOBAL_KEY
+                    instanceToken = generateInstanceToken(tenantId);
                     await axios.post(
                         `${CENTRAL_EVOLUTION_URL}/instance/create`,
                         {
-                            instanceName,
-                            integration: 'WHATSAPP-BAILEYS',
-                            qrcode: true,
-                            webhook: {
-                                url: `${APP_URL}/api/webhook/evolution`,
-                                events: ['messages.upsert', 'connection.update'],
-                                webhook_by_events: false
-                            }
+                            name: instanceName,
+                            token: instanceToken
                         },
                         { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
                     );
-                    logger.info(`📱 [WA-SAAS] ✅ Instância ${instanceName} criada com sucesso`);
+                    logger.info(`📱 [WA-SAAS] ✅ Instância ${instanceName} criada com sucesso (Evolution Go)`);
                 } catch (createErr) {
                     // Se erro é "instance already exists", tudo bem — idempotente
-                    if (createErr.response?.data?.message?.includes?.('already') ||
+                    if (createErr.response?.data?.error?.includes?.('already') ||
+                        createErr.response?.data?.message?.includes?.('already') ||
                         createErr.response?.status === 409) {
                         logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existia (idempotente)`);
                         instanceExists = true;
@@ -281,14 +287,15 @@ module.exports = function (app, logger) {
                 }
             }
 
-            // Buscar QR Code
+            // Buscar QR Code (Evolution Go: GET /instance/qr com token da instância)
             let qrcode = null;
             try {
                 const qrResp = await axios.get(
-                    `${CENTRAL_EVOLUTION_URL}/instance/connect/${instanceName}`,
-                    { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
+                    `${CENTRAL_EVOLUTION_URL}/instance/qr`,
+                    { headers: { apikey: instanceToken }, timeout: 15000 }
                 );
-                qrcode = qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || qrResp.data?.code || null;
+                // Evolution Go retorna: { data: { Qrcode: "data:image/png;base64,..." } }
+                qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.base64 || null;
             } catch (qrErr) {
                 logger.warn(`📱 [WA-SAAS] Aviso ao buscar QR:`, qrErr.response?.data || qrErr.message);
                 // Se já conectado, não terá QR — isso é OK
@@ -299,7 +306,7 @@ module.exports = function (app, logger) {
                 await DatabaseHelpers.saveWhatsAppSettings(apiKey, {
                     provider: 'evolution_saas',
                     evolutionApiUrl: CENTRAL_EVOLUTION_URL,
-                    evolutionApiKey: '', // Não salvar key central no tenant
+                    evolutionApiKey: instanceToken, // Token da instância Evolution Go (identifica o tenant)
                     evolutionInstanceName: instanceName,
                     notificationPhone: existingSettings?.notification_phone || null,
                     isActive: true
@@ -374,12 +381,18 @@ module.exports = function (app, logger) {
             let phone = settings.saas_phone || null;
             let pushName = settings.saas_push_name || null;
 
+            // Evolution Go v0.7.1: /instance/status com token da instância
+            const instanceToken = settings.evolution_api_key || CENTRAL_EVOLUTION_API_KEY;
             try {
                 const stateResp = await axios.get(
-                    `${CENTRAL_EVOLUTION_URL}/instance/connectionState/${instanceName}`,
-                    { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 8000 }
+                    `${CENTRAL_EVOLUTION_URL}/instance/status`,
+                    { headers: { apikey: instanceToken }, timeout: 8000 }
                 );
-                state = stateResp.data?.instance?.state || 'disconnected';
+                const goData = stateResp.data?.data || {};
+                state = (goData.Connected && goData.LoggedIn) ? 'open'
+                      : goData.Connected ? 'connecting'
+                      : 'disconnected';
+                pushName = goData.Name || pushName;
             } catch (stateErr) {
                 logger.warn(`📱 [WA-SAAS] Erro ao consultar estado:`, stateErr.message);
                 state = settings.connection_state || 'disconnected';
@@ -388,25 +401,22 @@ module.exports = function (app, logger) {
             // Se conectado, buscar dados da instância (número, nome)
             if (state === 'open') {
                 try {
+                    // Evolution Go: /instance/all retorna lista de instâncias
                     const infoResp = await axios.get(
-                        `${CENTRAL_EVOLUTION_URL}/instance/fetchInstances`,
+                        `${CENTRAL_EVOLUTION_URL}/instance/all`,
                         {
-                            headers: { apikey: CENTRAL_EVOLUTION_API_KEY },
-                            params: { instanceName },
+                            headers: { apikey: instanceToken },
                             timeout: 8000
                         }
                     );
-                    const instanceData = Array.isArray(infoResp.data)
-                        ? infoResp.data.find(i => i.instance?.instanceName === instanceName)
-                        : infoResp.data;
+                    const instances = infoResp.data?.data || [];
+                    const instanceData = instances.find(i => i.name === instanceName);
 
-                    if (instanceData?.instance) {
-                        const owner = instanceData.instance.owner || '';
-                        if (owner) {
-                            phone = owner.replace('@s.whatsapp.net', '').replace(/\D/g, '');
-                            phone = '+' + phone;
+                    if (instanceData) {
+                        const jid = instanceData.jid || '';
+                        if (jid) {
+                            phone = '+' + jid.replace('@s.whatsapp.net', '').replace(/\D/g, '');
                         }
-                        pushName = instanceData.instance.profileName || instanceData.instance.pushName || pushName;
                     }
                 } catch (infoErr) {
                     logger.warn(`📱 [WA-SAAS] Aviso ao buscar info da instância:`, infoErr.message);
@@ -474,11 +484,13 @@ module.exports = function (app, logger) {
             // Logout na Evolution Central (NÃO delete!)
             if (isSaasConfigured()) {
                 try {
+                    // Evolution Go v0.7.1: DELETE /instance/logout com token da instância
+                    const instanceToken = settings.evolution_api_key || CENTRAL_EVOLUTION_API_KEY;
                     await axios.delete(
-                        `${CENTRAL_EVOLUTION_URL}/instance/logout/${instanceName}`,
-                        { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 10000 }
+                        `${CENTRAL_EVOLUTION_URL}/instance/logout`,
+                        { headers: { apikey: instanceToken }, timeout: 10000 }
                     );
-                    logger.info(`📱 [WA-SAAS] ✅ Logout realizado para ${instanceName}`);
+                    logger.info(`📱 [WA-SAAS] ✅ Logout realizado para ${instanceName} (Evolution Go)`);
                 } catch (logoutErr) {
                     logger.warn(`📱 [WA-SAAS] Aviso no logout:`, logoutErr.response?.data || logoutErr.message);
                     // Continuar mesmo com erro — atualizar DB de qualquer forma

@@ -168,20 +168,21 @@ Continue assim! 🚀`
         }
     }
 
-    // Enviar mensagem via Evolution API
+    // Enviar mensagem via Evolution Go v0.7.1
+    // Migrado: /message/sendText/{name} → /send/text
+    // Instância identificada pelo token no header apikey
     async sendViaEvolution(to, message) {
         try {
-            const { apiUrl, apiKey, instanceName } = this.config;
+            const { apiUrl, apiKey } = this.config;
 
-            const url = `${apiUrl}/message/sendText/${instanceName}`;
+            // Evolution Go v0.7.1: endpoint /send/text (sem instanceName na URL)
+            const url = `${apiUrl}/send/text`;
 
             const formattedTo = this.formatPhoneNumber(to);
 
             const response = await axios.post(url, {
                 number: formattedTo,
-                textMessage: {
-                    text: message
-                }
+                text: message
             }, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -189,10 +190,10 @@ Continue assim! 🚀`
                 }
             });
 
-            console.log(`✅ WhatsApp enviado via Evolution para ${to}`);
-            return { success: true, messageId: response.data.key?.id };
+            console.log(`✅ WhatsApp enviado via Evolution Go para ${to}`);
+            return { success: true, messageId: response.data?.key?.id || response.data?.data?.id || null };
         } catch (error) {
-            console.error('❌ Erro ao enviar via Evolution:', error.response?.data || error.message);
+            console.error('❌ Erro ao enviar via Evolution Go:', error.response?.data || error.message);
             return { success: false, error: error.message };
         }
     }
@@ -491,9 +492,9 @@ if (process.env.WHATSAPP_PROVIDER === 'twilio') {
     });
 } else if (process.env.WHATSAPP_PROVIDER === 'evolution') {
     whatsappIntegration.configureEvolution({
-        apiUrl: process.env.EVOLUTION_API_URL,
-        apiKey: process.env.EVOLUTION_API_KEY,
-        instanceName: process.env.EVOLUTION_INSTANCE_NAME
+        apiUrl: process.env.EVOLUTION_API_URL || process.env.CENTRAL_EVOLUTION_URL,
+        apiKey: process.env.EVOLUTION_API_KEY || process.env.CENTRAL_EVOLUTION_API_KEY,
+        instanceName: process.env.EVOLUTION_INSTANCE_NAME || 'linkmagico'
     });
 }
 
