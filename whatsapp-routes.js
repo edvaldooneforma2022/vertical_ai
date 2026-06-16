@@ -246,13 +246,45 @@ module.exports = function (app, logger) {
                         `${CENTRAL_EVOLUTION_URL}/instance/status`,
                         { headers: { apikey: instanceToken }, timeout: 10000 }
                     );
-                    instanceExists = checkResp.data?.data?.Connected !== undefined;
+                    const statusData = checkResp.data?.data || {};
+                    instanceExists = statusData.Connected !== undefined;
+
+                    // PROTEÇÃO: se instância está morta (QR expirou, disconnect permanente), deletar e recriar
+                    if (instanceExists && !statusData.Connected && !statusData.LoggedIn) {
+                        // Verificar se tem disconnect_reason (QR limit, etc.)
+                        try {
+                            const allResp = await axios.get(
+                                `${CENTRAL_EVOLUTION_URL}/instance/all`,
+                                { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 8000 }
+                            );
+                            const instances = allResp.data?.data || [];
+                            const thisInstance = instances.find(i => i.name === instanceName);
+                            if (thisInstance?.disconnect_reason && thisInstance.disconnect_reason.includes('QR code limit')) {
+                                logger.info(`📱 [WA-SAAS] Instância ${instanceName} com QR expirado — deletando para recriar...`);
+                                try {
+                                    await axios.delete(
+                                        `${CENTRAL_EVOLUTION_URL}/instance/delete/${thisInstance.id}`,
+                                        { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 10000 }
+                                    );
+                                    logger.info(`📱 [WA-SAAS] ✅ Instância expirada ${instanceName} deletada`);
+                                } catch (delErr) {
+                                    logger.warn(`📱 [WA-SAAS] Aviso ao deletar instância expirada:`, delErr.message);
+                                }
+                                instanceExists = false;
+                                instanceToken = null;
+                            }
+                        } catch (checkAllErr) {
+                            logger.warn(`📱 [WA-SAAS] Aviso ao verificar disconnect_reason:`, checkAllErr.message);
+                        }
+                    }
+
                     if (instanceExists) {
-                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existe (Connected: ${checkResp.data?.data?.Connected})`);
+                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existe (Connected: ${statusData.Connected})`);
                     }
                 }
             } catch (checkErr) {
                 instanceExists = false;
+                instanceToken = null;
                 logger.info(`📱 [WA-SAAS] Instância ${instanceName} não encontrada, criando nova...`);
             }
 
