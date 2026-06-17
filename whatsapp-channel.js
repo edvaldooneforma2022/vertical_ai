@@ -84,66 +84,93 @@ class WhatsAppChannel {
         try {
             const body = req.body || {};
 
-            // ═══ DIAGNÓSTICO: logar TUDO que chega ═══
+            // ═══ OBSERVABILIDADE: log permanente ═══
             console.log(`📱 [WA-WEBHOOK] ══════════════════════════════════════`);
             console.log(`📱 [WA-WEBHOOK] POST /api/webhook/evolution RECEBIDO`);
             console.log(`📱 [WA-WEBHOOK] Body keys: ${Object.keys(body).join(', ')}`);
-            console.log(`📱 [WA-WEBHOOK] Body completo: ${JSON.stringify(body).substring(0, 500)}`);
+            console.log(`📱 [WA-WEBHOOK] Body (1500 chars): ${JSON.stringify(body).substring(0, 1500)}`);
 
-            // Evolution Go v0.7.1 pode enviar em formatos diferentes
-            // Formato 1 (Evolution API v1): { event, instance, data }
-            // Formato 2 (Evolution Go v0.7): { event, instance_name, data }
-            // Formato 3 (Evolution Go v0.7 flat): { event, instanceName, ... }
+            // ═══ EXTRAIR CAMPOS COMUNS ═══
             const event    = body.event || body.type || '';
-            const instance = body.instance || body.instance_name || body.instanceName || '';
-            const data     = body.data || body;
+            const instance = body.instanceName || body.instance || body.instance_name || '';
 
             console.log(`📱 [WA-WEBHOOK] event='${event}' instance='${instance}'`);
 
-            // Só processar mensagens recebidas
-            // Evolution Go pode enviar: 'messages.upsert', 'MESSAGES_UPSERT', 'message', 'MESSAGE'
-            const isMessageEvent = ['messages.upsert', 'MESSAGES_UPSERT', 'message', 'MESSAGE'].includes(event)
-                || event?.toLowerCase?.()?.includes?.('message');
+            // ═══ FILTRAR EVENTOS ═══
+            // Evolution Go v0.7.1 envia event='Message'
+            // Evolution API v1 envia event='messages.upsert'
+            const eventLower = (event || '').toLowerCase();
+            const isMessageEvent = eventLower === 'message' || eventLower === 'messages.upsert'
+                || eventLower === 'messages_upsert';
 
             if (!isMessageEvent) {
-                console.log(`📱 [WA-WEBHOOK] Evento ignorado (não é mensagem): '${event}'`);
+                console.log(`📱 [WA-WEBHOOK] Evento ignorado: '${event}'`);
                 return;
             }
 
-            // Extrair key — pode estar em data.key ou diretamente no body
-            const key = data?.key || body?.key || {};
-            if (!key || !key.remoteJid) {
-                console.log(`📱 [WA-WEBHOOK] Sem key.remoteJid — data.key=${JSON.stringify(data?.key)}`);
+            const data = body.data || {};
+
+            // ═══ EXTRAIR METADADOS DA MENSAGEM ═══
+            // Evolution Go v0.7.1: data.Info.Chat, data.Info.IsFromMe, data.Info.ID, data.Info.IsGroup
+            // Evolution API v1:    data.key.remoteJid, data.key.fromMe, data.key.id
+            let remoteJid, isFromMe, isGroup, waMessageId;
+
+            if (data.Info) {
+                // ── Formato Evolution Go v0.7.1 ──
+                remoteJid   = data.Info.Chat || '';
+                isFromMe    = data.Info.IsFromMe === true;
+                isGroup     = data.Info.IsGroup === true;
+                waMessageId = data.Info.ID || '';
+                console.log(`📱 [WA-WEBHOOK] Formato: Evolution Go v0.7.1`);
+            } else if (data.key) {
+                // ── Formato Evolution API v1 (fallback) ──
+                remoteJid   = data.key.remoteJid || '';
+                isFromMe    = data.key.fromMe === true;
+                isGroup     = (remoteJid || '').endsWith('@g.us');
+                waMessageId = data.key.id || '';
+                console.log(`📱 [WA-WEBHOOK] Formato: Evolution API v1`);
+            } else {
+                console.log(`📱 [WA-WEBHOOK] ❌ Formato desconhecido — sem data.Info nem data.key`);
+                console.log(`📱 [WA-WEBHOOK] data keys: ${Object.keys(data).join(', ')}`);
                 return;
             }
 
-            if (key.fromMe) {
+            console.log(`📱 [WA-WEBHOOK] remoteJid='${remoteJid}' isFromMe=${isFromMe} isGroup=${isGroup}`);
+
+            // Filtros
+            if (isFromMe) {
                 console.log(`📱 [WA-WEBHOOK] Mensagem fromMe — ignorando`);
                 return;
             }
-            if ((key.remoteJid || '').endsWith('@g.us')) {
+            if (isGroup) {
                 console.log(`📱 [WA-WEBHOOK] Mensagem de grupo — ignorando`);
                 return;
             }
+            if (!remoteJid) {
+                console.log(`📱 [WA-WEBHOOK] ❌ remoteJid vazio — descartando`);
+                return;
+            }
 
-            // Extrair dados da mensagem
-            const remoteJid = key.remoteJid || '';
-            const phone     = this._normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
-            const msgData   = data?.message || body?.message || {};
-            const text      = msgData?.conversation
-                           || msgData?.extendedTextMessage?.text
-                           || '';
-            const pushName    = data?.pushName || body?.pushName || '';
-            const waMessageId = key.id || '';
+            // ═══ EXTRAIR TEXTO DA MENSAGEM ═══
+            // Evolution Go v0.7.1: data.Message.conversation ou data.Message.extendedTextMessage.text
+            // Evolution API v1:    data.message.conversation ou data.message.extendedTextMessage.text
+            const msgObj = data.Message || data.message || {};
+            const text = msgObj.conversation
+                      || msgObj.extendedTextMessage?.text
+                      || '';
+
+            // ═══ EXTRAIR PHONE E PUSHNAME ═══
+            const phone    = this._normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
+            const pushName = data.PushName || data.pushName || body.pushName || '';
 
             console.log(`📱 [WA-WEBHOOK] phone='${phone}' pushName='${pushName}' text='${text.substring(0, 80)}'`);
 
             if (!phone || !text.trim()) {
-                console.log(`📱 [WA-WEBHOOK] phone ou text vazio — descartando`);
+                console.log(`📱 [WA-WEBHOOK] ❌ phone ou text vazio — descartando`);
                 return;
             }
 
-            console.log(`📱 [WA-IN] ${phone} (${pushName}): "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
+            console.log(`📱 [EVOLUTION MESSAGE RECEIVED] ${phone} (${pushName}): "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
 
             // Rate limit
             if (!this._checkRateLimit(phone)) {
@@ -151,17 +178,17 @@ class WhatsAppChannel {
                 return;
             }
 
-            // Resolver tenant pela instância Evolution
+            // ═══ RESOLVER TENANT ═══
             console.log(`📱 [WA-WEBHOOK] Resolvendo tenant para instância: '${instance}'`);
             const tenant = await this._resolveTenantByInstance(instance);
             if (!tenant) {
                 console.warn(`📱 [WA-CHANNEL] ❌ Instância desconhecida: "${instance}" — tenant não encontrado no DB`);
                 return;
             }
-            console.log(`📱 [WA-WEBHOOK] ✅ Tenant resolvido: apiKey=${tenant.apiKey?.substring(0, 12)}... mode=${tenant.channelMode}`);
+            console.log(`📱 [EVOLUTION TENANT RESOLVED] apiKey=${tenant.apiKey?.substring(0, 12)}... mode=${tenant.channelMode}`);
 
-            // Processar mensagem
-            console.log(`📱 [WA-WEBHOOK] Processando mensagem via _processIncomingMessage...`);
+            // ═══ PROCESSAR MENSAGEM ═══
+            console.log(`📱 [EVOLUTION MESSAGE PROCESSING]`);
             await this._processIncomingMessage({
                 apiKey:      tenant.apiKey,
                 channelMode: tenant.channelMode,
@@ -172,7 +199,7 @@ class WhatsAppChannel {
                 waMessageId,
                 provider:    'evolution'
             });
-            console.log(`📱 [WA-WEBHOOK] ✅ Mensagem processada com sucesso`);
+            console.log(`📱 [EVOLUTION MESSAGE PROCESSED] ✅`);
 
         } catch (error) {
             console.error('📱 [WA-CHANNEL] ❌ Erro no webhook Evolution:', error.message, error.stack);
