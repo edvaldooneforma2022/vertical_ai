@@ -335,20 +335,39 @@ class WhatsAppChannel {
     // CHAMAR chat-universal VIA HTTP INTERNO
     // (zero acoplamento — reutiliza toda a stack: auth, billing, IA, inteligências)
     // ============================================================
-    _callChatUniversal(apiKey, message, conversationId, leadId) {
-        return new Promise((resolve) => {
+    async _callChatUniversal(apiKey, message, conversationId, leadId) {
+        return new Promise(async (resolve) => {
             const timeout = setTimeout(() => {
                 console.warn('📱 [WA-CHANNEL] Timeout da IA (30s)');
                 resolve(null);
             }, AI_TIMEOUT);
 
             try {
+                // ═══ BUSCAR salesUrl DO ASSISTENTE (para IA ter dados de extração) ═══
+                let salesUrl = null;
+                try {
+                    if (this.USE_POSTGRES && this.db) {
+                        const urlResult = await this.db.query(
+                            `SELECT sales_url FROM short_urls WHERE api_key = $1 ORDER BY id DESC LIMIT 1`,
+                            [apiKey]
+                        );
+                        const urlRow = (urlResult.rows || urlResult)[0];
+                        if (urlRow && urlRow.sales_url) {
+                            salesUrl = urlRow.sales_url;
+                            console.log(`📱 [WA-CHANNEL] salesUrl encontrado: ${salesUrl.substring(0, 60)}...`);
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`📱 [WA-CHANNEL] Erro ao buscar salesUrl:`, e.message);
+                }
+
                 const postData = JSON.stringify({
                     message,
                     apiKey,
                     conversationId,
                     leadId: leadId || undefined,
-                    channel: 'whatsapp'
+                    channel: 'whatsapp',
+                    url: salesUrl || undefined  // ← CRUCIAL: passa salesUrl para extração
                 });
 
                 const options = {
