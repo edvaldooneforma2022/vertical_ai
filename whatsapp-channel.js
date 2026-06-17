@@ -83,26 +83,65 @@ class WhatsAppChannel {
 
         try {
             const body = req.body || {};
-            const event    = body.event;
-            const instance = body.instance;
-            const data     = body.data;
+
+            // ═══ DIAGNÓSTICO: logar TUDO que chega ═══
+            console.log(`📱 [WA-WEBHOOK] ══════════════════════════════════════`);
+            console.log(`📱 [WA-WEBHOOK] POST /api/webhook/evolution RECEBIDO`);
+            console.log(`📱 [WA-WEBHOOK] Body keys: ${Object.keys(body).join(', ')}`);
+            console.log(`📱 [WA-WEBHOOK] Body completo: ${JSON.stringify(body).substring(0, 500)}`);
+
+            // Evolution Go v0.7.1 pode enviar em formatos diferentes
+            // Formato 1 (Evolution API v1): { event, instance, data }
+            // Formato 2 (Evolution Go v0.7): { event, instance_name, data }
+            // Formato 3 (Evolution Go v0.7 flat): { event, instanceName, ... }
+            const event    = body.event || body.type || '';
+            const instance = body.instance || body.instance_name || body.instanceName || '';
+            const data     = body.data || body;
+
+            console.log(`📱 [WA-WEBHOOK] event='${event}' instance='${instance}'`);
 
             // Só processar mensagens recebidas
-            if (event !== 'messages.upsert') return;
-            if (!data || !data.key) return;
-            if (data.key.fromMe) return;                           // ignorar mensagens enviadas por nós
-            if ((data.key.remoteJid || '').endsWith('@g.us')) return; // ignorar grupos
+            // Evolution Go pode enviar: 'messages.upsert', 'MESSAGES_UPSERT', 'message', 'MESSAGE'
+            const isMessageEvent = ['messages.upsert', 'MESSAGES_UPSERT', 'message', 'MESSAGE'].includes(event)
+                || event?.toLowerCase?.()?.includes?.('message');
+
+            if (!isMessageEvent) {
+                console.log(`📱 [WA-WEBHOOK] Evento ignorado (não é mensagem): '${event}'`);
+                return;
+            }
+
+            // Extrair key — pode estar em data.key ou diretamente no body
+            const key = data?.key || body?.key || {};
+            if (!key || !key.remoteJid) {
+                console.log(`📱 [WA-WEBHOOK] Sem key.remoteJid — data.key=${JSON.stringify(data?.key)}`);
+                return;
+            }
+
+            if (key.fromMe) {
+                console.log(`📱 [WA-WEBHOOK] Mensagem fromMe — ignorando`);
+                return;
+            }
+            if ((key.remoteJid || '').endsWith('@g.us')) {
+                console.log(`📱 [WA-WEBHOOK] Mensagem de grupo — ignorando`);
+                return;
+            }
 
             // Extrair dados da mensagem
-            const remoteJid = data.key.remoteJid || '';
+            const remoteJid = key.remoteJid || '';
             const phone     = this._normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
-            const text      = data.message?.conversation
-                           || data.message?.extendedTextMessage?.text
+            const msgData   = data?.message || body?.message || {};
+            const text      = msgData?.conversation
+                           || msgData?.extendedTextMessage?.text
                            || '';
-            const pushName    = data.pushName || '';
-            const waMessageId = data.key.id || '';
+            const pushName    = data?.pushName || body?.pushName || '';
+            const waMessageId = key.id || '';
 
-            if (!phone || !text.trim()) return;
+            console.log(`📱 [WA-WEBHOOK] phone='${phone}' pushName='${pushName}' text='${text.substring(0, 80)}'`);
+
+            if (!phone || !text.trim()) {
+                console.log(`📱 [WA-WEBHOOK] phone ou text vazio — descartando`);
+                return;
+            }
 
             console.log(`📱 [WA-IN] ${phone} (${pushName}): "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
 
@@ -113,13 +152,16 @@ class WhatsAppChannel {
             }
 
             // Resolver tenant pela instância Evolution
+            console.log(`📱 [WA-WEBHOOK] Resolvendo tenant para instância: '${instance}'`);
             const tenant = await this._resolveTenantByInstance(instance);
             if (!tenant) {
-                console.warn(`📱 [WA-CHANNEL] Instância desconhecida: "${instance}"`);
+                console.warn(`📱 [WA-CHANNEL] ❌ Instância desconhecida: "${instance}" — tenant não encontrado no DB`);
                 return;
             }
+            console.log(`📱 [WA-WEBHOOK] ✅ Tenant resolvido: apiKey=${tenant.apiKey?.substring(0, 12)}... mode=${tenant.channelMode}`);
 
             // Processar mensagem
+            console.log(`📱 [WA-WEBHOOK] Processando mensagem via _processIncomingMessage...`);
             await this._processIncomingMessage({
                 apiKey:      tenant.apiKey,
                 channelMode: tenant.channelMode,
@@ -130,9 +172,10 @@ class WhatsAppChannel {
                 waMessageId,
                 provider:    'evolution'
             });
+            console.log(`📱 [WA-WEBHOOK] ✅ Mensagem processada com sucesso`);
 
         } catch (error) {
-            console.error('📱 [WA-CHANNEL] Erro no webhook Evolution:', error.message);
+            console.error('📱 [WA-CHANNEL] ❌ Erro no webhook Evolution:', error.message, error.stack);
         }
     }
 
