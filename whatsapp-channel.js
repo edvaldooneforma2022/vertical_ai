@@ -198,7 +198,8 @@ class WhatsAppChannel {
                 pushName,
                 text,
                 waMessageId,
-                provider:    'evolution'
+                provider:    'evolution',
+                instanceName: instance  // ← CRUCIAL: passar instância para outbound
             });
             console.log(`📱 [EVOLUTION MESSAGE PROCESSED] ✅`);
 
@@ -254,7 +255,7 @@ class WhatsAppChannel {
     // ============================================================
     // PROCESSAMENTO UNIFICADO (todos os provedores convergem aqui)
     // ============================================================
-    async _processIncomingMessage({ apiKey, channelMode, notifPhone, phone, pushName, text, waMessageId, provider }) {
+    async _processIncomingMessage({ apiKey, channelMode, notifPhone, phone, pushName, text, waMessageId, provider, instanceName }) {
         try {
             // 1. Resolver ou criar lead pelo telefone
             const lead = await this._resolveLeadByPhone(apiKey, phone, pushName);
@@ -295,7 +296,7 @@ class WhatsAppChannel {
 
             if (!aiResult || !aiResult.response) {
                 console.warn('📱 [WA-CHANNEL] IA sem resposta, enviando fallback');
-                await this._sendResponse(apiKey, phone, 'Recebi sua mensagem! Em breve retornaremos.', provider);
+                await this._sendResponse(apiKey, phone, 'Recebi sua mensagem! Em breve retornaremos.', provider, instanceName);
                 return;
             }
 
@@ -303,7 +304,7 @@ class WhatsAppChannel {
             const adapted = this._adaptForWhatsApp(aiResult.response);
 
             // Enviar resposta
-            const sendResult = await this._sendResponse(apiKey, phone, adapted, provider);
+            const sendResult = await this._sendResponse(apiKey, phone, adapted, provider, instanceName);
 
             // Registrar mensagem de saída
             if (sendResult?.success) {
@@ -455,87 +456,72 @@ class WhatsAppChannel {
     // ============================================================
     // ENVIAR RESPOSTA VIA WHATSAPP
     // ============================================================
-    async _sendResponse(apiKey, phone, message, provider) {
+    async _sendResponse(apiKey, phone, message, provider, instanceName) {
         try {
-            // Usar instância do tenant (multi-tenant)
-            const instance = await this.whatsappMgr.getTenantInstance(apiKey);
-            if (instance && instance.isReady()) {
-                return await instance.sendMessage(phone, message);
-            }
-
-            // ═══ FALLBACK SaaS: enviar direto via Evolution Go API ═══
-            // Quando whatsapp_settings não existe (FK chatbots falhou),
-            // envia direto usando CENTRAL_EVOLUTION_URL + instance name derivado do tenant
+            // ═══ PRIORIDADE 1: Envio DIRETO pela mesma instância que RECEBEU ═══
+            // O instanceName vem do webhook — é a instância que recebeu a mensagem
             const centralUrl = process.env.CENTRAL_EVOLUTION_URL;
             const centralKey = process.env.CENTRAL_EVOLUTION_API_KEY;
 
-            if (centralUrl && centralKey) {
-                // Derivar instance name do apiKey → tenant ID → lm_{first8}
-                let instanceName = null;
-                try {
-                    const q = this.USE_POSTGRES
-                        ? `SELECT t.id FROM tenants t JOIN api_keys ak ON ak.tenant_id = t.id WHERE ak.key_value = $1 LIMIT 1`
-                        : `SELECT t.id FROM tenants t JOIN api_keys ak ON ak.tenant_id = t.id WHERE ak.key_value = ? LIMIT 1`;
-                    const r = await this.db.query(q, [apiKey]);
-                    const row = (r.rows || r)[0];
-                    if (row) {
-                        instanceName = `lm_${String(row.id).substring(0, 8)}`;
-                    }
-                } catch (e) {
-                    console.warn(`📱 [WA-SEND] Erro ao derivar instanceName:`, e.message);
-                }
+            if (instanceName && centralUrl && centralKey) {
+                console.log(`📱 [WA-SEND] Enviando pela MESMA instância: ${instanceName} → ${phone}`);
+                const axios = require('axios');
+                const phoneClean = phone.replace(/\D/g, '');
 
-                if (instanceName) {
-                    console.log(`📱 [WA-SEND] Enviando direto via Evolution Go: instance=${instanceName} phone=${phone}`);
+                // Formato 1: phone com JID
+                try {
+                    const sendResp = await axios.post(
+                        `${centralUrl}/message/text`,
+                        {
+                            id: instanceName,
+                            message: { phone: phoneClean + '@s.whatsapp.net', text: message }
+                        },
+                        { headers: { apikey: centralKey }, timeout: 15000 }
+                    );
+                    console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ instance=${instanceName} status=${sendResp.status}`);
+                    return { success: true, provider: 'evolution_go_direct' };
+                } catch (err1) {
+                    console.warn(`📱 [WA-SEND] Fmt1 falhou:`, JSON.stringify(err1.response?.data || err1.message));
+
+                    // Formato 2: phone limpo
                     try {
-                        const axios = require('axios');
-                        const jid = phone.replace(/\D/g, '') + '@s.whatsapp.net';
-                        const sendResp = await axios.post(
+                        const sendResp2 = await axios.post(
                             `${centralUrl}/message/text`,
-                            {
-                                id: instanceName,
-                                message: {
-                                    phone: jid,
-                                    text: message
-                                }
-                            },
-                            {
-                                headers: { apikey: centralKey },
-                                timeout: 15000
-                            }
+                            { id: instanceName, message: { phone: phoneClean, text: message } },
+                            { headers: { apikey: centralKey }, timeout: 15000 }
                         );
-                        console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ status=${sendResp.status}`);
-                        return { success: true, provider: 'evolution_go_direct' };
-                    } catch (sendErr) {
-                        console.error(`📱 [WA-SEND] ❌ Erro Evolution Go direto:`, sendErr.response?.data || sendErr.message);
-                        // Tentar formato alternativo
+                        console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ (fmt2) instance=${instanceName}`);
+                        return { success: true, provider: 'evolution_go_fmt2' };
+                    } catch (err2) {
+                        console.warn(`📱 [WA-SEND] Fmt2 falhou:`, JSON.stringify(err2.response?.data || err2.message));
+
+                        // Formato 3: body plano
                         try {
-                            const axios = require('axios');
-                            const phoneClean = phone.replace(/\D/g, '');
-                            const sendResp2 = await axios.post(
+                            const sendResp3 = await axios.post(
                                 `${centralUrl}/message/text`,
-                                {
-                                    id: instanceName,
-                                    message: {
-                                        phone: phoneClean,
-                                        text: message
-                                    }
-                                },
-                                {
-                                    headers: { apikey: centralKey },
-                                    timeout: 15000
-                                }
+                                { id: instanceName, phone: phoneClean, text: message },
+                                { headers: { apikey: centralKey }, timeout: 15000 }
                             );
-                            console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ (formato alt) status=${sendResp2.status}`);
-                            return { success: true, provider: 'evolution_go_direct_alt' };
-                        } catch (sendErr2) {
-                            console.error(`📱 [WA-SEND] ❌ Erro Evolution Go (alt):`, sendErr2.response?.data || sendErr2.message);
+                            console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ (fmt3) instance=${instanceName}`);
+                            return { success: true, provider: 'evolution_go_fmt3' };
+                        } catch (err3) {
+                            console.error(`📱 [WA-SEND] ❌ Todos os 3 formatos falharam para ${instanceName}:`, JSON.stringify(err3.response?.data || err3.message));
                         }
                     }
                 }
             }
 
-            // Último fallback: instância global
+            // ═══ PRIORIDADE 2: Instância tenant via whatsapp_settings ═══
+            try {
+                const instance = await this.whatsappMgr.getTenantInstance(apiKey);
+                if (instance && instance !== this.whatsappMgr && instance.isReady()) {
+                    return await instance.sendMessage(phone, message);
+                }
+            } catch (e) {
+                console.warn(`📱 [WA-SEND] getTenantInstance falhou:`, e.message);
+            }
+
+            // ═══ PRIORIDADE 3: Instância global ═══
             if (this.whatsappMgr.isReady()) {
                 return await this.whatsappMgr.sendMessage(phone, message);
             }
