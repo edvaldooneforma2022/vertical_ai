@@ -161,7 +161,8 @@ class WhatsAppChannel {
 
             // ═══ EXTRAIR PHONE E PUSHNAME ═══
             const phone    = this._normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
-            const pushName = data.PushName || data.pushName || body.pushName || '';
+            // Evolution Go v0.7.1: PushName está dentro de data.Info.PushName
+            const pushName = data.Info?.PushName || data.PushName || data.pushName || body.pushName || '';
 
             console.log(`📱 [WA-WEBHOOK] phone='${phone}' pushName='${pushName}' text='${text.substring(0, 80)}'`);
 
@@ -544,6 +545,7 @@ class WhatsAppChannel {
         if (cached && cached._expiresAt > Date.now()) return cached;
 
         try {
+            // Tentativa 1: Buscar na tabela whatsapp_settings
             const q = this.USE_POSTGRES
                 ? `SELECT api_key, notification_phone, is_active FROM whatsapp_settings
                    WHERE (evolution_instance_name = $1 OR saas_instance_name = $1) AND is_active = true LIMIT 1`
@@ -552,7 +554,27 @@ class WhatsAppChannel {
 
             const params = this.USE_POSTGRES ? [instanceName] : [instanceName, instanceName];
             const result = await this.db.query(q, params);
-            const row = (result.rows || result)[0];
+            let row = (result.rows || result)[0];
+
+            // Tentativa 2 (FALLBACK): Se não encontrou, resolver pelo padrão lm_{tenantIdPrefix}
+            // A instância é nomeada como lm_{first8chars_of_tenant_id}
+            if (!row && instanceName.startsWith('lm_')) {
+                const tenantIdPrefix = instanceName.replace('lm_', '');
+                console.log(`📱 [WA-CHANNEL] Fallback: buscando tenant por ID prefix '${tenantIdPrefix}%'`);
+                try {
+                    const q2 = this.USE_POSTGRES
+                        ? `SELECT api_key FROM tenants WHERE id LIKE $1 AND status = 'active' LIMIT 1`
+                        : `SELECT api_key FROM tenants WHERE id LIKE ? AND status = 'active' LIMIT 1`;
+                    const r2 = await this.db.query(q2, [`${tenantIdPrefix}%`]);
+                    const row2 = (r2.rows || r2)[0];
+                    if (row2) {
+                        console.log(`📱 [WA-CHANNEL] ✅ Fallback: tenant encontrado via ID prefix: ${row2.api_key?.substring(0, 12)}...`);
+                        row = { api_key: row2.api_key, notification_phone: null, is_active: true };
+                    }
+                } catch (fbErr) {
+                    console.warn(`📱 [WA-CHANNEL] Fallback tenant error:`, fbErr.message);
+                }
+            }
 
             if (!row) return null;
 
