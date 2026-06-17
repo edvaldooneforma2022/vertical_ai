@@ -454,9 +454,9 @@ module.exports = function (app, logger) {
                     { headers: { apikey: instanceToken }, timeout: 8000 }
                 );
                 const goData = stateResp.data?.data || {};
-                // Evolution Go v0.7.1: Connected=true é suficiente para estado 'open'
-                // LoggedIn pode ser false mesmo com sessão ativa e funcional
-                state = goData.Connected ? 'open'
+                // Evolution Go v0.7.1: Connected=true é suficiente para estado conectado
+                // Frontend espera 'connected' (não 'open')
+                state = goData.Connected ? 'connected'
                       : 'disconnected';
                 pushName = goData.Name || pushName;
             } catch (stateErr) {
@@ -465,7 +465,7 @@ module.exports = function (app, logger) {
             }
 
             // Se conectado, buscar dados da instância (número, nome)
-            if (state === 'open') {
+            if (state === 'connected') {
                 try {
                     // Evolution Go: /instance/all REQUER token global (não aceita token de instância)
                     const infoResp = await axios.get(
@@ -513,7 +513,7 @@ module.exports = function (app, logger) {
 
             res.json({
                 success: true,
-                status: state === 'open' ? 'connected' : state === 'connecting' ? 'connecting' : 'disconnected',
+                status: state,
                 phone,
                 pushName,
                 instanceName,
