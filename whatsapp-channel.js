@@ -563,8 +563,14 @@ class WhatsAppChannel {
                 console.log(`📱 [WA-CHANNEL] Fallback: buscando tenant por ID prefix '${tenantIdPrefix}%'`);
                 try {
                     const q2 = this.USE_POSTGRES
-                        ? `SELECT api_key FROM tenants WHERE id LIKE $1 AND status = 'active' LIMIT 1`
-                        : `SELECT api_key FROM tenants WHERE id LIKE ? AND status = 'active' LIMIT 1`;
+                        ? `SELECT ak.key_value as api_key FROM api_keys ak
+                           JOIN tenants t ON ak.tenant_id = t.id
+                           WHERE t.id::text LIKE $1 AND t.status = 'active' AND ak.active = true
+                           LIMIT 1`
+                        : `SELECT ak.key_value as api_key FROM api_keys ak
+                           JOIN tenants t ON ak.tenant_id = t.id
+                           WHERE t.id LIKE ? AND t.status = 'active' AND ak.active = 1
+                           LIMIT 1`;
                     const r2 = await this.db.query(q2, [`${tenantIdPrefix}%`]);
                     const row2 = (r2.rows || r2)[0];
                     if (row2) {
