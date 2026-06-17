@@ -459,15 +459,89 @@ class WhatsAppChannel {
         try {
             // Usar instância do tenant (multi-tenant)
             const instance = await this.whatsappMgr.getTenantInstance(apiKey);
-            if (!instance || !instance.isReady()) {
-                // Fallback: usar instância global
-                if (this.whatsappMgr.isReady()) {
-                    return await this.whatsappMgr.sendMessage(phone, message);
-                }
-                console.warn('📱 [WA-CHANNEL] Nenhuma instância WhatsApp disponível para envio');
-                return { success: false, error: 'No WhatsApp instance' };
+            if (instance && instance.isReady()) {
+                return await instance.sendMessage(phone, message);
             }
-            return await instance.sendMessage(phone, message);
+
+            // ═══ FALLBACK SaaS: enviar direto via Evolution Go API ═══
+            // Quando whatsapp_settings não existe (FK chatbots falhou),
+            // envia direto usando CENTRAL_EVOLUTION_URL + instance name derivado do tenant
+            const centralUrl = process.env.CENTRAL_EVOLUTION_URL;
+            const centralKey = process.env.CENTRAL_EVOLUTION_API_KEY;
+
+            if (centralUrl && centralKey) {
+                // Derivar instance name do apiKey → tenant ID → lm_{first8}
+                let instanceName = null;
+                try {
+                    const q = this.USE_POSTGRES
+                        ? `SELECT t.id FROM tenants t JOIN api_keys ak ON ak.tenant_id = t.id WHERE ak.key_value = $1 LIMIT 1`
+                        : `SELECT t.id FROM tenants t JOIN api_keys ak ON ak.tenant_id = t.id WHERE ak.key_value = ? LIMIT 1`;
+                    const r = await this.db.query(q, [apiKey]);
+                    const row = (r.rows || r)[0];
+                    if (row) {
+                        instanceName = `lm_${String(row.id).substring(0, 8)}`;
+                    }
+                } catch (e) {
+                    console.warn(`📱 [WA-SEND] Erro ao derivar instanceName:`, e.message);
+                }
+
+                if (instanceName) {
+                    console.log(`📱 [WA-SEND] Enviando direto via Evolution Go: instance=${instanceName} phone=${phone}`);
+                    try {
+                        const axios = require('axios');
+                        const jid = phone.replace(/\D/g, '') + '@s.whatsapp.net';
+                        const sendResp = await axios.post(
+                            `${centralUrl}/message/text`,
+                            {
+                                id: instanceName,
+                                message: {
+                                    phone: jid,
+                                    text: message
+                                }
+                            },
+                            {
+                                headers: { apikey: centralKey },
+                                timeout: 15000
+                            }
+                        );
+                        console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ status=${sendResp.status}`);
+                        return { success: true, provider: 'evolution_go_direct' };
+                    } catch (sendErr) {
+                        console.error(`📱 [WA-SEND] ❌ Erro Evolution Go direto:`, sendErr.response?.data || sendErr.message);
+                        // Tentar formato alternativo
+                        try {
+                            const axios = require('axios');
+                            const phoneClean = phone.replace(/\D/g, '');
+                            const sendResp2 = await axios.post(
+                                `${centralUrl}/message/text`,
+                                {
+                                    id: instanceName,
+                                    message: {
+                                        phone: phoneClean,
+                                        text: message
+                                    }
+                                },
+                                {
+                                    headers: { apikey: centralKey },
+                                    timeout: 15000
+                                }
+                            );
+                            console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ (formato alt) status=${sendResp2.status}`);
+                            return { success: true, provider: 'evolution_go_direct_alt' };
+                        } catch (sendErr2) {
+                            console.error(`📱 [WA-SEND] ❌ Erro Evolution Go (alt):`, sendErr2.response?.data || sendErr2.message);
+                        }
+                    }
+                }
+            }
+
+            // Último fallback: instância global
+            if (this.whatsappMgr.isReady()) {
+                return await this.whatsappMgr.sendMessage(phone, message);
+            }
+
+            console.warn('📱 [WA-CHANNEL] Nenhuma instância WhatsApp disponível para envio');
+            return { success: false, error: 'No WhatsApp instance' };
         } catch (error) {
             console.error('📱 [WA-CHANNEL] Erro ao enviar resposta:', error.message);
             return { success: false, error: error.message };
