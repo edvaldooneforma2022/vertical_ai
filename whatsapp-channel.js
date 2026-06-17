@@ -301,8 +301,27 @@ class WhatsAppChannel {
                 return;
             }
 
-            // Adaptar resposta para WhatsApp
-            const adapted = this._adaptForWhatsApp(aiResult.response);
+            // Adaptar resposta para WhatsApp + injetar CTA/links inline
+            let adapted = this._adaptForWhatsApp(aiResult.response);
+
+            // ═══ INJETAR CTA COMO TEXTO (widget renderiza como botão, WA precisa inline) ═══
+            try {
+                // 1. CTA do chat-universal (V17.2 Link Resolver)
+                if (aiResult.cta && aiResult.cta.url && !adapted.includes(aiResult.cta.url)) {
+                    const ctaLabel = aiResult.cta.label || aiResult.cta.text || '🚀 Acesse aqui';
+                    adapted += `\n\n${ctaLabel}\n👉 ${aiResult.cta.url}`;
+                    console.log(`📱 [WA-CTA] Injetado CTA inline: ${aiResult.cta.url.substring(0, 60)}`);
+                }
+
+                // 2. Link de WhatsApp de contato (se houver)
+                const waLink = aiResult.contatos?.whatsappLink || aiResult.contatos?.whatsappLinks?.[0];
+                if (waLink && !adapted.includes(waLink) && !adapted.includes('wa.me')) {
+                    adapted += `\n\n📱 Fale com a equipe: ${waLink}`;
+                    console.log(`📱 [WA-CTA] Injetado WhatsApp link: ${waLink.substring(0, 60)}`);
+                }
+            } catch (ctaErr) {
+                console.warn(`📱 [WA-CTA] Erro ao injetar CTA (sem impacto):`, ctaErr.message);
+            }
 
             // Enviar resposta
             const sendResult = await this._sendResponse(apiKey, phone, adapted, provider, instanceName, instanceToken);
@@ -324,7 +343,7 @@ class WhatsAppChannel {
                 }
             }
 
-            console.log(`📱 [WA-OUT] ${phone}: enviado ${adapted.length} chars`);
+            console.log(`📱 [WA-OUT] ${phone}: enviado ${adapted.length} chars | cta=${!!aiResult.cta} | contatos=${!!aiResult.contatos?.whatsappLink}`);
 
         } catch (error) {
             console.error('📱 [WA-CHANNEL] Erro ao processar mensagem:', error.message);
