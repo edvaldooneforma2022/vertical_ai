@@ -321,16 +321,32 @@ module.exports = function (app, logger) {
 
             // Buscar QR Code (Evolution Go: GET /instance/qr com token da instância)
             let qrcode = null;
-            try {
-                const qrResp = await axios.get(
-                    `${CENTRAL_EVOLUTION_URL}/instance/qr`,
-                    { headers: { apikey: instanceToken }, timeout: 15000 }
-                );
-                // Evolution Go retorna: { data: { Qrcode: "data:image/png;base64,..." } }
-                qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.base64 || null;
-            } catch (qrErr) {
-                logger.warn(`📱 [WA-SAAS] Aviso ao buscar QR:`, qrErr.response?.data || qrErr.message);
-                // Se já conectado, não terá QR — isso é OK
+
+            // Após criar instância nova, aguardar Evolution Go inicializar a sessão
+            if (!instanceExists) {
+                logger.info(`📱 [WA-SAAS] Aguardando 3s para Evolution Go inicializar sessão...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+
+            // Retry: tentar buscar QR até 3 vezes (Evolution Go pode demorar para gerar)
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const qrResp = await axios.get(
+                        `${CENTRAL_EVOLUTION_URL}/instance/qr`,
+                        { headers: { apikey: instanceToken }, timeout: 15000 }
+                    );
+                    // Evolution Go retorna: { data: { Qrcode: "data:image/png;base64,..." } }
+                    qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.base64 || null;
+                    if (qrcode) {
+                        logger.info(`📱 [WA-SAAS] ✅ QR Code obtido na tentativa ${attempt} (${qrcode.length} chars)`);
+                        break;
+                    }
+                    logger.info(`📱 [WA-SAAS] QR vazio na tentativa ${attempt}, aguardando 2s...`);
+                    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
+                } catch (qrErr) {
+                    logger.warn(`📱 [WA-SAAS] Tentativa ${attempt}/3 QR:`, qrErr.response?.data || qrErr.message);
+                    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
+                }
             }
 
             // Salvar/atualizar no banco
