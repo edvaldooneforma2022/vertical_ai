@@ -278,6 +278,8 @@ class BillingManager {
 
     /**
      * Atualizar plano
+     * CORREÇÃO: Agora persiste no banco de dados (antes só cache in-memory).
+     * Sem persistência, o plano revertia para 'free' ao reiniciar o servidor.
      */
     async upgradePlan(userId, newPlanId) {
         const currentSubscription = await this.getSubscription(userId);
@@ -292,6 +294,38 @@ class BillingManager {
         currentSubscription.updatedAt = new Date().toISOString();
 
         this.subscriptions.set(userId, currentSubscription);
+
+        // PERSISTIR NO BANCO: garantir que o plano sobrevive a reinicializações do servidor
+        try {
+            const { db, USE_POSTGRES } = require('./database');
+            if (db) {
+                // Tentar atualizar pela API Key (userId pode ser key_value)
+                const updateByKey = USE_POSTGRES
+                    ? `UPDATE tenants SET plan = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT tenant_id FROM api_keys WHERE key_value = $2 AND active = true LIMIT 1)`
+                    : `UPDATE tenants SET plan = ?, updated_at = datetime('now') WHERE id = (SELECT tenant_id FROM api_keys WHERE key_value = ? AND active = 1 LIMIT 1)`;
+                const result = await db.query(updateByKey, [newPlanId, userId]);
+                const rowCount = result.rowCount || result.changes || 0;
+
+                if (rowCount > 0) {
+                    console.log(`💾 [Billing] Plano '${newPlanId}' persistido no DB para key ${userId.substring(0, 12)}...`);
+                } else {
+                    // Se não achou pela key, tentar pelo UUID direto (pode ser tenant_id)
+                    const updateById = USE_POSTGRES
+                        ? `UPDATE tenants SET plan = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+                        : `UPDATE tenants SET plan = ?, updated_at = datetime('now') WHERE id = ?`;
+                    const result2 = await db.query(updateById, [newPlanId, userId]);
+                    const rowCount2 = result2.rowCount || result2.changes || 0;
+                    if (rowCount2 > 0) {
+                        console.log(`💾 [Billing] Plano '${newPlanId}' persistido no DB para tenant ${userId.substring(0, 12)}...`);
+                    } else {
+                        console.warn(`⚠️ [Billing] Plano atualizado apenas in-memory (tenant não encontrado no DB): ${userId.substring(0, 12)}...`);
+                    }
+                }
+            }
+        } catch (dbErr) {
+            // Fail-open: se o DB falhar, o cache in-memory ainda funciona até o próximo restart
+            console.error(`❌ [Billing] Erro ao persistir plano no DB (cache ok):`, dbErr.message);
+        }
 
         console.log(`✅ Plano atualizado: ${userId} -> ${newPlanId}`);
 
