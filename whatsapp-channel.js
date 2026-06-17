@@ -343,12 +343,16 @@ class WhatsAppChannel {
             }, AI_TIMEOUT);
 
             try {
-                // ═══ BUSCAR dados DO ASSISTENTE (mesmos do link curto/widget) ═══
+                // ═══ BUSCAR TODOS os dados DO ASSISTENTE (idêntico ao link curto/widget) ═══
                 let salesUrl = null;
                 let robotName = null;
                 let instructions = null;
+                let checkoutLink = null;
+                let pageData = null;
+
                 try {
                     if (this.USE_POSTGRES && this.db) {
+                        // 1. Dados do assistente (short_urls)
                         const urlResult = await this.db.query(
                             `SELECT sales_url, robot_name, instructions FROM short_urls WHERE api_key = $1 ORDER BY id DESC LIMIT 1`,
                             [apiKey]
@@ -358,11 +362,50 @@ class WhatsAppChannel {
                             salesUrl = urlRow.sales_url || null;
                             robotName = urlRow.robot_name || null;
                             instructions = urlRow.instructions || null;
-                            console.log(`📱 [WA-CHANNEL] Assistente: name=${robotName} url=${(salesUrl || '').substring(0, 50)}... instructions=${(instructions || '').substring(0, 40)}...`);
                         }
+
+                        // 2. Checkout confirmado (checkout_links)
+                        if (salesUrl) {
+                            try {
+                                const crypto = require('crypto');
+                                const urlHash = crypto.createHash('md5').update(salesUrl).digest('hex').substring(0, 16);
+                                const ckResult = await this.db.query(
+                                    `SELECT checkout_url FROM checkout_links WHERE api_key = $1 AND url_hash = $2 AND confirmed = true LIMIT 1`,
+                                    [apiKey, urlHash]
+                                );
+                                const ckRow = (ckResult.rows || ckResult)[0];
+                                if (ckRow && ckRow.checkout_url) {
+                                    checkoutLink = ckRow.checkout_url;
+                                }
+                            } catch (ckErr) {
+                                console.warn(`📱 [WA-CHANNEL] Checkout DB lookup falhou:`, ckErr.message);
+                            }
+                        }
+
+                        // 3. Extração do site (mesma que o widget faz)
+                        if (salesUrl) {
+                            try {
+                                const { extractPageData } = require('./server-utils') || {};
+                                if (typeof extractPageData === 'function') {
+                                    pageData = await extractPageData(salesUrl);
+                                }
+                            } catch (exErr) {
+                                // extractPageData pode não estar disponível como módulo separado
+                                // Nesse caso, chat-universal fará a extração via url
+                            }
+                        }
+
+                        console.log(`📱 [WA-CHANNEL] Assistente: name=${robotName} url=${(salesUrl || '').substring(0, 50)} checkout=${(checkoutLink || 'N/A').substring(0, 50)} pageData=${pageData ? 'SIM' : 'via-url'}`);
                     }
                 } catch (e) {
                     console.warn(`📱 [WA-CHANNEL] Erro ao buscar dados do assistente:`, e.message);
+                }
+
+                // Montar pageData com checkout se disponível
+                const enrichedPageData = pageData ? { ...pageData } : undefined;
+                if (enrichedPageData && checkoutLink) {
+                    enrichedPageData.checkoutLink = checkoutLink;
+                    enrichedPageData.checkoutSource = 'db_confirmed';
                 }
 
                 const postData = JSON.stringify({
@@ -373,7 +416,9 @@ class WhatsAppChannel {
                     channel: 'whatsapp',
                     url: salesUrl || undefined,
                     robotName: robotName || undefined,
-                    instructions: instructions || undefined
+                    instructions: instructions || undefined,
+                    pageData: enrichedPageData || undefined,
+                    context: checkoutLink ? { checkoutLink } : undefined
                 });
 
                 const options = {
