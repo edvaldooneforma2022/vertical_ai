@@ -3722,6 +3722,9 @@ async function requireApiKey(req, res, next) {
         "/checkout-success.html",
         "/api/billing/plans",
         "/api/stripe/webhook",
+        "/api/webhook/evolution",
+        "/api/webhook/twilio",
+        "/api/whatsapp/channel/status",
         "/demo.html",
         "/ajuda", "/ajuda.html",
         "/comunidade", "/comunidade.html",
@@ -3733,7 +3736,7 @@ async function requireApiKey(req, res, next) {
         "/api/analytics/public-stats"
     ];
 
-    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/") || req.path.startsWith("/api/admin/") || req.path.startsWith("/api/auth/")) {
+    if (publicPaths.includes(req.path) || req.path.startsWith("/public/") || req.path.startsWith("/l/") || req.path.startsWith("/api/public/") || req.path.startsWith("/api/admin/") || req.path.startsWith("/api/auth/") || req.path.startsWith("/api/webhook/")) {
         return next();
     }
 
