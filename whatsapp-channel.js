@@ -199,7 +199,8 @@ class WhatsAppChannel {
                 text,
                 waMessageId,
                 provider:    'evolution',
-                instanceName: instance  // ← CRUCIAL: passar instância para outbound
+                instanceName: instance,  // ← instância que recebeu
+                instanceToken: body.instanceToken || ''  // ← token para autenticação
             });
             console.log(`📱 [EVOLUTION MESSAGE PROCESSED] ✅`);
 
@@ -255,7 +256,7 @@ class WhatsAppChannel {
     // ============================================================
     // PROCESSAMENTO UNIFICADO (todos os provedores convergem aqui)
     // ============================================================
-    async _processIncomingMessage({ apiKey, channelMode, notifPhone, phone, pushName, text, waMessageId, provider, instanceName }) {
+    async _processIncomingMessage({ apiKey, channelMode, notifPhone, phone, pushName, text, waMessageId, provider, instanceName, instanceToken }) {
         try {
             // 1. Resolver ou criar lead pelo telefone
             const lead = await this._resolveLeadByPhone(apiKey, phone, pushName);
@@ -296,7 +297,7 @@ class WhatsAppChannel {
 
             if (!aiResult || !aiResult.response) {
                 console.warn('📱 [WA-CHANNEL] IA sem resposta, enviando fallback');
-                await this._sendResponse(apiKey, phone, 'Recebi sua mensagem! Em breve retornaremos.', provider, instanceName);
+                await this._sendResponse(apiKey, phone, 'Recebi sua mensagem! Em breve retornaremos.', provider, instanceName, instanceToken);
                 return;
             }
 
@@ -304,7 +305,7 @@ class WhatsAppChannel {
             const adapted = this._adaptForWhatsApp(aiResult.response);
 
             // Enviar resposta
-            const sendResult = await this._sendResponse(apiKey, phone, adapted, provider, instanceName);
+            const sendResult = await this._sendResponse(apiKey, phone, adapted, provider, instanceName, instanceToken);
 
             // Registrar mensagem de saída
             if (sendResult?.success) {
@@ -456,56 +457,54 @@ class WhatsAppChannel {
     // ============================================================
     // ENVIAR RESPOSTA VIA WHATSAPP
     // ============================================================
-    async _sendResponse(apiKey, phone, message, provider, instanceName) {
+    async _sendResponse(apiKey, phone, message, provider, instanceName, instanceToken) {
         try {
             // ═══ PRIORIDADE 1: Envio DIRETO pela mesma instância que RECEBEU ═══
-            // O instanceName vem do webhook — é a instância que recebeu a mensagem
             const centralUrl = process.env.CENTRAL_EVOLUTION_URL;
             const centralKey = process.env.CENTRAL_EVOLUTION_API_KEY;
 
-            if (instanceName && centralUrl && centralKey) {
-                console.log(`📱 [WA-SEND] Enviando pela MESMA instância: ${instanceName} → ${phone}`);
-                const axios = require('axios');
-                const phoneClean = phone.replace(/\D/g, '');
+            if (instanceName && centralUrl) {
+                // Evolution Go v0.7.1: POST /send/text
+                // Body: { number, text }
+                // Header apikey: instanceToken (preferencial) ou centralKey (fallback)
+                const authKey = instanceToken || centralKey;
+                if (!authKey) {
+                    console.warn(`📱 [WA-SEND] Sem token para instância ${instanceName}`);
+                } else {
+                    console.log(`📱 [WA-SEND] Enviando via /send/text: instance=${instanceName} token=${authKey.substring(0, 8)}...`);
+                    const axios = require('axios');
+                    const phoneClean = phone.replace(/\D/g, '');
 
-                // Formato 1: phone com JID
-                try {
-                    const sendResp = await axios.post(
-                        `${centralUrl}/message/text`,
-                        {
-                            id: instanceName,
-                            message: { phone: phoneClean + '@s.whatsapp.net', text: message }
-                        },
-                        { headers: { apikey: centralKey }, timeout: 15000 }
-                    );
-                    console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ instance=${instanceName} status=${sendResp.status}`);
-                    return { success: true, provider: 'evolution_go_direct' };
-                } catch (err1) {
-                    console.warn(`📱 [WA-SEND] Fmt1 falhou:`, JSON.stringify(err1.response?.data || err1.message));
-
-                    // Formato 2: phone limpo
                     try {
-                        const sendResp2 = await axios.post(
-                            `${centralUrl}/message/text`,
-                            { id: instanceName, message: { phone: phoneClean, text: message } },
-                            { headers: { apikey: centralKey }, timeout: 15000 }
+                        const sendResp = await axios.post(
+                            `${centralUrl}/send/text`,
+                            { number: phoneClean, text: message },
+                            {
+                                headers: { 'Content-Type': 'application/json', apikey: authKey },
+                                timeout: 15000
+                            }
                         );
-                        console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ (fmt2) instance=${instanceName}`);
-                        return { success: true, provider: 'evolution_go_fmt2' };
-                    } catch (err2) {
-                        console.warn(`📱 [WA-SEND] Fmt2 falhou:`, JSON.stringify(err2.response?.data || err2.message));
+                        console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ instance=${instanceName} status=${sendResp.status}`);
+                        return { success: true, provider: 'evolution_go_direct', messageId: sendResp.data?.key?.id || sendResp.data?.data?.id || null };
+                    } catch (err1) {
+                        console.warn(`📱 [WA-SEND] /send/text com instanceToken falhou:`, JSON.stringify(err1.response?.data || err1.message));
 
-                        // Formato 3: body plano
-                        try {
-                            const sendResp3 = await axios.post(
-                                `${centralUrl}/message/text`,
-                                { id: instanceName, phone: phoneClean, text: message },
-                                { headers: { apikey: centralKey }, timeout: 15000 }
-                            );
-                            console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ (fmt3) instance=${instanceName}`);
-                            return { success: true, provider: 'evolution_go_fmt3' };
-                        } catch (err3) {
-                            console.error(`📱 [WA-SEND] ❌ Todos os 3 formatos falharam para ${instanceName}:`, JSON.stringify(err3.response?.data || err3.message));
+                        // Fallback: tentar com centralKey se o instanceToken falhou
+                        if (instanceToken && centralKey && instanceToken !== centralKey) {
+                            try {
+                                const sendResp2 = await axios.post(
+                                    `${centralUrl}/send/text`,
+                                    { number: phoneClean, text: message },
+                                    {
+                                        headers: { 'Content-Type': 'application/json', apikey: centralKey },
+                                        timeout: 15000
+                                    }
+                                );
+                                console.log(`📱 [EVOLUTION RESPONSE SENT] ✅ (centralKey) instance=${instanceName}`);
+                                return { success: true, provider: 'evolution_go_centralkey', messageId: sendResp2.data?.key?.id || null };
+                            } catch (err2) {
+                                console.error(`📱 [WA-SEND] ❌ /send/text com centralKey também falhou:`, JSON.stringify(err2.response?.data || err2.message));
+                            }
                         }
                     }
                 }
