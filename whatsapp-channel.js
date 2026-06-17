@@ -343,22 +343,26 @@ class WhatsAppChannel {
             }, AI_TIMEOUT);
 
             try {
-                // ═══ BUSCAR salesUrl DO ASSISTENTE (para IA ter dados de extração) ═══
+                // ═══ BUSCAR dados DO ASSISTENTE (mesmos do link curto/widget) ═══
                 let salesUrl = null;
+                let robotName = null;
+                let instructions = null;
                 try {
                     if (this.USE_POSTGRES && this.db) {
                         const urlResult = await this.db.query(
-                            `SELECT sales_url FROM short_urls WHERE api_key = $1 ORDER BY id DESC LIMIT 1`,
+                            `SELECT sales_url, robot_name, instructions FROM short_urls WHERE api_key = $1 ORDER BY id DESC LIMIT 1`,
                             [apiKey]
                         );
                         const urlRow = (urlResult.rows || urlResult)[0];
-                        if (urlRow && urlRow.sales_url) {
-                            salesUrl = urlRow.sales_url;
-                            console.log(`📱 [WA-CHANNEL] salesUrl encontrado: ${salesUrl.substring(0, 60)}...`);
+                        if (urlRow) {
+                            salesUrl = urlRow.sales_url || null;
+                            robotName = urlRow.robot_name || null;
+                            instructions = urlRow.instructions || null;
+                            console.log(`📱 [WA-CHANNEL] Assistente: name=${robotName} url=${(salesUrl || '').substring(0, 50)}... instructions=${(instructions || '').substring(0, 40)}...`);
                         }
                     }
                 } catch (e) {
-                    console.warn(`📱 [WA-CHANNEL] Erro ao buscar salesUrl:`, e.message);
+                    console.warn(`📱 [WA-CHANNEL] Erro ao buscar dados do assistente:`, e.message);
                 }
 
                 const postData = JSON.stringify({
@@ -367,7 +371,9 @@ class WhatsAppChannel {
                     conversationId,
                     leadId: leadId || undefined,
                     channel: 'whatsapp',
-                    url: salesUrl || undefined  // ← CRUCIAL: passa salesUrl para extração
+                    url: salesUrl || undefined,
+                    robotName: robotName || undefined,
+                    instructions: instructions || undefined
                 });
 
                 const options = {
