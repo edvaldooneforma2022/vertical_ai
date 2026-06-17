@@ -322,8 +322,25 @@ module.exports = function (app, logger) {
             // Buscar QR Code (Evolution Go: GET /instance/qr com token da instância)
             let qrcode = null;
 
-            // Após criar instância nova, aguardar Evolution Go inicializar a sessão
+            // Após criar instância nova: configurar webhook + aguardar inicialização
             if (!instanceExists) {
+                // CRÍTICO: Configurar webhook para que mensagens cheguem ao Link Mágico
+                try {
+                    const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
+                    const webhookUrl = `${APP_URL}/api/webhook/evolution`;
+                    await axios.post(
+                        `${CENTRAL_EVOLUTION_URL}/instance/connect`,
+                        {
+                            webhookUrl: webhookUrl,
+                            subscribe: ['MESSAGE']
+                        },
+                        { headers: { apikey: instanceToken }, timeout: 15000 }
+                    );
+                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado: ${webhookUrl}`);
+                } catch (whErr) {
+                    logger.warn(`📱 [WA-SAAS] ⚠️ Aviso ao configurar webhook:`, whErr.response?.data || whErr.message);
+                }
+
                 logger.info(`📱 [WA-SAAS] Aguardando 3s para Evolution Go inicializar sessão...`);
                 await new Promise(resolve => setTimeout(resolve, 3000));
             }
@@ -437,8 +454,9 @@ module.exports = function (app, logger) {
                     { headers: { apikey: instanceToken }, timeout: 8000 }
                 );
                 const goData = stateResp.data?.data || {};
-                state = (goData.Connected && goData.LoggedIn) ? 'open'
-                      : goData.Connected ? 'connecting'
+                // Evolution Go v0.7.1: Connected=true é suficiente para estado 'open'
+                // LoggedIn pode ser false mesmo com sessão ativa e funcional
+                state = goData.Connected ? 'open'
                       : 'disconnected';
                 pushName = goData.Name || pushName;
             } catch (stateErr) {
@@ -449,11 +467,11 @@ module.exports = function (app, logger) {
             // Se conectado, buscar dados da instância (número, nome)
             if (state === 'open') {
                 try {
-                    // Evolution Go: /instance/all retorna lista de instâncias
+                    // Evolution Go: /instance/all REQUER token global (não aceita token de instância)
                     const infoResp = await axios.get(
                         `${CENTRAL_EVOLUTION_URL}/instance/all`,
                         {
-                            headers: { apikey: instanceToken },
+                            headers: { apikey: CENTRAL_EVOLUTION_API_KEY },
                             timeout: 8000
                         }
                     );
