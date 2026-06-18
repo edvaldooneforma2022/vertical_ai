@@ -1,10 +1,14 @@
 /**
- * 📱 WHATSAPP CHANNEL - Link Mágico V8.0
- * Canal nativo WhatsApp — consome /api/chat-universal existente
+ * 📱 WHATSAPP CHANNEL - Link Mágico V21
+ * Canal PURO de transporte — consome o mesmo endpoint do Link Curto
  *
- * SAFE PATCH - WA-CHANNEL-001
+ * SAFE PATCH - WA-CHANNEL-002 (V21 PARITY)
  *
- * NÃO ALTERA: chat-universal, motores de IA, prompts, CRM core,
+ * PRINCÍPIO: Canal ≠ Inteligência
+ * WhatsApp apenas: recebe → resolve tenant → envia ao Unified Brain → entrega resposta
+ * Toda decisão comercial (intent, journey, CTA, captura, agendamento) vem do pipeline central.
+ *
+ * NÃO ALTERA: server.js, motores de IA, prompts, CRM core,
  * pipeline, analytics core, billing core, widget, link curto.
  *
  * Provedores:
@@ -16,6 +20,18 @@
 const http = require('http');
 const crypto = require('crypto');
 
+// ════════════════════════════════════════════════════════════════
+// V21 PARITY: Auditoria de paridade WhatsApp ↔ Link Curto
+// ════════════════════════════════════════════════════════════════
+let waParityAudit = null;
+try {
+    waParityAudit = require('./lib/wa-parity-audit');
+    console.log('📊 [WA-PARITY] Módulo de auditoria V21 carregado');
+} catch (_auditLoadErr) {
+    console.warn('📊 [WA-PARITY] Auditoria não disponível (sem impacto):', _auditLoadErr.message);
+    waParityAudit = { log: () => {} }; // stub silencioso
+}
+
 // ============================================================
 // CONSTANTES
 // ============================================================
@@ -24,6 +40,13 @@ const RATE_LIMIT_MAX    = 30;       // msgs por minuto por telefone
 const RATE_LIMIT_WINDOW = 60000;    // 1 minuto
 const TENANT_CACHE_TTL  = 300000;   // 5 minutos
 const AI_TIMEOUT        = 30000;    // 30 segundos para resposta da IA
+
+// ════════════════════════════════════════════════════════════════
+// V21 FEATURE FLAG: Rollback instantâneo para pipeline anterior
+// WA_USE_FULL_PIPELINE=true  → /api/process-chat-inteligente (Link Curto)
+// WA_USE_FULL_PIPELINE=false → /api/chat-universal (legado)
+// ════════════════════════════════════════════════════════════════
+const WA_USE_FULL_PIPELINE = process.env.WA_USE_FULL_PIPELINE !== 'false';
 
 // ============================================================
 // CLASSE PRINCIPAL
@@ -293,7 +316,8 @@ class WhatsAppChannel {
             }
 
             // ── ⚡ AUTOMÁTICO / 🎛️ MANUAL ──
-            const aiResult = await this._callChatUniversal(apiKey, text, conversationId, lead?.id);
+            // V21 PARITY: Chamar o mesmo endpoint do Link Curto
+            const aiResult = await this._callUnifiedBrain(apiKey, text, conversationId, lead?.id);
 
             if (!aiResult || !aiResult.response) {
                 console.warn('📱 [WA-CHANNEL] IA sem resposta, enviando fallback');
@@ -306,7 +330,7 @@ class WhatsAppChannel {
 
             // ═══ INJETAR CTA COMO TEXTO (widget renderiza como botão, WA precisa inline) ═══
             try {
-                // 1. CTA do chat-universal (V17.2 Link Resolver)
+                // 1. CTA do pipeline central (V17.2 Link Resolver)
                 if (aiResult.cta && aiResult.cta.url && !adapted.includes(aiResult.cta.url)) {
                     const ctaLabel = aiResult.cta.label || aiResult.cta.text || '🚀 Acesse aqui';
                     adapted += `\n\n${ctaLabel}\n👉 ${aiResult.cta.url}`;
@@ -321,6 +345,45 @@ class WhatsAppChannel {
                 }
             } catch (ctaErr) {
                 console.warn(`📱 [WA-CTA] Erro ao injetar CTA (sem impacto):`, ctaErr.message);
+            }
+
+            // ════════════════════════════════════════════════════════════════
+            // V21 PARITY: TRADUZIR sinais do pipeline central para WhatsApp
+            // O WhatsApp NÃO decide — apenas traduz o que o Link Curto decidiu
+            // ════════════════════════════════════════════════════════════════
+            try {
+                // ── CAPTURA: Traduzir sinal de leadCapture para texto ──
+                // O pipeline retorna shouldCapture=true quando o Lead Score atingiu
+                // o threshold. O WhatsApp apenas converte isso em pergunta textual.
+                // REGRA: Nenhuma lógica de captura própria — apenas tradução.
+                if (aiResult.leadCapture && aiResult.leadCapture.shouldCapture && !lead?.email_captured) {
+                    const captureMsg = aiResult.leadCapture.captureMessage
+                        || '📋 Para que eu possa te ajudar melhor, posso saber seu nome?';
+                    adapted += `\n\n${captureMsg}`;
+                    console.log(`📱 [WA-V21-CAPTURE] Sinal de captura traduzido do pipeline central`);
+                }
+
+                // ── AGENDAMENTO: Traduzir calendarHash para URL amigável ──
+                // O pipeline retorna calendarHash quando detecta intenção de agendamento.
+                // No Link Curto, isso renderiza um widget calendário.
+                // No WhatsApp, traduzimos para URL clicável.
+                // REGRA: Agendamento só aparece APÓS captura (ordem do Link Curto).
+                if (aiResult.calendarHash && !adapted.includes('/agendar/')) {
+                    const hasLeadData = lead && (lead.email || lead.telefone || lead.wa_phone);
+                    if (hasLeadData || (aiResult.leadCapture && !aiResult.leadCapture.shouldCapture)) {
+                        // Lead já capturado OU pipeline não pediu captura → mostrar agendamento
+                        const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
+                        const scheduleUrl = `${baseUrl}/agendar/${aiResult.calendarHash}`;
+                        adapted += `\n\n📅 Agende aqui:\n👉 ${scheduleUrl}`;
+                        console.log(`📱 [WA-V21-SCHEDULE] Agendamento traduzido para URL: ${scheduleUrl.substring(0, 60)}`);
+                    } else {
+                        // Lead NÃO capturado E pipeline PEDIU captura → captura primeiro
+                        // O agendamento aparecerá na próxima interação após captura
+                        console.log(`📱 [WA-V21-SCHEDULE] Agendamento ADIADO — aguardando captura do lead (ordem: CAPTURA → AGENDAMENTO)`);
+                    }
+                }
+            } catch (_v21TranslateErr) {
+                console.warn(`📱 [WA-V21] Erro na tradução de sinais (sem impacto):`, _v21TranslateErr.message);
             }
 
             // Enviar resposta
@@ -343,7 +406,31 @@ class WhatsAppChannel {
                 }
             }
 
-            console.log(`📱 [WA-OUT] ${phone}: enviado ${adapted.length} chars | cta=${!!aiResult.cta} | contatos=${!!aiResult.contatos?.whatsappLink}`);
+            // ════════════════════════════════════════════════════════════════
+            // V21 PARITY AUDIT: Registrar telemetria para comparação
+            // ════════════════════════════════════════════════════════════════
+            try {
+                waParityAudit.log({
+                    message: text,
+                    channel: 'whatsapp',
+                    conversationId,
+                    leadId: lead?.id || '',
+                    journeyStage: aiResult.journeyStage || 'N/A',
+                    intentDetected: aiResult.inteligenciasDetectadas || {},
+                    leadScore: aiResult.leadCapture?.score || 0,
+                    ctaTriggered: !!(aiResult.cta && aiResult.cta.url),
+                    captureTriggered: !!(aiResult.leadCapture && aiResult.leadCapture.shouldCapture),
+                    scheduleTriggered: !!aiResult.calendarHash,
+                    generateAIResponseExecuted: true,
+                    responseSource: WA_USE_FULL_PIPELINE ? 'process-chat-inteligente' : 'chat-universal',
+                    responsePreview: adapted?.substring(0, 120),
+                    wouldMatchLinkCurto: WA_USE_FULL_PIPELINE
+                });
+            } catch (_auditErr) {
+                // Auditoria NUNCA impacta o fluxo
+            }
+
+            console.log(`📱 [WA-OUT] ${phone}: enviado ${adapted.length} chars | cta=${!!(aiResult.cta && aiResult.cta.url)} | journey=${aiResult.journeyStage || 'N/A'} | capture=${!!(aiResult.leadCapture?.shouldCapture)} | schedule=${!!aiResult.calendarHash}`);
 
         } catch (error) {
             console.error('📱 [WA-CHANNEL] Erro ao processar mensagem:', error.message);
@@ -351,10 +438,12 @@ class WhatsAppChannel {
     }
 
     // ============================================================
-    // CHAMAR chat-universal VIA HTTP INTERNO
+    // V21 PARITY: CHAMAR UNIFIED BRAIN VIA HTTP INTERNO
+    // Mesmo endpoint do Link Curto: /api/process-chat-inteligente
+    // Feature flag WA_USE_FULL_PIPELINE para rollback
     // (zero acoplamento — reutiliza toda a stack: auth, billing, IA, inteligências)
     // ============================================================
-    async _callChatUniversal(apiKey, message, conversationId, leadId) {
+    async _callUnifiedBrain(apiKey, message, conversationId, leadId) {
         return new Promise(async (resolve) => {
             const timeout = setTimeout(() => {
                 console.warn('📱 [WA-CHANNEL] Timeout da IA (30s)');
@@ -362,7 +451,7 @@ class WhatsAppChannel {
             }, AI_TIMEOUT);
 
             try {
-                // ═══ BUSCAR TODOS os dados DO ASSISTENTE (idêntico ao link curto/widget) ═══
+                // ═══ BUSCAR TODOS os dados DO ASSISTENTE (idêntico ao link curto) ═══
                 let salesUrl = null;
                 let robotName = null;
                 let instructions = null;
@@ -371,7 +460,7 @@ class WhatsAppChannel {
 
                 try {
                     if (this.USE_POSTGRES && this.db) {
-                        // 1. Dados do assistente (short_urls)
+                        // 1. Dados do assistente (short_urls) — mesma fonte do Link Curto
                         const urlResult = await this.db.query(
                             `SELECT sales_url, robot_name, instructions FROM short_urls WHERE api_key = $1 ORDER BY id DESC LIMIT 1`,
                             [apiKey]
@@ -386,7 +475,6 @@ class WhatsAppChannel {
                         // 2. Checkout confirmado (checkout_links)
                         if (salesUrl) {
                             try {
-                                const crypto = require('crypto');
                                 const urlHash = crypto.createHash('md5').update(salesUrl).digest('hex').substring(0, 16);
                                 const ckResult = await this.db.query(
                                     `SELECT checkout_url FROM checkout_links WHERE api_key = $1 AND url_hash = $2 AND confirmed = true LIMIT 1`,
@@ -401,7 +489,7 @@ class WhatsAppChannel {
                             }
                         }
 
-                        // 3. Extração do site (mesma que o widget faz)
+                        // 3. Extração do site (mesma que o Link Curto faz via extractPageData no /chatbot)
                         if (salesUrl) {
                             try {
                                 const { extractPageData } = require('./server-utils') || {};
@@ -410,11 +498,11 @@ class WhatsAppChannel {
                                 }
                             } catch (exErr) {
                                 // extractPageData pode não estar disponível como módulo separado
-                                // Nesse caso, chat-universal fará a extração via url
+                                // Nesse caso, o endpoint fará a extração via url
                             }
                         }
 
-                        console.log(`📱 [WA-CHANNEL] Assistente: name=${robotName} url=${(salesUrl || '').substring(0, 50)} checkout=${(checkoutLink || 'N/A').substring(0, 50)} pageData=${pageData ? 'SIM' : 'via-url'}`);
+                        console.log(`📱 [WA-V21] Assistente: name=${robotName} url=${(salesUrl || '').substring(0, 50)} checkout=${(checkoutLink || 'N/A').substring(0, 50)} pageData=${pageData ? 'SIM' : 'via-url'}`);
                     }
                 } catch (e) {
                     console.warn(`📱 [WA-CHANNEL] Erro ao buscar dados do assistente:`, e.message);
@@ -427,12 +515,15 @@ class WhatsAppChannel {
                     enrichedPageData.checkoutSource = 'db_confirmed';
                 }
 
+                // ════════════════════════════════════════════════════════════════
+                // V21: PAYLOAD IDÊNTICO AO LINK CURTO (linhas 11448-11456 server.js)
+                // Campos: message, pageData, robotName, instructions, conversationId, leadId, apiKey
+                // ════════════════════════════════════════════════════════════════
                 const postData = JSON.stringify({
                     message,
                     apiKey,
                     conversationId,
                     leadId: leadId || undefined,
-                    channel: 'whatsapp',
                     url: salesUrl || undefined,
                     robotName: robotName || undefined,
                     instructions: instructions || undefined,
@@ -440,15 +531,22 @@ class WhatsAppChannel {
                     context: checkoutLink ? { checkoutLink } : undefined
                 });
 
+                // V21: Selecionar endpoint baseado na feature flag
+                const endpointPath = WA_USE_FULL_PIPELINE
+                    ? '/api/process-chat-inteligente'
+                    : '/api/chat-universal';
+
+                console.log(`📱 [WA-V21] Endpoint: ${endpointPath} | pipeline=${WA_USE_FULL_PIPELINE ? 'FULL' : 'LEGACY'}`);
+
                 const options = {
                     hostname: '127.0.0.1',
                     port: this.serverPort,
-                    path: '/api/chat-universal',
+                    path: endpointPath,
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Content-Length': Buffer.byteLength(postData),
-                        'X-Internal-Channel': 'whatsapp'   // Marcador de canal
+                        'X-Internal-Channel': 'whatsapp'   // Marcador de canal (não altera lógica)
                     }
                 };
 
@@ -478,7 +576,7 @@ class WhatsAppChannel {
 
             } catch (err) {
                 clearTimeout(timeout);
-                console.error('📱 [WA-CHANNEL] Erro ao chamar chat-universal:', err.message);
+                console.error('📱 [WA-CHANNEL] Erro ao chamar Unified Brain:', err.message);
                 resolve(null);
             }
         });
