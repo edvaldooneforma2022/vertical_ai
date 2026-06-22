@@ -337,12 +337,10 @@ class WhatsAppChannel {
                     console.log(`📱 [WA-CTA] Injetado CTA inline: ${aiResult.cta.url.substring(0, 60)}`);
                 }
 
-                // 2. Link de WhatsApp de contato (se houver)
-                const waLink = aiResult.contatos?.whatsappLink || aiResult.contatos?.whatsappLinks?.[0];
-                if (waLink && !adapted.includes(waLink) && !adapted.includes('wa.me')) {
-                    adapted += `\n\n📱 Fale com a equipe: ${waLink}`;
-                    console.log(`📱 [WA-CTA] Injetado WhatsApp link: ${waLink.substring(0, 60)}`);
-                }
+                // 2. [V21-FIX-01] CTA fantasma REMOVIDO — injetava "Fale com a equipe: wa.me/..."
+                // em TODAS as respostas (inclusive "obrigado", "o que é?", "não entendi")
+                // Causa raiz: stripCTAText() removia wa.me → guarda !adapted.includes('wa.me') sempre true
+                // CTA por intenção (bloco 1 acima) continua funcionando via V17.2 pipeline
             } catch (ctaErr) {
                 console.warn(`📱 [WA-CTA] Erro ao injetar CTA (sem impacto):`, ctaErr.message);
             }
