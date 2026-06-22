@@ -9060,7 +9060,7 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
                 const _v21CtaResult = _channelSafeRouting.resolveFinalCTA({
                     intent: _cuIntent || 'info',
                     checkoutLink: processedPageData?.checkoutLink || null,
-                    scheduleLink: aiResult?.calendarHash ? `${process.env.BASE_URL || 'https://linkmagico.app.br'}/agendar/${aiResult.calendarHash}` : null,
+                    scheduleLink: aiResult?.calendarHash ? _channelSafeRouting.resolveScheduleUrl(aiResult.calendarHash, { channel: 'whatsapp' }) : null,
                     whatsappLink: processedPageData?.whatsappLink || processedPageData?.contatos?.whatsappLink || null,
                     existingCta: _cuCta,
                     channel: 'whatsapp'
@@ -10607,7 +10607,7 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 const _v21CtaInt = _channelSafeRouting.resolveFinalCTA({
                     intent: _intIntent || 'info',
                     checkoutLink: processedPageData?.checkoutLink || null,
-                    scheduleLink: mainFlowCalendarHash ? `${process.env.BASE_URL || 'https://linkmagico.app.br'}/agendar/${mainFlowCalendarHash}` : null,
+                    scheduleLink: mainFlowCalendarHash ? _channelSafeRouting.resolveScheduleUrl(mainFlowCalendarHash, { channel: 'whatsapp' }) : null,
                     whatsappLink: processedPageData?.whatsappLink || processedPageData?.contatos?.whatsappLink || null,
                     existingCta: _intCta,
                     channel: 'whatsapp'
