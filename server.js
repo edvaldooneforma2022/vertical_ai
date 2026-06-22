@@ -503,6 +503,15 @@ try {
     console.log('⚠️ [V17.2] Link Resolver não disponível (não crítico):', e.message);
 }
 
+// ═══ V21 — Channel Safe Routing (isolado, WhatsApp-only) ═══
+let _channelSafeRouting = null;
+try {
+    _channelSafeRouting = require('./lib/channel-safe-routing');
+    console.log('🛡️ [V21] Channel Safe Routing carregado');
+} catch (e) {
+    console.log('⚠️ [V21] Channel Safe Routing não disponível (não crítico):', e.message);
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // 🛡️ V18 — EXTRACTION GUARD (Blindagem contra extractor imperfeito)
 // Avalia confiança, classifica links, aplica fallback controlado
@@ -8970,6 +8979,19 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         // 💳 Billing: registrar uso de mensagem
         billingManager.trackUsage(apiKey, 'messages');
 
+        // ═══ V21 FIX 2 — Enforce Page Data Truth (chat-universal) ═══
+        try {
+            if (_channelSafeRouting && _channelSafeRouting.shouldApplyFix('whatsapp', 'enforcePageDataTruth')) {
+                const _v21Truth = _channelSafeRouting.enforcePageDataTruth(finalResponse, processedPageData, { channel: 'whatsapp' });
+                if (_v21Truth.enforced) {
+                    finalResponse = _v21Truth.response;
+                    console.log(`[V21@chat-universal] 🛡️ PageData Truth enforced | denied=[${_v21Truth.deniedFacts.join(',')}]`);
+                }
+            }
+        } catch (_v21TruthErr) {
+            console.warn('[V21@chat-universal] PageData Truth erro (sem impacto):', _v21TruthErr.message);
+        }
+
         // ═══════════════════════════════════════════════════════════════════
         // 🧠 V15 — CONTEXT ENFORCEMENT LAYER (chat-universal)
         // Intercepta resposta final e garante entrega de checkout/WhatsApp
@@ -9030,6 +9052,26 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             }
         } catch (_ugErr) {
             console.warn('[V17.2@chat-universal] erro:', _ugErr.message);
+        }
+
+        // ═══ V21 FIX 3 — CTA Priority Engine (chat-universal) ═══
+        try {
+            if (_channelSafeRouting && _channelSafeRouting.shouldApplyFix('whatsapp', 'resolveFinalCTA')) {
+                const _v21CtaResult = _channelSafeRouting.resolveFinalCTA({
+                    intent: _cuIntent || 'info',
+                    checkoutLink: processedPageData?.checkoutLink || null,
+                    scheduleLink: aiResult?.calendarHash ? `${process.env.BASE_URL || 'https://linkmagico.app.br'}/agendar/${aiResult.calendarHash}` : null,
+                    whatsappLink: processedPageData?.whatsappLink || processedPageData?.contatos?.whatsappLink || null,
+                    existingCta: _cuCta,
+                    channel: 'whatsapp'
+                });
+                if (_v21CtaResult.cta && _v21CtaResult.source === 'cta_priority_engine') {
+                    console.log(`[V21@chat-universal] CTA Priority: ${_v21CtaResult.reason} | url=${_v21CtaResult.cta.url.substring(0, 50)}`);
+                    _cuCta = _v21CtaResult.cta;
+                }
+            }
+        } catch (_v21CtaErr) {
+            console.warn('[V21@chat-universal] CTA Priority erro (sem impacto):', _v21CtaErr.message);
         }
 
         return res.json({
@@ -10333,6 +10375,19 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             console.warn('[PP-GLOBAL] ⚠️ Erro (sem impacto):', _ppErr.message);
         }
 
+        // ═══ V21 FIX 2 — Enforce Page Data Truth (chat-inteligente) ═══
+        try {
+            if (_channelSafeRouting && _channelSafeRouting.shouldApplyFix('whatsapp', 'enforcePageDataTruth')) {
+                const _v21TruthInt = _channelSafeRouting.enforcePageDataTruth(finalResponse, processedPageData, { channel: 'whatsapp' });
+                if (_v21TruthInt.enforced) {
+                    finalResponse = _v21TruthInt.response;
+                    console.log(`[V21@chat-inteligente] 🛡️ PageData Truth enforced | denied=[${_v21TruthInt.deniedFacts.join(',')}]`);
+                }
+            }
+        } catch (_v21TruthIntErr) {
+            console.warn('[V21@chat-inteligente] PageData Truth erro (sem impacto):', _v21TruthIntErr.message);
+        }
+
         // ═══════════════════════════════════════════════════════════════════
         // 🧠 V15 — CONTEXT ENFORCEMENT LAYER (process-chat-inteligente)
         // Intercepta resposta final e garante entrega de checkout/WhatsApp
@@ -10545,6 +10600,26 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 });
             }
         } catch (_) {}
+
+        // ═══ V21 FIX 3 — CTA Priority Engine (chat-inteligente) ═══
+        try {
+            if (_channelSafeRouting && _channelSafeRouting.shouldApplyFix('whatsapp', 'resolveFinalCTA')) {
+                const _v21CtaInt = _channelSafeRouting.resolveFinalCTA({
+                    intent: _intIntent || 'info',
+                    checkoutLink: processedPageData?.checkoutLink || null,
+                    scheduleLink: mainFlowCalendarHash ? `${process.env.BASE_URL || 'https://linkmagico.app.br'}/agendar/${mainFlowCalendarHash}` : null,
+                    whatsappLink: processedPageData?.whatsappLink || processedPageData?.contatos?.whatsappLink || null,
+                    existingCta: _intCta,
+                    channel: 'whatsapp'
+                });
+                if (_v21CtaInt.cta && _v21CtaInt.source === 'cta_priority_engine') {
+                    console.log(`[V21@chat-inteligente] CTA Priority: ${_v21CtaInt.reason} | url=${_v21CtaInt.cta.url.substring(0, 50)}`);
+                    _intCta = _v21CtaInt.cta;
+                }
+            }
+        } catch (_v21CtaIntErr) {
+            console.warn('[V21@chat-inteligente] CTA Priority erro (sem impacto):', _v21CtaIntErr.message);
+        }
 
         return res.json({
             success: true,

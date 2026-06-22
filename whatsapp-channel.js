@@ -48,6 +48,9 @@ const AI_TIMEOUT        = 30000;    // 30 segundos para resposta da IA
 // ════════════════════════════════════════════════════════════════
 const WA_USE_FULL_PIPELINE = process.env.WA_USE_FULL_PIPELINE !== 'false';
 
+// ═══ V21 FIX — Channel Safe Routing (schedule URL correto no WhatsApp) ═══
+const _channelSafeRouting = require('./lib/channel-safe-routing');
+
 // ============================================================
 // CLASSE PRINCIPAL
 // ============================================================
@@ -370,8 +373,8 @@ class WhatsAppChannel {
                     const hasLeadData = lead && (lead.email || lead.telefone || lead.wa_phone);
                     if (hasLeadData || (aiResult.leadCapture && !aiResult.leadCapture.shouldCapture)) {
                         // Lead já capturado OU pipeline não pediu captura → mostrar agendamento
-                        const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
-                        const scheduleUrl = `${baseUrl}/agendar/${aiResult.calendarHash}`;
+                        // V21 FIX: WhatsApp SEMPRE usa domínio de produção (linkmagico.app.br)
+                        const scheduleUrl = _channelSafeRouting.resolveScheduleUrl(aiResult.calendarHash, { channel: 'whatsapp' });
                         adapted += `\n\n📅 Agende aqui:\n👉 ${scheduleUrl}`;
                         console.log(`📱 [WA-V21-SCHEDULE] Agendamento traduzido para URL: ${scheduleUrl.substring(0, 60)}`);
                     } else {
