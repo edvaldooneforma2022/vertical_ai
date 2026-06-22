@@ -6425,6 +6425,28 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         if (pageData && pageData.cleanText) {
             const cleanTextLimited = pageData.cleanText.substring(0, 6000);
             pageContentSummary = cleanTextLimited;
+
+            // ═══ V22.1 AUDIT-KNOWLEDGE — Logs de diagnóstico (ZERO alteração de comportamento) ═══
+            // Objetivo: Determinar se truncamento V17 (800 chars) corta termos comerciais
+            try {
+                const _auditMsg = (cleanUserMessage || userMessage || '').toLowerCase();
+                const _auditKeywords = ['whitelabel', 'afiliado', 'afiliados', 'parceiro', 'parceiros', 'comissão', 'comissao', 'quanto custa', 'valor', 'preço', 'preco', 'plano', 'garantia', 'revenda', 'revendedor'];
+                const _auditIsRelevant = _auditKeywords.some(k => _auditMsg.includes(k));
+                if (_auditIsRelevant) {
+                    const _fullText = (pageData.cleanText || '').toLowerCase();
+                    const _whitelabelIdx = _fullText.indexOf('whitelabel');
+                    const _affiliateIdx = _fullText.indexOf('afiliado');
+                    const _partnerIdx = _fullText.indexOf('parceiro');
+                    const _pricingIdx = _fullText.indexOf('r$');
+                    const _guaranteeIdx = _fullText.indexOf('garantia');
+                    const _commissionIdx = _fullText.indexOf('comiss');
+                    const _revenueIdx = _fullText.indexOf('revenue');
+                    const _indicaIdx = _fullText.indexOf('indique e ganhe');
+                    console.log(`\n[AUDIT-KNOWLEDGE]\nquestion="${(cleanUserMessage || userMessage || '').substring(0, 100)}"\ncleanTextLength=${(pageData.cleanText || '').length}\nv17SliceLength=800\nlegacySliceLength=6000\nwhitelabelIndex=${_whitelabelIdx}\naffiliateIndex=${_affiliateIdx}\npartnerIndex=${_partnerIdx}\npricingIndex=${_pricingIdx}\nguaranteeIndex=${_guaranteeIdx}\ncommissionIndex=${_commissionIdx}\nrevenueIndex=${_revenueIdx}\nindicaGanheIndex=${_indicaIdx}\ncontainsWhitelabelInV17Slice=${_whitelabelIdx >= 0 && _whitelabelIdx < 800}\ncontainsAffiliateInV17Slice=${_affiliateIdx >= 0 && _affiliateIdx < 800}\ncontainsPartnerInV17Slice=${_partnerIdx >= 0 && _partnerIdx < 800}\ncontainsPricingInV17Slice=${_pricingIdx >= 0 && _pricingIdx < 800}\ncontainsGuaranteeInV17Slice=${_guaranteeIdx >= 0 && _guaranteeIdx < 800}\ncontainsWhitelabelInLegacySlice=${_whitelabelIdx >= 0 && _whitelabelIdx < 6000}\ncontainsAffiliateInLegacySlice=${_affiliateIdx >= 0 && _affiliateIdx < 6000}\n[/AUDIT-KNOWLEDGE]\n`);
+                }
+            } catch (_auditErr) {
+                // Silencioso — log de auditoria nunca deve impactar fluxo
+            }
         }
 
         // 🎯 NOVO: CONTEÚDO DA BASE DE CONHECIMENTO (FAQ e Documentos)
