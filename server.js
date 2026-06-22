@@ -758,6 +758,15 @@ try {
     console.log('⚠️ [V8.0] Audit Logger não disponível:', e.message);
 }
 
+// ===== MISSAO 42 — Commercial Events Layer (observabilidade, sem impacto comercial) =====
+let commercialEvents = null;
+try {
+    commercialEvents = require('./lib/commercial-events');
+    console.log('✅ [M42] Commercial Events carregado');
+} catch (e) {
+    console.log('⚠️ [M42] Commercial Events não disponível:', e.message);
+}
+
 try {
     const pmModule = require('./lib/persistent-memory');
     persistentMemory = pmModule.persistentMemory;
@@ -8376,7 +8385,10 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
-        const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
+        const { message, pageData, url, conversationId: reqConvId, instructions = "", robotName, leadId } = req.body || {};
+
+        // MISSAO 42 FIX: garantir conversationId consistente (fallback se nao enviado)
+        const conversationId = reqConvId || (leadId ? 'lead_' + leadId : 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
 
         // [SALESMODE-FLOW-PATCH] Extrair salesMode e salesPreset do req.body de forma isolada
         let _reqSalesMode   = 'auto';
@@ -8447,6 +8459,10 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
         }
         if (effectiveLeadId) {
             leadSystem.updateLeadConversation(effectiveLeadId, message, true);
+        }
+        // MISSAO 42 FIX: registrar mensagem mesmo sem leadId (persistencia minima)
+        if (!effectiveLeadId && commercialEvents) {
+            try { commercialEvents.record({ api_key: apiKey, conversation_id: conversationId, lead_id: null, event_type: 'message_received', event_source: 'widget', metadata: { message_preview: (message||'').substring(0, 200) } }); } catch(_) {}
         }
 
         // 🎯 FEATURE_CLEAN_CHAT_V2: Passar robotName como chatbotId para busca de FAQs
@@ -9022,6 +9038,8 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             cta: _cuCta,
             bonuses_detected: processedPageData?.bonuses_detected || [],
             contatos: processedPageData?.contatos || {},
+            // MISSAO 42 FIX: ecoar conversationId na resposta
+            conversationId: conversationId || null,
             metadata: {
                 hasPageData: !!processedPageData,
                 contentLength: processedPageData?.cleanText?.length || 0,
@@ -9109,7 +9127,10 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
     try {
-        const { message, pageData, url, conversationId, instructions = "", robotName, leadId } = req.body || {};
+        const { message, pageData, url, conversationId: reqConvId, instructions = "", robotName, leadId } = req.body || {};
+
+        // MISSAO 42 FIX: garantir conversationId consistente (fallback se nao enviado)
+        const conversationId = reqConvId || (leadId ? 'lead_' + leadId : 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
 
         if (!message) {
             return res.status(400).json({
@@ -9130,6 +9151,9 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         }
 
         let processedPageData = pageData;
+
+        // MISSAO 42 — Decision Trace: rastrear qual camada modificou a resposta
+        let _m42DecisionTrace = { layers: [], final_authority: 'unknown' };
 
         // 🚨 CORREÇÃO CRÍTICA: O widget envia pageData apenas com URL
         const hasContent = processedPageData && (processedPageData.cleanText || processedPageData.title || processedPageData.summary);
@@ -9633,6 +9657,10 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // 🎯 ATUALIZAR RESPOSTA NO LEAD SE EXISTIR
         if (effectiveLeadId) {
             leadSystem.updateLeadConversation(effectiveLeadId, finalResponse, false);
+        }
+        // MISSAO 42 FIX: registrar resposta mesmo sem leadId (persistencia minima)
+        if (!effectiveLeadId && commercialEvents) {
+            try { commercialEvents.record({ api_key: apiKey, conversation_id: conversationId, lead_id: null, event_type: 'response_generated', event_source: 'widget', metadata: { response_preview: (finalResponse||'').substring(0, 200) } }); } catch(_) {}
         }
 
         // ═══ V14.1: SALVAR NO HISTÓRICO (para endpoint process-chat-inteligente / pipeline legado) ═══
@@ -10497,6 +10525,27 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
 
         console.log(`\n[AUDIT-LLM-BYPASS-V20]\nmessage="${(message||'').replace(/"/g, "'")}"\nconversationId="${conversationId||''}"\nleadId="${leadId||''}"\ninteligencias=${JSON.stringify(inteligencias)}\nwouldBypassLegacy=${_v20a_wouldBypass}\nlegacyReason="${_v20a_legacyReason}"\ngenerateAIResponseExecuted=true\nfinalResponsePreview="${(finalResponse||'').substring(0, 120).replace(/\n/g, ' ')}"\n[/AUDIT-LLM-BYPASS-V20]\n`);
 
+        // MISSAO 42 — Decision Trace: detectar camada vencedora pela assinatura da resposta
+        try {
+            const _m42Resp = finalResponse || '';
+            if (__v19Active) { _m42DecisionTrace.final_authority = 'V19'; _m42DecisionTrace.layers.push('V19_apply'); }
+            else {
+                // Detectar por padrão de texto qual camada modificou por ultimo
+                if (_m42Resp.includes('FINALIZAR COMPRA') && _m42Resp.includes('Clique para finalizar')) { _m42DecisionTrace.final_authority = 'V18.4_failsafe'; _m42DecisionTrace.layers.push('V18.4'); }
+                else if (_m42Resp.includes('━━━') && _m42Resp.includes('FINALIZAR')) { _m42DecisionTrace.final_authority = 'V11.3.3_sales_shield'; _m42DecisionTrace.layers.push('V11.3.3'); }
+                else if (_m42Resp.includes('Finalize sua compra aqui')) { _m42DecisionTrace.final_authority = 'V18.3_cta_injection'; _m42DecisionTrace.layers.push('V18.3'); }
+                else { _m42DecisionTrace.final_authority = 'pp_global_or_earlier'; _m42DecisionTrace.layers.push('PP-GLOBAL/V15/base'); }
+            }
+            if (commercialEvents) {
+                commercialEvents.record({
+                    api_key: apiKey, conversation_id: conversationId, lead_id: effectiveLeadId,
+                    event_type: 'decision_trace', event_source: 'pipeline',
+                    decision_layer: _m42DecisionTrace.final_authority,
+                    metadata: { layers: _m42DecisionTrace.layers, has_checkout: finalResponse?.includes('http') || false, response_length: finalResponse?.length || 0 }
+                });
+            }
+        } catch (_) {}
+
         return res.json({
             success: true,
             response: finalResponse,
@@ -10509,6 +10558,8 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             bonuses_detected: processedPageData?.bonuses_detected || [],
             contatos: processedPageData?.contatos || {},
             leadCapture: _leadCaptureResult,
+            // MISSAO 42 FIX: ecoar conversationId na resposta para consistencia ponta a ponta
+            conversationId: conversationId || null,
             metadata: {
                 hasPageData: !!processedPageData,
                 contentLength: processedPageData?.cleanText?.length || 0,
@@ -12859,6 +12910,11 @@ try {
         console.log(`👥 Jornada do cliente: Análise inteligente ATIVADA`);
         console.log(`🧠 Endpoint superinteligente: /api/process-chat-inteligente`);
         console.log(`🎉 SISTEMA SUPERINTELIGENTE IMPLANTADO COM SUCESSO!`);
+
+        // MISSAO 42 — Inicializar Commercial Events com DB
+        if (commercialEvents && commercialEvents.init && db) {
+            try { commercialEvents.init(db); console.log('✅ [M42] Commercial Events inicializado com DB'); } catch(_) {}
+        }
 
         // ===== INFORMAÇÕES V8.0 =====
         console.log('');
