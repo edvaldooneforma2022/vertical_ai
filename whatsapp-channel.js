@@ -40,6 +40,7 @@ const RATE_LIMIT_MAX    = 30;       // msgs por minuto por telefone
 const RATE_LIMIT_WINDOW = 60000;    // 1 minuto
 const TENANT_CACHE_TTL  = 300000;   // 5 minutos
 const AI_TIMEOUT        = 30000;    // 30 segundos para resposta da IA
+const SCHED_EXPIRY_MS   = 86400000; // 24h — slots expiram após 1 dia
 
 // ════════════════════════════════════════════════════════════════
 // V21 FEATURE FLAG: Rollback instantâneo para pipeline anterior
@@ -76,7 +77,272 @@ class WhatsAppChannel {
         this._tenantCache  = new Map();   // instanceName → { apiKey, ... }
         this._rateLimits   = new Map();   // phone → [timestamps]
 
+        // V22.1: Inicializar tabela de scheduling (PostgreSQL)
+        this._initScheduleTable();
+
         console.log('📱 [WA-CHANNEL] Módulo de canal WhatsApp inicializado');
+    }
+
+    // ============================================================
+    // V22.1 SCHEDULING CONVERSACIONAL — Persistência em PostgreSQL
+    // Tabela: wa_schedule_pending
+    // Fluxo: interruptível + retomável + persistido
+    // Reutiliza: /api/public/availability/:hash + /api/public/book/:hash
+    // ============================================================
+    async _initScheduleTable() {
+        if (!this.USE_POSTGRES) return;
+        try {
+            await this.db.query(`
+                CREATE TABLE IF NOT EXISTS wa_schedule_pending (
+                    id SERIAL PRIMARY KEY,
+                    conversation_id TEXT NOT NULL,
+                    api_key TEXT NOT NULL,
+                    calendar_hash TEXT NOT NULL,
+                    slots_json TEXT NOT NULL,
+                    state TEXT NOT NULL DEFAULT 'offered',
+                    selected_date TEXT,
+                    selected_time TEXT,
+                    lead_id TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            `);
+            console.log('📅 [WA-SCHED] Tabela wa_schedule_pending verificada/criada');
+        } catch (err) {
+            console.warn('📅 [WA-SCHED] Erro ao criar tabela (não bloqueia):', err.message);
+        }
+    }
+
+    /**
+     * Buscar agendamento pendente para esta conversa (não expirado).
+     * @returns {Object|null} { id, calendar_hash, slots_json, state, selected_date, selected_time }
+     */
+    async _getSchedulePending(conversationId) {
+        if (!this.USE_POSTGRES) return null;
+        try {
+            const result = await this.db.query(
+                `SELECT * FROM wa_schedule_pending
+                 WHERE conversation_id = $1
+                   AND state IN ('offered', 'selected')
+                   AND created_at > NOW() - INTERVAL '24 hours'
+                 ORDER BY created_at DESC LIMIT 1`,
+                [conversationId]
+            );
+            return result?.rows?.[0] || null;
+        } catch (err) {
+            console.warn('📅 [WA-SCHED] Erro ao buscar pending:', err.message);
+            return null;
+        }
+    }
+
+    /**
+     * Salvar oferta de agendamento (slots disponíveis).
+     */
+    async _saveScheduleOffer(conversationId, apiKey, calendarHash, slots, leadId) {
+        if (!this.USE_POSTGRES) return;
+        try {
+            // Invalidar ofertas anteriores desta conversa
+            await this.db.query(
+                `UPDATE wa_schedule_pending SET state = 'expired', updated_at = NOW()
+                 WHERE conversation_id = $1 AND state IN ('offered', 'selected')`,
+                [conversationId]
+            );
+            // Inserir nova oferta
+            await this.db.query(
+                `INSERT INTO wa_schedule_pending
+                 (conversation_id, api_key, calendar_hash, slots_json, state, lead_id)
+                 VALUES ($1, $2, $3, $4, 'offered', $5)`,
+                [conversationId, apiKey, calendarHash, JSON.stringify(slots), leadId || null]
+            );
+            console.log(`📅 [WA-SCHED] Oferta salva: ${slots.length} slots | conv=${conversationId.substring(0, 20)}`);
+        } catch (err) {
+            console.warn('📅 [WA-SCHED] Erro ao salvar oferta:', err.message);
+        }
+    }
+
+    /**
+     * Atualizar estado do agendamento pendente.
+     */
+    async _updateScheduleState(pendingId, state, selectedDate, selectedTime) {
+        if (!this.USE_POSTGRES) return;
+        try {
+            await this.db.query(
+                `UPDATE wa_schedule_pending
+                 SET state = $1, selected_date = $2, selected_time = $3, updated_at = NOW()
+                 WHERE id = $4`,
+                [state, selectedDate || null, selectedTime || null, pendingId]
+            );
+        } catch (err) {
+            console.warn('📅 [WA-SCHED] Erro ao atualizar estado:', err.message);
+        }
+    }
+
+    /**
+     * Verificar se a mensagem é uma resposta de agendamento.
+     * Retorna a resposta pronta OU null (pass-through para pipeline normal).
+     *
+     * INTERRUPTÍVEL: Se a mensagem não é numérica nem confirmação,
+     * retorna null → pipeline normal responde → estado permanece.
+     */
+    async _handleScheduleResponse(conversationId, message, apiKey, lead) {
+        try {
+            const pending = await this._getSchedulePending(conversationId);
+            if (!pending) return null;
+
+            const msg = (message || '').trim().toLowerCase();
+
+            // ── STATE: offered (aguardando seleção de horário) ──
+            if (pending.state === 'offered') {
+                // Verificar se é um número (seleção de slot)
+                const num = parseInt(msg, 10);
+                const slots = JSON.parse(pending.slots_json || '[]');
+                if (!isNaN(num) && num >= 1 && num <= slots.length) {
+                    const chosen = slots[num - 1];
+                    await this._updateScheduleState(pending.id, 'selected', chosen.date, chosen.time);
+                    const dateFormatted = chosen.date.split('-').reverse().join('/');
+                    console.log(`📅 [WA-SCHED] Slot selecionado: #${num} → ${chosen.dayName} ${chosen.date} ${chosen.time}`);
+                    return `Perfeito! Confirme seu agendamento:\n\n📅 ${chosen.dayName} — ${dateFormatted}\n🕒 ${chosen.time}\n\nDigite *SIM* para confirmar ou *NÃO* para cancelar.`;
+                }
+                // NÃO é um número → interrupção normal, pipeline responde
+                // O estado 'offered' permanece para retomada posterior
+                return null;
+            }
+
+            // ── STATE: selected (aguardando confirmação SIM/NÃO) ──
+            if (pending.state === 'selected') {
+                if (msg === 'sim' || msg === 'confirmo' || msg === 'confirmar' || msg === 's') {
+                    // Executar booking via API existente
+                    try {
+                        const bookResult = await this._executeBooking(
+                            pending.calendar_hash,
+                            pending.selected_date,
+                            pending.selected_time,
+                            lead
+                        );
+                        await this._updateScheduleState(pending.id, 'completed', pending.selected_date, pending.selected_time);
+                        if (bookResult?.success) {
+                            const dateFormatted = pending.selected_date.split('-').reverse().join('/');
+                            console.log(`📅 [WA-SCHED] ✅ Booking confirmado: ${pending.selected_date} ${pending.selected_time}`);
+                            return `✅ Agendamento confirmado!\n\n📅 ${dateFormatted}\n🕒 ${pending.selected_time}\n\nVocê receberá uma confirmação. Até breve! 🙌`;
+                        } else {
+                            await this._updateScheduleState(pending.id, 'error', pending.selected_date, pending.selected_time);
+                            return `⚠️ Houve um problema ao confirmar o agendamento. Por favor, tente novamente dizendo "quero agendar".`;
+                        }
+                    } catch (bookErr) {
+                        console.error('📅 [WA-SCHED] Erro no booking:', bookErr.message);
+                        await this._updateScheduleState(pending.id, 'error', null, null);
+                        return `⚠️ Erro ao confirmar agendamento. Tente novamente dizendo "quero agendar".`;
+                    }
+                }
+                if (msg === 'não' || msg === 'nao' || msg === 'cancelar' || msg === 'n') {
+                    await this._updateScheduleState(pending.id, 'cancelled', null, null);
+                    console.log(`📅 [WA-SCHED] Agendamento cancelado pelo usuário`);
+                    return `Sem problemas! O agendamento foi cancelado. Se quiser reagendar, é só dizer "quero agendar" 😊`;
+                }
+                // Nem SIM nem NÃO → interrupção, pipeline responde
+                // Estado 'selected' permanece para retomada
+                return null;
+            }
+
+            return null;
+        } catch (err) {
+            console.warn('📅 [WA-SCHED] Erro no handleScheduleResponse:', err.message);
+            return null; // Fallback: pipeline normal
+        }
+    }
+
+    /**
+     * Buscar slots via API interna e formatar como mensagem conversacional.
+     * Reutiliza GET /api/public/availability/:hash
+     */
+    async _fetchAndFormatSlots(calendarHash) {
+        return new Promise((resolve) => {
+            const req = http.request({
+                hostname: '127.0.0.1',
+                port: this.serverPort,
+                path: `/api/public/availability/${calendarHash}`,
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            }, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (!parsed.success || !parsed.slots || parsed.slots.length === 0) {
+                            resolve(null);
+                            return;
+                        }
+                        // Achatar slots: [{date, dayName, times: ['09:00','10:00']}] → [{date, dayName, time}]
+                        const flat = [];
+                        for (const day of parsed.slots) {
+                            for (const time of (day.times || [])) {
+                                flat.push({ date: day.date, dayName: day.dayName, time });
+                                if (flat.length >= 10) break; // max 10 opções
+                            }
+                            if (flat.length >= 10) break;
+                        }
+                        if (flat.length === 0) { resolve(null); return; }
+
+                        // Formatar mensagem numerada
+                        const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+                        let msg = '📅 *Horários disponíveis:*\n\n';
+                        flat.forEach((slot, i) => {
+                            const dateFormatted = slot.date.split('-').reverse().join('/');
+                            msg += `${numberEmojis[i] || (i+1)+'.'} ${slot.dayName} ${dateFormatted} — ${slot.time}\n`;
+                        });
+                        msg += '\nResponda apenas com o *número* desejado.';
+
+                        resolve({ message: msg, slots: flat });
+                    } catch (e) {
+                        console.warn('📅 [WA-SCHED] Erro ao parsear slots:', e.message);
+                        resolve(null);
+                    }
+                });
+            });
+            req.on('error', () => resolve(null));
+            req.setTimeout(10000, () => { req.destroy(); resolve(null); });
+            req.end();
+        });
+    }
+
+    /**
+     * Executar booking via API interna.
+     * Reutiliza POST /api/public/book/:hash
+     */
+    async _executeBooking(calendarHash, date, time, lead) {
+        return new Promise((resolve) => {
+            const body = JSON.stringify({
+                name: lead?.nome || lead?.name || 'WhatsApp',
+                email: lead?.email || '',
+                phone: lead?.wa_phone || lead?.telefone || '',
+                leadId: lead?.id || null,
+                date,
+                time,
+                notes: 'Agendado via WhatsApp Conversacional'
+            });
+            const req = http.request({
+                hostname: '127.0.0.1',
+                port: this.serverPort,
+                path: `/api/public/book/${calendarHash}`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(body)
+                }
+            }, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    try { resolve(JSON.parse(data)); }
+                    catch (e) { resolve(null); }
+                });
+            });
+            req.on('error', () => resolve(null));
+            req.setTimeout(10000, () => { req.destroy(); resolve(null); });
+            req.write(body);
+            req.end();
+        });
     }
 
     // ============================================================
@@ -318,6 +584,29 @@ class WhatsAppChannel {
                 return;
             }
 
+            // ── V22.1: INTERCEPTAR RESPOSTAS DE AGENDAMENTO ANTES DO BRAIN ──
+            // Se existe um agendamento pendente E a mensagem é numérica/confirmação,
+            // responde direto sem chamar a IA (economia de tokens + fluxo limpo).
+            // Se a mensagem NÃO é de agendamento, retorna null → pipeline normal.
+            try {
+                const schedResponse = await this._handleScheduleResponse(conversationId, text, apiKey, lead);
+                if (schedResponse) {
+                    // Resposta de agendamento — enviar direto, sem chamar IA
+                    const sendResult = await this._sendResponse(apiKey, phone, schedResponse, provider, instanceName, instanceToken);
+                    if (sendResult?.success) {
+                        await this._logMessage({
+                            apiKey, waMessageId: '', waPhone: phone,
+                            direction: 'outbound', content: schedResponse, leadId: lead?.id,
+                            conversationId, provider
+                        });
+                    }
+                    console.log(`📅 [WA-SCHED] Resposta de agendamento enviada | conv=${conversationId.substring(0, 20)}`);
+                    return;
+                }
+            } catch (_schedErr) {
+                console.warn('📅 [WA-SCHED] Erro na interceptação (continuando pipeline):', _schedErr.message);
+            }
+
             // ── ⚡ AUTOMÁTICO / 🎛️ MANUAL ──
             // V21 PARITY: Chamar o mesmo endpoint do Link Curto
             const aiResult = await this._callUnifiedBrain(apiKey, text, conversationId, lead?.id);
@@ -364,23 +653,42 @@ class WhatsAppChannel {
                     console.log(`📱 [WA-V21-CAPTURE] Sinal de captura traduzido do pipeline central`);
                 }
 
-                // ── AGENDAMENTO: Traduzir calendarHash para URL amigável ──
+                // ── V22.1 AGENDAMENTO CONVERSACIONAL ──
                 // O pipeline retorna calendarHash quando detecta intenção de agendamento.
-                // No Link Curto, isso renderiza um widget calendário.
-                // No WhatsApp, traduzimos para URL clicável.
-                // REGRA: Agendamento só aparece APÓS captura (ordem do Link Curto).
+                // No Link Curto, isso renderiza um widget calendário inline.
+                // No WhatsApp, buscamos os slots via API e oferecemos opções numeradas.
+                // Reutiliza: GET /api/public/availability/:hash + POST /api/public/book/:hash
+                // Estado: persistido em PostgreSQL (wa_schedule_pending)
+                // Fluxo: INTERRUPTÍVEL (perguntas normais passam) + RETOMÁVEL (número retoma)
                 if (aiResult.calendarHash && !adapted.includes('/agendar/')) {
                     const hasLeadData = lead && (lead.email || lead.telefone || lead.wa_phone);
                     if (hasLeadData || (aiResult.leadCapture && !aiResult.leadCapture.shouldCapture)) {
-                        // Lead já capturado OU pipeline não pediu captura → mostrar agendamento
-                        // V21 FIX: WhatsApp SEMPRE usa domínio de produção (linkmagico.app.br)
-                        const scheduleUrl = _channelSafeRouting.resolveScheduleUrl(aiResult.calendarHash, { channel: 'whatsapp' });
-                        adapted += `\n\n📅 Agende aqui:\n👉 ${scheduleUrl}`;
-                        console.log(`📱 [WA-V21-SCHEDULE] Agendamento traduzido para URL: ${scheduleUrl.substring(0, 60)}`);
+                        // Lead já capturado OU pipeline não pediu captura → oferecer slots
+                        try {
+                            const slotsResult = await this._fetchAndFormatSlots(aiResult.calendarHash);
+                            if (slotsResult && slotsResult.slots.length > 0) {
+                                // Salvar oferta no banco (persistente)
+                                await this._saveScheduleOffer(
+                                    conversationId, apiKey, aiResult.calendarHash,
+                                    slotsResult.slots, lead?.id
+                                );
+                                adapted += `\n\n${slotsResult.message}`;
+                                console.log(`📅 [WA-SCHED] Slots oferecidos: ${slotsResult.slots.length} opções | conv=${conversationId.substring(0, 20)}`);
+                            } else {
+                                // Sem slots disponíveis — fallback texto
+                                adapted += `\n\n📅 No momento não há horários disponíveis para agendamento. Tente novamente mais tarde.`;
+                                console.log(`📅 [WA-SCHED] Sem slots disponíveis`);
+                            }
+                        } catch (schedErr) {
+                            console.warn(`📅 [WA-SCHED] Erro ao buscar slots (sem impacto):`, schedErr.message);
+                            // Fallback: URL legada (melhor que nada)
+                            const scheduleUrl = _channelSafeRouting.resolveScheduleUrl(aiResult.calendarHash, { channel: 'whatsapp' });
+                            adapted += `\n\n📅 Agende aqui:\n👉 ${scheduleUrl}`;
+                        }
                     } else {
                         // Lead NÃO capturado E pipeline PEDIU captura → captura primeiro
                         // O agendamento aparecerá na próxima interação após captura
-                        console.log(`📱 [WA-V21-SCHEDULE] Agendamento ADIADO — aguardando captura do lead (ordem: CAPTURA → AGENDAMENTO)`);
+                        console.log(`📅 [WA-SCHED] Agendamento ADIADO — aguardando captura do lead`);
                     }
                 }
             } catch (_v21TranslateErr) {
