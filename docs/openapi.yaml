@@ -476,8 +476,7 @@ paths:
       description: |
         Registra cliques em CTAs e links de checkout. O widget faz isso
         automaticamente, mas pode ser chamado manualmente para integrações.
-      security:
-        - ApiKeyAuth: []
+        **Rota pública** — a API Key deve ser enviada no body, não no header.
       requestBody:
         required: true
         content:
@@ -485,8 +484,13 @@ paths:
             schema:
               type: object
               required:
+                - apiKey
                 - type
               properties:
+                apiKey:
+                  type: string
+                  description: API Key do tenant
+                  example: "LMV7-VX9Z-ZSR1-DONX"
                 type:
                   type: string
                   enum: [cta_click, checkout_click]
@@ -496,8 +500,6 @@ paths:
                   format: uri
                   example: "https://pay.hotmart.com/G103177435I"
                 leadId:
-                  type: string
-                robotName:
                   type: string
       responses:
         '200':
@@ -509,8 +511,9 @@ paths:
                 properties:
                   success:
                     type: boolean
-                  message:
+                  tracked:
                     type: string
+                    example: "checkout_click"
 
   /api/conversion-stats:
     get:
@@ -638,14 +641,164 @@ paths:
                   source:
                     type: string
 
+  /admin/leads/{id}:
+    delete:
+      tags:
+        - Leads
+      summary: Excluir lead
+      description: Remove permanentemente um lead pelo ID
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lead removido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: "Lead removido com sucesso"
+                  lead:
+                    $ref: '#/components/schemas/Lead'
+        '404':
+          description: Lead não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/appointments/{id}:
+    get:
+      tags:
+        - Agendamentos
+      summary: Obter agendamento específico
+      description: Retorna detalhes de um agendamento pelo ID
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agendamento encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  appointment:
+                    $ref: '#/components/schemas/Appointment'
+        '404':
+          description: Agendamento não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/appointments/{id}/status:
+    put:
+      tags:
+        - Agendamentos
+      summary: Atualizar status do agendamento
+      description: Atualiza o status de um agendamento existente
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [pendente, confirmado, cancelado, realizado]
+                  example: "confirmado"
+      responses:
+        '200':
+          description: Status atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  appointment:
+                    $ref: '#/components/schemas/Appointment'
+                  message:
+                    type: string
+                    example: "Status atualizado para: confirmado"
+        '400':
+          description: Status inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/leads/{leadId}/appointments:
+    get:
+      tags:
+        - Agendamentos
+      summary: Agendamentos de um lead
+      description: Retorna todos os agendamentos associados a um lead específico
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: leadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de agendamentos do lead
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  appointments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Appointment'
+                  total:
+                    type: integer
+
   /api/system/status:
     get:
       tags:
         - Sistema
       summary: Status do sistema
-      description: Retorna informações detalhadas do sistema
-      security:
-        - ApiKeyAuth: []
+      description: |
+        Retorna informações do sistema. Sem autenticação retorna apenas
+        health check básico. Com autenticação retorna métricas completas
+        (analytics, serviços ativos, feature flags).
       responses:
         '200':
           description: Status do sistema
@@ -654,14 +807,23 @@ paths:
               schema:
                 type: object
                 properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
                   version:
                     type: string
+                    example: "8.0.0"
                   uptime:
-                    type: number
-                  memory:
+                    type: integer
+                    description: Segundos de uptime (apenas autenticado)
+                  analytics:
                     type: object
-                  modules:
+                    description: Métricas de uso (apenas autenticado)
+                  services:
                     type: object
+                    description: Status dos serviços (apenas autenticado)
 
 components:
   securitySchemes:
