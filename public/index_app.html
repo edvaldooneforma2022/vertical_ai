@@ -12,6 +12,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- LM-UI V5: Driver.js CDN (onboarding guiado, carregamento nao-bloqueante) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
+    <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.js" defer></script>
 
     <style>
         :root {
@@ -1378,6 +1381,189 @@
         .qsv__footer{margin-top:12px;text-align:center}
         .qsv__footer-text{color:#64748b;font-size:.72rem;font-style:italic}
         @media(max-width:768px){.qsv__video-wrap{max-height:360px}}
+
+        /* ═══ LM-UI MODERNIZATION V5 — CSS Incremental (prefixado, sem colisão) ═══ */
+
+        /* Accordion: bloco "Como funciona" */
+        .lm-ui-accordion-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.2s ease;
+        }
+        .lm-ui-accordion-header:hover { opacity: 0.85; }
+        .lm-ui-accordion-chevron {
+            transition: transform 0.25s ease;
+            color: #fbbf24;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .lm-ui-accordion-chevron.lm-ui-open { transform: rotate(90deg); }
+        .lm-ui-accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.25s ease;
+            opacity: 0;
+        }
+        .lm-ui-accordion-body.lm-ui-open {
+            max-height: 500px;
+            opacity: 1;
+        }
+
+        /* Enhanced input validation */
+        .form-input.lm-ui-input-valid {
+            border-color: var(--success) !important;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+        .form-input.lm-ui-input-invalid {
+            border-color: var(--error) !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+        }
+        .lm-ui-input-wrapper { position: relative; }
+        .lm-ui-input-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.9rem;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        .lm-ui-input-icon.lm-ui-valid { color: var(--success); }
+        .lm-ui-input-icon.lm-ui-invalid { color: var(--error); }
+
+        /* Social grid subtitles */
+        .lm-ui-social-subtitle {
+            font-size: 0.55rem;
+            opacity: 0.75;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+            margin-top: 2px;
+            line-height: 1.2;
+        }
+
+        /* Button enhanced states — no pulse infinito */
+        #activateChatbotBtn {
+            transition: all 0.25s ease !important;
+        }
+        #activateChatbotBtn:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(59, 130, 246, 0.45);
+            filter: brightness(1.08);
+        }
+        #activateChatbotBtn:not(:disabled):active {
+            transform: scale(0.97);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Video lazy load card */
+        .lm-ui-video-thumb {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--dark), var(--dark-surface));
+            border: 1px solid rgba(71,85,105,0.4);
+            aspect-ratio: 16/9;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .lm-ui-video-thumb:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+        .lm-ui-video-play {
+            width: 64px;
+            height: 64px;
+            background: rgba(59, 130, 246, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.5rem;
+            transition: transform 0.2s ease, background 0.2s ease;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+        }
+        .lm-ui-video-thumb:hover .lm-ui-video-play {
+            transform: scale(1.1);
+            background: rgba(59, 130, 246, 1);
+        }
+        .lm-ui-video-meta {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.7);
+            color: #e2e8f0;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Tutorial reactivation button */
+        .lm-ui-tutorial-btn {
+            background: none;
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-muted);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .lm-ui-tutorial-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary-light);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        /* Reduced motion — acessibilidade */
+        @media (prefers-reduced-motion: reduce) {
+            .lm-ui-accordion-chevron,
+            .lm-ui-accordion-body,
+            .lm-ui-video-play,
+            .lm-ui-video-thumb,
+            .lm-ui-tutorial-btn,
+            #activateChatbotBtn,
+            .form-input,
+            .social-btn,
+            .analytics-card,
+            .qsv__card {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+
+        /* Responsive extras — 320px */
+        @media (max-width: 360px) {
+            .social-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.4rem;
+            }
+            .social-btn {
+                font-size: 0.6rem;
+                padding: 0.6rem 0.3rem;
+            }
+            .header-content {
+                padding: 0.75rem;
+            }
+            .control-panel {
+                padding: 1.25rem;
+            }
+        }
     </style>
 </head>
 
@@ -1416,20 +1602,22 @@
                 Sua IA Conversacional está pronta para impulsionar suas vendas!
             </div>
 
-            <!-- ONBOARDING: Bloco de Filtro Psicológico (Aviso importante) (Item 1) -->
+            <!-- ONBOARDING: Bloco informativo — Accordion fechado (Modernização V5) -->
             <div id="onboardingCriticalWarning"
-                style="background: rgba(245,158,11,0.12); border: 2px solid #f59e0b; border-radius: 16px; padding: 20px; margin-bottom: 20px; position: relative; z-index: 10001; margin-top: 10px;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                    <span style="font-size:1.5rem;">⚠️</span>
-                    <h3 style="color: #fbbf24; margin:0; font-size:1.1rem; font-weight:700;">Importante antes de começar
-                    </h3>
+                style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; margin-top: 10px;">
+                <div class="lm-ui-accordion-header" onclick="(function(el){var b=el.closest('#onboardingCriticalWarning').querySelector('.lm-ui-accordion-body');var c=el.querySelector('.lm-ui-accordion-chevron');if(b&&c){b.classList.toggle('lm-ui-open');c.classList.toggle('lm-ui-open');}})(this)">
+                    <i class="fas fa-chevron-right lm-ui-accordion-chevron"></i>
+                    <i class="fas fa-circle-info" style="color:#fbbf24; font-size:1.1rem;"></i>
+                    <h3 style="color: #fbbf24; margin:0; font-size:0.95rem; font-weight:600;">Como o LinkMágico funciona</h3>
                 </div>
-                <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; margin:0;">
-                    O Link Mágico não é um chatbot genérico.<br>
-                    Ele funciona como um <strong>funil conversacional inteligente</strong>.<br><br>
-                    Testes com perguntas aleatórias <strong>não representam o uso real</strong> da ferramenta.<br><br>
-                    Para ver o verdadeiro potencial, siga os passos abaixo na ordem. Leva menos de 5 minutos.
-                </p>
+                <div class="lm-ui-accordion-body">
+                    <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.6; margin:12px 0 0 0; padding-left: 28px;">
+                        O Link Mágico não é um chatbot genérico.<br>
+                        Ele funciona como um <strong>funil conversacional inteligente</strong>.<br><br>
+                        Testes com perguntas aleatórias <strong>não representam o uso real</strong> da ferramenta.<br><br>
+                        Para ver o verdadeiro potencial, siga os passos abaixo na ordem. Leva menos de 5 minutos.
+                    </p>
+                </div>
             </div>
 
             <div class="form-section">
@@ -1449,7 +1637,7 @@
                 <div style="margin-bottom:1rem;">
                     <button id="toggleAdvancedBtn" onclick="toggleAdvancedOptions()"
                         style="background:none; border:1px solid #475569; color:#94a3b8; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-size:0.85rem; width:100%; transition:all 0.3s;">
-                        ⚙️ Mostrar opções avançadas
+                        <i class="fas fa-sliders" style="margin-right:4px;"></i> Mostrar opções avançadas
                     </button>
                 </div>
 
@@ -1578,7 +1766,7 @@
                     <i class="fas fa-play-circle"></i> Ativar Assistente IA
                 </button>
                 <p id="activateBtnHint" style="color:#f59e0b; font-size:0.78rem; text-align:center; margin-top:0.5rem;">
-                    ⚠️ Preencha o nome e a URL para ativar</p>
+                    <i class="fas fa-info-circle"></i> Preencha o nome e a URL para ativar</p>
             </div>
 
             <!-- ===== NOVA SEÇÃO: LINK DO CHATBOT ===== -->
@@ -1639,22 +1827,18 @@
             <!-- /WA-CHANNEL-003 -->
 
             <div class="social-grid">
-                <button class="social-btn whatsapp" id="shareWhatsApp"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                <button class="social-btn instagram" id="shareInstagram"><i class="fab fa-instagram"></i>
-                    Instagram</button>
-                <button class="social-btn facebook" id="shareFacebook"><i class="fab fa-facebook"></i> Facebook</button>
-                <button class="social-btn youtube" id="shareYouTube"><i class="fab fa-youtube"></i> YouTube</button>
-                <button class="social-btn tiktok" id="shareTikTok"><i class="fab fa-tiktok"></i> TikTok</button>
-                <button class="social-btn twitter" id="shareTwitter"><i class="fab fa-twitter"></i> Twitter</button>
-                <button class="social-btn kwai" id="shareKwai"><i class="fas fa-video"></i> Kwai</button>
-                <button class="social-btn linkedin" id="shareLinkedIn"><i class="fab fa-linkedin"></i> LinkedIn</button>
-                <button class="social-btn telegram" id="shareTelegram"><i class="fab fa-telegram-plane"></i>
-                    Telegram</button>
-                <button class="social-btn messenger" id="shareMessenger"><i class="fab fa-facebook-messenger"></i>
-                    Messenger</button>
+                <button class="social-btn whatsapp" id="shareWhatsApp"><i class="fab fa-whatsapp"></i> WhatsApp<span class="lm-ui-social-subtitle">Bio · Link</span></button>
+                <button class="social-btn instagram" id="shareInstagram"><i class="fab fa-instagram"></i> Instagram<span class="lm-ui-social-subtitle">Perfil · Post · Reel</span></button>
+                <button class="social-btn facebook" id="shareFacebook"><i class="fab fa-facebook"></i> Facebook<span class="lm-ui-social-subtitle">Página · Post</span></button>
+                <button class="social-btn youtube" id="shareYouTube"><i class="fab fa-youtube"></i> YouTube<span class="lm-ui-social-subtitle">Vídeo · Canal</span></button>
+                <button class="social-btn tiktok" id="shareTikTok"><i class="fab fa-tiktok"></i> TikTok<span class="lm-ui-social-subtitle">Vídeo · Perfil</span></button>
+                <button class="social-btn twitter" id="shareTwitter"><i class="fab fa-twitter"></i> Twitter<span class="lm-ui-social-subtitle">Perfil · Post</span></button>
+                <button class="social-btn kwai" id="shareKwai"><i class="fas fa-video"></i> Kwai<span class="lm-ui-social-subtitle">Vídeo · Perfil</span></button>
+                <button class="social-btn linkedin" id="shareLinkedIn"><i class="fab fa-linkedin"></i> LinkedIn<span class="lm-ui-social-subtitle">Perfil · Artigo</span></button>
+                <button class="social-btn telegram" id="shareTelegram"><i class="fab fa-telegram-plane"></i> Telegram<span class="lm-ui-social-subtitle">Canal · Grupo</span></button>
+                <button class="social-btn messenger" id="shareMessenger"><i class="fab fa-facebook-messenger"></i> Messenger<span class="lm-ui-social-subtitle">Página</span></button>
                 <button class="social-btn prompt" id="promptBtn"><i class="fas fa-lightbulb"></i> Prompt</button>
-                <button class="social-btn analytics" id="analyticsBtn"><i class="fas fa-chart-line"></i>
-                    Analytics</button>
+                <button class="social-btn analytics" id="analyticsBtn"><i class="fas fa-chart-line"></i> Analytics</button>
             </div>
         </div>
 
@@ -1670,7 +1854,7 @@
                         style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; color:#94a3b8;">
                         <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;"
                             id="obStatusDot"></span>
-                        <span id="obStatusText">Nenhum assistente ativo</span>
+                        <span id="obStatusText">Pronto para criar seu vendedor IA</span>
                     </span>
                     <span id="obStatusLink"
                         style="display:none; align-items:center; gap:6px; font-size:0.82rem; color:#94a3b8;">
@@ -1680,6 +1864,9 @@
                         style="display:none; align-items:center; gap:6px; font-size:0.82rem; color:#94a3b8;">
                         📚 <span id="obFaqCount">0</span> FAQs
                     </span>
+                    <button class="lm-ui-tutorial-btn" onclick="(function(){try{localStorage.removeItem('lm_ui_onboarding_completed');location.reload();}catch(e){}})()" title="Reativar o tutorial guiado">
+                        <i class="fas fa-graduation-cap"></i> Mostrar tutorial
+                    </button>
                 </div>
             </div>
 
@@ -1805,22 +1992,23 @@
                 </script>
             </div>
 
-            <!-- 🎬 QUICK START VIDEO — Vídeo do Fundador (incremental, isolado, reversível) -->
+            <!-- QUICK START VIDEO — Lazy load estilo Notion (Modernização V5) -->
             <div id="qsvCard" class="qsv__card">
                 <div class="qsv__header">
-                    <span class="qsv__badge"><i class="fas fa-circle"></i> 🎬 GUIA RÁPIDO</span>
-                    <button class="qsv__close" onclick="dismissQSV()" title="Fechar para sempre">✕</button>
+                    <span class="qsv__badge"><i class="fas fa-circle"></i> <i class="fas fa-film" style="margin-right:4px;"></i> GUIA RÁPIDO</span>
+                    <button class="qsv__close" onclick="dismissQSV()" title="Fechar para sempre"><i class="fas fa-times" style="font-size:0.8rem;"></i></button>
                 </div>
                 <div class="qsv__title">Ative seu vendedor automático em 3 passos</div>
-                <p class="qsv__subtitle"><strong>Edvaldo</strong>, fundador do LinkMágico, explica como configurar em menos de 2 minutos. Assista antes de começar — facilita tudo!</p>
-                <div class="qsv__video-wrap">
-                    <video controls width="100%" height="100%" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0; background:#000;" playsinline controlsList="nodownload">
-                        <source src="/videos/onboarding_v2.mp4" type="video/mp4">
-                        Seu navegador não suporta a exibição deste vídeo.
-                    </video>
+                <p class="qsv__subtitle"><strong>Edvaldo</strong>, fundador do LinkMágico, explica como configurar em menos de 2 minutos.</p>
+                <div id="qsvVideoContainer">
+                    <!-- Thumbnail — vídeo carrega apenas no clique (lazy load) -->
+                    <div class="lm-ui-video-thumb" id="qsvThumb" onclick="(function(){try{var c=document.getElementById('qsvVideoContainer');if(c){c.innerHTML='<div class=\'qsv__video-wrap\'><video controls autoplay playsinline controlsList=\'nodownload\' style=\'position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000;\'><source src=\'/videos/onboarding_v2.mp4\' type=\'video/mp4\'></video></div>';}}catch(e){console.warn('[LM-UI] Erro ao carregar vídeo:',e.message);}})()">
+                        <div class="lm-ui-video-play"><i class="fas fa-play"></i></div>
+                        <div class="lm-ui-video-meta"><i class="fas fa-clock"></i> 2 min</div>
+                    </div>
                 </div>
                 <div class="qsv__footer">
-                    <span class="qsv__footer-text">⏱️ Vídeo curto • Sem compromisso • Veja e comece a usar</span>
+                    <span class="qsv__footer-text"><i class="fas fa-clock" style="margin-right:4px;"></i> Vídeo curto &bull; Sem compromisso &bull; Veja e comece a usar</span>
                 </div>
             </div>
             <script>
@@ -1845,12 +2033,9 @@
             <!-- UX-005: Card motivacional quando não há assistente ativo -->
             <div id="emptyStateCard"
                 style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1)); border:1px solid rgba(59,130,246,0.25); border-radius:16px; padding:2.5rem; text-align:center; margin-bottom:1.5rem;">
-                <div style="font-size:3rem; margin-bottom:1rem;">🚀</div>
-                <h3 style="color:#60a5fa; margin:0 0 0.75rem 0; font-size:1.2rem;">Crie seu primeiro assistente para
-                    começar</h3>
-                <p style="color:#94a3b8; margin:0; font-size:0.9rem; line-height:1.6;">Preencha o nome e a URL à
-                    esquerda, cadastre suas FAQs na Knowledge Base,<br>e clique em "Ativar Assistente IA" para ver a
-                    mágica acontecer! ✨</p>
+                <div style="font-size:2.5rem; margin-bottom:1rem;"><i class="fas fa-rocket" style="color:#60a5fa;"></i></div>
+                <h3 style="color:#60a5fa; margin:0 0 0.75rem 0; font-size:1.2rem;">Seu vendedor pode estar ativo em menos de 2 minutos</h3>
+                <p style="color:#94a3b8; margin:0; font-size:0.9rem; line-height:1.6;">Comece criando seu primeiro vendedor: preencha o nome e a URL ao lado,<br>e clique em "Ativar Assistente IA" para começar a vender no automático.</p>
             </div>
 
             <!-- UX-005: Analytics oculto por padrão (aparece quando existir assistente ativo) -->
@@ -7060,6 +7245,159 @@
     })();
     </script>
     <!-- /WA-CHANNEL-003 JS -->
+
+    <!-- LM-UI MODERNIZATION V5 — Scripts Encapsulados -->
+    <script>
+    /* LM-UI: Validacao Visual em Tempo Real (IIFE, encapsulado, sem globals) */
+    (function() {
+        'use strict';
+        try {
+            var urlInput = document.getElementById('salesUrl');
+            var nameInput = document.getElementById('robotName');
+            if (!urlInput || !nameInput) return;
+
+            var urlParent = urlInput.parentElement;
+            if (urlParent && !urlParent.classList.contains('lm-ui-input-wrapper')) {
+                urlParent.style.position = 'relative';
+                var urlIcon = document.createElement('i');
+                urlIcon.className = 'lm-ui-input-icon';
+                urlIcon.id = 'lmUiUrlIcon';
+                urlIcon.style.display = 'none';
+                urlParent.appendChild(urlIcon);
+            }
+
+            function isValidUrl(str) {
+                try {
+                    if (!str || str.length < 8) return false;
+                    var u = new URL(str);
+                    return u.protocol === 'http:' || u.protocol === 'https:';
+                } catch(e) { return false; }
+            }
+
+            urlInput.addEventListener('input', function() {
+                var val = this.value.trim();
+                var icon = document.getElementById('lmUiUrlIcon');
+                if (!val) {
+                    this.classList.remove('lm-ui-input-valid', 'lm-ui-input-invalid');
+                    if (icon) icon.style.display = 'none';
+                    return;
+                }
+                if (isValidUrl(val)) {
+                    this.classList.remove('lm-ui-input-invalid');
+                    this.classList.add('lm-ui-input-valid');
+                    if (icon) { icon.className = 'lm-ui-input-icon lm-ui-valid fas fa-check-circle'; icon.style.display = 'block'; }
+                } else {
+                    this.classList.remove('lm-ui-input-valid');
+                    this.classList.add('lm-ui-input-invalid');
+                    if (icon) { icon.className = 'lm-ui-input-icon lm-ui-invalid fas fa-times-circle'; icon.style.display = 'block'; }
+                }
+            });
+
+            console.log('[LM-UI] Validacao visual dos inputs carregada');
+        } catch(e) {
+            console.warn('[LM-UI] Validacao visual indisponivel:', e.message);
+        }
+    })();
+
+    /* LM-UI: Social Grid — Flexbox para subtitulos */
+    (function() {
+        'use strict';
+        try {
+            var btns = document.querySelectorAll('.social-grid .social-btn');
+            btns.forEach(function(btn) {
+                btn.style.display = 'flex';
+                btn.style.flexDirection = 'column';
+                btn.style.alignItems = 'center';
+            });
+        } catch(e) {
+            console.warn('[LM-UI] Social grid flex indisponivel:', e.message);
+        }
+    })();
+
+    /* LM-UI: Driver.js Onboarding Guiado (IIFE desacoplado, condicional, com fallback) */
+    (function() {
+        'use strict';
+        try {
+            if (typeof driver === 'undefined' && typeof window.driver === 'undefined') {
+                console.warn('[LM-UI] Driver.js nao carregado, onboarding desativado.');
+                return;
+            }
+            var Driver = window.driver ? window.driver.js ? window.driver.js.driver : null : null;
+            if (!Driver) {
+                console.warn('[LM-UI] Driver.js API nao encontrada.');
+                return;
+            }
+
+            // Verificar se onboarding ja foi completado
+            if (localStorage.getItem('lm_ui_onboarding_completed')) return;
+
+            // Aguardar DOM estavel
+            setTimeout(function() {
+                try {
+                    var driverObj = Driver({
+                        showProgress: true,
+                        animate: true,
+                        overlayColor: 'rgba(0,0,0,0.75)',
+                        stagePadding: 8,
+                        stageRadius: 12,
+                        popoverClass: 'lm-ui-popover',
+                        nextBtnText: 'Proximo',
+                        prevBtnText: 'Anterior',
+                        doneBtnText: 'Concluir',
+                        onDestroyStarted: function() {
+                            localStorage.setItem('lm_ui_onboarding_completed', 'true');
+                            driverObj.destroy();
+                        },
+                        steps: [
+                            {
+                                popover: {
+                                    title: 'Bem-vindo ao LinkMagico!',
+                                    description: 'Vamos configurar seu vendedor IA em 3 passos rapidos. Leva menos de 2 minutos.',
+                                    side: 'center',
+                                    align: 'center'
+                                }
+                            },
+                            {
+                                element: '#salesUrl',
+                                popover: {
+                                    title: '1. Cole a URL do seu site',
+                                    description: 'Cole aqui o link da sua pagina de vendas, perfil ou conteudo. A IA extrai tudo automaticamente.',
+                                    side: 'bottom',
+                                    align: 'start'
+                                }
+                            },
+                            {
+                                element: '#robotName',
+                                popover: {
+                                    title: '2. De um nome ao assistente',
+                                    description: 'Escolha um nome para seu vendedor virtual. Ex: @VendedorIA, @AtendenteTop',
+                                    side: 'bottom',
+                                    align: 'start'
+                                }
+                            },
+                            {
+                                element: '#activateChatbotBtn',
+                                popover: {
+                                    title: '3. Ative seu vendedor!',
+                                    description: 'Clique aqui para gerar seu link e widget. Seu vendedor estara pronto para atender clientes!',
+                                    side: 'top',
+                                    align: 'center'
+                                }
+                            }
+                        ]
+                    });
+                    driverObj.drive();
+                    console.log('[LM-UI] Onboarding Driver.js iniciado');
+                } catch(innerErr) {
+                    console.warn('[LM-UI] Erro ao iniciar Driver.js tour:', innerErr.message);
+                }
+            }, 1500);
+
+        } catch(e) {
+            console.warn('[LM-UI] Onboarding indisponivel:', e.message);
+        }
+    })();
+    </script>
 
 </body>
 
