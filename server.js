@@ -9363,8 +9363,20 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                     'link de pagamento','quero assinar','quero pagar'
                 ];
                 if (_v181BuyKw.some(k => _v181msg.includes(k))) {
-                    console.log('[V18.1-INTENT] 🔥 BUY intent FORÇADO via keyword match');
-                    req.__forceBuyIntent = true;
+                    // ═══ FIX-02 [V21.1-HARDENING] — Exclusão contextual para plano gratuito ═══
+                    const _v181FreePlanFixEnabled = (process.env.FEATURE_V21_FREEPLAN_FIX !== 'false');
+                    const _v181FreePlanModifiers = ['gratuito', 'grátis', 'gratis', 'free', 'trial', 'teste', 'básico', 'basico', 'starter', 'free forever', 'versão gratuita', 'versão free', 'versao gratuita', 'versao free'];
+                    const _v181HasPlanWord = (_v181msg.includes('plano') || _v181msg.includes('planos') || _v181msg.includes('versão') || _v181msg.includes('versao'));
+                    const _v181HasFreeModifier = _v181FreePlanModifiers.some(m => _v181msg.includes(m));
+                    const _v181HasBuyVerb = ['assinar', 'comprar', 'contratar', 'ativar', 'pagar', 'trocar', 'upgrade'].some(b => _v181msg.includes(b));
+                    const _v181IsFreePlanQuery = _v181FreePlanFixEnabled && _v181HasPlanWord && _v181HasFreeModifier && !_v181HasBuyVerb;
+
+                    if (_v181IsFreePlanQuery) {
+                        console.log('[V18.1-INTENT] ℹ️ FREE PLAN detectado — NÃO forçar BUY | msg="' + _v181msg.substring(0, 60) + '"');
+                    } else {
+                        console.log('[V18.1-INTENT] 🔥 BUY intent FORÇADO via keyword match');
+                        req.__forceBuyIntent = true;
+                    }
                 }
             } else {
                 console.log('[V18.1] ⏭️ BYPASS (V19 ativo)');
@@ -9808,6 +9820,12 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         // V10: Coletar dados de CTA e Closing para o Orchestrator
         let _intCtaData = null;
         let _intClosingData = null;
+        // ═══ FIX-01 [V21.1-HARDENING] — Intent no escopo correto para V21 CTA Priority ═══
+        // Problema: _intIntent era declarada com const em 3 blocos locais e usada fora no V21.
+        // Solução: _v21ResolvedIntent recebe a intenção de cada fonte, protegida por feature flag.
+        let _v21ResolvedIntent = 'info';
+        let _v21IntentOrigin = 'default';
+        const _v21IntentFixEnabled = (process.env.FEATURE_V21_INTENT_SCOPE_FIX !== 'false');
         const _intAiResponseOriginal = finalResponse; // Guardar resposta IA original pré-camadas
         try {
             const _intSalesMode = (processedPageData && processedPageData.salesMode) ||
@@ -9820,6 +9838,11 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                     (inteligencias?.objecao ? 'objecao' :
                     (inteligencias?.sair ? 'sair' :
                     (inteligencias?.curioso ? 'curioso' : '')));
+                // FIX-01: Propagar intent ao escopo externo (fonte 1/3: inteligências)
+                if (_v21IntentFixEnabled && typeof _intIntent === 'string' && _intIntent.trim()) {
+                    _v21ResolvedIntent = _intIntent;
+                    _v21IntentOrigin = 'inteligencias';
+                }
 
                 // 1. CTA Engine — selecionar CTA contextual
                 if (FEATURE_SMART_CTA && _ctaEngine) {
@@ -10093,6 +10116,11 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
             if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
                 const { detectIntent: _intDetectIntent, shouldBlockCheckout: _intShouldBlock } = require('./lib/decision-core');
                 const _intIntent = _intDetectIntent(message);
+                // FIX-01: Propagar intent ao escopo externo (fonte 2/3: decision-core)
+                if (_v21IntentFixEnabled && typeof _intIntent === 'string' && _intIntent.trim()) {
+                    _v21ResolvedIntent = _intIntent;
+                    _v21IntentOrigin = 'decision-core';
+                }
                 
                 if (_intShouldBlock(_intIntent)) {
                     const _intCheckoutUrl = processedPageData?.checkoutLink || processedPageData?.checkoutUrl || '';
@@ -10456,6 +10484,11 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                 }
                 if (_v17LinkResolver && _urlGuard) {
                     const _intIntent = _v17LinkResolver.detectIntent(message);
+                    // FIX-01: Propagar intent ao escopo externo (fonte 3/3: v17-link-resolver)
+                    if (_v21IntentFixEnabled && typeof _intIntent === 'string' && _intIntent.trim()) {
+                        _v21ResolvedIntent = _intIntent;
+                        _v21IntentOrigin = 'v17-link-resolver';
+                    }
                     const _intBestLink = _v17LinkResolver.resolveBestLink(_intIntent, {
                         checkoutLink: processedPageData?.checkoutLink,
                         whatsappLink: processedPageData?.whatsappLink || processedPageData?.contatos?.whatsappLink,
@@ -10624,10 +10657,12 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         } catch (_) {}
 
         // ═══ V21 FIX 3 — CTA Priority Engine (chat-inteligente) ═══
+        // FIX-01 [V21.1-HARDENING]: Usar _v21ResolvedIntent em vez de _intIntent (escopo corrigido)
+        console.log(`[V21-HARDENING] intent_resolvido=${_v21ResolvedIntent} | origem=${_v21IntentOrigin} | fix_enabled=${_v21IntentFixEnabled} | cta_atual=${!!_intCta}`);
         try {
             if (_channelSafeRouting && _channelSafeRouting.shouldApplyFix('whatsapp', 'resolveFinalCTA')) {
                 const _v21CtaInt = _channelSafeRouting.resolveFinalCTA({
-                    intent: _intIntent || 'info',
+                    intent: _v21ResolvedIntent || 'info',
                     checkoutLink: processedPageData?.checkoutLink || null,
                     scheduleLink: mainFlowCalendarHash ? _channelSafeRouting.resolveScheduleUrl(mainFlowCalendarHash, { channel: 'whatsapp' }) : null,
                     whatsappLink: processedPageData?.whatsappLink || processedPageData?.contatos?.whatsappLink || null,
