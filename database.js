@@ -1305,8 +1305,9 @@ const DatabaseHelpers = {
             api_key,
             name,
             url,
-            JSON.stringify(extracted_data),
-            JSON.stringify(config),
+            // FIX-04 [V21.1-HARDENING]: Sanitizar Unicode surrogates antes de persistir
+            JSON.stringify(this._sanitizeForJson(extracted_data)),
+            JSON.stringify(this._sanitizeForJson(config)),
             user_email,
             plan || 'free'
         ];
@@ -1350,11 +1351,12 @@ const DatabaseHelpers = {
         const params = [
             chatbot_id,
             session_id,
-            JSON.stringify(messages),
+            // FIX-04 [V21.1-HARDENING]: Sanitizar Unicode surrogates antes de persistir
+            JSON.stringify(this._sanitizeForJson(messages)),
             user_satisfaction,
             resolved ? 1 : 0,
             lead_captured ? 1 : 0,
-            JSON.stringify(metadata || {})
+            JSON.stringify(this._sanitizeForJson(metadata || {}))
         ];
 
         const result = await db.query(query, params);
@@ -1443,7 +1445,8 @@ const DatabaseHelpers = {
         await db.query(insertQuery, [
             url,
             urlHash,
-            JSON.stringify(extractedData),
+            // FIX-04 [V21.1-HARDENING]: Sanitizar Unicode surrogates antes de persistir
+            JSON.stringify(this._sanitizeForJson(extractedData)),
             expiresAt.toISOString()
         ]);
 
@@ -1700,7 +1703,8 @@ const DatabaseHelpers = {
             appointmentData.datetime || null,
             appointmentData.status || 'pendente',
             appointmentData.notes || null,
-            JSON.stringify(appointmentData.metadata || {})
+            // FIX-04 [V21.1-HARDENING]: Sanitizar Unicode surrogates antes de persistir
+            JSON.stringify(this._sanitizeForJson(appointmentData.metadata || {}))
         ];
 
         const result = await db.query(query, params);
@@ -1779,7 +1783,8 @@ const DatabaseHelpers = {
             shortUrlData.robotName || null,
             shortUrlData.salesUrl || null,
             shortUrlData.instructions || null,
-            JSON.stringify(shortUrlData.metadata || {})
+            // FIX-04 [V21.1-HARDENING]: Sanitizar Unicode surrogates antes de persistir
+            JSON.stringify(this._sanitizeForJson(shortUrlData.metadata || {}))
         ];
 
         try {
@@ -2106,7 +2111,8 @@ const DatabaseHelpers = {
             robotName || null,
             salesUrl || null,
             instructions || null,
-            JSON.stringify(metadata || {})
+            // FIX-04 [V21.1-HARDENING]: Sanitizar Unicode surrogates antes de persistir
+            JSON.stringify(this._sanitizeForJson(metadata || {}))
         ];
 
         const result = await db.query(query, params);
