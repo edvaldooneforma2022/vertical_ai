@@ -4990,6 +4990,20 @@ function clampSentences(text, maxSentences = 2) {
     return sentences.slice(0, maxSentences).join(" ");
 }
 
+/**
+ * 🛡️ [V20.1-HOTFIX] Truncar string sem cortar surrogate pairs (emojis) pela metade.
+ * Se o último char é um high surrogate (0xD800-0xDBFF), recua 1 posição.
+ * Resolve causa secundária do erro PostgreSQL 22P02.
+ */
+function safeTruncate(str, maxLen) {
+    if (typeof str !== 'string' || str.length <= maxLen) return str;
+    let end = maxLen;
+    const code = str.charCodeAt(end - 1);
+    // Se o último char é high surrogate, não cortar o par
+    if (code >= 0xD800 && code <= 0xDBFF) end--;
+    return str.slice(0, end);
+}
+
 function extractBonuses(text) {
     if (!text) return [];
     const bonusKeywords = /(bônus|bonus|brinde|extra|grátis|template|planilha|checklist|e-book|ebook)/gi;
@@ -5247,7 +5261,7 @@ async function extractPageData(url) {
                 const bodyText = $("body").text() || "";
                 const summaryText = bodyText.replace(/\s+/g, " ").trim();
                 const sentences = summaryText.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
-                extractedData.summary = sentences.slice(0, 3).join(". ").substring(0, 400) + (sentences.length > 3 ? "..." : "");
+                extractedData.summary = safeTruncate(sentences.slice(0, 3).join(". "), 400) + (sentences.length > 3 ? "..." : "");
 
                 extractedData.bonuses_detected = extractBonuses(bodyText);
 
@@ -5559,10 +5573,10 @@ async function extractPageData(url) {
                 if (finalText && finalText.length > extractedData.cleanText.length) {
                     extractedData.cleanText = finalText;
                     extractedData.method = "puppeteer";
-                    if (!extractedData.title && puppeteerData.title) extractedData.title = puppeteerData.title.slice(0, 200);
-                    if (!extractedData.description && puppeteerData.metaDescription) extractedData.description = puppeteerData.metaDescription.slice(0, 500);
+                    if (!extractedData.title && puppeteerData.title) extractedData.title = safeTruncate(puppeteerData.title, 200);
+                    if (!extractedData.description && puppeteerData.metaDescription) extractedData.description = safeTruncate(puppeteerData.metaDescription, 500);
                     const sents = finalText.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
-                    if (!extractedData.summary && sents.length) extractedData.summary = sents.slice(0, 3).join(". ").substring(0, 400) + (sents.length > 3 ? "..." : "");
+                    if (!extractedData.summary && sents.length) extractedData.summary = safeTruncate(sents.slice(0, 3).join(". "), 400) + (sents.length > 3 ? "..." : "");
                     extractedData.bonuses_detected = extractBonuses(finalText);
                     // 🎯 [BUG-FIX-PRECO] Atualizar preços no Puppeteer
                     extractedData.price_detected = extractPrices(finalText);
@@ -5973,7 +5987,7 @@ async function extractPageData(url) {
             }
             if (!extractedData.summary && extractedData.cleanText) {
                 const sents = extractedData.cleanText.split(/(?<=[.!?])\s+/).filter(Boolean);
-                extractedData.summary = sents.slice(0, 3).join(". ").slice(0, 400) + (sents.length > 3 ? "..." : "");
+                extractedData.summary = safeTruncate(sents.slice(0, 3).join(". "), 400) + (sents.length > 3 ? "..." : "");
             }
         } catch (procErr) {
             logger.warn("Final processing failed:", procErr.message || procErr);
@@ -6867,7 +6881,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     const _v13Base = _v13BuildBaseResponse(_v13Action.action, {
                         checkoutLink: pageData.checkoutLink || null,
                         productName: pageData.title || '',
-                        productDescription: (pageData.resumo || pageData.description || '').substring(0, 300),
+                        productDescription: safeTruncate(pageData.resumo || pageData.description || '', 300),
                         whatsappLink: (pageData.contatos && pageData.contatos.whatsapp && pageData.contatos.whatsapp[0]) || pageData.whatsapp || null,
                         price: null,  // Nunca passar preço — sistema não informa preço à IA
                         guarantee: pageData.garantia || pageData.guarantee || null,

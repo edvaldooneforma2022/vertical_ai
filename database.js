@@ -1493,23 +1493,21 @@ const DatabaseHelpers = {
      * Causa: emojis cortados pela metade ao truncar strings ou dados do widget
      */
     _sanitizeForJson(value) {
+        if (value === null || value === undefined) return value;
         if (typeof value === 'string') {
             // Remove surrogates órfãos (high sem low, ou low sem high)
             return value.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
         }
+        if (typeof value === 'number' || typeof value === 'boolean') return value;
         if (Array.isArray(value)) {
-            return value.map(item => {
-                if (typeof item === 'string') return this._sanitizeForJson(item);
-                if (typeof item === 'object' && item !== null) return JSON.parse(this._sanitizeForJson(JSON.stringify(item)));
-                return item;
-            });
+            return value.map(item => this._sanitizeForJson(item));
         }
-        if (typeof value === 'object' && value !== null) {
-            try {
-                return JSON.parse(this._sanitizeForJson(JSON.stringify(value)));
-            } catch (_) {
-                return value;
+        if (typeof value === 'object') {
+            const sanitized = {};
+            for (const [key, val] of Object.entries(value)) {
+                sanitized[key] = this._sanitizeForJson(val);
             }
+            return sanitized;
         }
         return value;
     },
@@ -1547,6 +1545,20 @@ const DatabaseHelpers = {
             JSON.stringify(safeMeta),
             JSON.stringify(safeConvs)
         ];
+
+        // 🛡️ [V20.1-HOTFIX] Sanitização final dos params JSON stringificados
+        // Proteção dupla: mesmo após walk recursivo, sanitiza a string JSON final
+        if (USE_POSTGRES) {
+            const surrogateRegex = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+            for (let i = 0; i < params.length; i++) {
+                if (typeof params[i] === 'string' && surrogateRegex.test(params[i])) {
+                    console.warn(`⚠️ [SURROGATE-FIX] Param $${i + 1} contém surrogate órfão — sanitizando`);
+                    surrogateRegex.lastIndex = 0;
+                    params[i] = params[i].replace(surrogateRegex, '');
+                }
+                surrogateRegex.lastIndex = 0;
+            }
+        }
 
         const result = await db.query(query, params);
         const savedLead = result.rows ? result.rows[0] : null;
