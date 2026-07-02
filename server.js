@@ -9826,6 +9826,17 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
         let _v21ResolvedIntent = 'info';
         let _v21IntentOrigin = 'default';
         const _v21IntentFixEnabled = (process.env.FEATURE_V21_INTENT_SCOPE_FIX !== 'false');
+        // ═══ FIX-02 [TAXONOMY-NORM] — Normaliza intents Sales (PT) → V17 (EN) na fronteira ═══
+        // Resolve DA-004: impede vazamento de 'curioso'/'duvida' etc no domínio V17.
+        // Aplica-se SOMENTE a _v21ResolvedIntent. Não altera _intIntent local (Sales pipeline intacto).
+        const _taxonomyNormEnabled = (process.env.FEATURE_TAXONOMY_NORMALIZATION !== 'false');
+        const SALES_TO_V17_INTENT_MAP = {
+            'comprar': 'buy',
+            'objecao': 'objection',
+            'sair': 'exit',
+            'curioso': 'interest',
+            'duvida': 'explain'
+        };
         const _intAiResponseOriginal = finalResponse; // Guardar resposta IA original pré-camadas
         try {
             const _intSalesMode = (processedPageData && processedPageData.salesMode) ||
@@ -9839,8 +9850,11 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                     (inteligencias?.sair ? 'sair' :
                     (inteligencias?.curioso ? 'curioso' : '')));
                 // FIX-01: Propagar intent ao escopo externo (fonte 1/3: inteligências)
+                // FIX-02: Normalizar PT→EN antes de propagar ao domínio V17
                 if (_v21IntentFixEnabled && typeof _intIntent === 'string' && _intIntent.trim()) {
-                    _v21ResolvedIntent = _intIntent;
+                    _v21ResolvedIntent = (_taxonomyNormEnabled && SALES_TO_V17_INTENT_MAP[_intIntent])
+                        ? SALES_TO_V17_INTENT_MAP[_intIntent]
+                        : _intIntent;
                     _v21IntentOrigin = 'inteligencias';
                 }
 

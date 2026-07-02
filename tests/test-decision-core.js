@@ -33,7 +33,7 @@ function test() {
       name: 'CURIOSIDADE (Sem Override)',
       message: 'Como funciona o suporte de vocês?',
       response: "Nosso suporte funciona 24h via chat.",
-      expectedIntent: 'curiosity',
+      expectedIntent: 'explain',
       shouldOverride: false
     }
   ];
