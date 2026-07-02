@@ -10669,9 +10669,19 @@ app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].
                     existingCta: _intCta,
                     channel: 'whatsapp'
                 });
-                if (_v21CtaInt.cta && _v21CtaInt.source === 'cta_priority_engine') {
+                // ═══════════════════════════════════════════════════════════════
+                // REGRA DE NEGÓCIO (NÃO REMOVER):
+                // V21 NUNCA pode criar um CTA novo.
+                // Apenas validar, substituir ou remover um CTA já produzido
+                // pelo pipeline principal (V17/V18/Decision Engine).
+                // Sem essa guarda, perguntas informativas (garantia, preço,
+                // whitelabel, afiliado) recebem CTA fantasma de checkout.
+                // ═══════════════════════════════════════════════════════════════
+                if (_v21CtaInt.cta && _v21CtaInt.source === 'cta_priority_engine' && _intCta) {
                     console.log(`[V21@chat-inteligente] CTA Priority: ${_v21CtaInt.reason} | url=${_v21CtaInt.cta.url.substring(0, 50)}`);
                     _intCta = _v21CtaInt.cta;
+                } else if (_v21CtaInt.cta && _v21CtaInt.source === 'cta_priority_engine' && !_intCta) {
+                    console.log(`[V21@chat-inteligente] ⛔ CTA BLOQUEADO (V21 não cria CTA novo) | intent=${_v21ResolvedIntent} | reason=${_v21CtaInt.reason}`);
                 }
             }
         } catch (_v21CtaIntErr) {
