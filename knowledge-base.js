@@ -473,10 +473,15 @@ class KnowledgeBaseManager {
 
         const results = [];
         const queryLower = query.toLowerCase();
+        // ═══ FIX [KB-EXAMPLE-FILTER] — Não usar FAQs de exemplo como contexto ═══
+        // FAQs genéricas (PIX, garantia 7 dias) contaminavam respostas de todos os tenants.
+        // Feature flag: FEATURE_FILTER_EXAMPLE_FAQS (default: true)
+        const _filterExamples = (process.env.FEATURE_FILTER_EXAMPLE_FAQS !== 'false');
 
         // Buscar em FAQs
         for (const faq of kb.faqs) {
             if (!faq.active) continue;
+            if (_filterExamples && faq.isExample) continue;
 
             const questionLower = faq.question.toLowerCase();
             const answerLower = faq.answer.toLowerCase();
@@ -579,9 +584,13 @@ class KnowledgeBaseManager {
 
             if (queryTokens.length === 0) return [];
 
+            // ═══ FIX [KB-EXAMPLE-FILTER] — Não usar FAQs de exemplo na busca inteligente ═══
+            const _filterExamplesSmart = (process.env.FEATURE_FILTER_EXAMPLE_FAQS !== 'false');
+
             // Buscar em FAQs
             for (const faq of kb.faqs) {
                 if (!faq.active) continue;
+                if (_filterExamplesSmart && faq.isExample) continue;
 
                 const questionTokens = tokenize(faq.question);
                 const answerTokens = tokenize(faq.answer);
@@ -741,10 +750,14 @@ class KnowledgeBaseManager {
         let context = '';
 
         // Adicionar FAQs
-        if (kb.faqs.length > 0) {
+        // ═══ FIX [KB-EXAMPLE-FILTER] — Não compilar FAQs de exemplo no contexto da IA ═══
+        const _filterExamplesCtx = (process.env.FEATURE_FILTER_EXAMPLE_FAQS !== 'false');
+        const _activeFaqs = kb.faqs.filter(f => f.active && !(_filterExamplesCtx && f.isExample));
+
+        if (_activeFaqs.length > 0) {
             context += '📋 PERGUNTAS FREQUENTES:\n\n';
 
-            for (const faq of kb.faqs.filter(f => f.active)) {
+            for (const faq of _activeFaqs) {
                 const entry = `P: ${faq.question}\nR: ${faq.answer}\n\n`;
 
                 if (context.length + entry.length > maxLength) break;
