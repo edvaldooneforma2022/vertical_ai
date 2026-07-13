@@ -5983,7 +5983,7 @@ async function extractPageData(url) {
             if (extractedData.cleanText) extractedData.cleanText = uniqueLines(extractedData.cleanText);
             if (!extractedData.title && extractedData.cleanText) {
                 const firstLine = extractedData.cleanText.split("\n").find(l => l && l.length > 10 && l.length < 150);
-                if (firstLine) extractedData.title = firstLine.slice(0, 150);
+                if (firstLine) extractedData.title = safeTruncate(firstLine, 150);
             }
             if (!extractedData.summary && extractedData.cleanText) {
                 const sents = extractedData.cleanText.split(/(?<=[.!?])\s+/).filter(Boolean);
