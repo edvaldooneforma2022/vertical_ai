@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Widget v2.0 - LinkMágico</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: #94a3b8;
+            margin-bottom: 40px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: left;
+        }
+
+        .feature-card h3 {
+            color: #3b82f6;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .feature-card p {
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        .cta-section {
+            margin-top: 80px;
+            padding: 60px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 24px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .cta-section h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .cta-section p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            color: white;
+            padding: 16px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+
+        .instruction {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            text-align: left;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .instruction code {
+            color: #3b82f6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="hero">
+        <span class="badge">🚀 NOVO Widget v2.0</span>
+        <h1>Assistente de IA Inteligente</h1>
+        <p class="subtitle">
+            Experimente o novo design moderno do widget LinkMágico.<br>
+            Clique no balão no canto inferior direito para iniciar uma conversa!
+        </p>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>✨ Design Moderno</h3>
+                <p>Interface limpa e profissional que se integra perfeitamente a qualquer site.</p>
+            </div>
+            <div class="feature-card">
+                <h3>💬 Chat Inline</h3>
+                <p>Abre diretamente na página, sem popups invasivos.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎯 Captura de Leads</h3>
+                <p>Formulário integrado para capturar informações de contato.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🤖 IA Avançada</h3>
+                <p>Respostas inteligentes baseadas no conteúdo da sua página.</p>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <h2>Teste Agora!</h2>
+            <p>Clique no balão "Oi! Posso ajudar?" no canto inferior direito para experimentar.</p>
+
+            <div class="instruction">
+                <strong>Para usar em seu site, adicione este código:</strong><br><br>
+                <code>&lt;script&gt;<br>
+                &nbsp;&nbsp;window.LinkMagicoWidgetConfig = {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;robotName: "Seu Assistente",<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;salesUrl: "https://seusite.com",<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;instructions: "Seja amigável",<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;primaryColor: "#3b82f6",<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;apiKey: "SUA_API_KEY"<br>
+                &nbsp;&nbsp;};<br>
+                &lt;/script&gt;<br>
+                &lt;script src="https://vertical-ai-dktu.onrender.com/public/widget-v2.js"&gt;&lt;/script&gt;</code>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>LinkMágico © 2025 - Todos os direitos reservados</p>
+    </footer>
+
+    <!-- Widget v2.0 -->
+    <script>
+        window.LinkMagicoWidgetConfig = {
+            robotName: "Link Mágico",
+            salesUrl: "https://www.arsenalsecretodosceos.com.br/linkmagico",
+            instructions: "Sempre responda de forma amigável, consultiva e entusiasmada, com foco em vendas e conversões.",
+            primaryColor: "#3b82f6",
+            apiKey: "LMV7-JGZJ-2KZG-EC6F",
+            greetingMessage: "Oi! Posso ajudar?",
+            welcomeMessage: "Olá 👋 Muito bom ter você aqui!",
+            secondMessage: "Vou te ajudar a revolucionar seu atendimento ao cliente! ⭐⭐⭐⭐⭐"
+        };
+    </script>
+    <script src="/public/widget-v2.js"></script>
+</body>
+
+</html>

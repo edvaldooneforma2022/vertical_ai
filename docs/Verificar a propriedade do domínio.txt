@@ -1,0 +1,27 @@
+Verificar a propriedade do domínio por meio do registro DNS
+linkmagico.app.br
+1
+Selecione o tipo de registro:
+Saiba mais
+2
+Faça login no seu provedor de nome de domínio (por exemplo, godaddy.com ou namecheap.com)
+3
+Copie o registro TXT abaixo na configuração do DNS referente a linkmagico.app.br
+google-site-verification=i5jDykNsHNx0d3mXs_76SNEaHRtx-38_pai63NTocLA
+4
+Pressione verificar abaixo
+Observação: pode levar algum tempo para que as alterações do DNS sejam aplicadas. Se o Search Console não encontrar o registro imediatamente, aguarde um dia e faça uma nova verificação.Saiba mais
+
+Não pode fazer a verificação por meio do provedor do nome de domínio?
+Para ter acesso a mais métodos de verificação, use uma propriedade de prefixo de URL
+
+
+
+google-site-verification=i5jDykNsHNx0d3mXs_76SNEaHRtx-38_pai63NTocLA
+
+
+
+
+
+
+

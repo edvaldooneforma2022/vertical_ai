@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Link Mágico — Atendimento Automático para seu Negócio</title>
+<meta name="description" content="Veja como um sistema automático responde perguntas reais de clientes. Sem código, sem complicação.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;
+  --purple:#7c3aed;--purple-light:#9f67ff;--green:#10b981;--green-light:#34d399;
+  --text:#f1f0ff;--text-muted:#8b8aa0;--radius:14px;--yellow:#fbbf24;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+
+/* HEADER */
+.header{text-align:center;padding:16px 20px;border-bottom:1px solid var(--border);background:rgba(10,10,15,.92);position:sticky;top:0;z-index:100;backdrop-filter:blur(14px)}
+.logo{font-size:1.25rem;font-weight:800;background:linear-gradient(135deg,var(--purple-light),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* HERO */
+.hero{text-align:center;padding:64px 20px 40px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:700px;height:400px;background:radial-gradient(ellipse,rgba(124,58,237,.22) 0%,transparent 70%);pointer-events:none}
+.badge{display:inline-block;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.35);color:var(--purple-light);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:999px;margin-bottom:20px}
+.hero h1{font-size:clamp(1.9rem,4.5vw,3.2rem);font-weight:900;line-height:1.12;max-width:780px;margin:0 auto 18px}
+.hero h1 span{background:linear-gradient(135deg,var(--purple-light),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1.05rem;color:var(--text-muted);max-width:540px;margin:0 auto}
+
+/* SECTION */
+.section{padding:72px 20px;max-width:880px;margin:0 auto}
+.section-title{text-align:center;font-size:clamp(1.5rem,3.2vw,2.2rem);font-weight:800;margin-bottom:10px}
+.section-sub{text-align:center;color:var(--text-muted);margin-bottom:44px;font-size:.95rem}
+.divider{border:none;border-top:1px solid var(--border);margin:0}
+
+/* CURIOSITY BLOCK */
+.curiosity{max-width:700px;margin:0 auto;padding:48px 20px 0}
+.curiosity-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;position:relative;overflow:hidden}
+.curiosity-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--green))}
+.curiosity h3{font-size:1.15rem;font-weight:700;margin-bottom:20px;text-align:center}
+.curiosity-msgs{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.c-msg{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:.88rem;display:flex;align-items:center;gap:10px;animation:fadeUp .4s ease both}
+.c-msg:nth-child(2){animation-delay:.1s}.c-msg:nth-child(3){animation-delay:.2s}.c-msg:nth-child(4){animation-delay:.3s}
+.c-msg-origin{font-size:.7rem;color:var(--purple-light);font-weight:600;white-space:nowrap}
+.c-msg-text{color:var(--text-muted)}
+.curiosity-cta{text-align:center;margin-top:4px}
+.curiosity-highlight{color:var(--green-light);font-weight:600;font-size:.95rem;margin-bottom:16px;text-align:center}
+
+/* BUTTONS */
+.btn-primary{display:block;width:100%;background:linear-gradient(135deg,var(--purple),var(--purple-light));color:#fff;border:none;border-radius:var(--radius);padding:16px 24px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;letter-spacing:.01em}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(124,58,237,.4)}
+.btn-primary:active{transform:translateY(0)}
+.btn-green{background:linear-gradient(135deg,#059669,var(--green-light));animation:pulse-green 2.5s infinite}
+@keyframes pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.35)}50%{box-shadow:0 0 0 12px rgba(16,185,129,0)}}
+.btn-outline{background:none;border:2px solid var(--border);color:var(--text);border-radius:var(--radius);padding:14px 20px;font-size:.92rem;font-weight:600;cursor:pointer;transition:border-color .2s,background .2s;font-family:inherit;width:100%}
+.btn-outline:hover{border-color:var(--purple-light);background:rgba(124,58,237,.08)}
+.disclaimer{text-align:center;color:var(--text-muted);font-size:.78rem;margin-top:10px}
+
+/* DEMO ZONE */
+#demo-zone{padding:60px 20px}
+.demo-container{max-width:640px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:36px 32px;box-shadow:0 0 60px rgba(124,58,237,.1)}
+.demo-step{display:none}.demo-step.active{display:block}
+
+/* STEP URL */
+#step-url .step-headline{font-size:1.5rem;font-weight:800;margin-bottom:8px;line-height:1.25}
+#step-url .step-sub{color:var(--text-muted);font-size:.9rem;margin-bottom:24px;line-height:1.65}
+.input-wrap{position:relative;margin-bottom:12px}
+.input-wrap input,.input-wrap textarea{width:100%;background:var(--surface2);border:2px solid var(--border);border-radius:var(--radius);padding:15px 16px;font-size:.95rem;color:var(--text);font-family:inherit;transition:border-color .25s;outline:none;resize:none}
+.input-wrap input:focus,.input-wrap textarea:focus{border-color:var(--purple)}
+.input-wrap input::placeholder,.input-wrap textarea::placeholder{color:var(--text-muted)}
+.url-error{color:#f87171;font-size:.82rem;margin-bottom:10px;display:none}
+
+.examples-section{margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.examples-label{font-size:.8rem;color:var(--text-muted);margin-bottom:10px;text-align:center}
+.examples-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.example-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font-size:.82rem;cursor:pointer;transition:border-color .2s,background .2s;font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px}
+.example-btn:hover{border-color:var(--purple-light);background:rgba(124,58,237,.1)}
+.example-btn .emoji{font-size:1.1rem}
+
+/* LOADING */
+#step-loading{text-align:center;padding:10px 0}
+.loading-icon{font-size:2.8rem;margin-bottom:20px;animation:spin-slow 3s linear infinite}
+@keyframes spin-slow{to{transform:rotate(360deg)}}
+#step-loading h2{font-size:1.3rem;font-weight:700;margin-bottom:6px}
+#loading-msg{color:var(--text-muted);font-size:.9rem;margin-bottom:24px;min-height:22px}
+.progress-bar-wrap{background:var(--surface2);border-radius:999px;height:7px;overflow:hidden;margin-bottom:10px}
+.progress-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--purple),var(--green));width:0%;transition:width .35s ease}
+#progress-pct{font-size:.8rem;color:var(--text-muted)}
+
+/* CHAT */
+.chat-header{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.chat-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--green));display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.chat-name{font-weight:700;font-size:.9rem}
+.chat-status{font-size:.78rem;color:var(--green);display:flex;align-items:center;gap:5px}
+.chat-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block}
+
+.timer-bar{background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:var(--radius);padding:9px 14px;font-size:.82rem;color:var(--purple-light);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+#session-timer{font-weight:700}
+
+.messages-wrap{background:var(--surface2);border-radius:var(--radius);padding:14px;min-height:240px;max-height:360px;overflow-y:auto;margin-bottom:14px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+.msg{max-width:82%;padding:10px 14px;border-radius:16px;font-size:.87rem;line-height:1.55;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg-bot{background:var(--surface);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px}
+.msg-client{background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);align-self:flex-end;border-bottom-right-radius:4px}
+.msg-client-label{font-size:.7rem;color:var(--purple-light);font-weight:600;margin-bottom:3px}
+.msg-typing{background:var(--surface);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px;padding:12px 16px}
+.dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text-muted);margin:0 2px;animation:bounce .9s infinite}
+.dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+
+.client-counter{text-align:center;padding:10px 0;font-size:.82rem;color:var(--text-muted);margin-top:8px}
+.client-counter strong{color:var(--green-light);font-size:1.1rem}
+
+.btn-restart{margin-top:16px}
+
+/* V2.0 — Micro-commitment Buttons */
+.mc-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;animation:fadeUp .4s ease}
+.mc-btn{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);color:var(--purple-light);border-radius:20px;padding:8px 16px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+.mc-btn:hover{background:rgba(124,58,237,.2);border-color:var(--purple-light);transform:translateY(-1px)}
+
+/* V2.0 — Action Buttons (checkout/link) */
+.action-btn{display:inline-block;background:linear-gradient(135deg,#059669,var(--green-light));color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;font-family:inherit;margin-top:6px}
+.action-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(16,185,129,.35)}
+
+/* V2.0 — Guided Conversion Card */
+.gc-card{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(16,185,129,.08));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:20px;text-align:center;animation:fadeUp .5s ease;margin-top:8px}
+.gc-card h4{font-size:1rem;font-weight:700;margin-bottom:6px;background:linear-gradient(135deg,var(--purple-light),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gc-card p{font-size:.82rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5}
+.gc-card .action-btn{display:block;width:100%}
+
+/* PERSONALIZE STEPS */
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.type-btn{background:var(--surface2);border:2px solid var(--border);color:var(--text);border-radius:14px;padding:16px 14px;font-size:.88rem;cursor:pointer;transition:border-color .25s,background .25s,transform .15s;font-family:inherit;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.type-btn:hover{border-color:var(--purple-light);background:rgba(124,58,237,.08);transform:translateY(-2px)}
+.type-btn .t-icon{font-size:1.6rem}
+.type-btn .t-label{font-weight:600;font-size:.82rem}
+.step-confirm{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:14px;padding:16px 20px;text-align:center;margin-bottom:18px;font-size:.9rem;color:var(--green-light);animation:fadeUp .4s ease}
+
+/* WOW MOMENT */
+.wow-box{background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(16,185,129,.08));border:1px solid var(--border);border-radius:16px;padding:24px 20px;text-align:center;margin-top:18px;animation:fadeUp .5s ease}
+.wow-box .wow-stat{font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--green),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.wow-box .wow-text{color:var(--text-muted);font-size:.9rem;margin-top:6px}
+.wow-box .wow-cta{color:var(--text);font-weight:700;font-size:1.05rem;margin-top:14px}
+
+/* INSTAGRAM SIM */
+.ig-sim-box{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:20px;margin-top:16px;text-align:center;animation:fadeUp .4s ease}
+.ig-sim-box p{font-size:.9rem;color:var(--text-muted);margin-bottom:12px}
+.btn-ig{background:linear-gradient(135deg,#E1306C,#833AB4,#5851DB);color:#fff;border:none;border-radius:var(--radius);padding:14px 20px;font-size:.92rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;width:100%}
+.btn-ig:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(131,58,180,.4)}
+
+/* OFFER */
+#offer-section{display:none;border-top:1px solid var(--border);margin-top:20px;padding-top:26px;text-align:center;animation:fadeUp .5s ease}
+.offer-label{font-size:.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.offer-title{font-size:1.35rem;font-weight:800;margin-bottom:6px}
+.offer-price{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,var(--green),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.offer-price-sub{font-size:.82rem;color:var(--text-muted);margin-bottom:20px}
+.offer-perks{list-style:none;margin-bottom:20px;text-align:left;display:inline-block}
+.offer-perks li{font-size:.88rem;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.offer-perks li::before{content:'✅';font-size:.9rem}
+
+/* NOTIFICATION TOAST */
+.toast{position:fixed;bottom:24px;left:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:.82rem;color:var(--text-muted);z-index:200;display:flex;align-items:center;gap:8px;animation:slideInToast .4s ease,fadeOutToast .4s ease 3.6s forwards;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+@keyframes slideInToast{from{transform:translateX(-30px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeOutToast{to{opacity:0;transform:translateX(-20px)}}
+
+/* SOCIAL PROOF BAR */
+.social-proof-bar{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;padding:14px 20px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:14px;margin:0 auto 20px;max-width:700px}
+.sp-item{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-muted);white-space:nowrap}
+.sp-item .sp-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:lm-pulse 2s infinite}
+.sp-item strong{color:var(--green-light)}
+
+/* FOMO NOTIFICATION */
+.fomo-toast{position:fixed;bottom:90px;left:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:.82rem;color:var(--text-muted);z-index:199;display:flex;align-items:center;gap:10px;animation:slideInToast .4s ease,fadeOutToast .4s ease 4.6s forwards;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.fomo-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--green));display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+
+/* VSL FALLBACK */
+.vsl-fallback{display:block;position:relative;cursor:pointer;text-decoration:none}
+.vsl-fallback img{width:100%;border-radius:16px;display:block}
+.vsl-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:68px;background:rgba(255,0,0,.85);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .2s,background .2s}
+.vsl-fallback:hover .vsl-play-btn{transform:translate(-50%,-50%) scale(1.15);background:rgba(255,0,0,1)}
+.vsl-play-btn::after{content:'';border-style:solid;border-width:12px 0 12px 22px;border-color:transparent transparent transparent #fff;margin-left:4px}
+.vsl-credibility{text-align:center;font-size:.82rem;color:var(--text-muted);margin-top:12px;font-style:italic}
+
+/* EDUCATION BLOCKS */
+.edu-block{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 28px}
+.edu-block h3{font-size:1.2rem;font-weight:700;margin-bottom:16px}
+.edu-list{list-style:none;display:flex;flex-direction:column;gap:12px}
+.edu-list li{display:flex;align-items:flex-start;gap:10px;font-size:.9rem;color:var(--text-muted);line-height:1.6}
+.edu-list li .icon{font-size:1.2rem;flex-shrink:0;margin-top:2px}
+.edu-tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.edu-tool{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:.82rem;color:var(--green-light);font-weight:600;display:flex;align-items:center;gap:6px}
+
+/* WHERE IT WORKS */
+.channels-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.channel-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 14px;text-align:center;transition:border-color .2s,transform .2s}
+.channel-card:hover{border-color:var(--purple);transform:translateY(-3px)}
+.channel-icon{font-size:2rem;margin-bottom:8px}
+.channel-name{font-size:.82rem;font-weight:600}
+
+/* HONESTY */
+.honesty-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:14px;padding:20px 24px;text-align:center;max-width:600px;margin:0 auto}
+.honesty-box p{font-size:.88rem;color:var(--text-muted);line-height:1.7}
+.honesty-box strong{color:var(--green-light)}
+
+/* SOCIAL PROOF */
+.proof-list{display:flex;flex-direction:column;gap:6px;max-width:400px;margin:0 auto}
+.proof-item{display:flex;align-items:center;gap:10px;font-size:.9rem;color:var(--text-muted);padding:6px 0}
+.proof-item::before{content:'✓';color:var(--green);font-weight:700;font-size:1rem}
+
+/* FAQ */
+.faq-list{display:flex;flex-direction:column;gap:10px}
+.faq-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
+.faq-item.open{border-color:var(--purple)}
+.faq-q{width:100%;background:none;border:none;color:var(--text);padding:16px 18px;font-size:.92rem;font-weight:600;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:inherit;gap:12px}
+.faq-arrow{font-size:1rem;transition:transform .25s;flex-shrink:0}
+.faq-item.open .faq-arrow{transform:rotate(180deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease,padding .25s}
+.faq-item.open .faq-a{max-height:300px;padding:0 18px 16px}
+.faq-a p{color:var(--text-muted);font-size:.88rem;line-height:1.7}
+
+/* FOOTER CTA */
+.footer-cta{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(16,185,129,.08));border-top:1px solid var(--border);padding:72px 20px;text-align:center}
+.footer-cta h2{font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:900;margin-bottom:14px}
+.footer-cta p{color:var(--text-muted);margin-bottom:28px;font-size:.95rem;max-width:500px;margin-left:auto;margin-right:auto}
+footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 20px;text-align:center;font-size:.78rem;color:var(--text-muted)}
+footer a{color:var(--text-muted)}
+
+/* VSL */
+.vsl-section{margin:24px 0 20px;text-align:center}
+.vsl-title{font-size:.95rem;color:var(--text);font-weight:600;margin-bottom:14px;line-height:1.5}
+.vsl-wrap{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:16px;border:1px solid var(--border);background:#000}
+.vsl-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+
+/* SUPPORT CHAT BLOCK */
+.support-block{max-width:640px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;text-align:center}
+.support-block h3{font-size:1.15rem;font-weight:700;margin-bottom:8px}
+.support-block p{color:var(--text-muted);font-size:.9rem;margin-bottom:18px;line-height:1.6}
+.btn-chat{display:inline-block;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:var(--radius);padding:16px 32px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;text-decoration:none}
+.btn-chat:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(37,211,102,.35)}
+
+/* V2.0 — Intent Sensor Floating Bar */
+.intent-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,15,.96);border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:12px;z-index:150;transform:translateY(100%);transition:transform .5s cubic-bezier(.22,1,.36,1);backdrop-filter:blur(16px)}
+.intent-bar.visible{transform:translateY(0)}
+.intent-bar .intent-text{color:var(--text-muted);font-size:.85rem;font-weight:500}
+.intent-bar .intent-text strong{color:var(--green-light)}
+.intent-bar .intent-btn{background:linear-gradient(135deg,var(--purple),var(--purple-light));color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:.85rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;white-space:nowrap}
+.intent-bar .intent-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(124,58,237,.4)}
+.intent-bar .intent-btn-green{background:linear-gradient(135deg,#059669,var(--green-light))}
+.intent-bar .intent-close{background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;padding:4px 8px;transition:color .2s}
+.intent-bar .intent-close:hover{color:var(--text)}
+
+/* Footer Links */
+.footer-links{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.footer-links a{color:var(--purple-light);font-weight:600;text-decoration:none;font-size:.85rem;transition:color .2s}
+.footer-links a:hover{color:var(--green-light)}
+
+@media(max-width:600px){
+  .demo-container{padding:24px 18px}
+  .examples-grid{grid-template-columns:1fr}
+  .channels-grid{grid-template-columns:repeat(3,1fr)}
+  .intent-bar{flex-direction:column;gap:8px;padding:12px 16px}
+  .intent-bar .intent-text{text-align:center;font-size:.8rem}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header"><div class="logo">⚡ Link Mágico</div></header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">Sistema de Atendimento Automático</div>
+  <h1>Seus visitantes perguntam.<br><span>Seu sistema responde — 24h por dia.</span></h1>
+  <p>Um atendimento automático treinado nas informações do seu negócio. Responde clientes no seu site, Instagram, WhatsApp e onde mais precisar.</p>
+</section>
+
+<!-- CURIOSITY TRIGGER -->
+<div class="curiosity">
+  <div class="curiosity-card">
+    <h3>💬 Perguntas reais que clientes fazem todos os dias:</h3>
+    <div class="curiosity-msgs">
+      <div class="c-msg"><span class="c-msg-origin">Instagram</span><span class="c-msg-text">Vocês atendem aos sábados?</span></div>
+      <div class="c-msg"><span class="c-msg-origin">WhatsApp</span><span class="c-msg-text">Esse produto funciona mesmo?</span></div>
+      <div class="c-msg"><span class="c-msg-origin">Site</span><span class="c-msg-text">Qual o prazo de entrega?</span></div>
+      <div class="c-msg"><span class="c-msg-origin">Google</span><span class="c-msg-text">Posso falar com alguém?</span></div>
+    </div>
+    <p class="curiosity-highlight">⚡ Agora imagine um sistema respondendo tudo isso automaticamente.</p>
+
+    <!-- VSL -->
+    <div class="vsl-section">
+      <div class="vsl-title">⚡ Veja em menos de 4 minutos como o sistema é poderoso atendendo clientes automaticamente.</div>
+      <div class="vsl-wrap" id="vsl-container">
+        <iframe src="https://www.youtube.com/embed/u6p9LwvLHgQ?rel=0&modestbranding=1&origin=https://vertical-ai-dktu.onrender.com" title="Link Mágico — Demonstração" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy" id="vsl-iframe"></iframe>
+      </div>
+      <p style="text-align:center;margin-top:8px"><a href="https://youtu.be/u6p9LwvLHgQ" target="_blank" style="color:var(--purple-light);font-size:.82rem;text-decoration:underline">Não consegue ver? Clique aqui para assistir no YouTube →</a></p>
+      <p class="vsl-credibility">Sistema em produção utilizado por empreendedores reais para automatizar atendimento de clientes.</p>
+    </div>
+
+    <div class="curiosity-cta">
+      <button class="btn-primary" onclick="document.getElementById('demo-zone').scrollIntoView({behavior:'smooth'})">VER ISSO FUNCIONANDO AGORA →</button>
+    </div>
+  </div>
+</div>
+
+<br>
+
+<!-- SOCIAL PROOF BAR -->
+<div class="social-proof-bar">
+  <div class="sp-item"><span class="sp-dot"></span> <strong id="sp-counter">2.847</strong> atendimentos hoje</div>
+  <div class="sp-item">👁 <strong id="sp-visitors">23</strong> pessoas testando agora</div>
+</div>
+
+<hr class="divider">
+
+<!-- DEMOS PRÉ-CONFIGURADAS -->
+<section class="section" style="padding-bottom:30px">
+  <div class="section-title">⚡ Demos ao Vivo — Veja Funcionando Agora</div>
+  <div class="section-sub">Clique e veja o chat respondendo clientes reais de cada nicho. Sem cadastro, sem formulário.</div>
+  <div class="channels-grid" style="max-width:640px;margin:0 auto;grid-template-columns:repeat(3,1fr)">
+    <a href="/demo.html?nicho=infoproduto&nome=Academia+Digital+Pro" class="channel-card" style="text-decoration:none;cursor:pointer">
+      <div class="channel-icon">📚</div>
+      <div class="channel-name">Curso Digital</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px">Infoproduto</div>
+    </a>
+    <a href="/demo.html?nicho=negocio_local&nome=Clínica+Bella+Estética" class="channel-card" style="text-decoration:none;cursor:pointer">
+      <div class="channel-icon">🏥</div>
+      <div class="channel-name">Clínica Estética</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px">Negócio Local</div>
+    </a>
+    <a href="/demo.html?nicho=ecommerce&nome=TechStore+Brasil" class="channel-card" style="text-decoration:none;cursor:pointer">
+      <div class="channel-icon">🛍️</div>
+      <div class="channel-name">Loja Virtual</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px">E-commerce</div>
+    </a>
+  </div>
+</section>
+
+<hr class="divider">
+<!-- DEMO ZONE -->
+<section id="demo-zone">
+  <div class="section-title">Teste o sistema agora</div>
+  <div class="section-sub">Descreva qualquer negócio e veja o atendimento funcionando em segundos.</div>
+
+  <div class="demo-container">
+
+    <!-- STEP 1: INPUT -->
+    <div id="step-url" class="demo-step active">
+      <div class="step-headline">Qual é o seu negócio? 👇</div>
+      <div class="step-sub">
+        Cole um link, uma rede social ou simplesmente descreva o tipo de negócio.<br>
+        O sistema detecta automaticamente.
+      </div>
+      <div class="input-wrap">
+        <input type="text" id="url-input" placeholder="Ex: Clínica de estética em SP, ou cole um link..." autocomplete="off">
+      </div>
+      <div class="url-error" id="url-error">Por favor, descreva seu negócio ou cole um link.</div>
+      <button class="btn-primary" id="btn-criar" onclick="iniciarDemo()">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
+      <p class="disclaimer">Sem cadastro · 100% gratuito para testar</p>
+
+      <div class="examples-section">
+        <div class="examples-label">Ou teste com um exemplo pronto:</div>
+        <div class="examples-grid">
+          <button class="example-btn" onclick="testarExemplo('curso')"><span class="emoji">📚</span> Curso online</button>
+          <button class="example-btn" onclick="testarExemplo('clinica')"><span class="emoji">🏥</span> Clínica / Consultório</button>
+          <button class="example-btn" onclick="testarExemplo('loja')"><span class="emoji">🛍️</span> Loja virtual</button>
+          <button class="example-btn" onclick="testarExemplo('afiliado')"><span class="emoji">📢</span> Afiliado digital</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: CHOOSE TYPE -->
+    <div id="step-type" class="demo-step">
+      <div class="step-headline">Vamos simular seu atendimento automático 🎯</div>
+      <div class="step-sub">Qual é o seu tipo de negócio?</div>
+      <div class="type-grid">
+        <button class="type-btn" onclick="escolherTipo('infoproduto')"><span class="t-icon">📚</span><span class="t-label">Curso / Infoproduto</span></button>
+        <button class="type-btn" onclick="escolherTipo('negocio_local')"><span class="t-icon">🏥</span><span class="t-label">Negócio Local</span></button>
+        <button class="type-btn" onclick="escolherTipo('ecommerce')"><span class="t-icon">🛍️</span><span class="t-label">E-commerce</span></button>
+        <button class="type-btn" onclick="escolherTipo('marketing')"><span class="t-icon">📢</span><span class="t-label">Afiliado</span></button>
+        <button class="type-btn" onclick="escolherTipo('servicos')"><span class="t-icon">💼</span><span class="t-label">Prestação de Serviço</span></button>
+        <button class="type-btn" onclick="escolherTipo('emagrecimento')"><span class="t-icon">💪</span><span class="t-label">Saúde / Fitness</span></button>
+      </div>
+    </div>
+
+    <!-- STEP 3: BUSINESS NAME -->
+    <div id="step-name" class="demo-step">
+      <div class="step-confirm" id="type-confirm">✅ Tipo selecionado</div>
+      <div class="step-headline">Qual é o nome do seu negócio? ✍️</div>
+      <div class="step-sub">Pode ser o nome da sua empresa, marca, curso ou perfil.</div>
+      <div class="input-wrap">
+        <input type="text" id="name-input" placeholder="Ex: Clínica Bella Estética" autocomplete="off" maxlength="50">
+      </div>
+      <button class="btn-primary" onclick="confirmarNome()">CONTINUAR →</button>
+      <p class="disclaimer">Isso personaliza a demonstração para você</p>
+    </div>
+
+    <!-- STEP 4: LOADING -->
+    <div id="step-loading" class="demo-step">
+      <div class="loading-icon">⚙️</div>
+      <h2>Preparando seu atendimento...</h2>
+      <p id="loading-msg">Iniciando...</p>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+      <p id="progress-pct">0%</p>
+    </div>
+
+    <!-- STEP 3: CHAT -->
+    <div id="step-chat" class="demo-step">
+      <div class="chat-header">
+        <div class="chat-avatar">🤖</div>
+        <div>
+          <div class="chat-name" id="chat-name">Atendimento Automático</div>
+          <div class="chat-status">Online</div>
+        </div>
+      </div>
+
+      <div class="timer-bar">
+        ⚡ Demonstração ativa por <span id="session-timer">05:00</span>
+      </div>
+
+      <div class="messages-wrap" id="messages-wrap"></div>
+
+      <div class="client-counter">
+        Clientes atendidos nesta demonstração: <strong id="client-count">0</strong>
+      </div>
+
+      <!-- WOW MOMENT -->
+      <div class="wow-box" id="wow-box" style="display:none">
+        <div class="wow-stat">⚡ <span id="wow-count">5</span> clientes atendidos</div>
+        <div class="wow-text">Seu atendimento automático respondeu todas as perguntas sem intervenção humana.</div>
+        <div class="wow-cta" id="wow-name-cta">Imagine isso respondendo todos os visitantes do seu negócio.</div>
+      </div>
+
+      <!-- INSTAGRAM SIM -->
+      <div class="ig-sim-box" id="ig-sim-box" style="display:none">
+        <p>📸 Quer ver como ficaria no seu Instagram?</p>
+        <button class="btn-ig" onclick="simularInstagram()">Simular no meu Instagram →</button>
+      </div>
+
+      <button class="btn-outline btn-restart" onclick="reiniciarDemo()">🔄 Testar outro negócio</button>
+
+      <!-- OFFER -->
+      <div id="offer-section">
+        <div class="offer-label">✅ Sistema configurado com sucesso</div>
+        <div class="offer-title">Ative seu atendimento automático</div>
+        <div class="offer-price">R$97<span style="font-size:1.1rem;color:var(--text-muted)">/ano</span></div>
+        <div class="offer-price-sub">Menos de R$8/mês · Cancele quando quiser</div>
+        <ul class="offer-perks">
+          <li>Sistema treinado nas informações do seu negócio</li>
+          <li>Atendimento 24h por dia, 7 dias por semana</li>
+          <li>Captura automática de contatos</li>
+          <li>Funciona em site, WhatsApp e Instagram</li>
+          <li>Painel de acompanhamento completo</li>
+        </ul>
+        <button class="btn-primary btn-green" onclick="irParaCheckout()">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
+        <p class="disclaimer">🛡️ Garantia de 7 dias · Sem riscos</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SUPPORT CHAT BLOCK -->
+<section class="section" style="padding-top:50px;padding-bottom:50px">
+  <div class="support-block">
+    <h3>💬 Ainda tem dúvidas?</h3>
+    <p>Fale com nosso atendimento agora e veja como configurar o sistema para seu negócio.</p>
+    <a href="https://vertical-ai-dktu.onrender.com/l/2Rf5vf" target="_blank" class="btn-chat">ABRIR CHAT →</a>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- WHERE IT WORKS -->
+<section class="section">
+  <div class="section-title">Onde o sistema pode responder clientes</div>
+  <div class="section-sub">O Link Mágico centraliza o atendimento automático em qualquer lugar onde clientes façam perguntas.</div>
+  <div class="channels-grid">
+    <div class="channel-card"><div class="channel-icon">📸</div><div class="channel-name">Instagram</div></div>
+    <div class="channel-card"><div class="channel-icon">💬</div><div class="channel-name">WhatsApp</div></div>
+    <div class="channel-card"><div class="channel-icon">🌐</div><div class="channel-name">Sites</div></div>
+    <div class="channel-card"><div class="channel-icon">🛒</div><div class="channel-name">Páginas de Vendas</div></div>
+    <div class="channel-card"><div class="channel-icon">🔗</div><div class="channel-name">Links de Afiliado</div></div>
+    <div class="channel-card"><div class="channel-icon">🔍</div><div class="channel-name">Google</div></div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- HOW IT LEARNS -->
+<section class="section">
+  <div class="section-title">Como o sistema aprende sobre seu negócio</div>
+  <div class="section-sub">Você pode ensinar o atendimento de várias formas — sem precisar de código.</div>
+  <div class="edu-block">
+    <ul class="edu-list">
+      <li><span class="icon">1️⃣</span> O sistema pode analisar os links do seu negócio  — página de vendas, site ou redes sociais</li>
+      <li><span class="icon">2️⃣</span> Você pode adicionar instruções personalizadas — como informações do produto, políticas de entrega e diferenciais</li>
+      <li><span class="icon">3️⃣</span> Você pode cadastrar perguntas frequentes — com as respostas que quiser para cada situação</li>
+    </ul>
+    <div class="edu-tools">
+      <span class="edu-tool">✓ Instruções personalizadas</span>
+      <span class="edu-tool">✓ FAQs</span>
+      <span class="edu-tool">✓ Análise de links</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- HONESTY -->
+<section class="section" style="padding-top:50px;padding-bottom:50px">
+  <div class="honesty-box">
+    <p>Esta é uma <strong>demonstração simulada</strong> para mostrar como o sistema funciona na prática. Após ativar, você poderá treinar o atendimento com <strong>informações reais do seu negócio</strong>.</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SOCIAL PROOF -->
+<section class="section">
+  <div class="section-title">Quem já utiliza</div>
+  <div class="section-sub">Sistema em produção utilizado por empreendedores reais para automatizar o atendimento de clientes.</div>
+  <div class="proof-list">
+    <div class="proof-item">Afiliados digitais</div>
+    <div class="proof-item">Infoprodutores</div>
+    <div class="proof-item">Negócios locais (clínicas, salões, estéticas)</div>
+    <div class="proof-item">Pequenos e-commerces</div>
+    <div class="proof-item">Consultores e prestadores de serviço</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- FAQ -->
+<section class="section">
+  <div class="section-title">Perguntas frequentes</div>
+  <div class="section-sub">Tudo que você precisa saber antes de ativar.</div>
+  <div class="faq-list">
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">O sistema realmente lê minha página?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim. O Link Mágico extrai automaticamente título, descrição, benefícios e informações do seu produto. Você também pode complementar manualmente com instruções personalizadas e FAQs.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Preciso instalar algum código?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Não. Após a ativação, você recebe um link único que pode compartilhar em qualquer lugar: WhatsApp, Instagram, email ou direto na sua página.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Funciona para qualquer tipo de negócio?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim. Cursos, mentorias, produtos físicos, serviços, consultorias, negócios locais — o sistema se adapta automaticamente ao seu nicho.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Posso cancelar a qualquer momento?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim, sem multas ou complicações. E você tem 7 dias de garantia: se não gostar, devolvemos 100% do seu dinheiro.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">A demonstração é igual ao produto real?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>A demonstração é uma simulação para que você veja o conceito funcionando. No produto real, o sistema é treinado com as informações específicas do seu negócio, oferecendo respostas muito mais precisas e personalizadas.</p></div></div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- FOOTER CTA -->
+<div class="footer-cta">
+  <h2>Imagine esse sistema <span style="background:linear-gradient(135deg,var(--purple-light),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent">respondendo todos os visitantes</span> do seu negócio automaticamente.</h2>
+  <p>Enquanto você dorme, viaja ou trabalha em outras coisas — seus clientes são atendidos.</p>
+  <button class="btn-primary btn-green" onclick="irParaCheckout()" style="max-width:440px;margin:0 auto 10px;display:block">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
+  <p class="disclaimer">🛡️ Garantia de 7 dias · Pagamento 100% seguro</p>
+</div>
+
+<footer>
+  <p>O Link Mágico é uma plataforma em produção utilizada por empreendedores para automatizar o atendimento de clientes.</p>
+  <br>
+  <div class="footer-links">
+    <a href="/criar-link?ref=demo_footer">✨ Criar meu LinkMágico</a>
+    <a href="/public/demo.html">🎯 Ver Demonstração</a>
+  </div>
+  <p>© 2025 Link Mágico · <a href="/public/politica-de-privacidade.html">Privacidade</a> · <a href="/public/termos-de-uso.html">Termos</a></p>
+</footer>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+// =====================================================
+// CONFIG
+// =====================================================
+const CHECKOUT_URL = 'https://pay.hotmart.com/G103177435I';
+
+// =====================================================
+// DADOS DE NICHOS
+// =====================================================
+const NICHOS = {
+  marketing: {
+    keywords: ['marketing','tráfego','ads','funil','copy','vendas','anúncio','leads','conversão','lançamento','afiliado','hotmart','kiwify','monetizze'],
+    nome: 'Marketing Digital',
+    clientes: [
+      { nome:'Ana', origem:'Instagram', pergunta:'Esse método funciona para quem está começando do zero?' },
+      { nome:'Carlos', origem:'Google', pergunta:'Preciso investir em anúncios para ter resultado?' },
+      { nome:'Juliana', origem:'WhatsApp', pergunta:'Em quanto tempo começo a ver resultado?' },
+      { nome:'Pedro', origem:'Site', pergunta:'Tem suporte para tirar dúvidas durante o curso?' },
+      { nome:'Mariana', origem:'Instagram', pergunta:'Funciona para qualquer nicho de mercado?' }
+    ],
+    respostas: [
+      'Sim, o método foi desenvolvido justamente para quem está começando. O conteúdo é passo a passo, sem pré-requisitos técnicos.',
+      'Não necessariamente. O treinamento ensina estratégias orgânicas e pagas. Você escolhe o que faz sentido para o seu momento.',
+      'Depende da dedicação, mas muitos alunos começam a ver os primeiros resultados entre 2 a 4 semanas de aplicação.',
+      'Sim, existe suporte disponível para acompanhar sua evolução e tirar dúvidas durante o processo.',
+      'Sim. As estratégias ensinadas são adaptáveis e já foram aplicadas com sucesso em mais de 40 segmentos diferentes.'
+    ]
+  },
+  negocio_local: {
+    keywords: ['dentista','clínica','estética','salão','barbearia','restaurante','pizzaria','academia','médico','psicólogo','advogado','veterinário','pet','oficina','padaria','consultório','fisioterapia'],
+    nome: 'Negócio Local',
+    clientes: [
+      { nome:'Maria', origem:'Instagram', pergunta:'Vocês atendem aos sábados?' },
+      { nome:'João', origem:'Google', pergunta:'Qual o horário de funcionamento?' },
+      { nome:'Fernanda', origem:'WhatsApp', pergunta:'Aceitam cartão de crédito?' },
+      { nome:'Lucas', origem:'Google', pergunta:'Precisa agendar ou posso ir direto?' },
+      { nome:'Patricia', origem:'Instagram', pergunta:'Qual o endereço de vocês?' }
+    ],
+    respostas: [
+      'O horário de atendimento pode variar, mas normalmente é possível agendar pelo chat mesmo aos sábados. Vou verificar a disponibilidade para você.',
+      'O estabelecimento funciona em horário comercial. Posso te ajudar a verificar os horários atualizados e agendar um horário.',
+      'Sim, normalmente são aceitos cartão de crédito, débito e PIX. Posso confirmar as formas de pagamento disponíveis.',
+      'Recomendamos agendar para garantir o melhor atendimento. Posso te ajudar a encontrar um horário disponível agora mesmo.',
+      'Posso te enviar a localização completa com link para o mapa. Quer que eu envie?'
+    ]
+  },
+  ecommerce: {
+    keywords: ['loja','roupa','produto','camiseta','tênis','moda','acessório','joia','cosmético','e-commerce','ecommerce','eletrônico','celular','fone'],
+    nome: 'Loja Virtual',
+    clientes: [
+      { nome:'Camila', origem:'Instagram', pergunta:'Tem esse produto em estoque?' },
+      { nome:'Roberto', origem:'Site', pergunta:'Qual o prazo de entrega para São Paulo?' },
+      { nome:'Aline', origem:'WhatsApp', pergunta:'Vocês entregam para todo o Brasil?' },
+      { nome:'Diego', origem:'Site', pergunta:'Posso trocar se não servir?' },
+      { nome:'Beatriz', origem:'Instagram', pergunta:'Tem desconto para compras acima de 3 peças?' }
+    ],
+    respostas: [
+      'Vou verificar a disponibilidade desse item para você. Normalmente o estoque é atualizado em tempo real no site.',
+      'Para São Paulo capital, o prazo médio é de 3 a 5 dias úteis. Para outras regiões pode variar conforme a transportadora.',
+      'Sim, as entregas são feitas para todo o Brasil via transportadoras parceiras. O frete é calculado automaticamente no checkout.',
+      'Sim, é possível trocar. Existe uma política de troca que cobre o prazo de 7 dias após o recebimento.',
+      'Promoções e descontos especiais podem estar disponíveis. Posso verificar as condições atuais para você.'
+    ]
+  },
+  infoproduto: {
+    keywords: ['curso','treinamento','aula','mentoria','ebook','workshop','masterclass','imersão','formação','certificação'],
+    nome: 'Curso / Infoproduto',
+    clientes: [
+      { nome:'Thiago', origem:'Google', pergunta:'O curso é para iniciantes?' },
+      { nome:'Larissa', origem:'Instagram', pergunta:'Tem acesso vitalício?' },
+      { nome:'Marcos', origem:'WhatsApp', pergunta:'Recebo certificado ao completar?' },
+      { nome:'Vanessa', origem:'Site', pergunta:'Posso assistir no celular?' },
+      { nome:'Gabriel', origem:'Instagram', pergunta:'Qual a diferença desse para outros cursos do mercado?' }
+    ],
+    respostas: [
+      'Sim, o conteúdo foi estruturado para quem está começando do zero. As aulas seguem uma ordem lógica e gradual.',
+      'Sim, normalmente o acesso é vitalício. Você pode assistir quantas vezes quiser no seu ritmo.',
+      'Sim, ao completar todas as etapas você recebe um certificado de conclusão.',
+      'Sim, a plataforma é responsiva e funciona em celular, tablet e computador. Dá para estudar de qualquer lugar.',
+      'O diferencial está na metodologia prática com exercícios aplicáveis. O foco é em resultado, não apenas teoria.'
+    ]
+  },
+  servicos: {
+    keywords: ['consultoria','agência','mentoria individual','coaching','assessoria','freelancer','designer','programador','fotógrafo','social media'],
+    nome: 'Serviços / Consultoria',
+    clientes: [
+      { nome:'Rafael', origem:'Google', pergunta:'Como funciona o processo de trabalho?' },
+      { nome:'Sandra', origem:'Instagram', pergunta:'Vocês atendem empresas pequenas?' },
+      { nome:'Felipe', origem:'WhatsApp', pergunta:'Qual o valor do serviço?' },
+      { nome:'Claudia', origem:'Site', pergunta:'Quanto tempo leva para ver resultados?' },
+      { nome:'Daniel', origem:'Instagram', pergunta:'Posso agendar uma conversa antes de contratar?' }
+    ],
+    respostas: [
+      'O processo começa com uma análise do cenário atual, seguido de um plano personalizado e acompanhamento da implementação.',
+      'Sim, atendemos desde profissionais autônomos até empresas de médio porte. Cada projeto recebe atenção personalizada.',
+      'O valor depende do escopo do projeto. Posso agendar uma conversa rápida para entender sua necessidade e apresentar as opções.',
+      'O prazo varia conforme o projeto, mas normalmente os primeiros resultados aparecem entre 30 e 90 dias de implementação.',
+      'Claro! Inclusive recomendamos isso. Posso te ajudar a agendar um horário para uma conversa inicial sem compromisso.'
+    ]
+  },
+  emagrecimento: {
+    keywords: ['emagrecer','dieta','peso','fitness','saúde','treino','alimentação','corpo','gordura','nutrição','emagrecimento'],
+    nome: 'Saúde / Emagrecimento',
+    clientes: [
+      { nome:'Lucia', origem:'Instagram', pergunta:'Funciona para quem já tentou várias dietas?' },
+      { nome:'André', origem:'Google', pergunta:'Preciso fazer exercícios pesados?' },
+      { nome:'Priscila', origem:'WhatsApp', pergunta:'Em quanto tempo emagreço?' },
+      { nome:'Ricardo', origem:'Site', pergunta:'Tem acompanhamento nutricional?' },
+      { nome:'Amanda', origem:'Instagram', pergunta:'Funciona para qualquer idade?' }
+    ],
+    respostas: [
+      'Sim, o método foi criado justamente para quem já tentou outras abordagens. A base é reeducação alimentar sustentável, não dietas extremas.',
+      'Não. O método inclui atividades adaptáveis ao seu nível. Nada extremo. A ideia é criar hábitos que você consiga manter.',
+      'Os resultados variam de pessoa para pessoa, mas muitos relatam mudanças visíveis nas primeiras 2 a 3 semanas.',
+      'Sim, existe orientação sobre alimentação e hábitos saudáveis ao longo de todo o processo.',
+      'Sim, o método foi testado com pessoas de 20 a 65 anos com ótimos resultados em diferentes faixas etárias.'
+    ]
+  }
+};
+
+// Mapeamento de exemplos rápidos
+const EXEMPLOS = {
+  curso: { texto:'Curso online de marketing digital', nicho:'infoproduto' },
+  clinica: { texto:'Clínica de estética em São Paulo', nicho:'negocio_local' },
+  loja: { texto:'Loja virtual de roupas femininas', nicho:'ecommerce' },
+  afiliado: { texto:'Afiliado Hotmart — produto de emagrecimento', nicho:'marketing' }
+};
+
+// =====================================================
+// V2.0 FEATURE FLAG (segurança: desativar = volta ao original)
+// =====================================================
+const ENABLE_V2 = true;
+
+// =====================================================
+// ESTADO
+// =====================================================
+let nichoAtual = 'infoproduto';
+let negocioNome = '';
+let clienteCount = 0;
+let timerInterval = null;
+let tempoRestante = 300;
+let ofertaMostrada = false;
+let chatInterval = null;
+let clienteIdx = 0;
+let toastInterval = null;
+let messageCount = 0; // V2.0: contador de interações para fases progressivas
+let gcShown = false;  // V2.0: guided conversion já exibido
+
+// =====================================================
+// UTILS
+// =====================================================
+function irParaCheckout() { window.open(CHECKOUT_URL,'_blank') }
+function toggleFaq(btn) {
+  const item=btn.parentElement;
+  const open=item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i=>i.classList.remove('open'));
+  if(!open) item.classList.add('open');
+}
+function showStep(id) {
+  document.querySelectorAll('.demo-step').forEach(s=>{s.classList.remove('active');s.style.display='none'});
+  const el=document.getElementById(id);el.style.display='block';el.classList.add('active');
+}
+
+function detectarNicho(texto) {
+  const t = texto.toLowerCase();
+  for (const [key,data] of Object.entries(NICHOS)) {
+    if (data.keywords.some(k=>t.includes(k))) return key;
+  }
+  return 'infoproduto'; // fallback
+}
+
+// =====================================================
+// TOASTS (pressão silenciosa)
+// =====================================================
+const TOAST_MSGS = [
+  '⚡ Outro visitante acabou de testar o sistema',
+  '⚡ Um negócio de estética criou um atendimento agora',
+  '⚡ Simulação de clientes iniciada por outro empreendedor',
+  '⚡ Um afiliado testou o sistema com seu link agora',
+  '⚡ Uma clínica ativou o atendimento automático'
+];
+let toastIdx = 0;
+function showToast(msg) {
+  const c = document.getElementById('toast-container');
+  const div = document.createElement('div');
+  div.className = 'toast';
+  div.textContent = msg;
+  c.appendChild(div);
+  setTimeout(()=>div.remove(), 4200);
+}
+function iniciarToasts() {
+  // Primeiro toast após 8s
+  setTimeout(()=>{
+    showToast(TOAST_MSGS[0]);
+    toastInterval = setInterval(()=>{
+      toastIdx = (toastIdx+1) % TOAST_MSGS.length;
+      showToast(TOAST_MSGS[toastIdx]);
+    }, 15000);
+  }, 8000);
+}
+
+// =====================================================
+// TESTAR EXEMPLO
+// =====================================================
+function testarExemplo(tipo) {
+  const ex = EXEMPLOS[tipo];
+  document.getElementById('url-input').value = ex.texto;
+  nichoAtual = ex.nicho;
+  iniciarDemo(true);
+}
+
+// =====================================================
+// INICIAR DEMO → vai para personalização
+// =====================================================
+function iniciarDemo(skipDetect) {
+  const input = document.getElementById('url-input');
+  const err = document.getElementById('url-error');
+  const texto = input.value.trim();
+  err.style.display='none';
+  if (!texto) { err.style.display='block'; input.focus(); return; }
+  if (!skipDetect) nichoAtual = detectarNicho(texto);
+  negocioNome = texto.length>40 ? texto.substring(0,40)+'...' : texto;
+  // Ir para step de escolha de tipo
+  showStep('step-type');
+  document.getElementById('demo-zone').scrollIntoView({behavior:'smooth'});
+}
+
+// =====================================================
+// PERSONALIZAÇÃO: escolher tipo
+// =====================================================
+function escolherTipo(tipo) {
+  nichoAtual = tipo;
+  const nichoData = NICHOS[nichoAtual] || NICHOS.infoproduto;
+  document.getElementById('type-confirm').textContent = '✅ ' + nichoData.nome + ' selecionado';
+  showStep('step-name');
+}
+
+// =====================================================
+// PERSONALIZAÇÃO: confirmar nome
+// =====================================================
+function confirmarNome() {
+  const nameInput = document.getElementById('name-input').value.trim();
+  if (nameInput) negocioNome = nameInput;
+  iniciarLoading();
+}
+
+// =====================================================
+// LOADING
+// =====================================================
+async function iniciarLoading() {
+  showStep('step-loading');
+  const MSGS = [
+    'Analisando conteúdo informado...',
+    'Identificando tipo de negócio...',
+    'Personalizando respostas para ' + negocioNome + '...',
+    'Configurando base de respostas...',
+    'Preparando atendimento automático...',
+    'Sistema pronto. ✅'
+  ];
+  let pct=0, msgIdx=0;
+  const fill=document.getElementById('progress-fill');
+  const msgEl=document.getElementById('loading-msg');
+  const pctEl=document.getElementById('progress-pct');
+  fill.style.width='0%'; pctEl.textContent='0%';
+  msgEl.textContent=MSGS[0];
+  await new Promise(resolve=>{
+    const iv=setInterval(()=>{
+      pct=Math.min(pct+1.5,95);
+      fill.style.width=pct+'%';
+      pctEl.textContent=Math.round(pct)+'%';
+      const ni=Math.floor((pct/95)*(MSGS.length-1));
+      if(ni!==msgIdx){msgIdx=ni;msgEl.textContent=MSGS[msgIdx]}
+      if(pct>=95){clearInterval(iv);resolve()}
+    },70);
+  });
+  fill.style.width='100%'; pctEl.textContent='100%';
+  msgEl.textContent=MSGS[MSGS.length-1];
+  await new Promise(r=>setTimeout(r,800));
+  iniciarChat();
+}
+
+// =====================================================
+// CHAT (com nome do negócio nas respostas)
+// =====================================================
+function personalizarResposta(resposta) {
+  // Injeta o nome do negócio na resposta quando fizer sentido
+  if (negocioNome && negocioNome.length > 2) {
+    const frases = resposta.split('.');
+    if (frases.length > 1) {
+      // Adiciona menção ao negócio na segunda frase
+      frases.splice(1, 0, ' Na ' + negocioNome + ', isso pode ser configurado facilmente');
+      return frases.join('.');
+    }
+  }
+  return resposta;
+}
+
+function iniciarChat() {
+  showStep('step-chat');
+  const nichoData = NICHOS[nichoAtual] || NICHOS.infoproduto;
+  document.getElementById('chat-name').textContent = negocioNome || ('Atendimento — ' + nichoData.nome);
+  clienteCount = 0;
+  clienteIdx = 0;
+  messageCount = 0; // V2.0: reset
+  gcShown = false;   // V2.0: reset
+  ofertaMostrada = false;
+  document.getElementById('client-count').textContent = '0';
+  document.getElementById('offer-section').style.display = 'none';
+  document.getElementById('wow-box').style.display = 'none';
+  document.getElementById('ig-sim-box').style.display = 'none';
+  document.getElementById('messages-wrap').innerHTML = '';
+
+  iniciarTimer();
+  iniciarToasts();
+
+  // Mensagem inicial personalizada
+  const msgInicial = negocioNome
+    ? 'Sistema ativado para **' + negocioNome + '**. ✅\n\nAgora veja como o atendimento automático responde perguntas reais de clientes.'
+    : 'Sistema ativado. ✅\n\nAgora veja como o atendimento automático responde perguntas reais de clientes.';
+
+  setTimeout(()=>mostrarTyping(800,()=>{
+    addMsg('bot', msgInicial);
+  }),500);
+  setTimeout(()=>simularProximoCliente(), 3500);
+}
+
+function simularProximoCliente() {
+  const nichoData = NICHOS[nichoAtual] || NICHOS.infoproduto;
+  if (clienteIdx >= nichoData.clientes.length) {
+    if (!ofertaMostrada) { ofertaMostrada=true; setTimeout(mostrarWow, 1500); }
+    return;
+  }
+  const cliente = nichoData.clientes[clienteIdx];
+  let resposta = nichoData.respostas[clienteIdx];
+  // Personalizar 2ª e 4ª resposta com nome do negócio
+  if ((clienteIdx === 1 || clienteIdx === 3) && negocioNome) {
+    resposta = personalizarResposta(resposta);
+  }
+  // V2.0: Venda embutida sutil nas respostas intermediárias
+  try {
+    if (ENABLE_V2 && clienteIdx === 3) {
+      resposta += ' Essa resposta que você está vendo acontece automaticamente sempre que alguém visita seu link.';
+    }
+    if (ENABLE_V2 && clienteIdx === 4) {
+      resposta += ' Se você tivesse isso no seu negócio, quantas oportunidades estaria aproveitando agora?';
+    }
+  } catch(e) { /* V2 fallback: keep original response */ }
+  clienteIdx++;
+  addClientMsg(cliente.nome, cliente.origem, cliente.pergunta);
+  clienteCount++;
+  document.getElementById('client-count').textContent = clienteCount;
+  setTimeout(()=>{
+    mostrarTyping(900+resposta.length*4, ()=>{
+      addMsg('bot', resposta);
+      if (clienteIdx < nichoData.clientes.length) {
+        setTimeout(simularProximoCliente, 4000);
+      } else {
+        if (!ofertaMostrada) { ofertaMostrada=true; setTimeout(mostrarWow, 2500); }
+      }
+    });
+  }, 1200);
+}
+
+// =====================================================
+// WOW MOMENT
+// =====================================================
+function mostrarWow() {
+  const wow = document.getElementById('wow-box');
+  document.getElementById('wow-count').textContent = clienteCount;
+  if (negocioNome) {
+    document.getElementById('wow-name-cta').textContent = 'Imagine isso respondendo todos os visitantes de ' + negocioNome + '.';
+  }
+  wow.style.display='block';
+  wow.scrollIntoView({behavior:'smooth',block:'nearest'});
+  // Mostrar IG sim após 2s
+  setTimeout(()=>{
+    document.getElementById('ig-sim-box').style.display='block';
+  }, 2000);
+  // Mostrar oferta após 4s
+  setTimeout(mostrarOferta, 4000);
+}
+
+// =====================================================
+// INSTAGRAM SIMULATION
+// =====================================================
+function simularInstagram() {
+  const wrap = document.getElementById('messages-wrap');
+  // Adicionar separador visual
+  const sep = document.createElement('div');
+  sep.className='msg msg-bot';
+  sep.innerHTML='📸 <strong>Simulação Instagram</strong><br><br>Veja como ficaria no DM do seu perfil:';
+  wrap.appendChild(sep);
+  wrap.scrollTop=wrap.scrollHeight;
+
+  const igMsgs = [
+    {nome:'@usuario_real', pergunta:'Oi! Vi seu post, vocês tem mais informações?'},
+    {nome:'@curiosa.123', pergunta:'Isso funciona mesmo? Quero saber mais!'}
+  ];
+
+  let i = 0;
+  function nextIg() {
+    if (i >= igMsgs.length) return;
+    const m = igMsgs[i]; i++;
+    setTimeout(()=>{
+      addClientMsg(m.nome, 'Instagram DM', m.pergunta);
+      setTimeout(()=>{
+        mostrarTyping(800, ()=>{
+          const nichoData = NICHOS[nichoAtual] || NICHOS.infoproduto;
+          addMsg('bot', nichoData.respostas[i-1] || 'Claro! Posso te ajudar com mais informações. O que gostaria de saber?');
+          nextIg();
+        });
+      }, 1000);
+    }, 2000);
+  }
+  nextIg();
+}
+
+// =====================================================
+// V2.0: Split response into multiple bubbles with delay
+// =====================================================
+function splitResponse(texto) {
+  try {
+    if (!ENABLE_V2) return [texto];
+    // Split by double newline or period followed by space (max 3 bubbles)
+    const parts = texto.split(/\n\n|(?<=\.)\s+(?=[A-Z])/).filter(p => p.trim());
+    return parts.length > 1 ? parts.slice(0, 3) : [texto];
+  } catch(e) { return [texto]; }
+}
+
+function addMsg(tipo, texto) {
+  try {
+    const wrap=document.getElementById('messages-wrap');
+    if (ENABLE_V2 && tipo === 'bot') {
+      // V2.0: Split bot messages into multiple bubbles with typing delay
+      const parts = splitResponse(texto);
+      if (parts.length > 1) {
+        _addSingleMsg(wrap, tipo, parts[0]);
+        parts.slice(1).forEach((part, i) => {
+          setTimeout(() => {
+            mostrarTyping(600 + Math.random() * 400, () => {
+              _addSingleMsg(wrap, tipo, part);
+            });
+          }, (i + 1) * 900);
+        });
+        messageCount++;
+        // V2.0: Show micro-commitments after first bot response
+        if (messageCount === 1) setTimeout(showMicroCommitments, (parts.length) * 900 + 500);
+        // V2.0: Show guided conversion card at message 10
+        if (messageCount >= 10 && !gcShown) { gcShown = true; setTimeout(showGuidedConversion, (parts.length) * 900 + 800); }
+        return;
+      }
+      messageCount++;
+      if (messageCount === 1) setTimeout(showMicroCommitments, 1200);
+      if (messageCount >= 10 && !gcShown) { gcShown = true; setTimeout(showGuidedConversion, 1500); }
+    }
+    _addSingleMsg(wrap, tipo, texto);
+  } catch(e) {
+    // Fallback: original behavior
+    const wrap=document.getElementById('messages-wrap');
+    const div=document.createElement('div');
+    div.className = tipo==='bot' ? 'msg msg-bot' : 'msg msg-client';
+    div.innerHTML = texto.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    wrap.appendChild(div);
+    wrap.scrollTop=wrap.scrollHeight;
+  }
+}
+
+function _addSingleMsg(wrap, tipo, texto) {
+  const div=document.createElement('div');
+  div.className = tipo==='bot' ? 'msg msg-bot' : 'msg msg-client';
+  // V2.0: Detect URLs and convert to action buttons
+  let html = texto.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  if (ENABLE_V2 && tipo === 'bot') {
+    try {
+      const urlRegex = /(https?:\/\/[^\s<>"']+)/g;
+      const urls = html.match(urlRegex);
+      if (urls && urls.length > 0) {
+        urls.forEach(url => {
+          html = html.replace(url, '');
+        });
+        html += '<br><a href="' + urls[0] + '" target="_blank" class="action-btn">👉 Acessar agora</a>';
+      }
+    } catch(e) { /* fallback: keep original html */ }
+  }
+  div.innerHTML = html;
+  wrap.appendChild(div);
+  wrap.scrollTop=wrap.scrollHeight;
+}
+
+function addClientMsg(nome, origem, texto) {
+  const wrap=document.getElementById('messages-wrap');
+  const div=document.createElement('div');
+  div.className='msg msg-client';
+  div.innerHTML=`<div class="msg-client-label">${nome} (${origem})</div>${texto}`;
+  wrap.appendChild(div);
+  wrap.scrollTop=wrap.scrollHeight;
+}
+
+function mostrarTyping(duracao, callback) {
+  const wrap=document.getElementById('messages-wrap');
+  const t=document.createElement('div');
+  t.className='msg msg-typing';t.id='typing-indicator';
+  t.innerHTML='<div class="dots"><span></span><span></span><span></span></div>';
+  wrap.appendChild(t);wrap.scrollTop=wrap.scrollHeight;
+  setTimeout(()=>{const el=document.getElementById('typing-indicator');if(el)el.remove();callback()},duracao);
+}
+
+// =====================================================
+// V2.0: Micro-commitment Buttons
+// =====================================================
+function showMicroCommitments() {
+  try {
+    if (!ENABLE_V2) return;
+    const wrap = document.getElementById('messages-wrap');
+    const btns = document.createElement('div');
+    btns.className = 'mc-buttons';
+    btns.id = 'mc-buttons';
+    btns.innerHTML = '<button class="mc-btn" onclick="handleMicroCommit(\'vendas\')">🚀 Aumentar Vendas</button>' +
+                     '<button class="mc-btn" onclick="handleMicroCommit(\'atendimento\')">🤖 Automatizar Atendimento</button>';
+    wrap.appendChild(btns);
+    wrap.scrollTop = wrap.scrollHeight;
+  } catch(e) { console.log('[V2] MC buttons fallback:', e); }
+}
+
+function handleMicroCommit(choice) {
+  try {
+    const btns = document.getElementById('mc-buttons');
+    if (btns) btns.remove();
+    const label = choice === 'vendas' ? '🚀 Aumentar Vendas' : '🤖 Automatizar Atendimento';
+    addClientMsg('Você', 'Escolha', label);
+    setTimeout(() => {
+      mostrarTyping(800, () => {
+        const resp = choice === 'vendas'
+          ? 'Ótima escolha! O sistema identifica automaticamente oportunidades de venda e responde com foco em conversão. Isso faz sentido pra você até aqui?'
+          : 'Perfeito! O atendimento automático responde 24h com base nas informações do seu negócio. Isso faz sentido pra você até aqui?';
+        addMsg('bot', resp);
+      });
+    }, 600);
+  } catch(e) { console.log('[V2] MC handler fallback:', e); }
+}
+
+// =====================================================
+// V2.0: Guided Conversion Card
+// =====================================================
+function showGuidedConversion() {
+  try {
+    if (!ENABLE_V2) return;
+    const wrap = document.getElementById('messages-wrap');
+    const card = document.createElement('div');
+    card.className = 'gc-card';
+    card.innerHTML = '<h4>✨ Criar meu primeiro LinkMágico</h4>' +
+                     '<p>Essa experiência que você está tendo acontece automaticamente com cada visitante do seu negócio.</p>' +
+                     '<a href="/criar-link?ref=demo_chat" class="action-btn" target="_blank">Criar meu LinkMágico →</a>';
+    wrap.appendChild(card);
+    wrap.scrollTop = wrap.scrollHeight;
+  } catch(e) { console.log('[V2] GC card fallback:', e); }
+}
+
+function mostrarOferta() {
+  const o=document.getElementById('offer-section');
+  o.style.display='block';
+  o.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// =====================================================
+// TIMER
+// =====================================================
+function iniciarTimer() {
+  if(timerInterval) clearInterval(timerInterval);
+  tempoRestante=300;
+  const el=document.getElementById('session-timer');
+  timerInterval=setInterval(()=>{
+    tempoRestante--;
+    const m=Math.floor(tempoRestante/60).toString().padStart(2,'0');
+    const s=(tempoRestante%60).toString().padStart(2,'0');
+    el.textContent=m+':'+s;
+    if(tempoRestante<=0){clearInterval(timerInterval);el.textContent='00:00';if(!ofertaMostrada){ofertaMostrada=true;mostrarOferta()}}
+  },1000);
+}
+
+// =====================================================
+// REINICIAR
+// =====================================================
+function reiniciarDemo() {
+  if(timerInterval) clearInterval(timerInterval);
+  if(toastInterval) clearInterval(toastInterval);
+  showStep('step-url');
+  document.getElementById('url-input').value='';
+  document.getElementById('name-input').value='';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('progress-pct').textContent='0%';
+  document.getElementById('demo-zone').scrollIntoView({behavior:'smooth'});
+}
+
+// =====================================================
+// ENTER handlers
+// =====================================================
+document.getElementById('url-input').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarDemo()});
+document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmarNome()});
+
+// =====================================================
+// SOCIAL PROOF: contadores dinâmicos
+// =====================================================
+(function(){
+  const spCounter=document.getElementById('sp-counter');
+  const spVisitors=document.getElementById('sp-visitors');
+  let baseCount=2800+Math.floor(Math.random()*200);
+  let visitors=18+Math.floor(Math.random()*12);
+  spCounter.textContent=baseCount.toLocaleString('pt-BR');
+  spVisitors.textContent=visitors;
+  // Incrementar atendimentos a cada 8-15s
+  setInterval(()=>{
+    baseCount+=Math.floor(Math.random()*3)+1;
+    spCounter.textContent=baseCount.toLocaleString('pt-BR');
+  },8000+Math.random()*7000);
+  // Variar visitantes a cada 12-25s
+  setInterval(()=>{
+    visitors+=Math.floor(Math.random()*5)-2;
+    if(visitors<14)visitors=14+Math.floor(Math.random()*4);
+    if(visitors>38)visitors=38-Math.floor(Math.random()*4);
+    spVisitors.textContent=visitors;
+  },12000+Math.random()*13000);
+})();
+
+// =====================================================
+// FOMO: notificações de outros usuários
+// =====================================================
+(function(){
+  const nomes=['João','Maria','Carlos','Ana','Pedro','Juliana','Rafael','Camila','Lucas','Fernanda','Thiago','Beatriz','Daniel','Sandra','Marcos','Priscila','Roberto','Amanda','Felipe','Larissa'];
+  const acoes=[
+    'acabou de testar a IA',
+    'iniciou uma conversa agora',
+    'está simulando um atendimento',
+    'ativou o sistema para loja virtual',
+    'testou com um curso online',
+    'criou um atendimento automático',
+    'está vendo a demonstração',
+    'acabou de ativar o sistema'
+  ];
+  let fomoTimeout;
+  function showFomo(){
+    const nome=nomes[Math.floor(Math.random()*nomes.length)];
+    const acao=acoes[Math.floor(Math.random()*acoes.length)];
+    const initials=nome.charAt(0);
+    const existing=document.querySelector('.fomo-toast');
+    if(existing)existing.remove();
+    const div=document.createElement('div');
+    div.className='fomo-toast';
+    div.innerHTML='<div class="fomo-avatar">'+initials+'</div><span>🔵 <strong>'+nome+'</strong> '+acao+'</span>';
+    document.body.appendChild(div);
+    setTimeout(()=>div.remove(),5200);
+    fomoTimeout=setTimeout(showFomo,10000+Math.random()*10000);
+  }
+  // Primeira notificação após 6s
+  fomoTimeout=setTimeout(showFomo,6000);
+})();
+
+// =====================================================
+// VSL: fallback se iframe falhar
+// =====================================================
+(function(){
+  const iframe=document.getElementById('vsl-iframe');
+  if(iframe){
+    iframe.addEventListener('error',function(){
+      const container=document.getElementById('vsl-container');
+      container.style.paddingBottom='0';
+      container.style.height='auto';
+      container.innerHTML='<a href="https://youtu.be/u6p9LwvLHgQ" target="_blank" class="vsl-fallback" style="display:block;position:relative"><img src="https://img.youtube.com/vi/u6p9LwvLHgQ/maxresdefault.jpg" alt="Assistir vídeo" style="width:100%;border-radius:16px"><div class="vsl-play-btn"></div></a>';
+    });
+  }
+})();
+
+// =====================================================
+// V2.0: SENSOR DE INTENÇÃO (scroll + tempo → floating CTA)
+// Incremental, isolado, protegido por try/catch + ENABLE_V2
+// =====================================================
+(function(){
+  try {
+    if (!ENABLE_V2) return;
+    let intentShown = false;
+    let intentDismissed = false;
+    const SCROLL_THRESHOLD = 0.6;
+    const TIME_THRESHOLD = 30000;
+
+    // Criar barra flutuante (não impacta DOM existente)
+    const bar = document.createElement('div');
+    bar.className = 'intent-bar';
+    bar.id = 'intent-bar';
+    bar.innerHTML = '<span class="intent-text">⚡ <strong>Gostou do que viu?</strong> Crie seu atendimento automático agora</span>' +
+      '<a href="/criar-link?ref=intent_sensor" class="intent-btn intent-btn-green">Criar meu LinkMágico →</a>' +
+      '<button class="intent-btn" onclick="document.getElementById(\'demo-zone\').scrollIntoView({behavior:\'smooth\'})">Testar Grátis</button>' +
+      '<button class="intent-close" onclick="this.parentElement.classList.remove(\'visible\');" title="Fechar">✕</button>';
+    document.body.appendChild(bar);
+
+    function showIntent() {
+      if (intentShown || intentDismissed) return;
+      intentShown = true;
+      bar.classList.add('visible');
+      console.log('[V2.0] Intent sensor triggered');
+    }
+
+    // Trigger 1: scroll 60%+
+    window.addEventListener('scroll', function() {
+      try {
+        const scrollPct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+        if (scrollPct >= SCROLL_THRESHOLD) showIntent();
+      } catch(e) { /* fallback silencioso */ }
+    }, { passive: true });
+
+    // Trigger 2: 30 segundos na página
+    setTimeout(function() {
+      try { showIntent(); } catch(e) { /* fallback silencioso */ }
+    }, TIME_THRESHOLD);
+
+    console.log('[V2.0] Sensor de intenção inicializado');
+  } catch(e) {
+    console.log('[V2.0] Intent sensor fallback:', e.message);
+  }
+})();
+
+// =====================================================
+// AUTO-START VIA QUERY PARAMS (Feature: Demos Pré-Configuradas)
+// Ex: /demo.html?nicho=infoproduto&nome=Academia+Digital+Pro
+// =====================================================
+(function() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const paramNicho = params.get('nicho');
+    const paramNome = params.get('nome');
+    if (paramNicho && NICHOS[paramNicho]) {
+      nichoAtual = paramNicho;
+      negocioNome = paramNome || NICHOS[paramNicho].nome;
+      // Pular direto para loading → chat (sem steps 1-3)
+      setTimeout(function() {
+        iniciarLoading();
+        // Scroll suave para a demo
+        var dz = document.getElementById('demo-zone');
+        if (dz) dz.scrollIntoView({behavior:'smooth'});
+      }, 600);
+      console.log('[DEMO-AUTO] Iniciando demo pré-configurada:', paramNicho, negocioNome);
+    }
+  } catch(e) {
+    console.log('[DEMO-AUTO] Fallback para fluxo normal:', e.message);
+  }
+})();
+</script>
+
+<!-- LinkMágico Chatbot Widget v2.0 - Chat Flutuante -->
+<script>
+(function() {
+    var config = {
+        robotName: "Lia",
+        salesUrl: "https://www.arsenalsecretodosceos.com.br/linkmagico",
+        instructions: "Você é a Lia, consultora especializada em automação de vendas e IA conversacional e assistente oficial do Link Mágico.\nSeu papel é conversar com leads que chegam pela página de vendas, tirar dúvidas e guiar para a compra — sem forçar, sem floreio e sem repetição.\n═══════════════════════════════════\nREGRAS ABSOLUTAS (NUNCA QUEBRE):\n═══════════════════════════════════\nNUNCA repita informações que já deu na mesma conversa. Se já falou o preço, diga: \"como mencionei antes\" e siga.\nMáximo 1 emoji por mensagem — e apenas se for natural. Zero emojis é melhor que emoji forçado.\nNUNCA faça mais de 1 pergunta por mensagem.\nPROIBIDO usar frases como:\n\"é como ter um vendedor superinteligente\"\n\"enquanto você dorme\"\n\"vejo que você está sentindo na pele\"\n\"é um prazer conversar\"\nQuando o lead disser que quer comprar → ENVIE O LINK IMEDIATAMENTE:\nhttps://pay.hotmart.com/G103177435I\nNão faça mais perguntas. Não qualifique mais. Não adicione nada.\nRespostas com NO MÁXIMO 4 linhas.\nSe precisar organizar melhor, use tópicos curtos com travessão.\nNUNCA comece respostas com:\n\"Entendi!\"\n\"Ótima pergunta!\"\n\"Priorizando sua solicitação!\"\nVá direto ao ponto.\nNUNCA repita a pergunta do lead. Responda direto.\nSe o lead demonstrar irritação ou disser que você está repetindo, peça desculpas brevemente e mude de direção.\nNa despedida, NÃO tente vender novamente. Apenas finalize.\nNUNCA invente funcionalidades, integrações ou promessas que não estejam nas informações oficiais abaixo.\n═══════════════════════════════════\nTOM DE VOZ:\n═══════════════════════════════════\nConsultora experiente, não vendedora agressiva\nDireta e objetiva\nLinguagem simples\nEmpática sem dramatizar\nSe o lead responder \"ok\", \"entendi\", \"hmm\", pergunte brevemente se quer esclarecer algo específico\n═══════════════════════════════════\nFASES DA CONVERSA (SIGA SEMPRE):\n═══════════════════════════════════\nFASE 1 — CHEGADA\nCumprimento breve (1 linha).\nFaça apenas 1 pergunta para entender o contexto do lead.\nFASE 2 — DIAGNÓSTICO\nReflita a dor em 1 frase curta.\nConfirme que entendeu corretamente.\nApresente o Link Mágico como solução da dor específica (não como lista genérica de funcionalidades).\nFASE 3 — DÚVIDAS\nResponda apenas o que foi perguntado.\nNão adicione informações extras que o lead não solicitou.\nFASE 4 — COMPRA\nEnvie imediatamente o link:\nhttps://pay.hotmart.com/G103177435I\nSem perguntas adicionais. Sem reforços desnecessários.\nFASE 5 — DESPEDIDA\n\"Fico por aqui. Qualquer dúvida, me chama.\"\nPonto final.\n═══════════════════════════════════\nSOBRE O LINK MÁGICO (INFORMAÇÕES OFICIAIS):\n═══════════════════════════════════\nO que é:\nPlataforma de IA conversacional — um Vendedor IA que responde leads automaticamente, 24h, com a marca do cliente.\nComo funciona (3 passos):\nCola a URL do site/produto → a IA extrai as informações automaticamente\nPersonaliza tom de voz e whitelabel (opcional)\nCola o widget na página ou usa o link no Instagram/WhatsApp\nPreço:\nR$97 pagamento único.\nAcesso completo por 12 meses + atualizações + suporte.\nGarantia:\n7 dias incondicional. Reembolso total se não gostar.\nPrincipais funcionalidades:\nRespostas em menos de 1 segundo\nSuperInteligência Conversacional (detecta emoção, urgência, contexto)\n3 motores de IA (Groq + OpenAI + OpenRouter)\nMemória persistente de conversa\nCRM integrado + Analytics + Export CSV\nWidget 100% whitelabel\nIntegração com WhatsApp, Gmail, qualquer site e link de bio\nSistema de agendamentos\nWebhooks (6 eventos) + 25+ endpoints de API\nDiferencial estratégico:\nPode usar com sua marca e até revender como serviço próprio.\nProva ao vivo:\nO chat da própria página é o Link Mágico funcionando.\nPúblico-alvo:\nAfiliados, infoprodutores, agências, e-commerces e qualquer negócio que recebe leads.",
+        primaryColor: "#f7ce3b",
+        apiKey: "LMV7-9BOT-HM5M-JOUV",
+        greetingMessage: "Oi! Posso ajudar?",
+        welcomeMessage: "Olá 👋 Muito bom ter você aqui!",
+        secondMessage: "Como posso ajudar você hoje?"
+    };
+    var apiBase = "https://vertical-ai-dktu.onrender.com";
+    if (!config.apiKey || config.apiKey === "SUA_API_KEY") { console.error("❌ LinkMágico Widget: API Key não configurada!"); return; }
+    var isOpen = false, leadId = null, leadCaptured = false, conversationId = 'lm_' + Date.now();
+    var styles = document.createElement('style');
+    styles.textContent = '.lm-widget-container *{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Inter,-apple-system,BlinkMacSystemFont,sans-serif}.lm-widget-container{position:fixed;bottom:20px;right:20px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;gap:12px}.lm-greeting-tooltip{background:#1f2937;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;font-weight:500;box-shadow:0 4px 15px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:lm-slideIn .3s ease;cursor:pointer;transition:all .2s ease}.lm-greeting-tooltip:hover{transform:scale(1.02);box-shadow:0 6px 20px rgba(0,0,0,.2)}.lm-greeting-tooltip .lm-online-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:lm-pulse 2s infinite}.lm-greeting-tooltip.lm-hidden{display:none}.lm-bubble{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(59,130,246,.4);transition:all .3s ease}.lm-bubble:hover{transform:scale(1.1);box-shadow:0 6px 25px rgba(59,130,246,.5)}.lm-bubble svg{width:28px;height:28px;fill:#fff}.lm-bubble.lm-hidden{display:none}.lm-chat-window{position:fixed;bottom:90px;right:20px;width:380px;height:520px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.15);display:none;flex-direction:column;overflow:hidden;animation:lm-scaleIn .3s ease;z-index:999998}.lm-chat-window.lm-open{display:flex}.lm-chat-header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px;display:flex;align-items:center;justify-content:space-between}.lm-chat-header-left{display:flex;align-items:center;gap:12px}.lm-chat-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#8b5cf6 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px}.lm-chat-header-info{display:flex;flex-direction:column}.lm-chat-header-subtitle{font-size:12px;color:#6b7280}.lm-chat-header-title{font-size:15px;font-weight:600;color:#1f2937}.lm-header-btn{width:36px;height:36px;border-radius:50%;border:none;background:#f3f4f6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease;color:#6b7280}.lm-header-btn:hover{background:#e5e7eb;color:#1f2937}.lm-chat-messages{flex:1;padding:16px;overflow-y:auto;background:#f9fafb;display:flex;flex-direction:column;gap:12px}.lm-message{max-width:80%;padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.5;animation:lm-fadeIn .3s ease}.lm-message.lm-bot{background:#fff;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb;border-bottom-left-radius:4px}.lm-message.lm-user{background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}.lm-typing{display:none;align-items:center;gap:4px;padding:12px 16px;background:#fff;border-radius:18px;border:1px solid #e5e7eb;align-self:flex-start;max-width:80px}.lm-typing.lm-active{display:flex}.lm-typing-dot{width:8px;height:8px;background:#9ca3af;border-radius:50%;animation:lm-typingBounce 1.4s infinite}.lm-typing-dot:nth-child(2){animation-delay:.2s}.lm-typing-dot:nth-child(3){animation-delay:.4s}.lm-chat-input-area{padding:16px;background:#fff;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:12px}.lm-chat-input{flex:1;border:1px solid #e5e7eb;border-radius:24px;padding:12px 20px;font-size:14px;outline:none;transition:all .2s ease;background:#f9fafb}.lm-chat-input:focus{border-color:'+config.primaryColor+';background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1)}.lm-chat-input::placeholder{color:#9ca3af}.lm-send-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease}.lm-send-btn:hover{transform:scale(1.05);box-shadow:0 4px 15px rgba(59,130,246,.4)}.lm-send-btn:disabled{opacity:.5;cursor:not-allowed}.lm-send-btn svg{width:20px;height:20px}.lm-lead-prompt{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:8px 0;align-self:flex-start;max-width:90%}.lm-lead-prompt input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:10px;outline:none;transition:all .2s ease}.lm-lead-prompt input:focus{border-color:'+config.primaryColor+'}.lm-lead-prompt button{width:100%;background:linear-gradient(135deg,'+config.primaryColor+' 0%,#1e40af 100%);color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s ease}.lm-lead-prompt button:hover{opacity:.9}@keyframes lm-slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes lm-scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}@keyframes lm-fadeIn{from{opacity:0}to{opacity:1}}@keyframes lm-pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes lm-typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}@media (max-width:480px){.lm-chat-window{width:calc(100% - 20px);height:calc(100% - 100px);right:10px;bottom:80px;border-radius:20px}.lm-widget-container{right:10px;bottom:10px}.lm-bubble{width:55px;height:55px}.lm-greeting-tooltip{display:none}}';
+    document.head.appendChild(styles);
+    var container = document.createElement('div');
+    container.className = 'lm-widget-container';
+    container.id = 'lmWidgetContainer';
+    container.innerHTML = '<div class="lm-greeting-tooltip" id="lmGreeting"><span class="lm-online-dot"></span><span>'+config.greetingMessage+'</span></div><div class="lm-bubble" id="lmBubble"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/><path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg></div><div class="lm-chat-window" id="lmChatWindow"><div class="lm-chat-header"><div class="lm-chat-header-left"><div class="lm-chat-avatar">'+config.robotName.charAt(0).toUpperCase()+'</div><div class="lm-chat-header-info"><span class="lm-chat-header-subtitle">Assistente Virtual</span><span class="lm-chat-header-title">'+config.robotName+'</span></div></div><button class="lm-header-btn" id="lmCloseBtn" title="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="lm-chat-messages" id="lmMessages"></div><div class="lm-typing" id="lmTyping"><span class="lm-typing-dot"></span><span class="lm-typing-dot"></span><span class="lm-typing-dot"></span></div><div class="lm-chat-input-area"><input type="text" class="lm-chat-input" id="lmInput" placeholder="Escreva sua mensagem..." autocomplete="off"><button class="lm-send-btn" id="lmSendBtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div></div>';
+    document.body.appendChild(container);
+    var chatWindow = document.getElementById('lmChatWindow');
+    var bubble = document.getElementById('lmBubble');
+    var greeting = document.getElementById('lmGreeting');
+    var messages = document.getElementById('lmMessages');
+    var input = document.getElementById('lmInput');
+    var sendBtn = document.getElementById('lmSendBtn');
+    var typing = document.getElementById('lmTyping');
+    var closeBtn = document.getElementById('lmCloseBtn');
+    function addMessage(text, isUser) {
+        var msgDiv = document.createElement('div');
+        msgDiv.className = 'lm-message ' + (isUser ? 'lm-user' : 'lm-bot');
+        if (isUser) { msgDiv.textContent = text; }
+        else if (/https?:\/\//.test(text)) {
+            var esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            msgDiv.innerHTML = esc.replace(/(https?:\/\/[^\s<>"']+)/gi, function(u) {
+                return '<a href="'+u+'" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:white;padding:6px 14px;border-radius:16px;text-decoration:none;font-size:13px;font-weight:600;margin:4px 0;">&#128279; Acessar agora</a>';
+            });
+        } else { msgDiv.textContent = text; }
+        messages.appendChild(msgDiv);
+        messages.scrollTop = messages.scrollHeight;
+    }
+    function showLeadForm() {
+        var formDiv = document.createElement('div');
+        formDiv.className = 'lm-lead-prompt'; formDiv.id = 'lmLeadForm';
+        formDiv.innerHTML = '<input type="text" id="lmLeadName" placeholder="Qual o seu nome?" required><input type="email" id="lmLeadEmail" placeholder="Seu melhor email"><input type="tel" id="lmLeadPhone" placeholder="WhatsApp (opcional)"><button id="lmLeadSubmit">Continuar conversa</button>';
+        messages.appendChild(formDiv); messages.scrollTop = messages.scrollHeight;
+        document.getElementById('lmLeadName').focus();
+        document.getElementById('lmLeadSubmit').addEventListener('click', captureLead);
+    }
+    function captureLead() {
+        var name = document.getElementById('lmLeadName').value.trim();
+        var email = document.getElementById('lmLeadEmail').value.trim();
+        var phone = document.getElementById('lmLeadPhone').value.trim();
+        if (!name) { document.getElementById('lmLeadName').focus(); return; }
+        var form = document.getElementById('lmLeadForm'); if (form) form.remove();
+        fetch(apiBase + '/api/capture-lead', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome: name, email: email || '', telefone: phone || '', url_origem: config.salesUrl, robotName: config.robotName, apiKey: config.apiKey })
+        }).then(function(r){return r.json()}).then(function(data){
+            if(data.success){leadId=data.lead.id;leadCaptured=true;addMessage('Olá '+name+'! Prazer em te conhecer. Como posso ajudar?',false);}
+        }).catch(function(e){console.error('Erro:',e);leadCaptured=true;});
+    }
+    function sendMessage() {
+        var message = input.value.trim(); if (!message) return;
+        if (!leadCaptured) { showLeadForm(); return; }
+        addMessage(message, true); input.value = ''; sendBtn.disabled = true;
+        typing.classList.add('lm-active');
+        fetch(apiBase + '/api/process-chat-inteligente', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message, pageData: { url: config.salesUrl }, robotName: config.robotName, instructions: config.instructions, conversationId: conversationId, leadId: leadId, apiKey: config.apiKey })
+        }).then(function(r){return r.json()}).then(function(data){
+            typing.classList.remove('lm-active');
+            if(data.success&&data.response){addMessage(data.response,false);}
+            else{addMessage('Desculpe, tive um problema. Pode repetir?',false);}
+        }).catch(function(e){typing.classList.remove('lm-active');addMessage('Ops! Erro de conexão. Tente novamente.',false);console.error('Erro:',e);});
+        sendBtn.disabled = false; input.focus();
+    }
+    function openChat() { isOpen=true; chatWindow.classList.add('lm-open'); greeting.classList.add('lm-hidden'); input.focus(); if(messages.children.length===0){addMessage(config.welcomeMessage,false);setTimeout(function(){addMessage(config.secondMessage,false);},800);} }
+    function closeChat() { isOpen=false; chatWindow.classList.remove('lm-open'); }
+    function toggleChat() { if(isOpen){closeChat();}else{openChat();} }
+    bubble.addEventListener('click', toggleChat);
+    greeting.addEventListener('click', openChat);
+    closeBtn.addEventListener('click', closeChat);
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', function(e){if(e.key==='Enter')sendMessage();});
+    console.log('✅ LinkMágico Widget v2.0 carregado!');
+})();
+</script>
+</body>
+</html>

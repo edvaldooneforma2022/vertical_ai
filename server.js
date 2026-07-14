@@ -3663,7 +3663,21 @@ app.use(session(sessionConfig));
 
 // ===== Middleware =====
 app.use(helmet({
-    contentSecurityPolicy: false,
+    // SEC-03: CSP em report-only (monitora sem bloquear)
+    contentSecurityPolicy: {
+        reportOnly: true,
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "http:"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
+            imgSrc: ["'self'", "data:", "https:", "http:", "blob:"],
+            connectSrc: ["'self'", "https:", "http:"],
+            fontSrc: ["'self'", "https:", "data:"],
+            frameSrc: ["'self'", "https:", "http:"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+        }
+    },
     crossOriginEmbedderPolicy: false
 }));
 
@@ -12905,6 +12919,21 @@ try {
             const { apiKey, checkoutUrl, source, salesUrl } = req.body || {};
             if (!apiKey || !checkoutUrl) {
                 return res.status(400).json({ success: false, error: 'apiKey e checkoutUrl são obrigatórios' });
+            }
+
+            // SEC-05: Validar que o apiKey pertence a um tenant real
+            if (process.env.FEATURE_CHECKOUT_AUTH !== 'false') {
+                try {
+                    const manager = getApiKeyManager();
+                    const keyCheck = await manager.validateKey(apiKey);
+                    if (!keyCheck.valid) {
+                        console.warn(`🚫 [SEC-05] Tentativa de confirm-checkout com apiKey inválida: ${apiKey.substring(0, 8)}...`);
+                        return res.status(401).json({ success: false, error: 'API Key inválida' });
+                    }
+                } catch (authErr) {
+                    console.error('[SEC-05] Erro ao validar apiKey no confirm-checkout:', authErr.message);
+                    // Fallback: permitir (não bloquear funcionalidade existente)
+                }
             }
 
             // Validar URL

@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkMágico v6.0 - Acesso Restrito</title>
+    <meta name="description" content="LinkMágico v6.0 - Sistema de chatbot IA com autenticação e conformidade LGPD">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #60a5fa;
+            --secondary: #8b5cf6;
+            --accent: #06d6a0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --dark: #0f172a;
+            --dark-surface: #1e293b;
+            --dark-elevated: #334155;
+            --dark-border: #475569;
+            --dark-text: #f8fafc;
+            --dark-text-secondary: #cbd5e1;
+            --dark-text-muted: #94a3b8;
+            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --gradient-success: linear-gradient(135deg, var(--success) 0%, var(--accent) 100%);
+            --gradient-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+            --glass-bg: rgba(30, 41, 59, 0.8);
+            --glass-border: rgba(148, 163, 184, 0.2);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--gradient-bg);
+            min-height: 100vh;
+            color: var(--dark-text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .auth-screen {
+            width: 100%;
+            max-width: 450px;
+            padding: 2rem;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .auth-content {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-xl);
+            text-align: center;
+            position: relative;
+            width: 100%;
+        }
+        
+        .auth-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            margin: 0 auto 1.5rem;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .auth-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--dark-text);
+            margin-bottom: 0.5rem;
+        }
+        
+        .auth-subtitle {
+            color: var(--dark-text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        /* SAFE PATCH — Tabs de Login (aditivo, não impacta auth existente) */
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            background: var(--dark-surface);
+            border-radius: 14px;
+            padding: 4px;
+            border: 1px solid var(--dark-border);
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 11px;
+            background: transparent;
+            color: var(--dark-text-muted);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .auth-tab:hover {
+            color: var(--dark-text-secondary);
+        }
+        
+        .auth-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .auth-tab-content {
+            display: none;
+        }
+        
+        .auth-tab-content.active {
+            display: block;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            border: 2px solid var(--dark-border);
+            border-radius: 12px;
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            font-size: 0.92rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            margin-bottom: 0.75rem;
+        }
+        
+        .login-input::placeholder {
+            color: var(--dark-text-muted);
+        }
+        
+        .login-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 1rem 0;
+            color: var(--dark-text-muted);
+            font-size: 0.8rem;
+        }
+        
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--dark-border);
+        }
+        
+        .auth-signup-link {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--dark-text-muted);
+        }
+        
+        .auth-signup-link a {
+            color: var(--primary-light);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .auth-signup-link a:hover {
+            text-decoration: underline;
+        }
+        
+        /* SAFE PATCH — Banner definir senha */
+        .set-password-banner {
+            display: none;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 16px;
+            padding: 1.2rem 1.5rem;
+            margin: 0 2rem 1rem;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .set-password-banner .spb-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 0.75rem;
+        }
+        
+        .set-password-banner .spb-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #f59e0b;
+        }
+        
+        .set-password-banner .spb-close {
+            background: none;
+            border: none;
+            color: var(--dark-text-muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 4px;
+        }
+        
+        .set-password-banner .spb-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .set-password-banner .spb-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.6rem 1rem;
+            border: 1px solid var(--dark-border);
+            border-radius: 10px;
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+        
+        .set-password-banner .spb-input:focus {
+            outline: none;
+            border-color: #f59e0b;
+        }
+        
+        .set-password-banner .spb-btn {
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .set-password-banner .spb-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        
+        .set-password-banner .spb-msg {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+        
+        .set-password-banner .spb-msg.success { color: var(--success); }
+        .set-password-banner .spb-msg.error { color: var(--error); }
+        
+        .api-key-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: 2px solid var(--dark-border);
+            border-radius: 16px;
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            font-size: 0.95rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+            transition: all 0.3s ease;
+        }
+        
+        .api-key-input::placeholder {
+            color: var(--dark-text-muted);
+        }
+        
+        .api-key-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .auth-button {
+            padding: 1rem 2rem;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .auth-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.4);
+        }
+        
+        .auth-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .auth-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--error);
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .auth-help {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--primary-light);
+            padding: 1.5rem;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            margin-top: 1.5rem;
+            text-align: left;
+        }
+        
+        .auth-help h4 {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .auth-help ul {
+            margin-left: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .main-app {
+            display: none;
+            width: 100%;
+            min-height: 100vh;
+        }
+        
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .logo-text h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        .version-badge {
+            background: var(--gradient-success);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: var(--shadow-md);
+            margin-left: 0.5rem;
+        }
+        
+        .status-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 0.6rem 1.2rem;
+            border-radius: 24px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .status-text {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--success);
+        }
+        
+        .lgpd-badge {
+            cursor: pointer;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 0.6rem 1.2rem;
+            border-radius: 24px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--primary-light);
+        }
+        
+        .lgpd-badge:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .main-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem 2rem 2rem;
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 2rem;
+            min-height: calc(100vh - 140px);
+        }
+        
+        .control-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2rem;
+            height: fit-content;
+            box-shadow: var(--shadow-xl);
+            position: sticky;
+            top: 120px;
+        }
+        
+        .panel-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark-text);
+            margin-bottom: 0.5rem;
+        }
+        
+        .panel-subtitle {
+            color: var(--dark-text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .url-input-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .url-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--dark-border);
+            border-radius: 12px;
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .url-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .extract-button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .extract-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .extract-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .chat-area {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: var(--shadow-xl);
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 200px);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .message {
+            display: flex;
+            gap: 1rem;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        
+        .message.user .message-avatar {
+            background: var(--gradient-primary);
+            color: white;
+        }
+        
+        .message.assistant .message-avatar {
+            background: var(--dark-elevated);
+            color: var(--primary-light);
+        }
+        
+        .message-content {
+            background: var(--dark-surface);
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        
+        .message.user .message-content {
+            background: var(--gradient-primary);
+            color: white;
+        }
+        
+        .chat-input-area {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid var(--dark-border);
+            border-radius: 12px;
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            font-size: 0.95rem;
+            resize: none;
+            min-height: 60px;
+            max-height: 150px;
+            font-family: inherit;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .send-button {
+            padding: 1rem 1.5rem;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--error);
+        }
+        
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-panel {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-content">
+            <div class="auth-icon">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h2 class="auth-title">LinkMágico v7.0</h2>
+            <p class="auth-subtitle">Acesse seu painel de controle</p>
+            
+            <!-- SAFE PATCH — Tabs: Email/Senha e API Key -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabEmail" onclick="switchAuthTab('email')">
+                    <i class="fas fa-envelope"></i> Email
+                </button>
+                <button class="auth-tab" id="tabApiKey" onclick="switchAuthTab('apikey')">
+                    <i class="fas fa-key"></i> API Key
+                </button>
+            </div>
+            
+            <!-- Tab 1: Login por Email/Senha -->
+            <div class="auth-tab-content active" id="tabContentEmail">
+                <form class="auth-form" id="loginForm" onsubmit="return false;">
+                    <input 
+                        type="email" 
+                        class="login-input" 
+                        id="loginEmail" 
+                        placeholder="seu@email.com"
+                        autocomplete="email"
+                        required
+                    >
+                    <input 
+                        type="password" 
+                        class="login-input" 
+                        id="loginPassword" 
+                        placeholder="Sua senha"
+                        autocomplete="current-password"
+                        required
+                    >
+                    <button type="submit" class="auth-button" id="loginButton" onclick="handleEmailLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Entrar
+                    </button>
+                </form>
+                <div class="auth-signup-link">
+                    Não tem conta? <a href="/signup.html">Criar conta grátis →</a>
+                </div>
+            </div>
+            
+            <!-- Tab 2: Login por API Key (código original preservado) -->
+            <div class="auth-tab-content" id="tabContentApiKey">
+                <form class="auth-form" id="authForm">
+                    <input 
+                        type="text" 
+                        class="api-key-input" 
+                        id="apiKeyInput" 
+                        placeholder="LMV7-XXXX-XXXX-XXXX"
+                        autocomplete="off"
+                        required
+                    >
+                    <button type="submit" class="auth-button" id="authButton">
+                        <i class="fas fa-sign-in-alt"></i> Acessar com API Key
+                    </button>
+                </form>
+                <div class="auth-help">
+                    <h4><i class="fas fa-info-circle"></i> Onde encontrar sua API Key:</h4>
+                    <ul>
+                        <li>No email de boas-vindas do cadastro</li>
+                        <li>Formato: LMV7-XXXX-XXXX-XXXX</li>
+                        <li>Mantenha sua chave em segurança</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="auth-error" id="authError"></div>
+        </div>
+    </div>
+
+    <div class="main-app" id="mainApp">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1>
+                            LinkMágico
+                            <span class="version-badge">v7.0</span>
+                        </h1>
+                    </div>
+                </div>
+                
+                <div class="status-area">
+                    <div class="status-indicator">
+                        <div class="status-dot"></div>
+                        <span class="status-text">Online</span>
+                    </div>
+                    <div class="lgpd-badge" onclick="window.open('/privacy-policy', '_blank')">
+                        <i class="fas fa-shield-alt"></i> LGPD Compliant
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- SAFE PATCH — Banner para definir senha (contas Hotmart) -->
+        <div class="set-password-banner" id="setPasswordBanner">
+            <div class="spb-header">
+                <span class="spb-title">🔑 Defina uma senha para acessar mais rápido no futuro</span>
+                <button class="spb-close" onclick="document.getElementById('setPasswordBanner').style.display='none'">×</button>
+            </div>
+            <div class="spb-form">
+                <input type="password" class="spb-input" id="newPasswordInput" placeholder="Nova senha (mínimo 6 caracteres)" minlength="6">
+                <button class="spb-btn" id="setPasswordBtn" onclick="handleSetPassword()">Definir Senha</button>
+            </div>
+            <div class="spb-msg" id="setPasswordMsg"></div>
+        </div>
+
+        <div class="main-container">
+            <aside class="control-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Extração de Dados</h2>
+                    <p class="panel-subtitle">Cole a URL para análise</p>
+                </div>
+                
+                <div id="extractAlert"></div>
+                
+                <div class="url-input-group">
+                    <input 
+                        type="url" 
+                        class="url-input" 
+                        id="urlInput" 
+                        placeholder="https://exemplo.com/pagina"
+                    >
+                </div>
+                
+                <button class="extract-button" id="extractButton">
+                    <i class="fas fa-download"></i>
+                    <span>Extrair Conteúdo</span>
+                </button>
+            </aside>
+
+            <main class="chat-area">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            Olá! Sou seu assistente de copywriting. Cole uma URL ao lado para começar ou faça perguntas sobre marketing e vendas.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <textarea 
+                        class="chat-input" 
+                        id="chatInput" 
+                        placeholder="Digite sua mensagem..."
+                    ></textarea>
+                    <button class="send-button" id="sendButton">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let apiKey = null;
+        let extractedData = null;
+        let chatHistory = [];
+
+        // ===== SAFE PATCH — Login por Email/Senha (aditivo) =====
+
+        // Alternar entre tabs
+        function switchAuthTab(tab) {
+            document.getElementById('tabEmail').classList.toggle('active', tab === 'email');
+            document.getElementById('tabApiKey').classList.toggle('active', tab === 'apikey');
+            document.getElementById('tabContentEmail').classList.toggle('active', tab === 'email');
+            document.getElementById('tabContentApiKey').classList.toggle('active', tab === 'apikey');
+            // Limpar erro ao trocar de tab
+            authError.style.display = 'none';
+        }
+
+        // Login por email/senha
+        async function handleEmailLogin() {
+            var emailEl = document.getElementById('loginEmail');
+            var passEl = document.getElementById('loginPassword');
+            var loginBtn = document.getElementById('loginButton');
+            var email = emailEl.value.trim();
+            var password = passEl.value;
+
+            if (!email || !password) {
+                showAuthError('Preencha email e senha.');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="loading"></span> Entrando...';
+
+            try {
+                var response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                var data = await response.json();
+
+                if (data.success && data.apiKey) {
+                    apiKey = data.apiKey;
+                    localStorage.setItem('linkmagico_key', data.apiKey);
+                    authScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                } else {
+                    showAuthError(data.error || 'Email ou senha incorretos');
+                }
+            } catch (error) {
+                showAuthError('Erro ao conectar. Tente novamente.');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+            }
+        }
+
+        // Enter no formulário de email/senha
+        document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleEmailLogin();
+            }
+        });
+
+        // SAFE PATCH — Auto-login via sessão ativa (não impacta fluxo existente)
+        (async function checkSession() {
+            try {
+                var resp = await fetch('/api/auth/session-check', { method: 'POST' });
+                var data = await resp.json();
+                if (data.success && data.authenticated && data.apiKey) {
+                    apiKey = data.apiKey;
+                    localStorage.setItem('linkmagico_key', data.apiKey);
+                    authScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                }
+            } catch (e) {
+                // Silencioso — fallback para login manual
+            }
+        })();
+
+        // ===== FIM SAFE PATCH Login Email/Senha =====
+
+        // SAFE PATCH — Verificar se conta precisa definir senha (contas Hotmart)
+        async function checkNeedsPassword() {
+            try {
+                // Só mostrar banner se logou via API Key (não por email)
+                if (!apiKey) return;
+                var resp = await fetch('/api/auth/set-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: '' }) // Vai retornar erro de validação
+                });
+                var data = await resp.json();
+                // Se retornou hasExistingPassword, conta já tem senha — não mostrar
+                // Se retornou 401 (não autenticado), ignorar
+                // Se retornou erro de validação (400), significa que está autenticado e PODE definir
+                if (resp.status === 400 && !data.hasExistingPassword) {
+                    document.getElementById('setPasswordBanner').style.display = 'block';
+                }
+            } catch(e) {
+                // Silencioso
+            }
+        }
+
+        // Definir senha
+        async function handleSetPassword() {
+            var passInput = document.getElementById('newPasswordInput');
+            var btn = document.getElementById('setPasswordBtn');
+            var msg = document.getElementById('setPasswordMsg');
+            var password = passInput.value;
+
+            if (!password || password.length < 6) {
+                msg.className = 'spb-msg error';
+                msg.textContent = 'Senha deve ter no mínimo 6 caracteres';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+
+            try {
+                var resp = await fetch('/api/auth/set-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password })
+                });
+
+                var data = await resp.json();
+
+                if (data.success) {
+                    msg.className = 'spb-msg success';
+                    msg.textContent = '✅ ' + data.message;
+                    setTimeout(function() {
+                        document.getElementById('setPasswordBanner').style.display = 'none';
+                    }, 3000);
+                } else {
+                    msg.className = 'spb-msg error';
+                    msg.textContent = data.error || 'Erro ao definir senha';
+                }
+            } catch(e) {
+                msg.className = 'spb-msg error';
+                msg.textContent = 'Erro de conexão. Tente novamente.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Definir Senha';
+            }
+        }
+
+        const authScreen = document.getElementById('authScreen');
+        const mainApp = document.getElementById('mainApp');
+        const authForm = document.getElementById('authForm');
+        const authError = document.getElementById('authError');
+        const authButton = document.getElementById('authButton');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        
+        const urlInput = document.getElementById('urlInput');
+        const extractButton = document.getElementById('extractButton');
+        const extractAlert = document.getElementById('extractAlert');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const key = apiKeyInput.value.trim();
+            
+            if (!key || (!key.startsWith('lm_') && !key.startsWith('LMV7-'))) {
+                showAuthError('API Key inválida. Formato esperado: LMV7-XXXX-XXXX-XXXX');
+                return;
+            }
+            
+            authButton.disabled = true;
+            authButton.innerHTML = '<span class="loading"></span> Verificando...';
+            
+            try {
+                const response = await fetch('/api/analytics', {
+                    headers: { 'X-API-Key': key }
+                });
+                
+                if (response.ok) {
+                    apiKey = key;
+                    localStorage.setItem('linkmagico_key', key);
+                    authScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                    // SAFE PATCH — Verificar se precisa definir senha
+                    setTimeout(checkNeedsPassword, 1000);
+                } else {
+                    const data = await response.json();
+                    showAuthError(data.reason || 'API Key inválida');
+                }
+            } catch (error) {
+                showAuthError('Erro ao conectar. Tente novamente.');
+            } finally {
+                authButton.disabled = false;
+                authButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Acessar Sistema';
+            }
+        });
+
+        function showAuthError(message) {
+            authError.textContent = message;
+            authError.style.display = 'block';
+            setTimeout(() => {
+                authError.style.display = 'none';
+            }, 5000);
+        }
+
+        extractButton.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showAlert('Por favor, insira uma URL', 'error');
+                return;
+            }
+            
+            extractButton.disabled = true;
+            extractButton.innerHTML = '<span class="loading"></span> Extraindo...';
+            
+            try {
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ url })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    extractedData = result.data;
+                    showAlert('Conteúdo extraído com sucesso!', 'success');
+                    addAssistantMessage(`Conteúdo extraído da página:\n\n📌 Título: ${extractedData.title}\n📝 Resumo: ${extractedData.summary}\n\nO que gostaria de fazer com esse conteúdo?`);
+                } else {
+                    showAlert(result.error || 'Erro na extração', 'error');
+                }
+            } catch (error) {
+                showAlert('Erro ao extrair conteúdo', 'error');
+            } finally {
+                extractButton.disabled = false;
+                extractButton.innerHTML = '<i class="fas fa-download"></i> Extrair Conteúdo';
+            }
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            
+            if (!message) return;
+            
+            addUserMessage(message);
+            chatInput.value = '';
+            
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<span class="loading"></span>';
+            
+            chatHistory.push({ role: 'user', content: message });
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({
+                        messages: chatHistory,
+                        context: extractedData ? { extractedData } : null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    chatHistory.push({ role: 'assistant', content: result.response });
+                    addAssistantMessage(result.response);
+                } else {
+                    addAssistantMessage('Desculpe, ocorreu um erro. Tente novamente.');
+                }
+            } catch (error) {
+                addAssistantMessage('Erro de conexão. Verifique sua internet.');
+            } finally {
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            }
+        }
+
+        function addUserMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user';
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="message-content">${escapeHtml(text)}</div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addAssistantMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showAlert(message, type) {
+            extractAlert.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                extractAlert.innerHTML = '';
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        const savedKey = localStorage.getItem('linkmagico_key');
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+        }
+    </script>
+
+    <!-- V2.0 Growth Loop Footer (aditivo, não impacta nada existente) -->
+    <footer style="background:rgba(15,23,42,.9);border-top:1px solid rgba(148,163,184,.2);padding:24px 20px;text-align:center;font-size:.8rem;color:#94a3b8;margin-top:auto">
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">
+        <a href="/criar-link?ref=index_footer" style="color:#60a5fa;font-weight:600;text-decoration:none;font-size:.85rem">✨ Criar meu LinkMágico</a>
+        <a href="/public/demo.html" style="color:#60a5fa;font-weight:600;text-decoration:none;font-size:.85rem">🎯 Ver Demonstração</a>
+      </div>
+      <p>© 2026 Link Mágico · <a href="/public/politica-de-privacidade.html" style="color:#94a3b8">Privacidade</a> · <a href="/public/termos-de-uso.html" style="color:#94a3b8">Termos</a></p>
+    </footer>
+</body>
+</html>

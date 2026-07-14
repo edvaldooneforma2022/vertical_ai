@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Completo - Link Mágico v7.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #8b5cf6;
+            --accent: #10b981;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.7;
+        }
+
+        .cover {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--dark) 0%, #1e293b 50%, #0f172a 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 3rem;
+            position: relative;
+            page-break-after: always;
+        }
+
+        .cover-logo {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+
+        .cover h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .cover .subtitle {
+            font-size: 1.5rem;
+            color: #94a3b8;
+            margin-bottom: 3rem;
+        }
+
+        .cover .version {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .cover .author {
+            position: absolute;
+            bottom: 3rem;
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .cover .author strong {
+            color: var(--primary);
+        }
+
+        .content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        h2 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 3rem 0 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 2rem 0 1rem;
+        }
+
+        h4 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--gray);
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: #475569;
+        }
+
+        .toc {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin: 2rem 0;
+        }
+
+        .toc-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .toc ul {
+            list-style: none;
+        }
+
+        .toc li {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .toc li:last-child {
+            border-bottom: none;
+        }
+
+        .toc a {
+            color: var(--dark);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .toc .page-num {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--primary);
+        }
+
+        .feature-card.active {
+            border-left-color: var(--accent);
+        }
+
+        .feature-card.future {
+            border-left-color: var(--secondary);
+            opacity: 0.85;
+        }
+
+        .feature-card .icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card h4 {
+            margin: 0 0 0.5rem;
+            color: var(--dark);
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.75rem;
+        }
+
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-future {
+            background: #ede9fe;
+            color: #5b21b6;
+        }
+
+        .step-container {
+            margin: 2rem 0;
+        }
+
+        .step {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            margin: 0 0 0.5rem;
+            color: var(--dark);
+        }
+
+        .step-content p {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .code-block {
+            background: var(--dark);
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 12px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .code-block .comment {
+            color: #64748b;
+        }
+
+        .code-block .keyword {
+            color: var(--secondary);
+        }
+
+        .code-block .string {
+            color: var(--accent);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .alert {
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .alert-info {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary);
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            border-left: 4px solid var(--accent);
+        }
+
+        .alert-warning {
+            background: #fefce8;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .alert .icon {
+            font-size: 1.5rem;
+        }
+
+        .screenshot {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            margin: 1.5rem 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .screenshot-caption {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: -1rem;
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 3rem;
+            background: var(--dark);
+            color: #94a3b8;
+            margin-top: 4rem;
+        }
+
+        .footer h3 {
+            color: white;
+        }
+
+        @media print {
+            .cover {
+                min-height: 100vh;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- CAPA -->
+    <div class="cover">
+        <div class="cover-logo">🔗✨</div>
+        <h1>Link Mágico</h1>
+        <p class="subtitle">Plataforma SaaS de Chatbot com Superinteligência Conversacional</p>
+        <div class="version">Versão 7.0 SUPERINTELIGENTE</div>
+        <p class="author">Desenvolvido por <strong>Edvaldo L. S.</strong> | Manual Completo de Uso</p>
+    </div>
+
+    <div class="content">
+
+        <!-- ÍNDICE -->
+        <div class="toc">
+            <h3 class="toc-title">📑 Índice</h3>
+            <ul>
+                <li><a href="#intro">1. Introdução à Plataforma</a> <span class="page-num">3</span></li>
+                <li><a href="#acesso">2. Acesso e Primeiros Passos</a> <span class="page-num">4</span></li>
+                <li><a href="#dashboard">3. Painel de Controle (Dashboard)</a> <span class="page-num">5</span></li>
+                <li><a href="#leads">4. Sistema de Captura de Leads</a> <span class="page-num">7</span></li>
+                <li><a href="#whitelabel">5. Personalização (Whitelabel)</a> <span class="page-num">8</span></li>
+                <li><a href="#funcionalidades">6. Funcionalidades Ativas</a> <span class="page-num">9</span></li>
+                <li><a href="#futuras">7. Funcionalidades Futuras</a> <span class="page-num">11</span></li>
+                <li><a href="#integracao">8. Integração no Site</a> <span class="page-num">12</span></li>
+                <li><a href="#api">9. Documentação da API</a> <span class="page-num">13</span></li>
+                <li><a href="#suporte">10. Suporte e Contato</a> <span class="page-num">14</span></li>
+            </ul>
+        </div>
+
+        <!-- SEÇÃO 1: INTRODUÇÃO -->
+        <section id="intro" class="page-break">
+            <h2>🚀 1. Introdução à Plataforma</h2>
+            <p>O <strong>Link Mágico</strong> é uma plataforma SaaS revolucionária que permite criar chatbots
+                superinteligentes para qualquer site em minutos. Com tecnologia de ponta em Inteligência Artificial
+                Conversacional, o Link Mágico transforma visitantes em clientes através de interações naturais e
+                personalizadas.</p>
+
+            <h3>✨ O que torna o Link Mágico especial?</h3>
+            <div class="feature-grid">
+                <div class="feature-card active">
+                    <div class="icon">🧠</div>
+                    <h4>SuperInteligência Conversacional</h4>
+                    <p>IA avançada com detecção de emoções, sarcasmo, múltiplas intenções e memória conversacional.</p>
+                </div>
+                <div class="feature-card active">
+                    <div class="icon">⚡</div>
+                    <h4>Instalação em 5 Minutos</h4>
+                    <p>Basta adicionar uma linha de código JavaScript ao seu site e pronto!</p>
+                </div>
+                <div class="feature-card active">
+                    <div class="icon">🎯</div>
+                    <h4>Captura Inteligente de Leads</h4>
+                    <p>Sistema automatizado que coleta e qualifica leads durante as conversas.</p>
+                </div>
+                <div class="feature-card active">
+                    <div class="icon">📅</div>
+                    <h4>Agendamento Automatizado</h4>
+                    <p>Permite que visitantes agendem reuniões diretamente pelo chatbot.</p>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <span class="icon">💡</span>
+                <div><strong>Tecnologias:</strong> Node.js, PostgreSQL, Redis, Crawl4AI, Playwright, OpenAI GPT, Groq e
+                    mais.</div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 2: ACESSO -->
+        <section id="acesso" class="page-break">
+            <h2>🔑 2. Acesso e Primeiros Passos</h2>
+
+            <h3>📍 URL de Acesso</h3>
+            <div class="code-block"><span class="string">https://vertical-ai-dktu.onrender.com</span></div>
+
+            <h3>📋 Passo a Passo para Começar</h3>
+            <div class="step-container">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Acesse a Plataforma</h4>
+                        <p>Abra o navegador e acesse a URL. Você verá a tela de login/registro.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Faça Login ou Registre-se</h4>
+                        <p>Insira suas credenciais ou crie uma nova conta. Cada conta recebe uma <strong>API Key
+                                exclusiva</strong>.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Acesse o Painel</h4>
+                        <p>Após login, clique em "Novos Sistemas V2.0" para acessar o Dashboard completo.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-success">
+                <span class="icon">✅</span>
+                <div><strong>Dica:</strong> Guarde sua API Key em local seguro. Ela é necessária para todas as
+                    integrações.</div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 3: DASHBOARD -->
+        <section id="dashboard" class="page-break">
+            <h2>📊 3. Painel de Controle (Dashboard)</h2>
+            <p>O Dashboard é o centro de comando do Link Mágico. Nele você gerencia todas as funcionalidades através de
+                abas organizadas.</p>
+
+            <h3>📈 Aba Analytics</h3>
+            <p>Visualize métricas em tempo real: total de conversas, mensagens, leads capturados e taxa de sucesso.</p>
+            <img src="img_analytics.png" alt="Aba Analytics do Dashboard" class="screenshot">
+            <p class="screenshot-caption">Figura 1: Painel de Analytics com métricas do chatbot</p>
+
+            <h3>🗂️ Abas Disponíveis</h3>
+            <table>
+                <tr>
+                    <th>Aba</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td>📈 <strong>Analytics</strong></td>
+                    <td>Estatísticas de mensagens, conversas e leads</td>
+                </tr>
+                <tr>
+                    <td>🔗 <strong>Webhooks</strong></td>
+                    <td>Configure integrações com outros sistemas</td>
+                </tr>
+                <tr>
+                    <td>📚 <strong>Knowledge Base</strong></td>
+                    <td>FAQs e documentos para o chatbot</td>
+                </tr>
+                <tr>
+                    <td>💳 <strong>Billing</strong></td>
+                    <td>Plano atual e opções de upgrade</td>
+                </tr>
+                <tr>
+                    <td>🎯 <strong>Otimização LLM</strong></td>
+                    <td>Cache e economia em chamadas de IA</td>
+                </tr>
+                <tr>
+                    <td>⚙️ <strong>Sistema</strong></td>
+                    <td>Status do servidor e banco de dados</td>
+                </tr>
+                <tr>
+                    <td>🤖 <strong>ChatGPT</strong></td>
+                    <td>Teste a integração com GPT</td>
+                </tr>
+                <tr>
+                    <td>🎨 <strong>Whitelabel</strong></td>
+                    <td>Personalize cores e logo</td>
+                </tr>
+                <tr>
+                    <td>👥 <strong>Leads</strong></td>
+                    <td>Gerencie leads capturados</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- SEÇÃO 4: LEADS -->
+        <section id="leads" class="page-break">
+            <h2>👥 4. Sistema de Captura de Leads</h2>
+            <p>O Link Mágico captura leads automaticamente durante as conversas, armazenando informações de contato e
+                qualificando cada lead.</p>
+
+            <img src="img_leads.png" alt="Aba de Leads" class="screenshot">
+            <p class="screenshot-caption">Figura 2: Painel de Gestão de Leads com exportação e backup</p>
+
+            <h3>📋 Dados Capturados</h3>
+            <table>
+                <tr>
+                    <th>Campo</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><strong>Nome</strong></td>
+                    <td>Nome do visitante</td>
+                </tr>
+                <tr>
+                    <td><strong>E-mail</strong></td>
+                    <td>Endereço de e-mail</td>
+                </tr>
+                <tr>
+                    <td><strong>Telefone</strong></td>
+                    <td>Número de telefone (opcional)</td>
+                </tr>
+                <tr>
+                    <td><strong>Mensagem</strong></td>
+                    <td>Primeira mensagem ou interesse</td>
+                </tr>
+                <tr>
+                    <td><strong>URL de Origem</strong></td>
+                    <td>Página onde foi capturado</td>
+                </tr>
+            </table>
+
+            <h3>🏷️ Classificação Automática</h3>
+            <div class="feature-grid">
+                <div class="feature-card" style="border-left-color: #ef4444;">
+                    <h4>🔥 Hot (Quente)</h4>
+                    <p>Lead com e-mail E telefone. Alta probabilidade de conversão.</p>
+                </div>
+                <div class="feature-card" style="border-left-color: #f59e0b;">
+                    <h4>🌡️ Warm (Morno)</h4>
+                    <p>Lead com e-mail OU telefone. Potencial médio.</p>
+                </div>
+                <div class="feature-card" style="border-left-color: #3b82f6;">
+                    <h4>❄️ Cold (Frio)</h4>
+                    <p>Lead com dados básicos. Requer nutrição.</p>
+                </div>
+            </div>
+
+            <h3>📤 Exportação e Backup</h3>
+            <p>Exporte para <strong>CSV</strong> com um clique. Sistema de backup automático com opção de restauração.
+            </p>
+        </section>
+
+        <!-- SEÇÃO 5: WHITELABEL -->
+        <section id="whitelabel" class="page-break">
+            <h2>🎨 5. Personalização (Whitelabel)</h2>
+            <p>Personalize completamente a aparência do chatbot com suas cores, logo e marca.</p>
+
+            <img src="img_whitelabel.png" alt="Aba Whitelabel" class="screenshot">
+            <p class="screenshot-caption">Figura 3: Configurações de Whitelabel para personalização da marca</p>
+
+            <h3>⚙️ Opções de Personalização</h3>
+            <div class="step-container">
+                <div class="step">
+                    <div class="step-number">🎨</div>
+                    <div class="step-content">
+                        <h4>Cores Personalizadas</h4>
+                        <p>Defina cores primária e secundária para combinar com sua marca.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">🖼️</div>
+                    <div class="step-content">
+                        <h4>Logo Customizado</h4>
+                        <p>Adicione seu logotipo ao cabeçalho do chatbot.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">✨</div>
+                    <div class="step-content">
+                        <h4>Remover "Powered By"</h4>
+                        <p>Nos planos pagos, remova a marca Link Mágico do widget.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <span class="icon">💎</span>
+                <div><strong>Planos:</strong> Whitelabel disponível nos planos Profissional e Empresarial.</div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 6: FUNCIONALIDADES -->
+        <section id="funcionalidades" class="page-break">
+            <h2>✅ 6. Funcionalidades Ativas</h2>
+
+            <h3>🧠 Inteligência Artificial</h3>
+            <div class="feature-grid">
+                <div class="feature-card active">
+                    <h4>SuperInteligência Conversacional</h4>
+                    <p>Sistema avançado que entende contexto, emoções e intenções.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Detecção de Sarcasmo/Ironia</h4>
+                    <p>Identifica nuances na comunicação.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Memória Conversacional</h4>
+                    <p>Lembra conversas anteriores do usuário.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Detecção de Urgência</h4>
+                    <p>Prioriza mensagens urgentes.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+            </div>
+
+            <h3>📊 Gestão e Analytics</h3>
+            <div class="feature-grid">
+                <div class="feature-card active">
+                    <h4>Dashboard Completo V2.0</h4>
+                    <p>Painel com métricas em tempo real.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Captura de Leads Persistente</h4>
+                    <p>Sistema com classificação automática.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Sistema de Agendamentos</h4>
+                    <p>Agendamento via chat.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Backup de Leads</h4>
+                    <p>Backups automáticos e manuais.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+            </div>
+
+            <h3>⚙️ Infraestrutura</h3>
+            <div class="feature-grid">
+                <div class="feature-card active">
+                    <h4>Cache Inteligente (Redis)</h4>
+                    <p>Cache de respostas com 85% de similaridade.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Multi-Tenant</h4>
+                    <p>Dados isolados por API Key.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Crawl4AI / Playwright</h4>
+                    <p>Extração dinâmica de sites.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+                <div class="feature-card active">
+                    <h4>Sistema de Segurança</h4>
+                    <p>Firewall e rate limiting.</p>
+                    <span class="status-badge status-active">✅ Ativo</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 7: FUTURAS -->
+        <section id="futuras" class="page-break">
+            <h2>🚧 7. Funcionalidades Futuras</h2>
+
+            <div class="feature-grid">
+                <div class="feature-card future">
+                    <h4>📧 Integração Gmail</h4>
+                    <p>Envio automático de e-mails de confirmação.</p>
+                    <span class="status-badge status-future">🔮 Em breve</span>
+                </div>
+                <div class="feature-card future">
+                    <h4>📱 Integração WhatsApp</h4>
+                    <p>Chatbot integrado com WhatsApp Business.</p>
+                    <span class="status-badge status-future">🔮 Em breve</span>
+                </div>
+                <div class="feature-card future">
+                    <h4>🔗 Integrações CRM</h4>
+                    <p>Sincronização com HubSpot, Pipedrive, Salesforce.</p>
+                    <span class="status-badge status-future">🔮 Em breve</span>
+                </div>
+                <div class="feature-card future">
+                    <h4>📊 Leads Estruturados</h4>
+                    <p>Qualificação avançada com scoring.</p>
+                    <span class="status-badge status-future">🔮 Em breve</span>
+                </div>
+                <div class="feature-card future">
+                    <h4>🌐 Domínio Customizado</h4>
+                    <p>Use seu próprio domínio para o chatbot.</p>
+                    <span class="status-badge status-future">🔮 Em breve</span>
+                </div>
+                <div class="feature-card future">
+                    <h4>📈 Analytics Avançado</h4>
+                    <p>Relatórios com inteligência de negócios.</p>
+                    <span class="status-badge status-future">🔮 Em breve</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 8: INTEGRAÇÃO -->
+        <section id="integracao" class="page-break">
+            <h2>🔧 8. Integração no Site</h2>
+
+            <h3>📋 Código de Integração</h3>
+            <p>Adicione antes de <code>&lt;/body&gt;</code>:</p>
+
+            <div class="code-block">
+                <span class="comment">&lt;!-- Link Mágico Widget --&gt;</span>
+                &lt;script <span class="keyword">src</span>=<span
+                    class="string">"https://vertical-ai-dktu.onrender.com/public/widget.js"</span>&gt;&lt;/script&gt;
+                &lt;script&gt;
+                LinkMagico.init({
+                <span class="keyword">apiKey</span>: <span class="string">'SUA-API-KEY'</span>,
+                <span class="keyword">robotName</span>: <span class="string">'Assistente Virtual'</span>,
+                <span class="keyword">instructions</span>: <span class="string">'Suas instruções aqui'</span>
+                });
+                &lt;/script&gt;
+            </div>
+
+            <h3>⚙️ Parâmetros</h3>
+            <table>
+                <tr>
+                    <th>Parâmetro</th>
+                    <th>Tipo</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><code>apiKey</code></td>
+                    <td>String (obrigatório)</td>
+                    <td>Sua chave de API</td>
+                </tr>
+                <tr>
+                    <td><code>robotName</code></td>
+                    <td>String</td>
+                    <td>Nome do assistente</td>
+                </tr>
+                <tr>
+                    <td><code>instructions</code></td>
+                    <td>String</td>
+                    <td>Instruções de comportamento</td>
+                </tr>
+                <tr>
+                    <td><code>primaryColor</code></td>
+                    <td>String (hex)</td>
+                    <td>Cor principal</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- SEÇÃO 9: API -->
+        <section id="api" class="page-break">
+            <h2>📡 9. Documentação da API</h2>
+
+            <h3>🔗 Endpoints Principais</h3>
+            <table>
+                <tr>
+                    <th>Método</th>
+                    <th>Endpoint</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><strong>POST</strong></td>
+                    <td>/api/process-chat-inteligente</td>
+                    <td>Processa mensagens com IA</td>
+                </tr>
+                <tr>
+                    <td><strong>POST</strong></td>
+                    <td>/api/capture-lead</td>
+                    <td>Captura dados de lead</td>
+                </tr>
+                <tr>
+                    <td><strong>GET</strong></td>
+                    <td>/admin/leads</td>
+                    <td>Lista todos os leads</td>
+                </tr>
+                <tr>
+                    <td><strong>GET</strong></td>
+                    <td>/api/appointments/:leadId</td>
+                    <td>Agendamentos de um lead</td>
+                </tr>
+                <tr>
+                    <td><strong>GET</strong></td>
+                    <td>/api/system/status</td>
+                    <td>Status do sistema</td>
+                </tr>
+                <tr>
+                    <td><strong>GET</strong></td>
+                    <td>/health</td>
+                    <td>Verificação de saúde</td>
+                </tr>
+            </table>
+
+            <h3>🔐 Autenticação</h3>
+            <div class="code-block"><span class="keyword">X-API-Key</span>: <span class="string">SUA-API-KEY</span>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 10: SUPORTE -->
+        <section id="suporte" class="page-break">
+            <h2>💬 10. Suporte e Contato</h2>
+
+            <div class="alert alert-success">
+                <span class="icon">🎉</span>
+                <div><strong>Parabéns!</strong> Você agora conhece todas as funcionalidades do Link Mágico!</div>
+            </div>
+
+            <h3>🏆 Sobre o Criador</h3>
+            <div class="alert alert-info">
+                <span class="icon">👨‍💻</span>
+                <div>
+                    <strong>Edvaldo L. S.</strong><br>
+                    Desenvolvedor e criador do Link Mágico. Apaixonado por Inteligência Artificial e soluções que
+                    transformam negócios.
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <div class="footer">
+        <h3>🔗✨ Link Mágico v7.0</h3>
+        <p>Plataforma SaaS de Chatbot com SuperInteligência Conversacional</p>
+        <p style="margin-top: 1rem; font-size: 0.9rem;">
+            © 2024 Link Mágico - Todos os direitos reservados<br>
+            Desenvolvido por <strong>Edvaldo L. S.</strong>
+        </p>
+    </div>
+
+</body>
+
+</html>

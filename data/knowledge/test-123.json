@@ -1,0 +1,40 @@
+{
+  "chatbotId": "test-123",
+  "sources": [],
+  "faqs": [
+    {
+      "id": "example_1",
+      "question": "Qual o horário de funcionamento?",
+      "answer": "Funcionamos de segunda a sexta, das 9h às 18h. Aos sábados, das 9h às 13h.",
+      "category": "geral",
+      "addedAt": "2026-07-13T03:15:27.311Z",
+      "active": true,
+      "hits": 0,
+      "isExample": true
+    },
+    {
+      "id": "example_2",
+      "question": "Quais as formas de pagamento aceitas?",
+      "answer": "Aceitamos PIX, cartão de crédito (até 12x), cartão de débito e boleto bancário.",
+      "category": "pagamento",
+      "addedAt": "2026-07-13T03:15:27.324Z",
+      "active": true,
+      "hits": 0,
+      "isExample": true
+    },
+    {
+      "id": "example_3",
+      "question": "Tem garantia ou política de reembolso?",
+      "answer": "Sim! Oferecemos garantia incondicional de 7 dias. Se não ficar satisfeito, devolvemos 100% do valor.",
+      "category": "garantia",
+      "addedAt": "2026-07-13T03:15:27.324Z",
+      "active": true,
+      "hits": 0,
+      "isExample": true
+    }
+  ],
+  "documents": [],
+  "manualEntries": [],
+  "lastUpdated": "2026-07-13T03:15:27.324Z",
+  "totalEntries": 3
+}

@@ -1,0 +1,13 @@
+language: pt-BR
+review:
+  enabled: true
+  auto_review:
+    enabled: true
+    on_push: true
+    on_pull_request: true
+
+suggestions:
+  enabled: true
+
+inline_fixes:
+  enabled: true

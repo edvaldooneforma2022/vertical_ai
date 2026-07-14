@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Mágico - Manual Completo para Iniciantes</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Cover Page */
+        .cover {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 40px;
+            margin: -20px -20px 40px -20px;
+            page-break-after: always;
+        }
+
+        .cover h1 {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .cover .subtitle {
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        .cover .version {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 30px;
+            border-radius: 50px;
+            font-size: 14px;
+        }
+
+        .cover .logo-emoji {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        /* Table of Contents */
+        .toc {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 40px;
+            page-break-after: always;
+        }
+
+        .toc h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .toc-list {
+            list-style: none;
+        }
+
+        .toc-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toc-list li:last-child {
+            border-bottom: none;
+        }
+
+        .toc-list .chapter {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .toc-list .page {
+            color: var(--gray);
+            font-size: 12px;
+        }
+
+        /* Sections */
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-number {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .section h2 {
+            color: var(--dark);
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .section h3 {
+            color: var(--primary);
+            font-size: 18px;
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+            padding-left: 15px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .section h4 {
+            color: var(--dark);
+            font-size: 15px;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+        }
+
+        .section p {
+            margin-bottom: 15px;
+            color: #475569;
+        }
+
+        /* Info Boxes */
+        .info-box {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .info-box.blue {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary);
+        }
+
+        .info-box.green {
+            background: #ecfdf5;
+            border-left: 4px solid var(--success);
+        }
+
+        .info-box.yellow {
+            background: #fffbeb;
+            border-left: 4px solid var(--warning);
+        }
+
+        .info-box.red {
+            background: #fef2f2;
+            border-left: 4px solid var(--danger);
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .inline-code {
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            color: var(--primary-dark);
+        }
+
+        /* Steps */
+        .step {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-content strong {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .feature-card .icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .feature-card h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+
+        .feature-card p {
+            font-size: 12px;
+            color: var(--gray);
+            margin: 0;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        .checklist li {
+            padding: 10px 0;
+            padding-left: 35px;
+            position: relative;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .checklist li::before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            font-size: 18px;
+            color: var(--primary);
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Page Breaks */
+        .page-break {
+            page-break-after: always;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                font-size: 11px;
+            }
+
+            .container {
+                max-width: 100%;
+                padding: 10px;
+            }
+
+            .section {
+                box-shadow: none;
+                border: 1px solid #e2e8f0;
+            }
+
+            .cover {
+                margin: 0;
+                min-height: auto;
+                padding: 60px 40px;
+            }
+        }
+
+        /* Glossary */
+        .glossary-term {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .glossary-term .term {
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 120px;
+        }
+
+        .glossary-term .definition {
+            color: #475569;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--gray);
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- CAPA -->
+        <div class="cover">
+            <div class="logo-emoji">🔗✨</div>
+            <h1>Link Mágico</h1>
+            <p class="subtitle">Manual Completo para Iniciantes</p>
+            <p style="font-size: 16px; opacity: 0.8; margin-bottom: 30px;">
+                Aprenda tudo sobre a plataforma de chatbot com IA<br>
+                De forma simples e passo a passo
+            </p>
+            <div class="version">Versão 3.0 | Janeiro 2026</div>
+        </div>
+
+        <!-- ÍNDICE -->
+        <div class="toc">
+            <h2>📚 Índice</h2>
+            <ul class="toc-list">
+                <li>
+                    <span class="chapter">1. O Que é o Link Mágico?</span>
+                    <span class="page">Página 3</span>
+                </li>
+                <li>
+                    <span class="chapter">2. Para Que Serve?</span>
+                    <span class="page">Página 4</span>
+                </li>
+                <li>
+                    <span class="chapter">3. Glossário - Termos Técnicos</span>
+                    <span class="page">Página 5</span>
+                </li>
+                <li>
+                    <span class="chapter">4. Como Acessar a Plataforma</span>
+                    <span class="page">Página 7</span>
+                </li>
+                <li>
+                    <span class="chapter">5. Usando o Dashboard</span>
+                    <span class="page">Página 8</span>
+                </li>
+                <li>
+                    <span class="chapter">6. Criando Seu Primeiro Chatbot</span>
+                    <span class="page">Página 10</span>
+                </li>
+                <li>
+                    <span class="chapter">7. Configurando o Widget</span>
+                    <span class="page">Página 12</span>
+                </li>
+                <li>
+                    <span class="chapter">8. Gerenciando Leads</span>
+                    <span class="page">Página 14</span>
+                </li>
+                <li>
+                    <span class="chapter">9. Analytics e Relatórios</span>
+                    <span class="page">Página 16</span>
+                </li>
+                <li>
+                    <span class="chapter">10. Integração WhatsApp</span>
+                    <span class="page">Página 18</span>
+                </li>
+                <li>
+                    <span class="chapter">11. Configurando ChatGPT</span>
+                    <span class="page">Página 20</span>
+                </li>
+                <li>
+                    <span class="chapter">12. Faturamento e Planos</span>
+                    <span class="page">Página 22</span>
+                </li>
+                <li>
+                    <span class="chapter">13. Personalização Whitelabel</span>
+                    <span class="page">Página 24</span>
+                </li>
+                <li>
+                    <span class="chapter">14. Status do Sistema</span>
+                    <span class="page">Página 26</span>
+                </li>
+                <li>
+                    <span class="chapter">15. Perguntas Frequentes</span>
+                    <span class="page">Página 28</span>
+                </li>
+                <li>
+                    <span class="chapter">16. Atualizações Recentes (Janeiro 2026)</span>
+                    <span class="page">Página 30</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- CAPÍTULO 1: O QUE É -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <h2>O Que é o Link Mágico?</h2>
+            </div>
+
+            <p>O <strong>Link Mágico</strong> é uma plataforma completa de chatbots com inteligência artificial que
+                permite criar assistentes virtuais inteligentes para seu negócio.</p>
+
+            <div class="info-box blue">
+                <strong>🎯 Resumo em uma frase:</strong>
+                É um robô de atendimento que conversa com seus clientes 24 horas por dia, 7 dias por semana, usando
+                inteligência artificial avançada.
+            </div>
+
+            <h3>Como Funciona?</h3>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="icon">🔗</div>
+                    <h4>Você Cadastra uma URL</h4>
+                    <p>Cole o link da sua página de vendas</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🤖</div>
+                    <h4>A IA Aprende</h4>
+                    <p>O sistema lê e entende seu conteúdo</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">💬</div>
+                    <h4>Widget no Seu Site</h4>
+                    <p>Instale o chat em qualquer página</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📊</div>
+                    <h4>Captura de Leads</h4>
+                    <p>Coleta dados dos visitantes automaticamente</p>
+                </div>
+            </div>
+
+            <h3>Diferenciais</h3>
+
+            <ul class="checklist">
+                <li><strong>Multi-tenant:</strong> Cada usuário tem seu próprio ambiente isolado</li>
+                <li><strong>Superinteligência:</strong> Entende emoções e adapta respostas</li>
+                <li><strong>Whitelabel:</strong> Personalize com sua marca</li>
+                <li><strong>Integrações:</strong> WhatsApp, Email, CRMs e mais</li>
+            </ul>
+        </div>
+
+        <!-- CAPÍTULO 2: PARA QUE SERVE -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <h2>Para Que Serve?</h2>
+            </div>
+
+            <p>O Link Mágico resolve vários problemas comuns de negócios digitais:</p>
+
+            <h3>🎯 Casos de Uso</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Atendimento 24/7</strong>
+                    Seus clientes têm dúvidas a qualquer hora. O chatbot responde instantaneamente, mesmo de madrugada
+                    ou em feriados.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Captura de Leads</strong>
+                    Enquanto conversa, o robô coleta nome, email e telefone dos visitantes interessados no seu produto.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Qualificação de Clientes</strong>
+                    A IA identifica se o visitante está pronto para comprar, ainda pesquisando, ou só tirando dúvidas.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Aumento de Conversão</strong>
+                    Responder dúvidas rapidamente aumenta a chance do visitante comprar seu produto.
+                </div>
+            </div>
+
+            <h3>👥 Quem Pode Usar?</h3>
+
+            <table>
+                <tr>
+                    <th>Perfil</th>
+                    <th>Como Usar</th>
+                </tr>
+                <tr>
+                    <td><strong>Infoprodutores</strong></td>
+                    <td>Tirar dúvidas sobre cursos e produtos digitais</td>
+                </tr>
+                <tr>
+                    <td><strong>Afiliados</strong></td>
+                    <td>Converter visitantes em compradores</td>
+                </tr>
+                <tr>
+                    <td><strong>Lojas Online</strong></td>
+                    <td>Suporte e vendas automatizadas</td>
+                </tr>
+                <tr>
+                    <td><strong>Consultores</strong></td>
+                    <td>Agendar reuniões e pré-qualificar clientes</td>
+                </tr>
+                <tr>
+                    <td><strong>Agências</strong></td>
+                    <td>Revender para clientes (whitelabel)</td>
+                </tr>
+            </table>
+
+            <div class="info-box green">
+                <strong>💡 Benefício Principal:</strong>
+                Você pode atender centenas de pessoas simultaneamente sem precisar contratar equipe ou ficar online o
+                tempo todo.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 3: GLOSSÁRIO -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <h2>Glossário - Termos Técnicos</h2>
+            </div>
+
+            <p>Antes de usar a plataforma, entenda o que significam os termos mais comuns:</p>
+
+            <h3>Termos Básicos</h3>
+
+            <div class="glossary-term">
+                <span class="term">API Key</span>
+                <span class="definition">Sua "senha de acesso" à plataforma. É um código único que identifica você.
+                    Exemplo: <span class="inline-code">LMV7-NRRX-2MR5-5PYY</span></span>
+            </div>
+
+            <div class="glossary-term">
+                <span class="term">Dashboard</span>
+                <span class="definition">Painel de controle. É a tela principal onde você gerencia tudo: chatbots,
+                    leads, configurações.</span>
+            </div>
+
+            <div class="glossary-term">
+                <span class="term">Widget</span>
+                <span class="definition">O "balãozinho" de chat que aparece no canto do seu site. É o que seus
+                    visitantes usam para conversar.</span>
+            </div>
+
+            <div class="glossary-term">
+                <span class="term">Lead</span>
+                <span class="definition">Um potencial cliente que deixou seus dados (nome, email, telefone) no
+                    chat.</span>
+            </div>
+
+            <div class="glossary-term">
+                <span class="term">Tenant</span>
+                <span class="definition">Seu "espaço" privado na plataforma. Seus dados são completamente separados de
+                    outros usuários.</span>
+            </div>
+
+            <h3>Termos Avançados</h3>
+
+            <div class="glossary-term">
+                <span class="term">Whitelabel</span>
+                <span class="definition">Personalização de marca. Você pode trocar cores, logo e até remover o nome
+                    "Link Mágico".</span>
+            </div>
+
+            <div class="glossary-term">
+                <span class="term">Analytics</span>
+                <span class="definition">Estatísticas e relatórios. Mostra quantas conversas, leads capturados, taxa de
+                    sucesso, etc.</span>
+            </div>
+
+            <div class="glossary-term">
+                <span class="term">Base de Conhecimento</span>
+                <span class="definition">Perguntas e respostas que você cadastra para o chatbot usar. Quanto mais você
+                    adicionar, mais inteligente ele fica.</span>
+            </div>
+
+            <div class="glossary-term">
+                <span class="term">Webhook</span>
+                <span class="definition">Notificação automática. Por exemplo: avisar seu CRM quando um novo lead for
+                    capturado.</span>
+            </div>
+
+            <div class="glossary-term">
+                <span class="term">Deploy</span>
+                <span class="definition">"Colocar no ar". Quando você faz uma alteração e ela começa a funcionar para
+                    todos.</span>
+            </div>
+
+            <div class="info-box yellow">
+                <strong>📝 Dica:</strong>
+                Não precisa decorar tudo agora. Volte a esta página sempre que encontrar um termo desconhecido.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 4: COMO ACESSAR -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <h2>Como Acessar a Plataforma</h2>
+            </div>
+
+            <h3>Passo a Passo</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Acesse o site</strong>
+                    Abra seu navegador e digite:<br>
+                    <span class="inline-code">https://vertical-ai-dktu.onrender.com</span>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Insira sua API Key</strong>
+                    Na tela de login, digite sua chave de acesso. Ela foi enviada por email quando você se cadastrou.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Clique em "Validar"</strong>
+                    Se a chave estiver correta, você será redirecionado para o dashboard.
+                </div>
+            </div>
+
+            <div class="info-box red">
+                <strong>⚠️ Atenção:</strong>
+                Sua API Key é pessoal e intransferível. Nunca compartilhe com terceiros!
+            </div>
+
+            <h3>Não Tem API Key?</h3>
+
+            <p>Se você ainda não possui uma API Key, entre em contato:</p>
+
+            <ul class="checklist">
+                <li>Email: <span class="inline-code">suporte@linkmagico.com</span></li>
+                <li>Ou solicite pelo site oficial</li>
+            </ul>
+
+            <h3>Esqueceu sua API Key?</h3>
+
+            <p>Verifique seu email cadastrado (caixa de entrada e spam). A chave foi enviada quando você se registrou.
+            </p>
+        </div>
+
+        <!-- CAPÍTULO 5: USANDO O DASHBOARD -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <h2>Usando o Dashboard</h2>
+            </div>
+
+            <p>O dashboard é seu painel de controle central. Aqui você gerencia tudo.</p>
+
+            <h3>Visão Geral das Abas</h3>
+
+            <table>
+                <tr>
+                    <th>Aba</th>
+                    <th>O Que Faz</th>
+                </tr>
+                <tr>
+                    <td>🏠 <strong>Principal</strong></td>
+                    <td>Criar e gerenciar assistentes (chatbots)</td>
+                </tr>
+                <tr>
+                    <td>📊 <strong>Analytics</strong></td>
+                    <td>Ver estatísticas de conversas e leads</td>
+                </tr>
+                <tr>
+                    <td>📋 <strong>Leads</strong></td>
+                    <td>Lista de clientes capturados pelo chat</td>
+                </tr>
+                <tr>
+                    <td>🎨 <strong>Whitelabel</strong></td>
+                    <td>Personalizar cores e logo da marca</td>
+                </tr>
+                <tr>
+                    <td>📚 <strong>Base de Conhecimento</strong></td>
+                    <td>Adicionar perguntas e respostas frequentes</td>
+                </tr>
+                <tr>
+                    <td>💬 <strong>WhatsApp</strong></td>
+                    <td>Configurar integração com WhatsApp</td>
+                </tr>
+                <tr>
+                    <td>🤖 <strong>ChatGPT</strong></td>
+                    <td>Configurar sua chave OpenAI</td>
+                </tr>
+                <tr>
+                    <td>🔧 <strong>Widget</strong></td>
+                    <td>Pegar código para instalar no site</td>
+                </tr>
+                <tr>
+                    <td>⚙️ <strong>Sistema</strong></td>
+                    <td>Ver status do servidor e versão</td>
+                </tr>
+            </table>
+
+            <h3>Navegação Básica</h3>
+
+            <p>Use o menu lateral esquerdo para navegar entre as seções. Cada aba abre um painel específico com suas
+                opções.</p>
+
+            <div class="info-box green">
+                <strong>💡 Dica:</strong>
+                Clique no botão "Novos Sistemas V2.0" no canto inferior direito para acessar funções avançadas
+                rapidamente.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 6: CRIANDO CHATBOT -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <h2>Criando Seu Primeiro Chatbot</h2>
+            </div>
+
+            <h3>Passo a Passo Completo</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Acesse a aba "Principal"</strong>
+                    Esta é a tela inicial do dashboard após o login.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Cole a URL da sua página</strong>
+                    No campo "URL do Produto/Página", cole o link da página que você quer que o chatbot aprenda.
+                    Exemplo:<br>
+                    <span class="inline-code">https://seuproduto.com.br/vendas</span>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Dê um nome ao assistente</strong>
+                    Escolha um nome amigável. Exemplo: "Atendente Virtual", "Suporte Maria", etc.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Configure as instruções (opcional)</strong>
+                    Você pode adicionar instruções específicas para o chatbot, como:<br>
+                    "Seja sempre educado e profissional. Foque em vender o curso."
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <strong>Clique em "Criar Assistente"</strong>
+                    Aguarde alguns segundos. A IA vai ler sua página e aprender sobre o conteúdo.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <strong>Teste a conversa</strong>
+                    Use o chat de preview para testar se as respostas estão corretas.
+                </div>
+            </div>
+
+            <div class="info-box yellow">
+                <strong>⏱️ Tempo estimado:</strong>
+                A extração da página leva de 10 a 60 segundos, dependendo do tamanho do conteúdo.
+            </div>
+
+            <h3>O Que Acontece Por Trás</h3>
+
+            <ol>
+                <li>A IA acessa a URL que você informou</li>
+                <li>Extrai todo o texto, preços, bônus e contatos</li>
+                <li>Processa e entende o contexto do produto</li>
+                <li>Fica pronta para responder perguntas sobre ele</li>
+            </ol>
+        </div>
+
+        <!-- CAPÍTULO 7: WIDGET -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">7</div>
+                <h2>Configurando o Widget no Seu Site</h2>
+            </div>
+
+            <h3>O Que é o Widget?</h3>
+
+            <p>O widget é o "balãozinho" de chat que aparece no canto do seu site. Quando alguém clica, abre a conversa
+                com o chatbot.</p>
+
+            <h3>Como Instalar</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Acesse a aba "Widget"</strong>
+                    No menu lateral ou no painel "Novos Sistemas V2.0".
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Copie o código gerado</strong>
+                    Clique no botão "Copiar Código". É um código JavaScript que você vai colar no seu site.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Cole no seu site</strong>
+                    Cole o código antes da tag <span class="inline-code">&lt;/body&gt;</span> do seu site.
+                </div>
+            </div>
+
+            <h3>Onde Colar o Código</h3>
+
+            <table>
+                <tr>
+                    <th>Plataforma</th>
+                    <th>Onde Colar</th>
+                </tr>
+                <tr>
+                    <td><strong>WordPress</strong></td>
+                    <td>Aparência → Editor de Temas → footer.php (antes de &lt;/body&gt;)</td>
+                </tr>
+                <tr>
+                    <td><strong>Builderall</strong></td>
+                    <td>Configurações → Scripts → Script no Body</td>
+                </tr>
+                <tr>
+                    <td><strong>Hotmart Pages</strong></td>
+                    <td>Configurações → Códigos Personalizados</td>
+                </tr>
+                <tr>
+                    <td><strong>HTML Puro</strong></td>
+                    <td>No arquivo HTML, antes de &lt;/body&gt;</td>
+                </tr>
+            </table>
+
+            <div class="info-box green">
+                <strong>✅ Pronto!</strong>
+                Após instalar, o chat aparecerá automaticamente no canto inferior direito do seu site.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 8: LEADS -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">8</div>
+                <h2>Gerenciando Leads</h2>
+            </div>
+
+            <h3>O Que São Leads?</h3>
+
+            <p>Leads são os visitantes que deixaram seus dados (nome, email, telefone) durante a conversa com o chatbot.
+                São seus potenciais clientes!</p>
+
+            <h3>Visualizando Leads</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Acesse a aba "Leads"</strong>
+                    No painel "Novos Sistemas V2.0", clique em "Leads".
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Veja a lista completa</strong>
+                    Você verá todos os leads com: Nome, Email, Telefone, Data de captura, Histórico de conversas.
+                </div>
+            </div>
+
+            <h3>Exportando Leads</h3>
+
+            <p>Você pode exportar seus leads em formato CSV para usar em outras ferramentas (Excel, CRMs, etc.):</p>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Clique em "Exportar"</strong>
+                    Escolha o período desejado.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Faça download do arquivo</strong>
+                    O arquivo CSV pode ser aberto no Excel ou Google Sheets.
+                </div>
+            </div>
+
+            <h3>Backup de Leads</h3>
+
+            <div class="info-box blue">
+                <strong>🔄 Backup Automático:</strong>
+                A plataforma faz backups automáticos dos seus leads. Você também pode criar backups manuais a qualquer
+                momento.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 9: ANALYTICS -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">9</div>
+                <h2>Analytics e Relatórios</h2>
+            </div>
+
+            <h3>Métricas Disponíveis</h3>
+
+            <table>
+                <tr>
+                    <th>Métrica</th>
+                    <th>O Que Significa</th>
+                </tr>
+                <tr>
+                    <td><strong>Mensagens</strong></td>
+                    <td>Total de mensagens trocadas no período</td>
+                </tr>
+                <tr>
+                    <td><strong>Conversas</strong></td>
+                    <td>Número de sessões de chat iniciadas</td>
+                </tr>
+                <tr>
+                    <td><strong>Leads</strong></td>
+                    <td>Visitantes que deixaram dados de contato</td>
+                </tr>
+                <tr>
+                    <td><strong>Taxa de Sucesso</strong></td>
+                    <td>% de visitantes que viraram leads</td>
+                </tr>
+            </table>
+
+            <h3>Filtrando por Período</h3>
+
+            <p>Use os botões de período para ver estatísticas de:</p>
+
+            <ul class="checklist">
+                <li>Últimos 7 dias</li>
+                <li>Últimos 30 dias</li>
+                <li>Últimos 90 dias</li>
+            </ul>
+
+            <h3>Como Melhorar Suas Métricas</h3>
+
+            <div class="info-box green">
+                <strong>📈 Dicas:</strong>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li>Adicione mais perguntas na Base de Conhecimento</li>
+                    <li>Melhore as instruções do chatbot</li>
+                    <li>Teste as respostas e ajuste conforme necessário</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 10: WHATSAPP -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">10</div>
+                <h2>Integração WhatsApp</h2>
+            </div>
+
+            <p>Conecte seu chatbot ao WhatsApp para receber notificações e interagir com leads diretamente pelo celular.
+            </p>
+
+            <h3>Provedores Suportados</h3>
+
+            <table>
+                <tr>
+                    <th>Provedor</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><strong>Twilio</strong></td>
+                    <td>Serviço oficial do WhatsApp Business API. Mais estável e profissional.</td>
+                </tr>
+                <tr>
+                    <td><strong>Evolution API</strong></td>
+                    <td>Solução alternativa mais acessível. Boa para começar.</td>
+                </tr>
+            </table>
+
+            <h3>Como Configurar</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Acesse a aba "WhatsApp"</strong>
+                    No menu lateral ou no painel "Novos Sistemas V2.0".
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Escolha o provedor</strong>
+                    Selecione Twilio ou Evolution API conforme sua preferência.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Preencha as credenciais</strong>
+                    <ul style="margin-top: 8px; padding-left: 20px;">
+                        <li><strong>Twilio:</strong> Account SID, Auth Token, Número do WhatsApp</li>
+                        <li><strong>Evolution:</strong> URL da API, Instance Name, API Key</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Informe seu número para notificações</strong>
+                    Este é o número que receberá alertas quando novos leads forem capturados.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <strong>Salve e teste</strong>
+                    Use o botão "Testar Conexão" para verificar se está funcionando.
+                </div>
+            </div>
+
+            <div class="info-box green">
+                <strong>✅ O que acontece após configurar:</strong>
+                Você receberá uma mensagem de WhatsApp sempre que um novo lead for capturado, contendo nome, email e
+                telefone do visitante.
+            </div>
+
+            <div class="info-box yellow">
+                <strong>⚠️ Importante:</strong>
+                Seus dados de credenciais são armazenados de forma segura e isolada (multi-tenant). Outros usuários não
+                têm acesso às suas configurações.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 11: CHATGPT -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">11</div>
+                <h2>Configurando ChatGPT</h2>
+            </div>
+
+            <p>Use sua própria chave OpenAI para ter mais controle sobre a IA do chatbot.</p>
+
+            <h3>Por Que Usar Sua Própria Chave?</h3>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="icon">🎛️</div>
+                    <h4>Controle Total</h4>
+                    <p>Escolha o modelo de IA (GPT-4, GPT-4 Turbo, etc.)</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📊</div>
+                    <h4>Monitoramento</h4>
+                    <p>Acompanhe seu uso diretamente na OpenAI</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">💰</div>
+                    <h4>Custos</h4>
+                    <p>Pague apenas pelo que usar</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔒</div>
+                    <h4>Privacidade</h4>
+                    <p>Seus dados passam pela sua conta</p>
+                </div>
+            </div>
+
+            <h3>Como Configurar</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Obtenha sua chave OpenAI</strong>
+                    Acesse <span class="inline-code">platform.openai.com</span> → API Keys → Create new secret key
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Acesse a aba "ChatGPT"</strong>
+                    No dashboard, clique na aba ChatGPT.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Cole sua chave API</strong>
+                    A chave começa com <span class="inline-code">sk-</span>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Escolha o modelo</strong>
+                    Recomendamos <span class="inline-code">gpt-4-turbo</span> para melhor custo-benefício.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <strong>Salve e teste</strong>
+                    Use o campo de teste para verificar se a IA está respondendo corretamente.
+                </div>
+            </div>
+
+            <div class="info-box red">
+                <strong>⚠️ Segurança:</strong>
+                Nunca compartilhe sua chave API da OpenAI. Ela dá acesso à sua conta e pode gerar cobranças.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 12: FATURAMENTO -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">12</div>
+                <h2>Faturamento e Planos</h2>
+            </div>
+
+            <p>Acompanhe seu uso e gerencie sua assinatura na aba Faturamento.</p>
+
+            <h3>Planos Disponíveis</h3>
+
+            <table>
+                <tr>
+                    <th>Plano</th>
+                    <th>Preço</th>
+                    <th>Recursos</th>
+                </tr>
+                <tr>
+                    <td><strong>Gratuito</strong></td>
+                    <td>R$ 0</td>
+                    <td>1 chatbot, 100 mensagens/mês, 10 extrações</td>
+                </tr>
+                <tr>
+                    <td><strong>Profissional</strong></td>
+                    <td>R$ 79,90/mês</td>
+                    <td>10 chatbots, 5.000 mensagens, analytics avançado</td>
+                </tr>
+                <tr>
+                    <td><strong>Empresarial</strong></td>
+                    <td>R$ 299,90/mês</td>
+                    <td>Ilimitado, suporte dedicado, SLA, whitelabel</td>
+                </tr>
+            </table>
+
+            <h3>Limites de Uso</h3>
+
+            <p>Na aba Faturamento você visualiza:</p>
+
+            <ul class="checklist">
+                <li><strong>Mensagens:</strong> Quantas mensagens você já usou no mês</li>
+                <li><strong>Extrações:</strong> Quantas páginas você já extraiu</li>
+                <li><strong>Chatbots:</strong> Limite de assistentes que pode criar</li>
+            </ul>
+
+            <h3>Como Fazer Upgrade</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Acesse a aba "Faturamento"</strong>
+                    No menu lateral do dashboard.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Veja os planos disponíveis</strong>
+                    Compare os recursos e escolha o melhor para você.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Clique em "Fazer Upgrade"</strong>
+                    Você será redirecionado para o checkout seguro.
+                </div>
+            </div>
+
+            <div class="info-box blue">
+                <strong>💡 Dica:</strong>
+                Se você estiver atingindo seus limites com frequência, considere fazer upgrade para não perder leads.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 13: WHITELABEL -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">13</div>
+                <h2>Personalização Whitelabel</h2>
+            </div>
+
+            <p>Personalize o chatbot com as cores e logo da sua marca.</p>
+
+            <h3>O Que Você Pode Personalizar</h3>
+
+            <table>
+                <tr>
+                    <th>Elemento</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><strong>Nome da Empresa</strong></td>
+                    <td>Aparece no cabeçalho do chat</td>
+                </tr>
+                <tr>
+                    <td><strong>Logo</strong></td>
+                    <td>URL de uma imagem (PNG ou JPG)</td>
+                </tr>
+                <tr>
+                    <td><strong>Cor Primária</strong></td>
+                    <td>Cor principal do chat (botões, cabeçalho)</td>
+                </tr>
+                <tr>
+                    <td><strong>Cor Secundária</strong></td>
+                    <td>Cor de destaque (degradê, detalhes)</td>
+                </tr>
+            </table>
+
+            <h3>Como Configurar</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Acesse a aba "Whitelabel"</strong>
+                    No menu lateral do dashboard.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Preencha o nome da empresa</strong>
+                    Este nome aparecerá no chat ao invés de "Link Mágico".
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Cole a URL do logo</strong>
+                    Use uma imagem hospedada (ex: Imgur, seu site).
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Escolha as cores</strong>
+                    Use o seletor de cores ou digite o código HEX (ex: <span class="inline-code">#3b82f6</span>).
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <strong>Confira o preview</strong>
+                    Veja como o chat ficará ao vivo antes de salvar.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <strong>Salve as configurações</strong>
+                    Clique em "Salvar Configuração". As mudanças são aplicadas imediatamente.
+                </div>
+            </div>
+
+            <div class="info-box green">
+                <strong>✅ Resultado:</strong>
+                Seus visitantes verão o chat com a identidade visual da sua marca, sem menção ao Link Mágico.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 14: SISTEMA -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">14</div>
+                <h2>Status do Sistema</h2>
+            </div>
+
+            <p>A aba Sistema mostra informações técnicas sobre a plataforma.</p>
+
+            <h3>O Que Você Vê</h3>
+
+            <table>
+                <tr>
+                    <th>Informação</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><strong>Status do Servidor</strong></td>
+                    <td>Se a plataforma está operacional (✅) ou com problemas (⚠️)</td>
+                </tr>
+                <tr>
+                    <td><strong>Uptime</strong></td>
+                    <td>Há quanto tempo o servidor está rodando sem interrupções</td>
+                </tr>
+                <tr>
+                    <td><strong>Requisições Totais</strong></td>
+                    <td>Número de chamadas à API desde o último deploy</td>
+                </tr>
+                <tr>
+                    <td><strong>Serviços IA</strong></td>
+                    <td>Quais modelos de IA estão disponíveis (Groq, OpenAI, etc.)</td>
+                </tr>
+                <tr>
+                    <td><strong>Versão</strong></td>
+                    <td>Versão atual da plataforma</td>
+                </tr>
+            </table>
+
+            <h3>Quando Verificar o Sistema</h3>
+
+            <ul class="checklist">
+                <li>Quando o chatbot não estiver respondendo</li>
+                <li>Se quiser verificar se há atualizações</li>
+                <li>Para confirmar que a plataforma está online</li>
+            </ul>
+
+            <div class="info-box yellow">
+                <strong>⏱️ Status Degradado:</strong>
+                Se o status aparecer como "Degradado", aguarde alguns segundos e tente novamente. Isso pode acontecer se
+                o servidor estiver sob alta carga.
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 15: FAQ -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">15</div>
+                <h2>Perguntas Frequentes</h2>
+            </div>
+
+            <h3>❓ O chatbot responde sozinho ou eu preciso ficar online?</h3>
+            <p><strong>Resposto automaticamente!</strong> Você não precisa ficar online. A IA responde 24/7.</p>
+
+            <h3>❓ Quantos chatbots posso criar?</h3>
+            <p>Depende do seu plano. Consulte sua assinatura para ver os limites.</p>
+
+            <h3>❓ O chatbot funciona no meu celular?</h3>
+            <p>Sim! O widget é responsivo e funciona perfeitamente em celulares e tablets.</p>
+
+            <h3>❓ Posso mudar as respostas do chatbot?</h3>
+            <p>Sim! Use a Base de Conhecimento para adicionar perguntas e respostas personalizadas. Elas têm prioridade
+                sobre a IA.</p>
+
+            <h3>❓ Como faço para o chatbot não responder algo errado?</h3>
+            <p>Adicione a resposta correta na Base de Conhecimento. Quanto mais você alimentar, melhor ele fica.</p>
+
+            <h3>❓ Meus dados estão seguros?</h3>
+            <p>Sim! Cada usuário tem seu ambiente isolado (multi-tenant). Seus dados não são visíveis para outros
+                usuários.</p>
+
+            <h3>❓ Posso integrar com WhatsApp?</h3>
+            <p>Sim! Acesse a aba "WhatsApp" e configure com Twilio ou Evolution API.</p>
+
+            <div class="info-box blue">
+                <strong>🆘 Precisa de Ajuda?</strong>
+                Entre em contato pelo email <span class="inline-code">suporte@linkmagico.com</span>
+            </div>
+        </div>
+
+        <!-- CAPÍTULO 16: ATUALIZAÇÕES RECENTES -->
+        <div class="section page-break">
+            <div class="section-header">
+                <div class="section-number">16</div>
+                <h2>Atualizações Recentes (Janeiro 2026)</h2>
+            </div>
+
+            <p>Esta seção documenta as melhorias e correções mais recentes da plataforma.</p>
+
+            <h3>🔧 Correções de Bugs</h3>
+
+            <div class="info-box green">
+                <strong>✅ BUG-004: Validação ao Compartilhar nas Redes Sociais</strong>
+                <p style="margin-top: 10px;">Ao clicar nos botões de compartilhamento (WhatsApp, Facebook, etc.) antes
+                    de ativar o assistente, agora aparece uma mensagem amigável:</p>
+                <p style="margin-top: 5px;"><em>"⚠️ Ative o assistente primeiro antes de compartilhar!"</em></p>
+            </div>
+
+            <div class="info-box green">
+                <strong>✅ BUG-002: Status do Sistema Corrigido</strong>
+                <p style="margin-top: 10px;">A aba Sistema agora carrega corretamente, mostrando status do servidor,
+                    uptime e versão da plataforma.</p>
+            </div>
+
+            <div class="info-box green">
+                <strong>✅ BUG-001: Contagem de Analytics</strong>
+                <p style="margin-top: 10px;">O contador de mensagens agora reflete os valores reais do seu tenant.</p>
+            </div>
+
+            <h3>🚀 Novas Funcionalidades</h3>
+
+            <table>
+                <tr>
+                    <th>Funcionalidade</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><strong>Filtros de Período</strong></td>
+                    <td>Analytics agora permite filtrar por 7, 30 ou 90 dias</td>
+                </tr>
+                <tr>
+                    <td><strong>Aba Widget Dedicada</strong></td>
+                    <td>Nova aba exclusiva para configuração do widget</td>
+                </tr>
+                <tr>
+                    <td><strong>Multi-Tenant WhatsApp</strong></td>
+                    <td>Cada usuário configura suas próprias credenciais</td>
+                </tr>
+                <tr>
+                    <td><strong>Multi-Tenant ChatGPT</strong></td>
+                    <td>Use sua própria chave OpenAI de forma isolada</td>
+                </tr>
+            </table>
+
+            <div class="info-box blue">
+                <strong>💡 Como Atualizar:</strong>
+                O sistema é atualizado automaticamente. Basta acessar a plataforma para usar as novas funcionalidades.
+            </div>
+        </div>
+
+        <!-- CHECKLIST FINAL -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">✓</div>
+                <h2>Checklist de Uso</h2>
+            </div>
+
+            <p>Use esta lista para garantir que você configurou tudo corretamente:</p>
+
+            <h3>Configuração Inicial</h3>
+            <ul class="checklist">
+                <li>Acessei a plataforma com minha API Key</li>
+                <li>Criei pelo menos um assistente (chatbot)</li>
+                <li>Testei a conversa no preview</li>
+            </ul>
+
+            <h3>Instalação no Site</h3>
+            <ul class="checklist">
+                <li>Copiei o código do widget</li>
+                <li>Colei no meu site antes de &lt;/body&gt;</li>
+                <li>Testei se o balãozinho aparece</li>
+                <li>Fiz uma conversa teste no meu site</li>
+            </ul>
+
+            <h3>Personalização</h3>
+            <ul class="checklist">
+                <li>Configurei minhas cores no Whitelabel</li>
+                <li>Adicionei perguntas frequentes na Base de Conhecimento</li>
+            </ul>
+
+            <h3>Integrações</h3>
+            <ul class="checklist">
+                <li>Configurei integração WhatsApp (opcional)</li>
+                <li>Configurei minha chave ChatGPT (opcional)</li>
+            </ul>
+
+            <h3>Monitoramento</h3>
+            <ul class="checklist">
+                <li>Acessei o Analytics para ver estatísticas</li>
+                <li>Verifiquei a lista de Leads capturados</li>
+                <li>Verifiquei meus limites no Faturamento</li>
+                <li>Conferi o status do Sistema</li>
+            </ul>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p><strong>Link Mágico</strong> - Manual Completo para Iniciantes</p>
+            <p>Versão 3.0 | Janeiro 2026</p>
+            <p style="margin-top: 10px;">© 2026 Link Mágico. Todos os direitos reservados.</p>
+            <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
+                Para salvar como PDF: No navegador, pressione Ctrl+P (ou Cmd+P no Mac) e escolha "Salvar como PDF"
+            </p>
+        </div>
+
+    </div>
+</body>
+
+</html>

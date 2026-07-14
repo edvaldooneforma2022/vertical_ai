@@ -9,6 +9,7 @@
  */
 
 const express = require('express');
+const crypto = require('crypto');
 const { getAuditLedger } = require('./billing-audit');
 const { getAntiFraud } = require('./anti-fraud');
 const { getApiKeyManager } = require('./api-key-manager');
@@ -27,9 +28,12 @@ function adminAuth(req, res, next) {
         });
     }
 
-    const providedKey = req.headers['x-admin-key'] || req.query.admin_key;
+    // SEC-01: Apenas header (admin-billing.html usa x-admin-key via header)
+    const providedKey = req.headers['x-admin-key'];
 
-    if (!providedKey || providedKey !== adminKey) {
+    // SEC-01: Comparação timing-safe para impedir timing attack
+    if (!providedKey || providedKey.length !== adminKey.length ||
+        !crypto.timingSafeEqual(Buffer.from(providedKey, 'utf8'), Buffer.from(adminKey, 'utf8'))) {
         return res.status(401).json({
             success: false,
             error: 'Acesso negado. Chave admin inválida.'

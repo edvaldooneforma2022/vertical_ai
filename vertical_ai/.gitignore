@@ -1,0 +1,6 @@
+node_modules
+data/learning/
+data/*.db
+*.log
+.env
+.env.local

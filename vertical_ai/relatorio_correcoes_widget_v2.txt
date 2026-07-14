@@ -1,0 +1,48 @@
+RELATÓRIO TÉCNICO: IMPLEMENTAÇÃO DO WIDGET v2.0 (LINK MÁGICO)
+Data: 12/12/2025
+Status: CONCLUÍDO
+================================================================================
+
+1. OBJETIVO INICIAL
+-------------------
+Redesenhar o widget do chatbot para um visual moderno (estilo ZinTech/Inline) e atualizar o gerador de código no painel administrativo para fornecer este novo design aos usuários.
+
+2. PROBLEMAS ENCONTRADOS E SOLUÇÕES APLICADAS
+---------------------------------------------
+
+PROBLEMA #1: Widget via Script Externo não funcionava
+- Sintoma: O usuário relatou que carregar o script externamente (`<script src="/widget-v2.js">`) não funcionava em páginas externas de vendas.
+- Causa: Restrições de contexto ou carregamento em domínios externos. O usuário confirmou que apenas "scripts inline grandes" (todo o código em um bloco) funcionavam anteriormente.
+- Correção: Implementação de uma função geradora (`generateModernWidgetScript`) no `index_app.html` que constrói todo o código HTML, CSS e JS do widget v2.0 em uma única string ("script inline grande"), eliminando a dependência de arquivos .js externos para o cliente.
+
+PROBLEMA #2: Quebra de Layout no Painel (Overflow)
+- Sintoma: O código gerado aparecia em uma única linha infinita, estourando a largura do container e quebrando o layout do dashboard.
+- Causa: Falta de regras CSS para quebra de linha em blocos de código (`pre` tag).
+- Correção: Atualização do CSS no `index_app.html`:
+  - Adicionado `white-space: pre-wrap` e `word-wrap: break-word` na classe `.code-block`.
+  - Definido `max-height: 300px` com rolagem (`overflow-y: auto`) para manter o painel organizado.
+
+PROBLEMA #3: Widget exibindo apenas texto (Tags HTML escapadas)
+- Sintoma: Ao colar o código no site, o navegador exibia o código fonte como texto em vez de renderizar o widget.
+- Causa:
+  1. Uso de `innerHTML` no JavaScript para exibir o código no painel, o que fazia o navegador tentar renderizar o script na hora em vez de mostrar o texto.
+  2. A função geradora estava retornando entidades HTML (`&lt;script&gt;`) em vez de tags reais, o que impedia a execução.
+- Correção:
+  1. Substituído `widgetCodeDisplay.innerHTML` por `widgetCodeDisplay.textContent` para garantir a exibição correta do código-fonte.
+  2. Ajustado o retorno da função `generateModernWidgetScript` para usar tags reais (`<script>` e `</script>`), garantindo que funcionem ao serem coladas no site de destino.
+
+PROBLEMA #4: "Erro de Conexão" e Dashboard sem Dados (CORS)
+- Sintoma: O widget carregava (novo design OK), mas ao enviar mensagem exibia "Erro de conexão". Além disso, leads e conversas não eram registrados no dashboard.
+- Causa: Bloqueio de CORS (Cross-Origin Resource Sharing) no servidor (`server.js`). O servidor estava configurado para aceitar apenas origens locais ou domínios específicos, bloqueando requisições vindas do site de vendas externo (`arsenalsecretodosceos.com.br`). Isso impedia tanto a captura de leads (`/api/capture-lead`) quanto o processamento do chat (`/api/process-chat-inteligente`).
+- Correção: Atualização da configuração do middleware `cors` no `server.js`.
+  - Alterado `origin` para `true` (dinâmico). Isso permite que o servidor aceite requisições de qualquer origem (necessário para um widget que será instalado em diversos sites de clientes), mantendo o suporte a credenciais/sessões.
+
+3. ESTADO ATUAL
+---------------
+- Design: Widget v2.0 moderno (Inline, Avatar, Tooltip) implementado.
+- Entrega: O sistema gera um script "tudo-em-um" fácil de copiar e colar.
+- Funcionalidade: Conexão com API restabelecida (CORS corrigido). Leads e conversas agora são salvos e aparecem no dashboard.
+- Infraestrutura: Server atualizado para permitir uso externo do widget.
+
+================================================================================
+FIM DO RELATÓRIO

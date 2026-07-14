@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Mágico - Central de Treinamento</title>
+    <meta name="description" content="Plataforma de treinamento do Link Mágico - SaaS de IA Conversacional Avançada">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="curso.css">
+</head>
+
+<body>
+    <!-- ============================================
+         TOP BAR
+         ============================================ -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <!-- Mobile sidebar toggle -->
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+            </button>
+            <div class="topbar-logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="20" cy="20" r="18" stroke="url(#logoGrad)" stroke-width="2" fill="none" />
+                        <path d="M12 20L18 26L28 14" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <defs>
+                            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#8b5cf6" />
+                                <stop offset="100%" style="stop-color:#06b6d4" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="topbar-title-wrap">
+                    <span class="topbar-brand">Link Mágico</span>
+                    <span class="topbar-course-name">Central de Treinamento</span>
+                </div>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <!-- Contact icon strip -->
+            <div class="topbar-contacts">
+                <a href="https://www.instagram.com/linkmagico.ia?igsh=Nnk2dDg2cGN6NGFl" target="_blank"
+                    class="contact-icon" title="Instagram" aria-label="Instagram">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                    </svg>
+                </a>
+                <a href="https://t.me/+_eGGNYfZUa4wMmEx" target="_blank" class="contact-icon" title="Telegram"
+                    aria-label="Telegram">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M21.2 4.8L2.4 11.4c-.8.3-.8 1.5.1 1.8l4.6 1.7 1.7 5.5c.2.6 1 .8 1.4.3l2.4-2.5 4.7 3.5c.6.4 1.4.1 1.5-.6l3.3-14.5c.2-.7-.5-1.2-1.1-1z" />
+                    </svg>
+                </a>
+                <a href="https://wa.me/5585987654321" target="_blank" class="contact-icon" title="WhatsApp"
+                    aria-label="WhatsApp">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg>
+                </a>
+                <a href="mailto:linkmagicobot@gmail.com" class="contact-icon" title="E-mail" aria-label="E-mail">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                        <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                </a>
+            </div>
+            <a href="https://vertical-ai-dktu.onrender.com" target="_blank" class="btn-platform">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                <span>Plataforma</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ============================================
+         APP LAYOUT (Sidebar + Content)
+         ============================================ -->
+    <div class="app-layout">
+
+        <!-- ============================================
+             SIDEBAR
+             ============================================ -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Sidebar header -->
+            <div class="sidebar-header">
+                <div class="sidebar-course-info">
+                    <div class="course-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polygon points="10 8 16 12 10 16 10 8" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="course-title">Link Mágico Academy</h2>
+                        <span class="course-meta">16 aulas • 4 materiais</span>
+                    </div>
+                </div>
+                <!-- Progress bar -->
+                <div class="progress-bar-wrapper">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <span class="progress-text" id="progressText">0% concluído</span>
+                </div>
+            </div>
+
+            <!-- Sidebar nav content -->
+            <nav class="sidebar-nav" id="sidebarNav">
+
+                <!-- ================================================
+                     MÓDULO 1 — PRIMEIROS PASSOS
+                     Para adicionar uma nova aula: copie um bloco
+                     <li class="lesson-item"> e altere data-video-id,
+                     data-lesson-title e data-lesson-desc.
+                     Para remover: delete o <li> inteiro.
+                     ================================================ -->
+                <div class="module" data-module="modulo-1">
+                    <button class="module-header active" aria-expanded="true">
+                        <div class="module-info">
+                            <span class="module-number">01</span>
+                            <span class="module-name">Primeiros Passos</span>
+                        </div>
+                        <div class="module-meta">
+                            <span class="module-count">3 aulas</span>
+                            <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </div>
+                    </button>
+                    <ul class="module-lessons open">
+                        <li class="lesson-item active" data-type="video"
+                            data-video-id="19dqY9J7Ct3So6LxsaVQ0MIvDghG4RIb1"
+                            data-lesson-title="Link Mágico - Apresentação Breve"
+                            data-lesson-desc="Conheça a plataforma e suas principais funcionalidades">
+                            <span class="lesson-number">01</span>
+                            <span class="lesson-title">Apresentação Breve</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1HcjejEpFbxG4vByEvpJR5wH8fLT32aig"
+                            data-lesson-title="Como acessar a plataforma"
+                            data-lesson-desc="Primeiros passos para acessar sua conta">
+                            <span class="lesson-number">02</span>
+                            <span class="lesson-title">Como acessar a plataforma</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1w9aSYBUz-5WFUfArUJ7AkMwy28q88T0Y"
+                            data-lesson-title="Preferências de Privacidade"
+                            data-lesson-desc="Configure suas preferências de privacidade">
+                            <span class="lesson-number">03</span>
+                            <span class="lesson-title">Preferências de Privacidade</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ================================================
+                     MÓDULO 2 — CONHECENDO A PLATAFORMA
+                     ================================================ -->
+                <div class="module" data-module="modulo-2">
+                    <button class="module-header" aria-expanded="false">
+                        <div class="module-info">
+                            <span class="module-number">02</span>
+                            <span class="module-name">Conhecendo a Plataforma</span>
+                        </div>
+                        <div class="module-meta">
+                            <span class="module-count">3 aulas</span>
+                            <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </div>
+                    </button>
+                    <ul class="module-lessons">
+                        <li class="lesson-item" data-type="video" data-video-id="1-H6cv9w9WLMCAK94E1DTrK_ZT3uqUhtz"
+                            data-lesson-title="Conhecendo a Plataforma Link Mágico"
+                            data-lesson-desc="Tour completo pela plataforma">
+                            <span class="lesson-number">04</span>
+                            <span class="lesson-title">Tour pela Plataforma</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1xMlD0PiiFT3fk9u4YONIXd5rnknzs1OA"
+                            data-lesson-title="Criando o Assistente IA"
+                            data-lesson-desc="Configure seu assistente inteligente">
+                            <span class="lesson-number">05</span>
+                            <span class="lesson-title">Criando o Assistente IA</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1Fk2gXCoVp5BRkrlJakJ2FiqUXaILlKIt"
+                            data-lesson-title="Dados Extraídos" data-lesson-desc="Visualize os dados extraídos pela IA">
+                            <span class="lesson-number">06</span>
+                            <span class="lesson-title">Dados Extraídos</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ================================================
+                     MÓDULO 3 — CAPTURA DE LEADS
+                     ================================================ -->
+                <div class="module" data-module="modulo-3">
+                    <button class="module-header" aria-expanded="false">
+                        <div class="module-info">
+                            <span class="module-number">03</span>
+                            <span class="module-name">Captura de Leads</span>
+                        </div>
+                        <div class="module-meta">
+                            <span class="module-count">3 aulas</span>
+                            <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </div>
+                    </button>
+                    <ul class="module-lessons">
+                        <li class="lesson-item" data-type="video" data-video-id="1Xjn81NLlYYXcqxC03P1d_tc0V2_9KJcX"
+                            data-lesson-title="Assistente inicia com Captura de Leads"
+                            data-lesson-desc="Como capturar leads automaticamente">
+                            <span class="lesson-number">07</span>
+                            <span class="lesson-title">Captura de Leads</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1pSQpnRf8iA6CABYHtMP_wC-FSD8cV-LW"
+                            data-lesson-title="Como o Assistente de vendas trabalha"
+                            data-lesson-desc="Entenda o fluxo do assistente de vendas">
+                            <span class="lesson-number">08</span>
+                            <span class="lesson-title">Assistente de Vendas</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="15AF2ct4P5LAzBZhtGU-0LH2zef9p8Qb1"
+                            data-lesson-title="Conferindo dados capturados"
+                            data-lesson-desc="Visualize os leads e dados capturados">
+                            <span class="lesson-number">09</span>
+                            <span class="lesson-title">Dados Capturados</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ================================================
+                     MÓDULO 4 — PERSONALIZAÇÃO
+                     ================================================ -->
+                <div class="module" data-module="modulo-4">
+                    <button class="module-header" aria-expanded="false">
+                        <div class="module-info">
+                            <span class="module-number">04</span>
+                            <span class="module-name">Personalização</span>
+                        </div>
+                        <div class="module-meta">
+                            <span class="module-count">2 aulas</span>
+                            <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </div>
+                    </button>
+                    <ul class="module-lessons">
+                        <li class="lesson-item" data-type="video" data-video-id="1Zbb3L9B4Xg7JYqNRKO4yP3AT27liJx44"
+                            data-lesson-title="Configurando cores da sua marca"
+                            data-lesson-desc="Personalize as cores do widget">
+                            <span class="lesson-number">10</span>
+                            <span class="lesson-title">Cores da sua Marca</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1HXzV8dzG9uNxdQo4G7my0VnN7AX1kzc6"
+                            data-lesson-title="Assistente personalizado"
+                            data-lesson-desc="Personalize comportamento e respostas">
+                            <span class="lesson-number">11</span>
+                            <span class="lesson-title">Assistente Personalizado</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ================================================
+                     MÓDULO 5 — ATIVAÇÃO NO SITE
+                     ================================================ -->
+                <div class="module" data-module="modulo-5">
+                    <button class="module-header" aria-expanded="false">
+                        <div class="module-info">
+                            <span class="module-number">05</span>
+                            <span class="module-name">Ativação no Site</span>
+                        </div>
+                        <div class="module-meta">
+                            <span class="module-count">5 aulas</span>
+                            <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </div>
+                    </button>
+                    <ul class="module-lessons">
+                        <li class="lesson-item" data-type="video" data-video-id="14PnMgw_p8qtH-jigwMCyF-H3UmbPZ1rp"
+                            data-lesson-title="Ativando Assistente no Site"
+                            data-lesson-desc="Instalação do widget no seu site">
+                            <span class="lesson-number">12</span>
+                            <span class="lesson-title">Ativando no Site</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1TAUlXCr3YWMae63MIazWjLO507QRdzol"
+                            data-lesson-title="Ativando Assistente no Site I"
+                            data-lesson-desc="Configuração avançada - Parte 1">
+                            <span class="lesson-number">13</span>
+                            <span class="lesson-title">Configuração Avançada I</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="13xea161PyfBxFIOrJ9BBNUS-XuHbNbNe"
+                            data-lesson-title="Ativando Assistente no Site II"
+                            data-lesson-desc="Configuração avançada - Parte 2">
+                            <span class="lesson-number">14</span>
+                            <span class="lesson-title">Configuração Avançada II</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1sojVB1Y5gj4DunKeAHQtNUp16A-L3gD4"
+                            data-lesson-title="Ativando Assistente no Site III"
+                            data-lesson-desc="Configuração avançada - Parte 3">
+                            <span class="lesson-number">15</span>
+                            <span class="lesson-title">Configuração Avançada III</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                        <li class="lesson-item" data-type="video" data-video-id="1nKkHU8KD0zMZ93pxQ-UhjHXtk1QT0SGN"
+                            data-lesson-title="Fale Conosco" data-lesson-desc="Canais de suporte e contato">
+                            <span class="lesson-number">16</span>
+                            <span class="lesson-title">Fale Conosco</span>
+                            <span class="lesson-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ================================================
+                     MATERIAIS DE APOIO (PDFs)
+                     Para adicionar: copie um <li class="lesson-item">
+                     com data-type="doc" e altere data-doc-id.
+                     Para remover: delete o <li> inteiro.
+                     ================================================ -->
+                <div class="module" data-module="materiais">
+                    <button class="module-header" aria-expanded="false">
+                        <div class="module-info">
+                            <span class="module-icon-wrap">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                            </span>
+                            <span class="module-name">Materiais de Apoio</span>
+                        </div>
+                        <div class="module-meta">
+                            <span class="module-count">4 PDFs</span>
+                            <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </div>
+                    </button>
+                    <ul class="module-lessons">
+                        <li class="lesson-item" data-type="doc" data-doc-id="1pQ295_XwFCDEqr8VmL22gHZdJfgfXokl"
+                            data-lesson-title="Manual Link Mágico"
+                            data-lesson-desc="Guia completo de uso da plataforma">
+                            <span class="lesson-doc-icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                            </span>
+                            <span class="lesson-title">Manual Link Mágico</span>
+                            <span class="lesson-badge">PDF</span>
+                        </li>
+                        <li class="lesson-item" data-type="doc" data-doc-id="1ayvHo9IKnyo5LksvoaSVSWyP3zrh20IL"
+                            data-lesson-title="Prompts Link Mágico v3"
+                            data-lesson-desc="Guia de prompts e configurações de IA">
+                            <span class="lesson-doc-icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                            </span>
+                            <span class="lesson-title">Prompts Link Mágico v3</span>
+                            <span class="lesson-badge">PDF</span>
+                        </li>
+                        <li class="lesson-item" data-type="doc" data-doc-id="1L6-EAmAuTKHjf87FMGipnUPB-3O_tC4M"
+                            data-lesson-title="Funcionalidades Link Mágico"
+                            data-lesson-desc="Lista completa de funcionalidades da plataforma">
+                            <span class="lesson-doc-icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                            </span>
+                            <span class="lesson-title">Funcionalidades</span>
+                            <span class="lesson-badge">PDF</span>
+                        </li>
+                        <li class="lesson-item" data-type="doc" data-doc-id="1jbENeY7bGX067Tbwjb730XtMQbJOIuLf"
+                            data-lesson-title="Detalhes Técnicos"
+                            data-lesson-desc="Arquitetura e especificações técnicas">
+                            <span class="lesson-doc-icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                            </span>
+                            <span class="lesson-title">Detalhes Técnicos</span>
+                            <span class="lesson-badge">PDF</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ================================================
+                     FALE CONOSCO — Contato Rápido
+                     ================================================ -->
+                <div class="sidebar-contact-section">
+                    <h3 class="sidebar-section-label">Fale Conosco</h3>
+                    <div class="sidebar-contact-links">
+                        <a href="https://www.instagram.com/linkmagico.ia?igsh=Nnk2dDg2cGN6NGFl" target="_blank"
+                            class="sidebar-contact-btn instagram">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                            </svg>
+                            Instagram
+                        </a>
+                        <a href="https://t.me/+_eGGNYfZUa4wMmEx" target="_blank" class="sidebar-contact-btn telegram">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M21.2 4.8L2.4 11.4c-.8.3-.8 1.5.1 1.8l4.6 1.7 1.7 5.5c.2.6 1 .8 1.4.3l2.4-2.5 4.7 3.5c.6.4 1.4.1 1.5-.6l3.3-14.5c.2-.7-.5-1.2-1.1-1z" />
+                            </svg>
+                            Telegram
+                        </a>
+                        <a href="https://wa.me/5585987654321" target="_blank" class="sidebar-contact-btn whatsapp">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                            </svg>
+                            WhatsApp
+                        </a>
+                        <a href="mailto:linkmagicobot@gmail.com" class="sidebar-contact-btn email">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                                <polyline points="22,6 12,13 2,6" />
+                            </svg>
+                            E-mail
+                        </a>
+                    </div>
+                </div>
+
+            </nav>
+
+            <!-- Sidebar footer -->
+            <div class="sidebar-footer">
+                <span>© 2024 Link Mágico</span>
+                <span>Versão 7.x</span>
+            </div>
+        </aside>
+
+        <!-- ============================================
+             MAIN CONTENT AREA
+             ============================================ -->
+        <main class="content-area" id="contentArea">
+            <!-- Welcome state (shown initially before first play) -->
+            <div class="welcome-screen" id="welcomeScreen">
+                <div class="welcome-glow"></div>
+                <div class="welcome-icon">
+                    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="40" cy="40" r="36" stroke="url(#welcomeGrad)" stroke-width="2" opacity="0.3" />
+                        <circle cx="40" cy="40" r="26" stroke="url(#welcomeGrad)" stroke-width="2" opacity="0.5" />
+                        <circle cx="40" cy="40" r="16" fill="url(#welcomeGrad)" opacity="0.8" />
+                        <path d="M35 32L50 40L35 48V32Z" fill="white" />
+                        <defs>
+                            <linearGradient id="welcomeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#8b5cf6" />
+                                <stop offset="100%" style="stop-color:#06b6d4" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h1 class="welcome-title">Bem-vindo à <span class="gradient-text">Central de Treinamento</span></h1>
+                <p class="welcome-desc">Selecione uma aula no menu lateral para começar seu aprendizado.</p>
+                <div class="welcome-stats">
+                    <div class="welcome-stat">
+                        <span class="welcome-stat-num">16</span>
+                        <span class="welcome-stat-label">Vídeos</span>
+                    </div>
+                    <div class="welcome-stat">
+                        <span class="welcome-stat-num">4</span>
+                        <span class="welcome-stat-label">Manuais</span>
+                    </div>
+                    <div class="welcome-stat">
+                        <span class="welcome-stat-num">5</span>
+                        <span class="welcome-stat-label">Módulos</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player area (shown when a lesson is selected) -->
+            <div class="player-area" id="playerArea" style="display:none;">
+                <div class="player-wrapper">
+                    <div class="player-container" id="playerContainer">
+                        <iframe id="playerFrame" src="" allowfullscreen allow="autoplay"></iframe>
+                    </div>
+                </div>
+
+                <!-- Materials Grid View -->
+                <div id="materialsGrid" class="materials-grid">
+                    <div class="doc-card" data-doc-id="1pQ295_XwFCDEqr8VmL22gHZdJfgfXokl"
+                        data-doc-title="Manual Link Mágico">
+                        <div class="doc-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                        </div>
+                        <div class="doc-card-content">
+                            <span class="doc-badge">Manual</span>
+                            <h3>Manual Link Mágico</h3>
+                            <p>Guia completo de uso da plataforma</p>
+                        </div>
+                    </div>
+                    <div class="doc-card" data-doc-id="1ayvHo9IKnyo5LksvoaSVSWyP3zrh20IL"
+                        data-doc-title="Prompts Link Mágico v3">
+                        <div class="doc-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                        </div>
+                        <div class="doc-card-content">
+                            <span class="doc-badge">PDF</span>
+                            <h3>Prompts Link Mágico v3</h3>
+                            <p>Guia de prompts e configurações de IA</p>
+                        </div>
+                    </div>
+                    <div class="doc-card" data-doc-id="1L6-EAmAuTKHjf87FMGipnUPB-3O_tC4M"
+                        data-doc-title="Funcionalidades Link Mágico">
+                        <div class="doc-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                        </div>
+                        <div class="doc-card-content">
+                            <span class="doc-badge">PDF</span>
+                            <h3>Funcionalidades</h3>
+                            <p>Lista completa de funcionalidades</p>
+                        </div>
+                    </div>
+                    <div class="doc-card" data-doc-id="1jbENeY7bGX067Tbwjb730XtMQbJOIuLf"
+                        data-doc-title="Detalhes Técnicos">
+                        <div class="doc-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                        </div>
+                        <div class="doc-card-content">
+                            <span class="doc-badge">Técnico</span>
+                            <h3>Detalhes Técnicos</h3>
+                            <p>Arquitetura e especificações técnicas</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lesson-info" id="lessonInfo">
+                    <div class="lesson-info-header">
+                        <div>
+                            <span class="lesson-info-badge" id="lessonBadge">Aula 01</span>
+                            <h2 class="lesson-info-title" id="lessonTitle">Selecione uma aula</h2>
+                        </div>
+                        <div class="lesson-info-actions">
+                            <button class="btn-nav-lesson" id="btnPrevLesson" title="Aula anterior">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6" />
+                                </svg>
+                            </button>
+                            <button class="btn-nav-lesson" id="btnNextLesson" title="Próxima aula">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="lesson-info-desc" id="lessonDesc">Descrição da aula aparecerá aqui.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- PDF Modal removed to avoid Drive framing issues with HTML files -->
+
+    <script>
+        /* ===============================================
+           Link Mágico Academy — Course Platform JS
+           =============================================== */
+        (function () {
+            'use strict';
+            function ready(fn) {
+                if (document.readyState !== 'loading') { fn(); }
+                else { document.addEventListener('DOMContentLoaded', fn); }
+            }
+            ready(function () {
+                var sidebar = document.getElementById('sidebar');
+                var sidebarToggle = document.getElementById('sidebarToggle');
+                var sidebarOverlay = document.getElementById('sidebarOverlay');
+                var welcomeScreen = document.getElementById('welcomeScreen');
+                var playerArea = document.getElementById('playerArea');
+                var playerFrame = document.getElementById('playerFrame');
+                var playerContainer = document.getElementById('playerContainer');
+                var materialsGrid = document.getElementById('materialsGrid');
+                var lessonInfo = document.getElementById('lessonInfo');
+                var lessonTitle = document.getElementById('lessonTitle');
+                var lessonDesc = document.getElementById('lessonDesc');
+                var lessonBadge = document.getElementById('lessonBadge');
+                var btnPrev = document.getElementById('btnPrevLesson');
+                var btnNext = document.getElementById('btnNextLesson');
+
+                var allLessons = [];
+                var lessonNodes = document.querySelectorAll('.lesson-item');
+                for (var i = 0; i < lessonNodes.length; i++) { allLessons.push(lessonNodes[i]); }
+                var totalLessons = allLessons.length;
+                var currentIndex = -1;
+
+                /* Module accordion & Grid trigger */
+                var moduleHeaders = document.querySelectorAll('.module-header');
+                for (var m = 0; m < moduleHeaders.length; m++) {
+                    (function (header) {
+                        header.addEventListener('click', function (e) {
+                            e.preventDefault(); e.stopPropagation();
+                            var module = header.closest('.module');
+                            var list = header.nextElementSibling;
+                            if (!list) return;
+
+                            var isMaterials = header.textContent.toLowerCase().indexOf('materiais') !== -1;
+
+                            if (list.classList.contains('open') && !isMaterials) {
+                                list.classList.remove('open'); header.classList.remove('active');
+                                header.setAttribute('aria-expanded', 'false');
+                            } else {
+                                // Close others
+                                for (var x = 0; x < moduleHeaders.length; x++) {
+                                    if (moduleHeaders[x] !== header) {
+                                        moduleHeaders[x].classList.remove('active');
+                                        if (moduleHeaders[x].nextElementSibling) moduleHeaders[x].nextElementSibling.classList.remove('open');
+                                    }
+                                }
+                                list.classList.add('open'); header.classList.add('active');
+                                header.setAttribute('aria-expanded', 'true');
+
+                                if (isMaterials) showMaterialsGrid();
+                            }
+                        });
+                    })(moduleHeaders[m]);
+                }
+
+                function showMaterialsGrid() {
+                    if (welcomeScreen) welcomeScreen.style.display = 'none';
+                    if (playerArea) playerArea.style.display = 'block';
+                    if (playerContainer) playerContainer.style.display = 'none';
+                    if (lessonInfo) lessonInfo.style.display = 'none';
+                    if (materialsGrid) materialsGrid.classList.add('active');
+                    closeSidebar();
+                }
+
+                /* Lesson click */
+                for (var j = 0; j < allLessons.length; j++) {
+                    (function (idx) {
+                        allLessons[idx].addEventListener('click', function (e) {
+                            e.preventDefault(); e.stopPropagation();
+                            selectLesson(idx);
+                        });
+                    })(j);
+                }
+
+                /* Doc Card click */
+                var docCards = document.querySelectorAll('.doc-card');
+                for (var c = 0; c < docCards.length; c++) {
+                    (function (card) {
+                        card.addEventListener('click', function () {
+                            var id = card.getAttribute('data-doc-id');
+                            var title = card.getAttribute('data-doc-title');
+                            openDocument(id, title);
+                        });
+                    })(docCards[c]);
+                }
+
+                function openDocument(id, title) {
+                    if (!id) return;
+                    // Force direct download as requested for HTML files
+                    var driveUrl = 'https://drive.google.com/uc?export=download&id=' + id;
+                    window.open(driveUrl, '_blank');
+                }
+
+                // Doc Modal logic removed
+
+                function selectLesson(index) {
+                    if (index < 0 || index >= totalLessons) return;
+                    var item = allLessons[index];
+                    var type = item.getAttribute('data-type');
+                    var title = item.getAttribute('data-lesson-title') || '';
+                    var desc = item.getAttribute('data-lesson-desc') || '';
+
+                    if (type === 'doc') {
+                        openDocument(item.getAttribute('data-doc-id'), title);
+                        return;
+                    }
+
+                    for (var k = 0; k < allLessons.length; k++) { allLessons[k].classList.remove('active'); }
+                    item.classList.add('active');
+
+                    if (welcomeScreen) welcomeScreen.style.display = 'none';
+                    if (playerArea) playerArea.style.display = 'block';
+                    if (materialsGrid) materialsGrid.classList.remove('active');
+                    if (playerContainer) playerContainer.style.display = 'block';
+                    if (lessonInfo) lessonInfo.style.display = 'block';
+
+                    if (type === 'video') {
+                        var videoId = item.getAttribute('data-video-id');
+                        if (playerFrame && videoId) { playerFrame.src = 'https://drive.google.com/file/d/' + videoId + '/preview'; }
+                        var lessonNum = item.querySelector('.lesson-number');
+                        if (lessonBadge) { lessonBadge.textContent = lessonNum ? 'Aula ' + lessonNum.textContent.trim() : 'Video'; }
+                    }
+
+                    if (lessonTitle) lessonTitle.textContent = title || 'Sem titulo';
+                    if (lessonDesc) lessonDesc.textContent = desc || '';
+                    currentIndex = index;
+                    updateNavButtons();
+                    closeSidebar();
+                    var contentArea = document.getElementById('contentArea');
+                    if (contentArea) { try { contentArea.scrollTop = 0; } catch (err) { } }
+                }
+
+                function updateNavButtons() {
+                    if (btnPrev) btnPrev.disabled = (currentIndex <= 0);
+                    if (btnNext) btnNext.disabled = (currentIndex >= totalLessons - 1);
+                }
+                if (btnPrev) { btnPrev.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (currentIndex > 0) selectLesson(currentIndex - 1); }); }
+                if (btnNext) { btnNext.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (currentIndex < totalLessons - 1) selectLesson(currentIndex + 1); }); }
+
+                function openSidebar() { if (sidebar) sidebar.classList.add('open'); if (sidebarOverlay) sidebarOverlay.classList.add('active'); }
+                function closeSidebar() { if (sidebar) sidebar.classList.remove('open'); if (sidebarOverlay) sidebarOverlay.classList.remove('active'); }
+                if (sidebarToggle) { sidebarToggle.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (sidebar && sidebar.classList.contains('open')) closeSidebar(); else openSidebar(); }); }
+                if (sidebarOverlay) { sidebarOverlay.addEventListener('click', function () { closeSidebar(); }); }
+                document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeSidebar(); if (docModal) docModal.classList.remove('active'); } });
+
+                // Initial auto-load (find first video to avoid opening modal on load)
+                for (var i = 0; i < allLessons.length; i++) {
+                    if (allLessons[i].getAttribute('data-type') === 'video') {
+                        selectLesson(i);
+                        break;
+                    }
+                }
+            });
+        })();
+    </script>
+</body>
+
+</html>

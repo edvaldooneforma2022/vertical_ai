@@ -1,0 +1,1330 @@
+{
+  "timestamp": "2026-04-21T00:57:05.980Z",
+  "overall": {
+    "passed": 53,
+    "total": 64,
+    "pct": 83
+  },
+  "tenants": [
+    {
+      "tenant": "teste 01",
+      "code": "SvdH3Z",
+      "passed": 12,
+      "total": 16,
+      "pct": 75,
+      "status": "⚠️ Vende, mas perde dinheiro",
+      "results": [
+        {
+          "id": "Q01",
+          "text": "Vi seu anúncio… me explica rápido o que você vende?",
+          "expect": "PRODUTO_CLARO",
+          "criteria": "Resposta clara + nome do produto + proposta",
+          "response": "Eu ofereço a plataforma Inner AI, que ajuda a organizar pensamentos, aumentar a criatividade e realizar tarefas de forma mais rápida 🤔",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 135,
+            "pass": true,
+            "reason": "Produto explicado"
+          },
+          "elapsed": 876,
+          "status": 200
+        },
+        {
+          "id": "Q02",
+          "text": "Mas tipo assim… isso serve pra quê na prática mesmo?",
+          "expect": "EXPLICACAO_SIMPLES",
+          "criteria": "Explicação simples, sem enrolação",
+          "response": "A plataforma Inner AI serve para ajudar a gerenciar ideias, priorizar tarefas e aumentar a produtividade, tornando mais fácil alcançar seus objetivos diários.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 158,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 981,
+          "status": 200
+        },
+        {
+          "id": "Q03",
+          "text": "Como isso funciona passo a passo?",
+          "expect": "EXPLICACAO_CONCRETA",
+          "criteria": "Explicação concreta (não genérica)",
+          "response": "A plataforma Inner AI funciona organizando seus pensamentos, identificando padrões e conexões, e então sugerindo ações para ajudar a realizar suas tarefas de forma mais eficiente.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 179,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 516,
+          "status": 200
+        },
+        {
+          "id": "Q04",
+          "text": "O que exatamente eu recebo quando compro?",
+          "expect": "CONTEUDO_REAL",
+          "criteria": "Conteúdo real (não pergunta de volta)",
+          "response": "Você recebe acesso à plataforma Inner AI, que é uma ferramenta de inteligência artificial projetada para organizar seus pensamentos, aumentar sua criatividade e ajudar a realizar tarefas mais rapidamente 🤔",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 206,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 477,
+          "status": 200
+        },
+        {
+          "id": "Q05",
+          "text": "Precisa ter experiência ou qualquer pessoa consegue usar?",
+          "expect": "RESPOSTA_DIRETA",
+          "criteria": "Resposta direta + segurança",
+          "response": "\udf1f **PERFEITO PARA INICIANTES!**\n\nNão é necessário nenhuma experiência prévia! Nossa plataforma foi desenvolvida para ser intuitiva e fácil de usar, com tutoriais passo a passo e suporte completo.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 195,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 257,
+          "status": 200
+        },
+        {
+          "id": "Q06",
+          "text": "Você já me explicou isso antes… lembra?",
+          "expect": "MEMORIA_CONTEXTO",
+          "criteria": "Reconhecer contexto (não resetar)",
+          "response": "Sim, eu me lembro de ter explicado anteriormente que a plataforma Inner AI é uma ferramenta de inteligência artificial para organizar pensamentos e aumentar produtividade.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 171,
+            "pass": true,
+            "reason": "Memória OK"
+          },
+          "elapsed": 618,
+          "status": 200
+        },
+        {
+          "id": "Q07",
+          "text": "Então resume tudo em 1 frase pra mim",
+          "expect": "SINTESE_COERENTE",
+          "criteria": "Síntese coerente do produto",
+          "response": "A plataforma Inner AI é uma ferramenta de inteligência artificial que ajuda a organizar pensamentos, aumentar criatividade e realizar tarefas de forma mais eficiente.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 166,
+            "pass": true,
+            "reason": "Síntese OK"
+          },
+          "elapsed": 571,
+          "status": 200
+        },
+        {
+          "id": "Q08",
+          "text": "Quanto custa?",
+          "expect": "LINK_COM_CONTEXTO",
+          "criteria": "Link + contexto (não só botão)",
+          "response": "Infelizmente, não tenho informações sobre o preço da plataforma Inner AI. \udca1 Posso te ajudar de outra forma ou te direcionar para atendimento personalizado. O que prefere?",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": true,
+            "linkCount": 0,
+            "length": 170,
+            "pass": false,
+            "reason": "SEM LINK"
+          },
+          "elapsed": 470,
+          "status": 200
+        },
+        {
+          "id": "Q09",
+          "text": "Quero comprar agora",
+          "expect": "LINK_UNICO",
+          "criteria": "1 único link válido, sem duplicação",
+          "response": "Posso oferecer a compra da plataforma Inner AI para você, por favor forneça mais informações para concluir a transação \udecd️",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 121,
+            "pass": false,
+            "reason": "SEM LINK"
+          },
+          "elapsed": 490,
+          "status": 200
+        },
+        {
+          "id": "Q10",
+          "text": "Me manda o link certo porque o outro não abriu",
+          "expect": "LINK_ALTERNATIVO",
+          "criteria": "NÃO repetir link quebrado, alternativa ou WhatsApp",
+          "response": "Como posso te ajudar com mais informações sobre o produto?",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": true,
+            "hasCheckout": false,
+            "asksBack": true,
+            "linkCount": 0,
+            "length": 58,
+            "pass": false,
+            "reason": "SEM ALTERNATIVA"
+          },
+          "elapsed": 247,
+          "status": 200
+        },
+        {
+          "id": "Q11",
+          "text": "Isso parece golpe, é confiável mesmo?",
+          "expect": "TRANQUILIZAR_SEM_CHECKOUT",
+          "criteria": "Tranquilizar, NUNCA checkout direto",
+          "response": "Entendo sua preocupação, a plataforma Inner AI é uma ferramenta legítima de inteligência artificial.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 100,
+            "pass": true,
+            "reason": "Tranquilizou sem checkout"
+          },
+          "elapsed": 661,
+          "status": 200
+        },
+        {
+          "id": "Q12",
+          "text": "Não entendi nada ainda, explica como se eu fosse leigo",
+          "expect": "EXPLICAR_SEM_VENDA",
+          "criteria": "Explicação clara, sem empurrar venda",
+          "response": "A plataforma Inner AI é um sistema que ajuda a organizar pensamentos, aumentar a criatividade e realizar tarefas de forma mais rápida.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 134,
+            "pass": true,
+            "reason": "Explicou sem vender"
+          },
+          "elapsed": 641,
+          "status": 200
+        },
+        {
+          "id": "Q13",
+          "text": "Achei caro… vale mesmo a pena?",
+          "expect": "REFORCO_VALOR",
+          "criteria": "Reforço de valor, não pressionar",
+          "response": "Sim, vale a pena, pois pode aumentar sua produtividade e criatividade, tornando-se uma ferramenta valiosa a longo prazo \udecd️",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 122,
+            "pass": true,
+            "reason": "Valor reforçado"
+          },
+          "elapsed": 508,
+          "status": 200
+        },
+        {
+          "id": "Q14",
+          "text": "Quero falar com alguém de verdade",
+          "expect": "WHATSAPP_SEM_CHECKOUT",
+          "criteria": "WhatsApp correto, sem checkout junto",
+          "response": "Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 72,
+            "pass": false,
+            "reason": "SEM WHATSAPP"
+          },
+          "elapsed": 248,
+          "status": 200
+        },
+        {
+          "id": "Q15",
+          "text": "Tá bom, depois eu vejo isso",
+          "expect": "RESPOSTA_LEVE",
+          "criteria": "Resposta leve, sem empurrar link",
+          "response": "Ok, sinta-se à vontade para voltar e saber mais sobre a plataforma Inner AI quando estiver pronto.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 98,
+            "pass": true,
+            "reason": "Saída leve OK"
+          },
+          "elapsed": 575,
+          "status": 200
+        },
+        {
+          "id": "Q16",
+          "text": "Valeu, tchau",
+          "expect": "DESPEDIDA_LIMPA",
+          "criteria": "Despedida limpa, ZERO checkout",
+          "response": "Deixa eu te explicar melhor \n\nTchau, boa sorte! \udc4b\n\nPosso te ajudar com mais alguma dúvida?",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": true,
+            "hasCheckout": false,
+            "asksBack": true,
+            "linkCount": 0,
+            "length": 90,
+            "pass": true,
+            "reason": "Despedida limpa"
+          },
+          "elapsed": 401,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "tenant": "testa02",
+      "code": "N8OxIG",
+      "passed": 15,
+      "total": 16,
+      "pct": 94,
+      "status": "🔥 Pronto pra vender",
+      "results": [
+        {
+          "id": "Q01",
+          "text": "Vi seu anúncio… me explica rápido o que você vende?",
+          "expect": "PRODUTO_CLARO",
+          "criteria": "Resposta clara + nome do produto + proposta",
+          "response": "Vendo um sistema de IA que atende, tira dúvidas, agenda e conduz leads 24h por dia, com CRM completo, por R$ 97 sem mensalidade \udcc8",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 129,
+            "pass": true,
+            "reason": "Produto explicado"
+          },
+          "elapsed": 33693,
+          "status": 200
+        },
+        {
+          "id": "Q02",
+          "text": "Mas tipo assim… isso serve pra quê na prática mesmo?",
+          "expect": "EXPLICACAO_SIMPLES",
+          "criteria": "Explicação simples, sem enrolação",
+          "response": "Ajuda a não perder leads por não responder a tempo, aumentando as chances de venda, pois a IA atende e conduz os leads 24h por dia.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 131,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 705,
+          "status": 200
+        },
+        {
+          "id": "Q03",
+          "text": "Como isso funciona passo a passo?",
+          "expect": "EXPLICACAO_CONCRETA",
+          "criteria": "Explicação concreta (não genérica)",
+          "response": "Funciona em 3 passos: ativa o vendedor IA, ele atende e tira dúvidas dos leads, e agenda e conduz os leads à ação 24h por dia.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 126,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 519,
+          "status": 200
+        },
+        {
+          "id": "Q04",
+          "text": "O que exatamente eu recebo quando compro?",
+          "expect": "CONTEUDO_REAL",
+          "criteria": "Conteúdo real (não pergunta de volta)",
+          "response": "Recebe um CRM completo com uma IA que atende e conduz leads, além de bônus incluídos, tudo por R$ 97, sem mensalidade.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 118,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 641,
+          "status": 200
+        },
+        {
+          "id": "Q05",
+          "text": "Precisa ter experiência ou qualquer pessoa consegue usar?",
+          "expect": "RESPOSTA_DIRETA",
+          "criteria": "Resposta direta + segurança",
+          "response": "\udf1f **PERFEITO PARA INICIANTES!**\n\nNão é necessário nenhuma experiência prévia! Nossa plataforma foi desenvolvida para ser intuitiva e fácil de usar, com tutoriais passo a passo e suporte completo.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 195,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 229,
+          "status": 200
+        },
+        {
+          "id": "Q06",
+          "text": "Você já me explicou isso antes… lembra?",
+          "expect": "MEMORIA_CONTEXTO",
+          "criteria": "Reconhecer contexto (não resetar)",
+          "response": "Sim, lembro! Já expliquei como funciona e o que você recebe. Quer saber mais sobre como isso pode ajudar no seu negócio? \udcc8",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": true,
+            "linkCount": 0,
+            "length": 122,
+            "pass": true,
+            "reason": "Memória OK"
+          },
+          "elapsed": 603,
+          "status": 200
+        },
+        {
+          "id": "Q07",
+          "text": "Então resume tudo em 1 frase pra mim",
+          "expect": "SINTESE_COERENTE",
+          "criteria": "Síntese coerente do produto",
+          "response": "Você recebe um CRM completo com IA que atende e conduz leads 24h por dia, por R$ 97, sem mensalidade.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 101,
+            "pass": true,
+            "reason": "Síntese OK"
+          },
+          "elapsed": 609,
+          "status": 200
+        },
+        {
+          "id": "Q08",
+          "text": "Quanto custa?",
+          "expect": "LINK_COM_CONTEXTO",
+          "criteria": "Link + contexto (não só botão)",
+          "response": "Custa R$ 97, sem mensalidade. O link de compra está logo abaixo.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 64,
+            "pass": false,
+            "reason": "SEM LINK"
+          },
+          "elapsed": 447,
+          "status": 200
+        },
+        {
+          "id": "Q09",
+          "text": "Quero comprar agora",
+          "expect": "LINK_UNICO",
+          "criteria": "1 único link válido, sem duplicação",
+          "response": "Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\nhttps://pay.hotmart.com/G103177435I\n━━━━━━━━━━━━━━━━━━━",
+          "analysis": {
+            "hasLink": true,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": true,
+            "asksBack": false,
+            "linkCount": 1,
+            "length": 139,
+            "pass": true,
+            "reason": "Link único OK"
+          },
+          "elapsed": 230,
+          "status": 200
+        },
+        {
+          "id": "Q10",
+          "text": "Me manda o link certo porque o outro não abriu",
+          "expect": "LINK_ALTERNATIVO",
+          "criteria": "NÃO repetir link quebrado, alternativa ou WhatsApp",
+          "response": "Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\nhttps://pay.hotmart.com/G103177435I\n━━━━━━━━━━━━━━━━━━━",
+          "analysis": {
+            "hasLink": true,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": true,
+            "asksBack": false,
+            "linkCount": 1,
+            "length": 139,
+            "pass": true,
+            "reason": "Link alternativo"
+          },
+          "elapsed": 226,
+          "status": 200
+        },
+        {
+          "id": "Q11",
+          "text": "Isso parece golpe, é confiável mesmo?",
+          "expect": "TRANQUILIZAR_SEM_CHECKOUT",
+          "criteria": "Tranquilizar, NUNCA checkout direto",
+          "response": "Sim, é confiável, você paga apenas R$ 97 e não há mensalidade.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 62,
+            "pass": true,
+            "reason": "Tranquilizou sem checkout"
+          },
+          "elapsed": 1224,
+          "status": 200
+        },
+        {
+          "id": "Q12",
+          "text": "Não entendi nada ainda, explica como se eu fosse leigo",
+          "expect": "EXPLICAR_SEM_VENDA",
+          "criteria": "Explicação clara, sem empurrar venda",
+          "response": "Você paga R$ 97 e recebe um sistema que ajuda a vender seus produtos 24h por dia \udcc8",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 82,
+            "pass": true,
+            "reason": "Explicou sem vender"
+          },
+          "elapsed": 456,
+          "status": 200
+        },
+        {
+          "id": "Q13",
+          "text": "Achei caro… vale mesmo a pena?",
+          "expect": "REFORCO_VALOR",
+          "criteria": "Reforço de valor, não pressionar",
+          "response": "Sim, vale a pena, pois você não perde leads por não responder a tempo e ainda tem um CRM completo.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 98,
+            "pass": true,
+            "reason": "Valor reforçado"
+          },
+          "elapsed": 566,
+          "status": 200
+        },
+        {
+          "id": "Q14",
+          "text": "Quero falar com alguém de verdade",
+          "expect": "WHATSAPP_SEM_CHECKOUT",
+          "criteria": "WhatsApp correto, sem checkout junto",
+          "response": "Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\nhttps://wa.me/5511962607237\n\nEles vão te ajudar rapidinho 🙌",
+          "analysis": {
+            "hasLink": true,
+            "hasWhatsApp": true,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 1,
+            "length": 141,
+            "pass": true,
+            "reason": "WhatsApp OK"
+          },
+          "elapsed": 265,
+          "status": 200
+        },
+        {
+          "id": "Q15",
+          "text": "Tá bom, depois eu vejo isso",
+          "expect": "RESPOSTA_LEVE",
+          "criteria": "Resposta leve, sem empurrar link",
+          "response": "Ok, é uma oportunidade para aumentar suas vendas sem perder leads, quando quiser saber mais é só perguntar \udcc8",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 108,
+            "pass": true,
+            "reason": "Saída leve OK"
+          },
+          "elapsed": 502,
+          "status": 200
+        },
+        {
+          "id": "Q16",
+          "text": "Valeu, tchau",
+          "expect": "DESPEDIDA_LIMPA",
+          "criteria": "Despedida limpa, ZERO checkout",
+          "response": "Tchau, boa sorte com suas vendas \udcc8",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 34,
+            "pass": true,
+            "reason": "Despedida limpa"
+          },
+          "elapsed": 523,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "tenant": "Teste03",
+      "code": "oJ5hIQ",
+      "passed": 12,
+      "total": 16,
+      "pct": 75,
+      "status": "⚠️ Vende, mas perde dinheiro",
+      "results": [
+        {
+          "id": "Q01",
+          "text": "Vi seu anúncio… me explica rápido o que você vende?",
+          "expect": "PRODUTO_CLARO",
+          "criteria": "Resposta clara + nome do produto + proposta",
+          "response": "Vendemos o Upflows, um ecossistema comercial que opera sem intervenção humana. \nAgentes Híbridos de IA vendem no WhatsApp 24/7. \nTambém temos CRM autoalimentado e funil autônomo. \udcca",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": true,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 180,
+            "pass": true,
+            "reason": "Produto explicado"
+          },
+          "elapsed": 2062,
+          "status": 200
+        },
+        {
+          "id": "Q02",
+          "text": "Mas tipo assim… isso serve pra quê na prática mesmo?",
+          "expect": "EXPLICACAO_SIMPLES",
+          "criteria": "Explicação simples, sem enrolação",
+          "response": "Isso ajuda a automatizar o processo de vendas, \ntornando mais eficiente e reduzindo a necessidade de intervenção humana. \nIsso pode aumentar as conversões e melhorar a experiência do cliente. \udca1",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 193,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 605,
+          "status": 200
+        },
+        {
+          "id": "Q03",
+          "text": "Como isso funciona passo a passo?",
+          "expect": "EXPLICACAO_CONCRETA",
+          "criteria": "Explicação concreta (não genérica)",
+          "response": "Os Agentes Híbridos de IA do Upflows interagem com os clientes no WhatsApp, \ncoletando informações e alimentando o CRM autoalimentado. \nEm seguida, o funil autônomo direciona os leads para ações específicas. \udcc8",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": true,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 209,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 572,
+          "status": 200
+        },
+        {
+          "id": "Q04",
+          "text": "O que exatamente eu recebo quando compro?",
+          "expect": "CONTEUDO_REAL",
+          "criteria": "Conteúdo real (não pergunta de volta)",
+          "response": "Você recebe o acesso ao ecossistema Upflows, \ncom Agentes Híbridos de IA, CRM autoalimentado, \nfunil autônomo e calendário inteligente. \udcbb",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 137,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 509,
+          "status": 200
+        },
+        {
+          "id": "Q05",
+          "text": "Precisa ter experiência ou qualquer pessoa consegue usar?",
+          "expect": "RESPOSTA_DIRETA",
+          "criteria": "Resposta direta + segurança",
+          "response": "\udf1f **PERFEITO PARA INICIANTES!**\n\nNão é necessário nenhuma experiência prévia! Nossa plataforma foi desenvolvida para ser intuitiva e fácil de usar, com tutoriais passo a passo e suporte completo.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 195,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 259,
+          "status": 200
+        },
+        {
+          "id": "Q06",
+          "text": "Você já me explicou isso antes… lembra?",
+          "expect": "MEMORIA_CONTEXTO",
+          "criteria": "Reconhecer contexto (não resetar)",
+          "response": "Sim, eu me lembro de ter explicado anteriormente \ncomo o Upflows funciona com Agentes Híbridos de IA. \udcdd",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 103,
+            "pass": true,
+            "reason": "Memória OK"
+          },
+          "elapsed": 441,
+          "status": 200
+        },
+        {
+          "id": "Q07",
+          "text": "Então resume tudo em 1 frase pra mim",
+          "expect": "SINTESE_COERENTE",
+          "criteria": "Síntese coerente do produto",
+          "response": "O Upflows é um ecossistema comercial que opera sem intervenção humana, \ncom Agentes Híbridos de IA que vendem no WhatsApp 24/7. \udca1",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": true,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 129,
+            "pass": true,
+            "reason": "Síntese OK"
+          },
+          "elapsed": 579,
+          "status": 200
+        },
+        {
+          "id": "Q08",
+          "text": "Quanto custa?",
+          "expect": "LINK_COM_CONTEXTO",
+          "criteria": "Link + contexto (não só botão)",
+          "response": "O preço do Upflows não foi especificado, \npreciso saber mais sobre o seu negócio para fornecer um valor. \udcb0",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 106,
+            "pass": false,
+            "reason": "SEM LINK"
+          },
+          "elapsed": 773,
+          "status": 200
+        },
+        {
+          "id": "Q09",
+          "text": "Quero comprar agora",
+          "expect": "LINK_UNICO",
+          "criteria": "1 único link válido, sem duplicação",
+          "response": "Vamos fechar a compra do Upflows, \nvocê terá Agentes Híbridos de IA vendendo 24/7. \udcc8",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 84,
+            "pass": false,
+            "reason": "SEM LINK"
+          },
+          "elapsed": 579,
+          "status": 200
+        },
+        {
+          "id": "Q10",
+          "text": "Me manda o link certo porque o outro não abriu",
+          "expect": "LINK_ALTERNATIVO",
+          "criteria": "NÃO repetir link quebrado, alternativa ou WhatsApp",
+          "response": "Como posso te ajudar com mais informações sobre o produto?",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": true,
+            "hasCheckout": false,
+            "asksBack": true,
+            "linkCount": 0,
+            "length": 58,
+            "pass": false,
+            "reason": "SEM ALTERNATIVA"
+          },
+          "elapsed": 264,
+          "status": 200
+        },
+        {
+          "id": "Q11",
+          "text": "Isso parece golpe, é confiável mesmo?",
+          "expect": "TRANQUILIZAR_SEM_CHECKOUT",
+          "criteria": "Tranquilizar, NUNCA checkout direto",
+          "response": "O Upflows é um sistema de vendas automatizado, \ncomprovado por depoimentos de clientes satisfeitos. \udca1",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 101,
+            "pass": true,
+            "reason": "Tranquilizou sem checkout"
+          },
+          "elapsed": 567,
+          "status": 200
+        },
+        {
+          "id": "Q12",
+          "text": "Não entendi nada ainda, explica como se eu fosse leigo",
+          "expect": "EXPLICAR_SEM_VENDA",
+          "criteria": "Explicação clara, sem empurrar venda",
+          "response": "O Upflows é um sistema que usa inteligência \nartificial para vender produtos no WhatsApp. \udcf1",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": true,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 91,
+            "pass": true,
+            "reason": "Explicou sem vender"
+          },
+          "elapsed": 469,
+          "status": 200
+        },
+        {
+          "id": "Q13",
+          "text": "Achei caro… vale mesmo a pena?",
+          "expect": "REFORCO_VALOR",
+          "criteria": "Reforço de valor, não pressionar",
+          "response": "O Upflows pode aumentar suas vendas \nsem necessidade de intervenção humana, \neconomizando tempo e recursos. \udcb8",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 109,
+            "pass": true,
+            "reason": "Valor reforçado"
+          },
+          "elapsed": 586,
+          "status": 200
+        },
+        {
+          "id": "Q14",
+          "text": "Quero falar com alguém de verdade",
+          "expect": "WHATSAPP_SEM_CHECKOUT",
+          "criteria": "WhatsApp correto, sem checkout junto",
+          "response": "Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 72,
+            "pass": false,
+            "reason": "SEM WHATSAPP"
+          },
+          "elapsed": 231,
+          "status": 200
+        },
+        {
+          "id": "Q15",
+          "text": "Tá bom, depois eu vejo isso",
+          "expect": "RESPOSTA_LEVE",
+          "criteria": "Resposta leve, sem empurrar link",
+          "response": "O Upflows oferece agentes híbridos de IA \nque trabalham 24/7, sem parar. \udd52",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 74,
+            "pass": true,
+            "reason": "Saída leve OK"
+          },
+          "elapsed": 622,
+          "status": 200
+        },
+        {
+          "id": "Q16",
+          "text": "Valeu, tchau",
+          "expect": "DESPEDIDA_LIMPA",
+          "criteria": "Despedida limpa, ZERO checkout",
+          "response": "Tchau, boa sorte com suas vendas. \udc4b",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 35,
+            "pass": true,
+            "reason": "Despedida limpa"
+          },
+          "elapsed": 437,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "tenant": "Teste04",
+      "code": "CtyAln",
+      "passed": 14,
+      "total": 16,
+      "pct": 88,
+      "status": "🔥 Pronto pra vender",
+      "results": [
+        {
+          "id": "Q01",
+          "text": "Vi seu anúncio… me explica rápido o que você vende?",
+          "expect": "PRODUTO_CLARO",
+          "criteria": "Resposta clara + nome do produto + proposta",
+          "response": "Vendemos o – S.O.S CRESCIMENTO, um kit para crescimento capilar. \udf3f",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 66,
+            "pass": true,
+            "reason": "Produto explicado"
+          },
+          "elapsed": 38287,
+          "status": 200
+        },
+        {
+          "id": "Q02",
+          "text": "Mas tipo assim… isso serve pra quê na prática mesmo?",
+          "expect": "EXPLICACAO_SIMPLES",
+          "criteria": "Explicação simples, sem enrolação",
+          "response": "Serve para ajudar no crescimento do cabelo, é compatível com qualquer tipo de cabelo e química.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 95,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 594,
+          "status": 200
+        },
+        {
+          "id": "Q03",
+          "text": "Como isso funciona passo a passo?",
+          "expect": "EXPLICACAO_CONCRETA",
+          "criteria": "Explicação concreta (não genérica)",
+          "response": "O kit contém extratos de bardana e bambu, além de extrato de café, que ajudam a promover o crescimento capilar de forma natural.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 128,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 684,
+          "status": 200
+        },
+        {
+          "id": "Q04",
+          "text": "O que exatamente eu recebo quando compro?",
+          "expect": "CONTEUDO_REAL",
+          "criteria": "Conteúdo real (não pergunta de volta)",
+          "response": "Recebe o kit S.O.S Crescimento, com até 60% de desconto e brindes.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 66,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 593,
+          "status": 200
+        },
+        {
+          "id": "Q05",
+          "text": "Precisa ter experiência ou qualquer pessoa consegue usar?",
+          "expect": "RESPOSTA_DIRETA",
+          "criteria": "Resposta direta + segurança",
+          "response": "\udf1f **PERFEITO PARA INICIANTES!**\n\nNão é necessário nenhuma experiência prévia! Nossa plataforma foi desenvolvida para ser intuitiva e fácil de usar, com tutoriais passo a passo e suporte completo.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 195,
+            "pass": true,
+            "reason": "Explicação OK"
+          },
+          "elapsed": 211,
+          "status": 200
+        },
+        {
+          "id": "Q06",
+          "text": "Você já me explicou isso antes… lembra?",
+          "expect": "MEMORIA_CONTEXTO",
+          "criteria": "Reconhecer contexto (não resetar)",
+          "response": "Sim, lembro! Você quer saber o que vem no kit, não é? Infelizmente, não tenho essa informação detalhada 🤔\n\n\udca1 Posso te ajudar de outra forma ou te direcionar para atendimento personalizado. O que prefere?",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": true,
+            "linkCount": 0,
+            "length": 204,
+            "pass": false,
+            "reason": "RESETOU CONVERSA"
+          },
+          "elapsed": 879,
+          "status": 200
+        },
+        {
+          "id": "Q07",
+          "text": "Então resume tudo em 1 frase pra mim",
+          "expect": "SINTESE_COERENTE",
+          "criteria": "Síntese coerente do produto",
+          "response": "O kit S.O.S Crescimento é um produto natural para promover o crescimento capilar, com desconto de até 60% e brindes.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 116,
+            "pass": true,
+            "reason": "Síntese OK"
+          },
+          "elapsed": 884,
+          "status": 200
+        },
+        {
+          "id": "Q08",
+          "text": "Quanto custa?",
+          "expect": "LINK_COM_CONTEXTO",
+          "criteria": "Link + contexto (não só botão)",
+          "response": "Com até 60% OFF, o preço é atraente, mas infelizmente não tenho o valor exato. O link de compra está logo abaixo. \n\n\udca1 Posso te ajudar de outra forma ou te direcionar para atendimento personalizado. O que prefere?",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": true,
+            "linkCount": 0,
+            "length": 212,
+            "pass": false,
+            "reason": "SEM LINK"
+          },
+          "elapsed": 590,
+          "status": 200
+        },
+        {
+          "id": "Q09",
+          "text": "Quero comprar agora",
+          "expect": "LINK_UNICO",
+          "criteria": "1 único link válido, sem duplicação",
+          "response": "Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\nhttps://ev.braip.com/checkout/planv8yk/cheon6kw\n━━━━━━━━━━━━━━━━━━━",
+          "analysis": {
+            "hasLink": true,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": true,
+            "asksBack": false,
+            "linkCount": 1,
+            "length": 151,
+            "pass": true,
+            "reason": "Link único OK"
+          },
+          "elapsed": 295,
+          "status": 200
+        },
+        {
+          "id": "Q10",
+          "text": "Me manda o link certo porque o outro não abriu",
+          "expect": "LINK_ALTERNATIVO",
+          "criteria": "NÃO repetir link quebrado, alternativa ou WhatsApp",
+          "response": "Clique abaixo para finalizar sua compra 👇\n\n━━━━━━━━━━━━━━━━━━━\n🚀 FINALIZAR COMPRA\nhttps://ev.braip.com/checkout/planv8yk/cheon6kw\n━━━━━━━━━━━━━━━━━━━",
+          "analysis": {
+            "hasLink": true,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": true,
+            "asksBack": false,
+            "linkCount": 1,
+            "length": 151,
+            "pass": true,
+            "reason": "Link alternativo"
+          },
+          "elapsed": 293,
+          "status": 200
+        },
+        {
+          "id": "Q11",
+          "text": "Isso parece golpe, é confiável mesmo?",
+          "expect": "TRANQUILIZAR_SEM_CHECKOUT",
+          "criteria": "Tranquilizar, NUNCA checkout direto",
+          "response": "Sim, é confiável! O site é seguro, seus dados estão protegidos e criptografados. Além disso, o kit é original, direto da empresa.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 129,
+            "pass": true,
+            "reason": "Tranquilizou sem checkout"
+          },
+          "elapsed": 743,
+          "status": 200
+        },
+        {
+          "id": "Q12",
+          "text": "Não entendi nada ainda, explica como se eu fosse leigo",
+          "expect": "EXPLICAR_SEM_VENDA",
+          "criteria": "Explicação clara, sem empurrar venda",
+          "response": "O site onde você compra o kit S.O.S Crescimento é seguro, então você não precisa se preocupar com suas informações pessoais. É como se você estivesse comprando em uma loja confiável.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 182,
+            "pass": true,
+            "reason": "Explicou sem vender"
+          },
+          "elapsed": 1252,
+          "status": 200
+        },
+        {
+          "id": "Q13",
+          "text": "Achei caro… vale mesmo a pena?",
+          "expect": "REFORCO_VALOR",
+          "criteria": "Reforço de valor, não pressionar",
+          "response": "Muitas mulheres já usaram o kit e estão satisfeitas, mais de 38 mil! Além disso, você tem a garantia de satisfação ou seu dinheiro de volta.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 140,
+            "pass": true,
+            "reason": "Valor reforçado"
+          },
+          "elapsed": 601,
+          "status": 200
+        },
+        {
+          "id": "Q14",
+          "text": "Quero falar com alguém de verdade",
+          "expect": "WHATSAPP_SEM_CHECKOUT",
+          "criteria": "WhatsApp correto, sem checkout junto",
+          "response": "Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\nhttps://wa.me/5519981647456\n\nEles vão te ajudar rapidinho 🙌",
+          "analysis": {
+            "hasLink": true,
+            "hasWhatsApp": true,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 1,
+            "length": 141,
+            "pass": true,
+            "reason": "WhatsApp OK"
+          },
+          "elapsed": 229,
+          "status": 200
+        },
+        {
+          "id": "Q15",
+          "text": "Tá bom, depois eu vejo isso",
+          "expect": "RESPOSTA_LEVE",
+          "criteria": "Resposta leve, sem empurrar link",
+          "response": "Lembre-se de que são últimas unidades com até 60% OFF e brindes. Se você tiver alguma dúvida, pode falar com um especialista.",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 125,
+            "pass": true,
+            "reason": "Saída leve OK"
+          },
+          "elapsed": 823,
+          "status": 200
+        },
+        {
+          "id": "Q16",
+          "text": "Valeu, tchau",
+          "expect": "DESPEDIDA_LIMPA",
+          "criteria": "Despedida limpa, ZERO checkout",
+          "response": "Tchau, boa sorte com o seu cabelo! \udc81",
+          "analysis": {
+            "hasLink": false,
+            "hasWhatsApp": false,
+            "isGeneric": false,
+            "hasCheckout": false,
+            "asksBack": false,
+            "linkCount": 0,
+            "length": 36,
+            "pass": true,
+            "reason": "Despedida limpa"
+          },
+          "elapsed": 594,
+          "status": 200
+        }
+      ]
+    }
+  ]
+}

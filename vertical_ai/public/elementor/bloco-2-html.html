@@ -1,0 +1,277 @@
+<!-- ============================================== -->
+<!-- BLOCO 2 — HTML (cole no segundo widget HTML)   -->
+<!-- ============================================== -->
+
+<!-- HEADER -->
+<header class="header"><div class="logo">⚡ Link Mágico</div></header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">Sistema de Atendimento Automático</div>
+  <h1>Seus visitantes perguntam.<br><span>Seu sistema responde — 24h por dia.</span></h1>
+  <p>Um atendimento automático treinado nas informações do seu negócio. Responde clientes no seu site, Instagram, WhatsApp e onde mais precisar.</p>
+</section>
+
+<!-- CURIOSITY TRIGGER -->
+<div class="curiosity">
+  <div class="curiosity-card">
+    <h3>💬 Perguntas reais que clientes fazem todos os dias:</h3>
+    <div class="curiosity-msgs">
+      <div class="c-msg"><span class="c-msg-origin">Instagram</span><span class="c-msg-text">Vocês atendem aos sábados?</span></div>
+      <div class="c-msg"><span class="c-msg-origin">WhatsApp</span><span class="c-msg-text">Esse produto funciona mesmo?</span></div>
+      <div class="c-msg"><span class="c-msg-origin">Site</span><span class="c-msg-text">Qual o prazo de entrega?</span></div>
+      <div class="c-msg"><span class="c-msg-origin">Google</span><span class="c-msg-text">Posso falar com alguém?</span></div>
+    </div>
+    <p class="curiosity-highlight">⚡ Agora imagine um sistema respondendo tudo isso automaticamente.</p>
+
+    <!-- VSL -->
+    <div class="vsl-section">
+      <div class="vsl-title">⚡ Veja em menos de 4 minutos como o sistema é poderoso atendendo clientes automaticamente.</div>
+      <div class="vsl-wrap" id="vsl-container">
+        <iframe src="https://www.youtube.com/embed/u6p9LwvLHgQ?rel=0&modestbranding=1" title="Link Mágico — Demonstração" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy" id="vsl-iframe"></iframe>
+      </div>
+      <p style="text-align:center;margin-top:8px"><a href="https://youtu.be/u6p9LwvLHgQ" target="_blank" style="color:var(--purple-light);font-size:.82rem;text-decoration:underline">Não consegue ver? Clique aqui para assistir no YouTube →</a></p>
+      <p class="vsl-credibility">Sistema em produção utilizado por empreendedores reais para automatizar atendimento de clientes.</p>
+    </div>
+
+    <div class="curiosity-cta">
+      <button class="btn-primary" onclick="document.getElementById('demo-zone').scrollIntoView({behavior:'smooth'})">VER ISSO FUNCIONANDO AGORA →</button>
+    </div>
+  </div>
+</div>
+
+<br>
+
+<!-- SOCIAL PROOF BAR -->
+<div class="social-proof-bar">
+  <div class="sp-item"><span class="sp-dot"></span> <strong id="sp-counter">2.847</strong> atendimentos hoje</div>
+  <div class="sp-item">👁 <strong id="sp-visitors">23</strong> pessoas testando agora</div>
+</div>
+
+<hr class="divider">
+
+<!-- DEMO ZONE -->
+<section id="demo-zone">
+  <div class="section-title">Teste o sistema agora</div>
+  <div class="section-sub">Descreva qualquer negócio e veja o atendimento funcionando em segundos.</div>
+
+  <div class="demo-container">
+
+    <!-- STEP 1: INPUT -->
+    <div id="step-url" class="demo-step active">
+      <div class="step-headline">Qual é o seu negócio? 👇</div>
+      <div class="step-sub">
+        Cole um link, uma rede social ou simplesmente descreva o tipo de negócio.<br>
+        O sistema detecta automaticamente.
+      </div>
+      <div class="input-wrap">
+        <input type="text" id="url-input" placeholder="Ex: Clínica de estética em SP, ou cole um link..." autocomplete="off">
+      </div>
+      <div class="url-error" id="url-error">Por favor, descreva seu negócio ou cole um link.</div>
+      <button class="btn-primary" id="btn-criar" onclick="iniciarDemo()">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
+      <p class="disclaimer">Sem cadastro · 100% gratuito para testar</p>
+
+      <div class="examples-section">
+        <div class="examples-label">Ou teste com um exemplo pronto:</div>
+        <div class="examples-grid">
+          <button class="example-btn" onclick="testarExemplo('curso')"><span class="emoji">📚</span> Curso online</button>
+          <button class="example-btn" onclick="testarExemplo('clinica')"><span class="emoji">🏥</span> Clínica / Consultório</button>
+          <button class="example-btn" onclick="testarExemplo('loja')"><span class="emoji">🛍️</span> Loja virtual</button>
+          <button class="example-btn" onclick="testarExemplo('afiliado')"><span class="emoji">📢</span> Afiliado digital</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: CHOOSE TYPE -->
+    <div id="step-type" class="demo-step">
+      <div class="step-headline">Vamos simular seu atendimento automático 🎯</div>
+      <div class="step-sub">Qual é o seu tipo de negócio?</div>
+      <div class="type-grid">
+        <button class="type-btn" onclick="escolherTipo('infoproduto')"><span class="t-icon">📚</span><span class="t-label">Curso / Infoproduto</span></button>
+        <button class="type-btn" onclick="escolherTipo('negocio_local')"><span class="t-icon">🏥</span><span class="t-label">Negócio Local</span></button>
+        <button class="type-btn" onclick="escolherTipo('ecommerce')"><span class="t-icon">🛍️</span><span class="t-label">E-commerce</span></button>
+        <button class="type-btn" onclick="escolherTipo('marketing')"><span class="t-icon">📢</span><span class="t-label">Afiliado</span></button>
+        <button class="type-btn" onclick="escolherTipo('servicos')"><span class="t-icon">💼</span><span class="t-label">Prestação de Serviço</span></button>
+        <button class="type-btn" onclick="escolherTipo('emagrecimento')"><span class="t-icon">💪</span><span class="t-label">Saúde / Fitness</span></button>
+      </div>
+    </div>
+
+    <!-- STEP 3: BUSINESS NAME -->
+    <div id="step-name" class="demo-step">
+      <div class="step-confirm" id="type-confirm">✅ Tipo selecionado</div>
+      <div class="step-headline">Qual é o nome do seu negócio? ✍️</div>
+      <div class="step-sub">Pode ser o nome da sua empresa, marca, curso ou perfil.</div>
+      <div class="input-wrap">
+        <input type="text" id="name-input" placeholder="Ex: Clínica Bella Estética" autocomplete="off" maxlength="50">
+      </div>
+      <button class="btn-primary" onclick="confirmarNome()">CONTINUAR →</button>
+      <p class="disclaimer">Isso personaliza a demonstração para você</p>
+    </div>
+
+    <!-- STEP 4: LOADING -->
+    <div id="step-loading" class="demo-step">
+      <div class="loading-icon">⚙️</div>
+      <h2>Preparando seu atendimento...</h2>
+      <p id="loading-msg">Iniciando...</p>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+      <p id="progress-pct">0%</p>
+    </div>
+
+    <!-- STEP 5: CHAT -->
+    <div id="step-chat" class="demo-step">
+      <div class="chat-header">
+        <div class="chat-avatar">🤖</div>
+        <div>
+          <div class="chat-name" id="chat-name">Atendimento Automático</div>
+          <div class="chat-status">Online</div>
+        </div>
+      </div>
+
+      <div class="timer-bar">
+        ⚡ Demonstração ativa por <span id="session-timer">05:00</span>
+      </div>
+
+      <div class="messages-wrap" id="messages-wrap"></div>
+
+      <div class="client-counter">
+        Clientes atendidos nesta demonstração: <strong id="client-count">0</strong>
+      </div>
+
+      <!-- WOW MOMENT -->
+      <div class="wow-box" id="wow-box" style="display:none">
+        <div class="wow-stat">⚡ <span id="wow-count">5</span> clientes atendidos</div>
+        <div class="wow-text">Seu atendimento automático respondeu todas as perguntas sem intervenção humana.</div>
+        <div class="wow-cta" id="wow-name-cta">Imagine isso respondendo todos os visitantes do seu negócio.</div>
+      </div>
+
+      <!-- INSTAGRAM SIM -->
+      <div class="ig-sim-box" id="ig-sim-box" style="display:none">
+        <p>📸 Quer ver como ficaria no seu Instagram?</p>
+        <button class="btn-ig" onclick="simularInstagram()">Simular no meu Instagram →</button>
+      </div>
+
+      <button class="btn-outline btn-restart" onclick="reiniciarDemo()">🔄 Testar outro negócio</button>
+
+      <!-- OFFER -->
+      <div id="offer-section">
+        <div class="offer-label">✅ Sistema configurado com sucesso</div>
+        <div class="offer-title">Ative seu atendimento automático</div>
+        <div class="offer-price">R$97<span style="font-size:1.1rem;color:var(--text-muted)">/ano</span></div>
+        <div class="offer-price-sub">Menos de R$8/mês · Cancele quando quiser</div>
+        <ul class="offer-perks">
+          <li>Sistema treinado nas informações do seu negócio</li>
+          <li>Atendimento 24h por dia, 7 dias por semana</li>
+          <li>Captura automática de contatos</li>
+          <li>Funciona em site, WhatsApp e Instagram</li>
+          <li>Painel de acompanhamento completo</li>
+        </ul>
+        <button class="btn-primary btn-green" onclick="irParaCheckout()">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
+        <p class="disclaimer">🛡️ Garantia de 7 dias · Sem riscos</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SUPPORT CHAT BLOCK -->
+<section class="section" style="padding-top:50px;padding-bottom:50px">
+  <div class="support-block">
+    <h3>💬 Ainda tem dúvidas?</h3>
+    <p>Fale com nosso atendimento agora e veja como configurar o sistema para seu negócio.</p>
+    <a href="https://vertical-ai-dktu.onrender.com/l/2Rf5vf" target="_blank" class="btn-chat">ABRIR CHAT →</a>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- WHERE IT WORKS -->
+<section class="section">
+  <div class="section-title">Onde o sistema pode responder clientes</div>
+  <div class="section-sub">O Link Mágico centraliza o atendimento automático em qualquer lugar onde clientes façam perguntas.</div>
+  <div class="channels-grid">
+    <div class="channel-card"><div class="channel-icon">📸</div><div class="channel-name">Instagram</div></div>
+    <div class="channel-card"><div class="channel-icon">💬</div><div class="channel-name">WhatsApp</div></div>
+    <div class="channel-card"><div class="channel-icon">🌐</div><div class="channel-name">Sites</div></div>
+    <div class="channel-card"><div class="channel-icon">🛒</div><div class="channel-name">Páginas de Vendas</div></div>
+    <div class="channel-card"><div class="channel-icon">🔗</div><div class="channel-name">Links de Afiliado</div></div>
+    <div class="channel-card"><div class="channel-icon">🔍</div><div class="channel-name">Google</div></div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- HOW IT LEARNS -->
+<section class="section">
+  <div class="section-title">Como o sistema aprende sobre seu negócio</div>
+  <div class="section-sub">Você pode ensinar o atendimento de várias formas — sem precisar de código.</div>
+  <div class="edu-block">
+    <ul class="edu-list">
+      <li><span class="icon">1️⃣</span> O sistema pode analisar os links do seu negócio  — página de vendas, site ou redes sociais</li>
+      <li><span class="icon">2️⃣</span> Você pode adicionar instruções personalizadas — como informações do produto, políticas de entrega e diferenciais</li>
+      <li><span class="icon">3️⃣</span> Você pode cadastrar perguntas frequentes — com as respostas que quiser para cada situação</li>
+    </ul>
+    <div class="edu-tools">
+      <span class="edu-tool">✓ Instruções personalizadas</span>
+      <span class="edu-tool">✓ FAQs</span>
+      <span class="edu-tool">✓ Análise de links</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- HONESTY -->
+<section class="section" style="padding-top:50px;padding-bottom:50px">
+  <div class="honesty-box">
+    <p>Esta é uma <strong>demonstração simulada</strong> para mostrar como o sistema funciona na prática. Após ativar, você poderá treinar o atendimento com <strong>informações reais do seu negócio</strong>.</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SOCIAL PROOF -->
+<section class="section">
+  <div class="section-title">Quem já utiliza</div>
+  <div class="section-sub">Sistema em produção utilizado por empreendedores reais para automatizar o atendimento de clientes.</div>
+  <div class="proof-list">
+    <div class="proof-item">Afiliados digitais</div>
+    <div class="proof-item">Infoprodutores</div>
+    <div class="proof-item">Negócios locais (clínicas, salões, estéticas)</div>
+    <div class="proof-item">Pequenos e-commerces</div>
+    <div class="proof-item">Consultores e prestadores de serviço</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- FAQ -->
+<section class="section">
+  <div class="section-title">Perguntas frequentes</div>
+  <div class="section-sub">Tudo que você precisa saber antes de ativar.</div>
+  <div class="faq-list">
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">O sistema realmente lê minha página?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim. O Link Mágico extrai automaticamente título, descrição, benefícios e informações do seu produto. Você também pode complementar manualmente com instruções personalizadas e FAQs.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Preciso instalar algum código?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Não. Após a ativação, você recebe um link único que pode compartilhar em qualquer lugar: WhatsApp, Instagram, email ou direto na sua página.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Funciona para qualquer tipo de negócio?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim. Cursos, mentorias, produtos físicos, serviços, consultorias, negócios locais — o sistema se adapta automaticamente ao seu nicho.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Posso cancelar a qualquer momento?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim, sem multas ou complicações. E você tem 7 dias de garantia: se não gostar, devolvemos 100% do seu dinheiro.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">A demonstração é igual ao produto real?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>A demonstração é uma simulação para que você veja o conceito funcionando. No produto real, o sistema é treinado com as informações específicas do seu negócio, oferecendo respostas muito mais precisas e personalizadas.</p></div></div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- FOOTER CTA -->
+<div class="footer-cta">
+  <h2>Imagine esse sistema <span style="background:linear-gradient(135deg,var(--purple-light),var(--green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent">respondendo todos os visitantes</span> do seu negócio automaticamente.</h2>
+  <p>Enquanto você dorme, viaja ou trabalha em outras coisas — seus clientes são atendidos.</p>
+  <button class="btn-primary btn-green" onclick="irParaCheckout()" style="max-width:440px;margin:0 auto 10px;display:block">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
+  <p class="disclaimer">🛡️ Garantia de 7 dias · Pagamento 100% seguro</p>
+</div>
+
+<footer>
+  <p>O Link Mágico é uma plataforma em produção utilizada por empreendedores para automatizar o atendimento de clientes.</p>
+  <br>
+  <p>© 2025 Link Mágico</p>
+</footer>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>

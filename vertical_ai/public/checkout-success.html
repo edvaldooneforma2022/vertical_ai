@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upgrade Concluído! — LinkMágico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0b1a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .bg-glow {
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 50% 40%, rgba(16,185,129,0.15) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .card {
+            background: rgba(30,27,46,0.9);
+            border: 1px solid rgba(16,185,129,0.2);
+            border-radius: 24px;
+            padding: 48px 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 20px 60px rgba(16,185,129,0.1);
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #059669, #10b981);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 2.5rem;
+            animation: bounce 0.6s ease;
+        }
+        @keyframes bounce {
+            0% { transform: scale(0); }
+            60% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p { color: #94a3b8; font-size: 1rem; line-height: 1.6; margin-bottom: 8px; }
+        .plan-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin: 16px 0;
+        }
+        .cta-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            padding: 14px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: 24px;
+            transition: box-shadow 0.3s;
+        }
+        .cta-btn:hover {
+            box-shadow: 0 8px 30px rgba(99,102,241,0.4);
+        }
+        .confetti {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <canvas class="confetti" id="confetti"></canvas>
+
+    <div class="card">
+        <div class="success-icon">🎉</div>
+        <h1>Upgrade concluído!</h1>
+        <p>Seu plano foi atualizado com sucesso.</p>
+        <div class="plan-badge" id="planBadge">Carregando...</div>
+        <p>Todas as novas funcionalidades já estão disponíveis no seu painel.</p>
+        <a href="/app" class="cta-btn">🚀 Acessar meu painel</a>
+    </div>
+
+    <script>
+        // Confetti animation
+        (function() {
+            const canvas = document.getElementById('confetti');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const pieces = [];
+            const colors = ['#6366f1','#8b5cf6','#10b981','#f59e0b','#ec4899','#3b82f6'];
+            for (let i = 0; i < 120; i++) {
+                pieces.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    w: Math.random() * 8 + 4,
+                    h: Math.random() * 4 + 2,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    vy: Math.random() * 3 + 2,
+                    vx: Math.random() * 2 - 1,
+                    rot: Math.random() * 360,
+                    vr: Math.random() * 10 - 5
+                });
+            }
+            let frame = 0;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                pieces.forEach(p => {
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot * Math.PI / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = Math.max(0, 1 - frame / 150);
+                    ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+                    ctx.restore();
+                    p.y += p.vy;
+                    p.x += p.vx;
+                    p.rot += p.vr;
+                });
+                frame++;
+                if (frame < 180) requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+        // Show plan name
+        const params = new URLSearchParams(window.location.search);
+        const planNames = { starter: 'Starter — R$29/mês', pro: 'Pro — R$69/mês', business: 'Business — R$97/mês' };
+        const planId = params.get('plan');
+        document.getElementById('planBadge').textContent = planNames[planId] || 'Plano atualizado';
+    </script>
+</body>
+</html>

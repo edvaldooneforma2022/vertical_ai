@@ -1,0 +1,294 @@
+    <div id="toastContainer" class="toast-container">
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">
+          <div class="logo-text">
+          <div class="status-indicator">
+          <div id="lgpdBadge" class="lgpd-badge">
+    <main class="main-container">
+      <div class="control-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+        <div id="successAlert" class="success-alert">
+        <div id="onboardingCriticalWarning">
+        <div class="form-section">
+          <div class="form-group">
+            <input id="robotName" class="form-input">
+          <div class="form-group">
+            <input id="salesUrl" class="form-input">
+            <button id="toggleAdvancedBtn">
+          <div id="advancedOptions">
+            <div class="form-group">
+              <div id="salesModeGroup" class="form-group">
+                <div id="salesModeButtons">
+                  <button id="salesModeAuto">
+                  <button id="salesModeManual">
+                  <button id="salesModeOff">
+                <div id="salesPresetGrid">
+                    <button class="preset-btn">
+                    <button class="preset-btn">
+                    <button class="preset-btn">
+                    <button class="preset-btn">
+                    <button class="preset-btn">
+                    <button class="preset-btn">
+                <input id="selectedSalesMode">
+                <input id="selectedSalesPreset">
+              <div id="salesModeBadge">
+            <div class="form-group">
+                <input id="apiKeyInput" class="form-input">
+                <button id="toggleApiKeyBtn">
+          <button id="activateChatbotBtn" class="btn btn-primary">
+        <div id="chatbotLinkSection" class="chatbot-link-section">
+          <div class="chatbot-link-title">
+          <div class="chatbot-link-url">
+            <button id="copyChatbotLinkBtn" class="copy-link-btn">
+          <div class="extracted-data-section">
+            <div class="extracted-data-title">
+            <div id="extractedDataContent" class="extracted-data-content">
+          <div id="v113CheckoutSection" class="v113-checkout-section">
+            <div id="v113CheckoutStatus" class="v113-checkout-status">
+            <div class="v113-checkout-input-row">
+              <input id="v113CheckoutUrl">
+              <button id="v113SaveCheckoutBtn">
+        <div id="waChannelSection">
+            <button id="waChannelConnectBtn">
+        <div class="social-grid">
+          <button id="shareWhatsApp" class="social-btn whatsapp">
+          <button id="shareInstagram" class="social-btn instagram">
+          <button id="shareFacebook" class="social-btn facebook">
+          <button id="shareYouTube" class="social-btn youtube">
+          <button id="shareTikTok" class="social-btn tiktok">
+          <button id="shareTwitter" class="social-btn twitter">
+          <button id="shareKwai" class="social-btn kwai">
+          <button id="shareLinkedIn" class="social-btn linkedin">
+          <button id="shareTelegram" class="social-btn telegram">
+          <button id="shareMessenger" class="social-btn messenger">
+          <button id="promptBtn" class="social-btn prompt">
+          <button id="analyticsBtn" class="social-btn analytics">
+      <div class="dashboard">
+        <div class="dashboard-header">
+          <h2 class="dashboard-title">
+          <div id="onboardingStatusBar">
+        <div id="onboardingChecklist">
+            <div id="obProgressBar">
+            <div id="obStep1" class="ob-step">
+            <div id="obStep2" class="ob-step">
+            <div id="obStep3" class="ob-step">
+          <div id="obCheckin">
+          <div id="obAchievement">
+          <div id="quickAccessCards">
+        <div id="qsvCard" class="qsv__card">
+          <div class="qsv__header">
+            <button class="qsv__close">
+          <div class="qsv__title">
+          <div class="qsv__video-wrap">
+            <div class="qsv__footer">
+          <div id="emptyStateCard">
+          <div id="analyticsSection">
+            <div class="analytics-grid">
+              <div class="analytics-card">
+                <div class="card-header">
+                  <div class="card-icon">
+                <div id="activeChatbots" class="card-value">
+                <div class="card-change">
+              <div class="analytics-card">
+                <div class="card-header">
+                  <div class="card-icon">
+                <div id="conversationsToday" class="card-value">
+                <div class="card-change">
+              <div class="analytics-card">
+                <div class="card-header">
+                  <div class="card-icon">
+                <div id="totalLeads" class="card-value">
+                <div class="card-change">
+              <div class="analytics-card">
+                <div class="card-header">
+                  <div class="card-icon">
+                <div id="conversionRate" class="card-value">
+                <div class="card-change">
+          <div class="chat-preview">
+            <div class="chat-header">
+          <div class="widget-generator">
+            <div class="code-block">
+              <button id="copyWidgetCodeBtn" class="copy-btn">
+      <div id="diagnosticModal" class="consent-modal">
+        <div class="consent-backdrop">
+        <div class="consent-content">
+          <div class="consent-header">
+            <button id="closeDiagModal" class="close-btn">
+          <div class="consent-body">
+            <div class="diag-score-container">
+              <div id="diagScore" class="diag-score-circle">
+              <div id="diagMode" class="diag-mode-badge">
+            <div id="diagIssuesSection">
+              <div class="diag-section-title">
+            <div id="diagWarningsSection">
+              <div class="diag-section-title">
+            <div class="diag-footer">
+              <button id="diagContinueBtn" class="btn-diag-primary">
+              <button id="diagAdjustBtn" class="btn-diag-secondary">
+      <div id="consentModal" class="consent-modal">
+        <div class="consent-backdrop">
+        <div class="consent-content">
+          <div class="consent-header">
+            <button id="closeConsentModal" class="close-btn">
+          <div class="consent-body">
+            <div class="consent-warning">
+            <div class="consent-details">
+              <div class="legal-basis">
+            <div class="url-verification">
+                <input id="urlResponsibilityCheckbox">
+            <div class="consent-footer">
+              <button id="rejectConsentBtn" class="btn-secondary">
+              <button id="acceptConsentBtn" class="btn-primary-consent">
+            <div class="consent-links">
+          <div id="lmGreeting" class="lm-greeting-tooltip">
+          <div id="lmBubble" class="lm-bubble">
+          <div id="lmChatWindow" class="lm-chat-window">
+            <div class="lm-chat-header">
+              <div class="lm-chat-header-left">
+                <div class="lm-chat-avatar">
+                <div class="lm-chat-header-info">
+              <button id="lmCloseBtn" class="lm-header-btn">
+            <div id="lmMessages" class="lm-chat-messages">
+            <div id="lmTyping" class="lm-typing">
+            <div class="lm-chat-input-area">
+              <input id="lmInput" class="lm-chat-input">
+              <button id="lmSendBtn" class="lm-send-btn">
+            <div class="lm-powered-badge">
+          <div class="lm-cal-loading">
+            <div class="lm-cal-spinner">
+          <div class="lm-cal-error">
+          <div class="lm-cal-error">
+          <div class="lm-cal-error">
+          <div class="lm-cal-error">
+          <div class="lm-cal-error">
+          <div class="lm-cal-day">
+            <div class="lm-cal-day-header">
+            <div class="lm-cal-slots">
+              <button class="lm-cal-slot">
+          <button id="lmCalCf" class="lm-cal-confirm">
+          <div class="lm-cal-success">
+          <input id="lmLeadName">
+          <input id="lmLeadEmail">
+          <input id="lmLeadPhone">
+          <button id="lmLeadSubmit">
+          <div id="newSystemsPanel">
+              <div class="new-tabs">
+                <button class="new-tab active">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+                <button class="new-tab">
+              <div id="tab-analytics" class="new-tab-content">
+                    <button class="analytics-period-btn">
+                    <button class="analytics-period-btn active">
+                    <button class="analytics-period-btn">
+                      <div id="analytics-messages">
+                      <div id="analytics-conversations">
+                      <div id="analytics-leads">
+                      <div id="analytics-success">
+              <div id="tab-webhooks" class="new-tab-content">
+                      <div id="webhooks-total-count">
+                      <div id="webhooks-events-count">
+                      <div id="webhooks-status-badge">
+                  <div id="webhook-add-form">
+                    <input id="webhook-url">
+                    <input id="webhook-secret">
+                  <div id="webhooks-list">
+                  <button id="webhook-add-btn">
+              <div id="tab-knowledge" class="new-tab-content">
+                    <input id="faq-question">
+                  <div id="faqs-list">
+                    <div id="faqs-container">
+              <div id="tab-billing" class="new-tab-content">
+                  <div id="billing-limits-container">
+                        <div id="billing-plan-name">
+                        <div id="billing-messages-usage">
+                        <div id="billing-extractions-usage">
+                        <div id="billing-chatbots-limit">
+                  <div id="billing-upgrade-banner">
+              <div id="tab-llm" class="new-tab-content">
+                      <div id="llm-cache-hits">
+                      <div id="llm-savings">
+                      <div id="llm-cache-rate">
+              <div id="tab-system" class="new-tab-content">
+                  <div id="system-status">
+              <div id="tab-whatsapp" class="new-tab-content">
+                  <div id="waSaasSection">
+                    <div id="waSaasStatusCard">
+                      <div id="waSaasStateDisconnected">
+                        <button id="waSaasConnectBtn">
+                      <div id="waSaasStateConnecting">
+                        <div id="waSaasQrContainer">
+                      <div id="waSaasStateConnected">
+                      <div id="waSaasStateLoading">
+                    <button id="waAdvancedToggle">
+                    <div id="waAdvancedContent">
+                          <button id="btn-twilio">
+                          <button id="btn-evolution">
+                      <div id="form-twilio">
+                        <input id="twilio-sid">
+                        <input id="twilio-token">
+                        <input id="twilio-number">
+                        <input id="twilio-notification-phone">
+                      <div id="form-evolution">
+                        <input id="evolution-url">
+                        <input id="evolution-key">
+                        <input id="evolution-instance">
+                        <input id="evolution-notification-phone">
+              <div id="tab-chatgpt" class="new-tab-content">
+                  <div id="chatgpt-current-status">
+                    <div id="chatgpt-settings-status">
+                    <input id="chatgpt-api-key">
+                    <div id="chatgpt-response">
+              <div id="tab-whitelabel" class="new-tab-content">
+                    <input id="wl-company">
+                    <input id="wl-logo">
+                        <input id="wl-primary">
+                        <input id="wl-secondary">
+                    <div id="wl-powered-by-container">
+                        <input id="wl-show-powered-by">
+                    <button id="wl-save-btn">
+                    <div id="wl-status">
+                    <div id="wl-preview">
+                        <div id="wl-preview-bubble">
+                        <div id="wl-preview-header">
+                          <div id="wl-preview-name">
+              <div id="tab-leads" class="new-tab-content">
+                      <div id="leads-total">
+                      <div id="leads-hot">
+                      <div id="leads-warm">
+                      <div id="leads-cold">
+                    <div id="leads-list">
+                    <div id="backups-list">
+              <div id="tab-widget" class="new-tab-content">
+                    <input id="widget-color">
+                    <input id="widget-greeting">
+                    <div id="widget-code-container">
+              <div id="tab-assistentes" class="new-tab-content">
+                  <div id="assistants-list">
+              <div id="tab-scheduling" class="new-tab-content">
+                  <div id="sched-days-grid">
+                  <div id="sched-public-link">
+                      <input id="sched-public-url">
+                    <input id="sched-block-date">
+                    <input id="sched-block-reason">
+                  <div id="sched-blocked-list">
+          <button id="openNewSystemsBtn">
+                  <input class="sched-day-toggle">
+                <input class="sched-start">
+                <input class="sched-end">
+            <div id="obFaqSuggestion${i}">
+              <input id="obFaqQ${i}">
+          <div class="privacy-footer">

@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planos e Preços — LinkMágico</title>
+    <meta name="description" content="Escolha o plano ideal para seu negócio. Do gratuito ao Business, tenha um vendedor IA 24/7.">
+    <link rel="canonical" href="https://linkmagico.app.br/pricing.html">
+    <!-- SAFE PATCH: OG Tags — Apenas metadados, zero impacto em funcionalidade -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Planos e Preços — LinkMágico">
+    <meta property="og:description" content="Do plano gratuito ao Business. Vendedor automático com IA, CRM integrado, WhatsApp e white-label.">
+    <meta property="og:url" content="https://linkmagico.app.br/pricing.html">
+    <meta property="og:site_name" content="LinkMágico">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:image" content="https://site.linkmagico.app.br/og-linkmagico.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Planos e Preços — LinkMágico">
+    <meta name="twitter:description" content="Vendedor automático com IA a partir de R$ 0. Compare planos e comece agora.">
+    <meta name="twitter:image" content="https://site.linkmagico.app.br/og-linkmagico.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #0f0b1a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background */
+        .bg-glow {
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.12) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.08) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 60px 20px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #a78bfa;
+            margin-bottom: 8px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e2e8f0, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Toggle mensal/anual - futuro */
+
+        /* Plans Grid */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Plan Card */
+        .plan-card {
+            background: rgba(30, 27, 46, 0.85);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(167,139,250,0.3);
+            box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+        }
+
+        .plan-card.popular {
+            border-color: rgba(99,102,241,0.5);
+            background: linear-gradient(180deg, rgba(99,102,241,0.08) 0%, rgba(30,27,46,0.95) 100%);
+        }
+
+        .plan-card.popular::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6366f1, #a78bfa, #6366f1);
+        }
+
+        /* Badge popular */
+        .popular-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .plan-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 8px;
+        }
+
+        .plan-price {
+            margin-bottom: 20px;
+        }
+
+        .plan-price .amount {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #f1f5f9;
+        }
+
+        .plan-price .currency {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            vertical-align: super;
+        }
+
+        .plan-price .period {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .plan-price .free-label {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #10b981;
+        }
+
+        /* Features list */
+        .features-list {
+            list-style: none;
+            flex: 1;
+            margin-bottom: 24px;
+        }
+
+        .features-list li {
+            padding: 8px 0;
+            font-size: 0.88rem;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .features-list li .icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        .features-list li .icon.check {
+            background: rgba(16,185,129,0.15);
+            color: #10b981;
+        }
+
+        .features-list li .icon.cross {
+            background: rgba(239,68,68,0.1);
+            color: #ef4444;
+        }
+
+        .features-list li.highlight {
+            color: #a78bfa;
+            font-weight: 600;
+        }
+
+        /* CTA Button */
+        .plan-cta {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .plan-cta.primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+        }
+
+        .plan-cta.primary:hover {
+            box-shadow: 0 8px 30px rgba(99,102,241,0.5);
+            transform: translateY(-1px);
+        }
+
+        .plan-cta.secondary {
+            background: rgba(255,255,255,0.05);
+            color: #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .plan-cta.secondary:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(167,139,250,0.3);
+        }
+
+        .plan-cta.green {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #fff;
+        }
+
+        .plan-cta.green:hover {
+            box-shadow: 0 8px 30px rgba(16,185,129,0.4);
+        }
+
+        .plan-cta:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Comparison table */
+        .comparison-section {
+            max-width: 1200px;
+            margin: 60px auto 40px;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .comparison-section h2 {
+            text-align: center;
+            font-size: 1.5rem;
+            color: #f1f5f9;
+            margin-bottom: 30px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(30,27,46,0.7);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 14px 16px;
+            text-align: center;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .comparison-table th {
+            background: rgba(99,102,241,0.1);
+            color: #a78bfa;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .comparison-table td:first-child {
+            text-align: left;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        .comparison-table td {
+            color: #94a3b8;
+        }
+
+        .comparison-table .check-mark { color: #10b981; }
+        .comparison-table .cross-mark { color: #475569; }
+
+        /* FAQ */
+        .faq-section {
+            max-width: 700px;
+            margin: 60px auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .faq-section h2 {
+            text-align: center;
+            font-size: 1.5rem;
+            color: #f1f5f9;
+            margin-bottom: 30px;
+        }
+
+        .faq-item {
+            background: rgba(30,27,46,0.6);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            padding: 16px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-question::after {
+            content: '+';
+            font-size: 1.2rem;
+            color: #6366f1;
+            transition: transform 0.3s;
+        }
+
+        .faq-item.open .faq-question::after {
+            transform: rotate(45deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .faq-answer p {
+            padding: 0 20px 16px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .faq-item.open .faq-answer {
+            max-height: 200px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #475569;
+            font-size: 0.8rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e1b2e;
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #fca5a5;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            z-index: 100;
+            transition: transform 0.4s;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Responsivo */
+        @media (max-width: 1024px) {
+            .plans-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 640px) {
+            .plans-grid { grid-template-columns: 1fr; max-width: 400px; }
+            .header h1 { font-size: 1.8rem; }
+            .comparison-table { font-size: 0.75rem; }
+            .comparison-table th, .comparison-table td { padding: 10px 8px; }
+        }
+
+        /* SAFE PATCH — Modal API Key */
+        .apikey-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .apikey-modal-overlay.show { display: flex; }
+        .apikey-modal {
+            background: #12121a;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+        }
+        .apikey-modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #f0f0f5; }
+        .apikey-modal p { font-size: 0.85rem; color: #8888a0; margin-bottom: 20px; line-height: 1.5; }
+        .apikey-modal input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid rgba(124,58,237,0.3);
+            border-radius: 12px;
+            background: #1a1a2e;
+            color: #34d399;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .apikey-modal input:focus { outline: none; border-color: #7c3aed; }
+        .apikey-modal input::placeholder { color: #555; font-weight: 400; font-family: inherit; }
+        .apikey-modal .modal-btns { display: flex; gap: 10px; }
+        .apikey-modal .modal-btns button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .apikey-modal .btn-confirm {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: white;
+        }
+        .apikey-modal .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,58,237,0.3); }
+        .apikey-modal .btn-cancel {
+            background: rgba(255,255,255,0.06);
+            color: #8888a0;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .apikey-modal .btn-cancel:hover { background: rgba(255,255,255,0.1); }
+        .apikey-modal .modal-signup { margin-top: 16px; font-size: 0.82rem; color: #8888a0; }
+        .apikey-modal .modal-signup a { color: #a78bfa; text-decoration: none; font-weight: 600; }
+        .apikey-modal .modal-signup a:hover { text-decoration: underline; }
+
+        /* SAFE PATCH — Trial Banner */
+        .trial-banner {
+            display: none;
+            margin-top: 10px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.08));
+            border: 1px solid rgba(251,191,36,0.25);
+            border-radius: 12px;
+            text-align: center;
+        }
+        .trial-banner.show { display: block; }
+        .trial-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .trial-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,158,11,0.3); }
+        .trial-info { font-size: 0.72rem; color: #f59e0b; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+
+    <header class="header">
+        <div class="logo">⚡ LinkMágico</div>
+        <h1>Escolha seu plano</h1>
+        <p>Do gratuito ao Business. Tenha um vendedor IA que trabalha 24/7 para você.</p>
+    </header>
+
+    <!-- Plans Grid -->
+    <div class="plans-grid">
+        <!-- FREE -->
+        <div class="plan-card">
+            <div class="plan-name">Free</div>
+            <div class="plan-price">
+                <span class="free-label">Grátis</span>
+                <span class="period">para sempre</span>
+            </div>
+            <ul class="features-list">
+                <li><span class="icon check">✓</span> 1 chatbot</li>
+                <li><span class="icon check">✓</span> 500 mensagens/mês</li>
+                <li><span class="icon check">✓</span> 3 extrações</li>
+                <li><span class="icon check">✓</span> Link compartilhável</li>
+                <li><span class="icon check">✓</span> Widget para site</li>
+                <li><span class="icon cross">✗</span> WhatsApp</li>
+                <li><span class="icon cross">✗</span> Remover badge</li>
+            </ul>
+            <a href="/signup.html" class="plan-cta green">Começar Grátis</a>
+        </div>
+
+        <!-- STARTER -->
+        <div class="plan-card">
+            <div class="plan-name">Starter</div>
+            <div class="plan-price">
+                <span class="currency">R$</span><span class="amount">29</span>
+                <span class="period">/mês</span>
+            </div>
+            <ul class="features-list">
+                <li><span class="icon check">✓</span> 3 chatbots</li>
+                <li><span class="icon check">✓</span> 1.000 mensagens/mês</li>
+                <li><span class="icon check">✓</span> 50 extrações</li>
+                <li><span class="icon check">✓</span> API Access</li>
+                <li><span class="icon check">✓</span> Webhooks (5)</li>
+                <li><span class="icon cross">✗</span> WhatsApp</li>
+                <li><span class="icon cross">✗</span> Remover badge</li>
+            </ul>
+            <button class="plan-cta secondary" onclick="subscribe('starter')" id="btn-starter">Assinar Starter</button>
+        </div>
+
+        <!-- PRO (Popular) -->
+        <div class="plan-card popular">
+            <span class="popular-badge">⭐ Mais Popular</span>
+            <div class="plan-name">Pro</div>
+            <div class="plan-price">
+                <span class="currency">R$</span><span class="amount">69</span>
+                <span class="period">/mês</span>
+            </div>
+            <ul class="features-list">
+                <li><span class="icon check">✓</span> 10 chatbots</li>
+                <li><span class="icon check">✓</span> 5.000 mensagens/mês</li>
+                <li><span class="icon check">✓</span> 200 extrações</li>
+                <li class="highlight"><span class="icon check">✓</span> WhatsApp ✅</li>
+                <li><span class="icon check">✓</span> Remover badge</li>
+                <li><span class="icon check">✓</span> Analytics avançado</li>
+                <li><span class="icon check">✓</span> Suporte prioritário</li>
+            </ul>
+            <button class="plan-cta primary" onclick="subscribe('pro')" id="btn-pro">Assinar Pro</button>
+            <div class="trial-banner" id="trialBanner">
+                <button class="trial-btn" onclick="subscribeTrial()" id="btn-trial">🎁 Testar Pro GRÁTIS por 7 dias</button>
+                <div class="trial-info">Sem cobrança nos primeiros 7 dias. Cancele quando quiser.</div>
+            </div>
+        </div>
+
+        <!-- BUSINESS -->
+        <div class="plan-card">
+            <div class="plan-name">Business</div>
+            <div class="plan-price">
+                <span class="currency">R$</span><span class="amount">97</span>
+                <span class="period">/mês</span>
+            </div>
+            <ul class="features-list">
+                <li><span class="icon check">✓</span> Chatbots ilimitados</li>
+                <li><span class="icon check">✓</span> Mensagens ilimitadas</li>
+                <li><span class="icon check">✓</span> Extrações ilimitadas</li>
+                <li class="highlight"><span class="icon check">✓</span> WhatsApp ✅</li>
+                <li><span class="icon check">✓</span> WhiteLabel completo</li>
+                <li><span class="icon check">✓</span> SLA dedicado</li>
+                <li><span class="icon check">✓</span> Suporte dedicado</li>
+            </ul>
+            <button class="plan-cta secondary" onclick="subscribe('business')" id="btn-business">Assinar Business</button>
+        </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <section class="comparison-section">
+        <h2>Comparação detalhada</h2>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Free</th>
+                    <th>Starter</th>
+                    <th>Pro</th>
+                    <th>Business</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Chatbots</td><td>1</td><td>3</td><td>10</td><td>Ilimitado</td></tr>
+                <tr><td>Mensagens/mês</td><td>500</td><td>1.000</td><td>5.000</td><td>Ilimitado</td></tr>
+                <tr><td>Extrações</td><td>3</td><td>50</td><td>200</td><td>Ilimitado</td></tr>
+                <tr><td>Widget para site</td><td class="check-mark">✓</td><td class="check-mark">✓</td><td class="check-mark">✓</td><td class="check-mark">✓</td></tr>
+                <tr><td>Link compartilhável</td><td class="check-mark">✓</td><td class="check-mark">✓</td><td class="check-mark">✓</td><td class="check-mark">✓</td></tr>
+                <tr><td>API Access</td><td class="cross-mark">✗</td><td class="check-mark">✓</td><td class="check-mark">✓</td><td class="check-mark">✓</td></tr>
+                <tr><td>Webhooks</td><td class="cross-mark">✗</td><td>5</td><td>20</td><td>Ilimitado</td></tr>
+                <tr><td>WhatsApp</td><td class="cross-mark">✗</td><td class="cross-mark">✗</td><td class="check-mark">✓</td><td class="check-mark">✓</td></tr>
+                <tr><td>Remover "Powered by"</td><td class="cross-mark">✗</td><td class="cross-mark">✗</td><td class="check-mark">✓</td><td class="check-mark">✓</td></tr>
+                <tr><td>Analytics avançado</td><td class="cross-mark">✗</td><td class="cross-mark">✗</td><td class="check-mark">✓</td><td class="check-mark">✓</td></tr>
+                <tr><td>WhiteLabel</td><td class="cross-mark">✗</td><td class="cross-mark">✗</td><td class="cross-mark">✗</td><td class="check-mark">✓</td></tr>
+                <tr><td>Suporte</td><td>Email</td><td>Email</td><td>Prioritário</td><td>Dedicado</td></tr>
+                <tr><td>Retenção analytics</td><td>7 dias</td><td>30 dias</td><td>90 dias</td><td>365 dias</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq-section">
+        <h2>Perguntas frequentes</h2>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Posso trocar de plano a qualquer momento?</div>
+            <div class="faq-answer"><p>Sim! Você pode fazer upgrade ou downgrade quando quiser. O valor é ajustado proporcionalmente.</p></div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Como funciona o plano Free?</div>
+            <div class="faq-answer"><p>O plano Free é 100% gratuito e para sempre. Você pode criar 1 chatbot com até 500 mensagens por mês. Perfeito para testar a plataforma.</p></div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">O pagamento é seguro?</div>
+            <div class="faq-answer"><p>Sim. Processamos pagamentos via Stripe, a mesma plataforma usada por Google, Amazon e milhares de empresas globais. Seus dados estão 100% seguros.</p></div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Posso cancelar quando quiser?</div>
+            <div class="faq-answer"><p>Sim, sem compromisso! Cancele a qualquer momento direto no painel. Seu acesso continua até o fim do período pago.</p></div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">O que acontece se eu ultrapassar os limites?</div>
+            <div class="faq-answer"><p>Você receberá um aviso antes de atingir o limite. Ao atingir, novas mensagens serão pausadas até o próximo ciclo ou até fazer upgrade.</p></div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>© 2026 <a href="/">LinkMágico</a> — Seu Vendedor IA 24/7</p>
+    </footer>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Verificar se usuário está logado (tem API Key na session)
+        function getApiKey() {
+            try {
+                return sessionStorage.getItem('lm_api_key') || localStorage.getItem('lm_api_key') || localStorage.getItem('linkmagico_key') || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // SAFE PATCH — Modal ao invés de prompt()
+        let _pendingPlanId = null;
+
+        function promptApiKey() {
+            return null; // Agora usa modal assíncrono
+        }
+
+        function showApiKeyModal(planId) {
+            _pendingPlanId = planId;
+            document.getElementById('modalApiKeyInput').value = '';
+            document.getElementById('apikeyModal').classList.add('show');
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById('apikeyModal').classList.remove('show');
+            _pendingPlanId = null;
+        }
+
+        function confirmApiKeyModal() {
+            var input = document.getElementById('modalApiKeyInput');
+            var key = input.value.trim();
+            if (!key || (!key.startsWith('LMV7-') && !key.startsWith('lm_'))) {
+                input.style.borderColor = '#ef4444';
+                setTimeout(function() { input.style.borderColor = 'rgba(124,58,237,0.3)'; }, 2000);
+                return;
+            }
+            try {
+                sessionStorage.setItem('lm_api_key', key);
+                localStorage.setItem('lm_api_key', key);
+                localStorage.setItem('linkmagico_key', key);
+            } catch(e) {}
+            closeApiKeyModal();
+            if (_pendingPlanId) {
+                subscribe(_pendingPlanId);
+            }
+        }
+
+        // Enter no modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.getElementById('apikeyModal').classList.contains('show')) {
+                confirmApiKeyModal();
+            }
+            if (e.key === 'Escape') {
+                closeApiKeyModal();
+            }
+        });
+
+        async function subscribe(planId) {
+            let apiKey = getApiKey();
+
+            if (!apiKey) {
+                showApiKeyModal(planId);
+                return;
+            }
+
+            const btn = document.getElementById('btn-' + planId);
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Redirecionando...';
+
+            try {
+                const resp = await fetch('/api/billing/create-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey, planId })
+                });
+
+                const data = await resp.json();
+
+                if (data.success && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    showToast(data.error || 'Erro ao criar sessão de pagamento');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            } catch (err) {
+                showToast('Erro de conexão. Tente novamente.');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // SAFE PATCH — Trial 7 dias
+        async function subscribeTrial() {
+            let apiKey = getApiKey();
+            if (!apiKey) {
+                showApiKeyModal('pro');
+                return;
+            }
+
+            const btn = document.getElementById('btn-trial');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = 'Redirecionando...';
+
+            try {
+                const resp = await fetch('/api/billing/create-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey, planId: 'pro', trial: true })
+                });
+
+                const data = await resp.json();
+
+                if (data.success && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    showToast(data.error || 'Erro ao iniciar trial');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            } catch (err) {
+                showToast('Erro de conexão. Tente novamente.');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // Checar elegibilidade do trial ao carregar
+        async function checkTrialEligibility() {
+            try {
+                var apiKey = getApiKey();
+                if (!apiKey) return; // Sem API key, não mostrar trial
+
+                var resp = await fetch('/api/billing/trial-eligible?apiKey=' + encodeURIComponent(apiKey));
+                var data = await resp.json();
+
+                if (data.success && data.eligible) {
+                    var banner = document.getElementById('trialBanner');
+                    if (banner) banner.classList.add('show');
+                }
+            } catch (e) {
+                // Silencioso — trial é bonus, não obrigatório
+            }
+        }
+        // Executar após carregamento
+        setTimeout(checkTrialEligibility, 1000);
+
+        function toggleFaq(el) {
+            el.parentElement.classList.toggle('open');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        // Se veio com ?cancelled=true, mostrar toast
+        if (new URLSearchParams(window.location.search).get('cancelled') === 'true') {
+            setTimeout(() => showToast('Checkout cancelado. Você pode tentar novamente quando quiser.'), 500);
+        }
+    </script>
+
+<!-- SAFE PATCH — Modal API Key -->
+<div class="apikey-modal-overlay" id="apikeyModal">
+    <div class="apikey-modal">
+        <h3>🔑 Informe sua API Key</h3>
+        <p>Para assinar um plano, insira a API Key que você recebeu no cadastro.</p>
+        <input type="text" id="modalApiKeyInput" placeholder="LMV7-XXXX-XXXX-XXXX" autocomplete="off">
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeApiKeyModal()">Cancelar</button>
+            <button class="btn-confirm" onclick="confirmApiKeyModal()">Continuar</button>
+        </div>
+        <div class="modal-signup">Não tem conta? <a href="/signup.html">Criar conta grátis →</a></div>
+    </div>
+</div>
+</body>
+</html>

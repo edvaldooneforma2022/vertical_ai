@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indique e Ganhe — LinkMágico</title>
+    <meta name="description" content="Indique o LinkMágico e ganhe 20% de comissão recorrente em cada plano pago.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface2: #1a1a2e;
+            --border: rgba(255,255,255,0.06);
+            --text: #f0f0f5;
+            --muted: #8888a0;
+            --purple: #7c3aed;
+            --purple-l: #a78bfa;
+            --green: #10b981;
+            --green-l: #34d399;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --amber-l: #fbbf24;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.10;
+            pointer-events: none;
+        }
+        body::before { width: 500px; height: 500px; background: var(--amber); top: -100px; left: -100px; }
+        body::after { width: 400px; height: 400px; background: var(--purple); bottom: -80px; right: -80px; }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 36px;
+            padding-top: 20px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--text); }
+
+        .page-logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .logo-highlight { background: linear-gradient(135deg, var(--purple), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .page-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .page-header h1 span { background: linear-gradient(135deg, var(--amber-l), var(--amber)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .page-header p {
+            color: var(--muted);
+            font-size: 1rem;
+            max-width: 480px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .commission-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            background: rgba(245,158,11,0.12);
+            border: 1px solid rgba(245,158,11,0.25);
+            color: var(--amber-l);
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin: 16px 0;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 16px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            border-color: rgba(245,158,11,0.2);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .stat-value.green { color: var(--green-l); }
+        .stat-value.purple { color: var(--purple-l); }
+        .stat-value.amber { color: var(--amber-l); }
+        .stat-value.blue { color: #60a5fa; }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        /* Link Card */
+        .link-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .link-card h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .link-card p {
+            color: var(--muted);
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .link-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .link-input {
+            flex: 1;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 2px solid rgba(245,158,11,0.2);
+            background: var(--surface2);
+            color: var(--amber-l);
+            font-family: 'Courier New', monospace;
+            font-size: 0.88rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            outline: none;
+        }
+        .link-input:focus { border-color: var(--amber); }
+
+        .btn-copy {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--amber), #d97706);
+            color: #1a1a2e;
+            font-size: 0.88rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-copy:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,158,11,0.3); }
+
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-share {
+            padding: 10px 20px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-share:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); }
+
+        /* How it Works */
+        .how-it-works {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .how-it-works h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .step {
+            text-align: center;
+            padding: 16px;
+        }
+
+        .step-number {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--amber), #d97706);
+            color: #1a1a2e;
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+
+        .step h3 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .step p {
+            font-size: 0.78rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* Comissões Table */
+        .commissions-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .commissions-card h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .commission-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .commission-table th {
+            text-align: left;
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .commission-table td {
+            padding: 12px;
+            font-size: 0.88rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .commission-table .amount { color: var(--green-l); font-weight: 700; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: var(--muted); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            padding: 14px 28px;
+            border-radius: 12px;
+            background: var(--green);
+            color: white;
+            font-size: 0.88rem;
+            font-weight: 600;
+            z-index: 10000;
+            transition: transform 0.3s;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Not logged in */
+        .login-prompt {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .login-prompt h2 { margin-bottom: 12px; }
+        .login-prompt p { color: var(--muted); margin-bottom: 24px; }
+        .btn-login {
+            display: inline-block;
+            padding: 14px 32px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--purple), #6d28d9);
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,58,237,0.3); }
+
+        @media (max-width: 640px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps { grid-template-columns: 1fr; }
+            .link-input-group { flex-direction: column; }
+            .page-header h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="page-header">
+        <a href="/app" class="back-link">← Voltar ao painel</a>
+        <div class="page-logo">
+            <span>⚡</span>
+            <span>Link<span class="logo-highlight">Mágico</span></span>
+        </div>
+        <h1>Indique e <span>Ganhe</span></h1>
+        <p>Compartilhe seu link e ganhe comissão recorrente em cada plano pago.</p>
+        <div class="commission-badge">💰 20% de comissão recorrente</div>
+    </div>
+
+    <div id="mainContent">
+        <div class="loading">Carregando...</div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+    function getApiKey() {
+        try {
+            // 1. URL param (vindo do painel)
+            var params = new URLSearchParams(window.location.search);
+            var fromUrl = params.get('apiKey');
+            if (fromUrl) {
+                localStorage.setItem('lm_api_key', fromUrl);
+                return fromUrl;
+            }
+            // 2. Storage (todas as chaves possíveis)
+            return sessionStorage.getItem('lm_api_key') || localStorage.getItem('lm_api_key') || localStorage.getItem('linkmagico_key') || localStorage.getItem('linkmagico_api_key') || '';
+        } catch(e) { return ''; }
+    }
+
+    function showToast(msg) {
+        var toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(function() { toast.classList.remove('show'); }, 3000);
+    }
+
+    window.copyLink = function() {
+        var input = document.getElementById('referralInput');
+        if (input) {
+            navigator.clipboard.writeText(input.value).then(function() {
+                showToast('✅ Link copiado!');
+            }).catch(function() {
+                input.select();
+                document.execCommand('copy');
+                showToast('✅ Link copiado!');
+            });
+        }
+    };
+
+    async function loadAffiliate() {
+        var apiKey = getApiKey();
+        var main = document.getElementById('mainContent');
+
+        if (!apiKey) {
+            main.innerHTML = '<div class="login-prompt">' +
+                '<h2>🔐 Faça login primeiro</h2>' +
+                '<p>Você precisa estar logado para acessar seu link de indicação.</p>' +
+                '<a href="/app" class="btn-login">Acessar o Painel</a>' +
+                '</div>';
+            return;
+        }
+
+        try {
+            // Buscar link e stats em paralelo
+            var [linkResp, statsResp] = await Promise.all([
+                fetch('/api/affiliates/my-link?apiKey=' + encodeURIComponent(apiKey)),
+                fetch('/api/affiliates/stats?apiKey=' + encodeURIComponent(apiKey))
+            ]);
+
+            var linkData = await linkResp.json();
+            var statsData = await statsResp.json();
+
+            if (!linkData.success) {
+                // Gerar link via POST
+                linkResp = await fetch('/api/affiliates/my-link?apiKey=' + encodeURIComponent(apiKey));
+                linkData = await linkResp.json();
+            }
+
+            var stats = statsData.stats || {};
+            var commissions = stats.commissions || {};
+
+            var html = '';
+
+            // Stats Grid
+            html += '<div class="stats-grid">';
+            html += '<div class="stat-card"><div class="stat-value purple">' + (stats.referredTotal || 0) + '</div><div class="stat-label">Indicados</div></div>';
+            html += '<div class="stat-card"><div class="stat-value green">' + (stats.referredPaid || 0) + '</div><div class="stat-label">Pagantes</div></div>';
+            html += '<div class="stat-card"><div class="stat-value blue">' + (stats.conversionRate || 0) + '%</div><div class="stat-label">Conversão</div></div>';
+            html += '<div class="stat-card"><div class="stat-value amber">R$' + (commissions.totalBRL || '0.00') + '</div><div class="stat-label">Comissão total</div></div>';
+            html += '</div>';
+
+            // Link Card
+            var referralLink = linkData.referralLink || '';
+            html += '<div class="link-card">';
+            html += '<h2>🔗 Seu Link de Indicação</h2>';
+            html += '<p>Compartilhe este link. Quando alguém se cadastrar e assinar um plano, você ganha ' + (linkData.commissionPercent || 20) + '% de comissão recorrente.</p>';
+            html += '<div class="link-input-group">';
+            html += '<input type="text" class="link-input" id="referralInput" value="' + referralLink + '" readonly>';
+            html += '<button class="btn-copy" onclick="copyLink()">📋 Copiar</button>';
+            html += '</div>';
+            html += '<div class="share-buttons">';
+            if (linkData.shareLinks && linkData.shareLinks.whatsapp) {
+                html += '<a href="' + linkData.shareLinks.whatsapp + '" target="_blank" class="btn-share">📱 Compartilhar no WhatsApp</a>';
+            }
+            html += '<button class="btn-share" onclick="copyLink()">🔗 Copiar Link</button>';
+            html += '</div>';
+            html += '</div>';
+
+            // How it Works
+            html += '<div class="how-it-works">';
+            html += '<h2>Como funciona?</h2>';
+            html += '<div class="steps">';
+            html += '<div class="step"><div class="step-number">1</div><h3>Compartilhe</h3><p>Envie seu link para amigos, colegas e redes sociais.</p></div>';
+            html += '<div class="step"><div class="step-number">2</div><h3>Eles se cadastram</h3><p>O indicado cria uma conta grátis usando seu link.</p></div>';
+            html += '<div class="step"><div class="step-number">3</div><h3>Você ganha</h3><p>Quando o indicado assinar um plano pago, você recebe 20% de comissão.</p></div>';
+            html += '</div>';
+            html += '</div>';
+
+            // Comissão exemplos
+            html += '<div class="commissions-card">';
+            html += '<h2>💰 Simulação de Ganhos</h2>';
+            html += '<table class="commission-table">';
+            html += '<thead><tr><th>Se indicar</th><th>Plano</th><th>Valor</th><th>Sua comissão</th></tr></thead>';
+            html += '<tbody>';
+            html += '<tr><td>5 clientes</td><td>Starter (R$29)</td><td>R$145/mês</td><td class="amount">R$29/mês</td></tr>';
+            html += '<tr><td>5 clientes</td><td>Pro (R$69)</td><td>R$345/mês</td><td class="amount">R$69/mês</td></tr>';
+            html += '<tr><td>10 clientes</td><td>Pro (R$69)</td><td>R$690/mês</td><td class="amount">R$138/mês</td></tr>';
+            html += '<tr><td>20 clientes</td><td>Mix</td><td>~R$1.000/mês</td><td class="amount">~R$200/mês</td></tr>';
+            html += '</tbody>';
+            html += '</table>';
+            html += '</div>';
+
+            main.innerHTML = html;
+
+        } catch (err) {
+            main.innerHTML = '<div class="loading">❌ Erro ao carregar dados. <a href="javascript:location.reload()" style="color:var(--purple-l)">Tentar novamente</a></div>';
+            console.error('Erro:', err);
+        }
+    }
+
+    loadAffiliate();
+})();
+</script>
+
+</body>
+</html>

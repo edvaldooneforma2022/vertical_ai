@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>LinkMágico - Assistente IA</title>
+    <meta name="description" content="Assistente de IA inteligente para vendas" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .product-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .product-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+        }
+
+        .product-price {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            white-space: pre-line;
+            line-height: 1.4;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            border-color: #667eea;
+        }
+
+        .input-group button {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        .input-group button:hover {
+            background: #5a6fd8;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px;
+            font-style: italic;
+            color: #666;
+        }
+
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e9ecef;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 40px;
+            color: #dc3545;
+        }
+
+        .error-message h2 {
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 100vh;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container" id="chatContainer">
+        <div class="loading-container" id="loadingContainer">
+            <div class="loading-spinner"></div>
+            <p>Carregando assistente...</p>
+        </div>
+    </div>
+
+    <script>
+        // Extrair short ID da URL
+        const pathParts = window.location.pathname.split('/');
+        const shortId = pathParts[pathParts.length - 1];
+
+        let pageData = null;
+        let robotName = 'Assistente IA';
+        let salesUrl = '';
+        let customInstructions = '';
+        let apiKey = '';
+        let conversationId = 'chat_' + Date.now();
+
+        // Carregar configuração do assistente
+        async function loadAssistantConfig() {
+            try {
+                const response = await fetch(`/api/assistant-config/${shortId}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    showError('Assistente não encontrado', 'O link que você acessou não é válido ou expirou.');
+                    return;
+                }
+
+                // Aplicar configuração
+                robotName = data.config.robotName || 'Assistente IA';
+                salesUrl = data.config.salesUrl || '';
+                customInstructions = data.config.instructions || '';
+                apiKey = data.config.apiKey || '';
+
+                // Aplicar cor primária se definida
+                if (data.config.primaryColor) {
+                    document.documentElement.style.setProperty('--primary-color', data.config.primaryColor);
+                }
+
+                // Renderizar interface do chat
+                renderChatInterface();
+
+                // Carregar dados da página se URL fornecida
+                if (salesUrl) {
+                    await loadPageData(salesUrl);
+                }
+
+            } catch (error) {
+                console.error('Erro ao carregar configuração:', error);
+                showError('Erro de conexão', 'Não foi possível carregar o assistente. Tente novamente.');
+            }
+        }
+
+        function showError(title, message) {
+            document.getElementById('chatContainer').innerHTML = `
+                <div class="error-message">
+                    <h2>❌ ${title}</h2>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function renderChatInterface() {
+            document.getElementById('chatContainer').innerHTML = `
+                <div class="chat-header">
+                    <h1 id="robotNameDisplay">🤖 ${robotName}</h1>
+                    <p>Assistente Inteligente para Vendas</p>
+                </div>
+                <div class="product-info" id="productInfo" style="display: none;">
+                    <div class="product-title" id="productTitle"></div>
+                    <div class="product-price" id="productPrice"></div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot">
+                        <div class="message-content" id="welcomeMessage">
+                            Olá! 👋 Sou seu assistente especializado. Como posso te ajudar hoje?
+                        </div>
+                    </div>
+                </div>
+                <div class="typing-indicator" id="typingIndicator">
+                    Assistente está digitando...
+                </div>
+                <div class="chat-input">
+                    <div class="input-group">
+                        <input id="messageInput" maxlength="500" placeholder="Digite sua pergunta..." type="text"/>
+                        <button onclick="sendMessage()">Enviar</button>
+                    </div>
+                </div>
+            `;
+
+            // Configurar evento de Enter
+            document.getElementById('messageInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        }
+
+        async function loadPageData(url) {
+            try {
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        instructions: customInstructions
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data && data.data) {
+                    pageData = data.data;
+                } else if (data) {
+                    pageData = data;
+                }
+
+                // Adiciona instruções personalizadas aos dados da página
+                if (pageData && customInstructions) {
+                    pageData.custom_instructions = customInstructions;
+                }
+
+                if (pageData) {
+                    const productInfo = document.getElementById('productInfo');
+                    const productTitle = document.getElementById('productTitle');
+                    const productPrice = document.getElementById('productPrice');
+                    const welcomeMessage = document.getElementById('welcomeMessage');
+
+                    if (productInfo && productTitle && productPrice) {
+                        productTitle.textContent = pageData.title || 'Produto';
+                        productPrice.textContent = pageData.price || 'Consulte o preço';
+                        productInfo.style.display = 'block';
+                    }
+
+                    // Atualizar mensagem de boas-vindas
+                    if (welcomeMessage) {
+                        welcomeMessage.textContent =
+                            `Olá! 👋 Sou o ${robotName}, seu assistente especializado em "${pageData.title || 'nossos produtos'}". Como posso te ajudar hoje?`;
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dados da página:', error);
+            }
+        }
+
+        function addMessage(content, isUser = false) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + (isUser ? 'user' : 'bot');
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showTyping() {
+            document.getElementById('typingIndicator').style.display = 'block';
+        }
+
+        function hideTyping() {
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            addMessage(message, true);
+            input.value = '';
+
+            showTyping();
+
+            try {
+                const response = await fetch('/api/chat-universal', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        pageData: pageData,
+                        robotName: robotName,
+                        conversationId: conversationId,
+                        apiKey: apiKey
+                    })
+                });
+
+                const data = await response.json();
+                hideTyping();
+
+                if (data.success) {
+                    addMessage(data.response);
+                } else {
+                    addMessage('Desculpe, ocorreu um erro. Tente novamente.');
+                }
+            } catch (error) {
+                hideTyping();
+                addMessage('Erro de conexão. Verifique sua internet e tente novamente.');
+            }
+        }
+
+        // Inicializar
+        loadAssistantConfig();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,745 @@
+openapi: 3.0.3
+info:
+  title: LinkMágico API
+  description: |
+    API SuperInteligente para Chatbots e Captura de Leads.
+    
+    ## Autenticação
+    Todas as requisições devem incluir a API Key em uma das seguintes formas:
+    - Header: `X-API-Key: sua_api_key`
+    - Query Parameter: `?apiKey=sua_api_key`
+    - Body: `{ "apiKey": "sua_api_key" }`
+    
+    ## Rate Limiting
+    - Default: 100 requisições/minuto
+    - Chat: 60 mensagens/minuto
+    - Extração: 10 requisições/minuto
+    - Auth: 5 tentativas/15 minutos
+  version: 8.0.0
+  contact:
+    name: LinkMágico Support
+    url: https://linkmagico.app.br
+  license:
+    name: ISC
+    
+servers:
+  - url: https://linkmagico.app.br
+    description: Produção
+  - url: http://localhost:11235
+    description: Desenvolvimento Local
+
+tags:
+  - name: Autenticação
+    description: Endpoints de autenticação e validação de API Key
+  - name: Leads
+    description: Gerenciamento de leads capturados
+  - name: Chat
+    description: Processamento de chat e IA conversacional
+  - name: Agendamentos
+    description: Sistema de agendamentos
+  - name: Backup
+    description: Sistema de backup de dados
+  - name: Extração
+    description: Extração de dados de páginas web
+  - name: Sistema
+    description: Status e informações do sistema
+  - name: Conversões
+    description: Tracking de conversão e métricas de checkout
+
+paths:
+  /validate-api-key:
+    post:
+      tags:
+        - Autenticação
+      summary: Validar API Key
+      description: Valida a API Key e inicia uma sessão autenticada
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - apiKey
+              properties:
+                apiKey:
+                  type: string
+                  example: "LMV7-VX9Z-ZSR1-DONX"
+      responses:
+        '200':
+          description: API Key válida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "API Key validada com sucesso"
+        '401':
+          description: API Key inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/leads:
+    get:
+      tags:
+        - Leads
+      summary: Listar todos os leads
+      description: Retorna lista de todos os leads capturados
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de leads
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  leads:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lead'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/leads/{id}:
+    get:
+      tags:
+        - Leads
+      summary: Obter lead específico
+      description: Retorna detalhes de um lead pelo ID
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lead encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  lead:
+                    $ref: '#/components/schemas/Lead'
+        '404':
+          description: Lead não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/capture-lead:
+    post:
+      tags:
+        - Leads
+      summary: Capturar novo lead
+      description: Captura e armazena um novo lead
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nome
+                - email
+              properties:
+                nome:
+                  type: string
+                  example: "João Silva"
+                email:
+                  type: string
+                  format: email
+                  example: "joao@example.com"
+                telefone:
+                  type: string
+                  example: "+5511999999999"
+                url_origem:
+                  type: string
+                  format: uri
+                  example: "https://exemplo.com"
+                robotName:
+                  type: string
+                  example: "Meu Assistente"
+      responses:
+        '200':
+          description: Lead capturado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  lead:
+                    $ref: '#/components/schemas/Lead'
+
+  /api/process-chat-inteligente:
+    post:
+      tags:
+        - Chat
+      summary: Processar chat com IA superinteligente
+      description: |
+        Processa mensagem do usuário com análise emocional, 
+        detecção de intenções e memória conversacional
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  example: "Quero saber mais sobre seus produtos"
+                pageData:
+                  type: object
+                  description: Dados extraídos da página de origem
+                robotName:
+                  type: string
+                  example: "Meu Assistente"
+                instructions:
+                  type: string
+                  description: Instruções personalizadas para o robô
+                leadId:
+                  type: string
+                  description: ID do lead associado
+      responses:
+        '200':
+          description: Resposta processada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  response:
+                    type: string
+                  inteligenciasDetectadas:
+                    type: object
+                  analiseEmocional:
+                    type: object
+
+  /admin/appointments:
+    get:
+      tags:
+        - Agendamentos
+      summary: Listar agendamentos
+      description: Retorna todos os agendamentos
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de agendamentos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  appointments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Appointment'
+                  total:
+                    type: integer
+
+  /api/appointments:
+    post:
+      tags:
+        - Agendamentos
+      summary: Criar agendamento
+      description: Cria um novo agendamento
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - datetime
+              properties:
+                leadId:
+                  type: string
+                leadName:
+                  type: string
+                leadEmail:
+                  type: string
+                  format: email
+                leadPhone:
+                  type: string
+                datetime:
+                  type: string
+                  example: "Segunda 09:00"
+                notes:
+                  type: string
+                robotName:
+                  type: string
+                urlOrigem:
+                  type: string
+      responses:
+        '200':
+          description: Agendamento criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  appointment:
+                    $ref: '#/components/schemas/Appointment'
+                  message:
+                    type: string
+
+  /admin/leads/backup/create:
+    post:
+      tags:
+        - Backup
+      summary: Criar backup manual
+      description: Cria backup manual dos leads
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Backup criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  filename:
+                    type: string
+                  path:
+                    type: string
+
+  /admin/leads/backup/list:
+    get:
+      tags:
+        - Backup
+      summary: Listar backups
+      description: Lista todos os backups disponíveis
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de backups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  backups:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        filename:
+                          type: string
+                        timestamp:
+                          type: string
+                        type:
+                          type: string
+                        leadsCount:
+                          type: integer
+                        size:
+                          type: integer
+                  total:
+                    type: integer
+
+  /admin/leads/backup/restore:
+    post:
+      tags:
+        - Backup
+      summary: Restaurar backup
+      description: Restaura dados de um backup específico
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - filename
+              properties:
+                filename:
+                  type: string
+                  example: "leads-backup-manual-2025-12-09.json"
+      responses:
+        '200':
+          description: Backup restaurado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  leadsCount:
+                    type: integer
+                  timestamp:
+                    type: string
+
+  /api/extract-enhanced:
+    post:
+      tags:
+        - Extração
+      summary: Extração aprimorada de dados
+      description: Extrai dados completos de uma página web
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: "https://exemplo.com"
+      responses:
+        '200':
+          description: Dados extraídos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                  validacao:
+                    type: object
+
+  /health:
+    get:
+      tags:
+        - Sistema
+      summary: Health check
+      description: Verifica se o servidor está online
+      responses:
+        '200':
+          description: Servidor online
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+
+  /api/track-conversion:
+    post:
+      tags:
+        - Conversões
+      summary: Rastrear evento de conversão
+      description: |
+        Registra cliques em CTAs e links de checkout. O widget faz isso
+        automaticamente, mas pode ser chamado manualmente para integrações.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [cta_click, checkout_click]
+                  example: "checkout_click"
+                url:
+                  type: string
+                  format: uri
+                  example: "https://pay.hotmart.com/G103177435I"
+                leadId:
+                  type: string
+                robotName:
+                  type: string
+      responses:
+        '200':
+          description: Evento registrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/conversion-stats:
+    get:
+      tags:
+        - Conversões
+      summary: Métricas de conversão
+      description: |
+        Retorna estatísticas de conversão do tenant: total CTAs,
+        total checkouts, taxa de conversão, dados dos últimos 7 e 30 dias.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Estatísticas de conversão
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stats:
+                    type: object
+                    properties:
+                      totalCta:
+                        type: integer
+                        example: 142
+                      totalCheckout:
+                        type: integer
+                        example: 38
+                      conversionRate:
+                        type: number
+                        example: 26.8
+                      last7days:
+                        type: array
+                        items:
+                          type: object
+                      last30days:
+                        type: array
+                        items:
+                          type: object
+
+  /api/confirm-checkout:
+    post:
+      tags:
+        - Conversões
+      summary: Confirmar link de checkout
+      description: |
+        Salva ou confirma o link de checkout associado ao tenant.
+        Usado para garantir que a IA sempre tenha o link correto de compra.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - apiKey
+                - checkoutUrl
+              properties:
+                apiKey:
+                  type: string
+                  example: "LMV7-VX9Z-ZSR1-DONX"
+                checkoutUrl:
+                  type: string
+                  format: uri
+                  example: "https://pay.hotmart.com/G103177435I"
+                source:
+                  type: string
+                  enum: [user_confirmed, auto_detected]
+                  example: "user_confirmed"
+                salesUrl:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Checkout salvo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: "Checkout salvo com sucesso"
+
+  /api/checkout-status:
+    get:
+      tags:
+        - Conversões
+      summary: Status do checkout
+      description: Retorna se o tenant tem checkout configurado e qual é o link.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: apiKey
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "LMV7-VX9Z-ZSR1-DONX"
+        - name: salesUrl
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status do checkout
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  hasCheckout:
+                    type: boolean
+                  checkoutUrl:
+                    type: string
+                  source:
+                    type: string
+
+  /api/system/status:
+    get:
+      tags:
+        - Sistema
+      summary: Status do sistema
+      description: Retorna informações detalhadas do sistema
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Status do sistema
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                  uptime:
+                    type: number
+                  memory:
+                    type: object
+                  modules:
+                    type: object
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    Lead:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        email:
+          type: string
+        telefone:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        conversations:
+          type: array
+          items:
+            type: object
+        journeyStage:
+          type: string
+          enum: [descoberta, negociacao, fidelizacao]
+        lastInteraction:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [ativo, inativo]
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        leadId:
+          type: string
+        leadName:
+          type: string
+        leadEmail:
+          type: string
+        leadPhone:
+          type: string
+        datetime:
+          type: string
+        status:
+          type: string
+          enum: [pendente, confirmado, cancelado, realizado]
+        notes:
+          type: string
+        robotName:
+          type: string
+        urlOrigem:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: API Key não fornecida ou inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

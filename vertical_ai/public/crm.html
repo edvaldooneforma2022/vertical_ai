@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Pipeline — Link Mágico V7.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --bg-hover: #334155;
+            --bg-input: #0f172a;
+            --border: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --cold: #3b82f6;
+            --warm: #f59e0b;
+            --hot: #ef4444;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+            --glass: rgba(30, 41, 59, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary), #1a1f3a);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header .badge {
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .btn-back {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-back:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        /* ===== CONTENT ===== */
+        .content {
+            padding: 24px;
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== KANBAN ===== */
+        .kanban-board {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding-bottom: 16px;
+            min-height: 60vh;
+        }
+
+        .kanban-column {
+            min-width: 280px;
+            max-width: 320px;
+            flex-shrink: 0;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kanban-column-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .kanban-column-header .stage-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .kanban-column-header .stage-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .kanban-column-header .stage-count {
+            background: var(--bg-hover);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .kanban-cards {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+
+        .kanban-cards.drag-over {
+            background: rgba(99, 102, 241, 0.05);
+            border: 2px dashed var(--accent);
+            border-radius: var(--radius-sm);
+        }
+
+        .kanban-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            margin-bottom: 10px;
+            cursor: grab;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .kanban-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+        }
+
+        .kanban-card .lead-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .kanban-card .lead-email {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .kanban-card .lead-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .kanban-card .temp-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .temp-badge.cold {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--cold);
+        }
+
+        .temp-badge.warm {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warm);
+        }
+
+        .temp-badge.hot {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--hot);
+        }
+
+        .kanban-card .lead-value {
+            font-size: 0.8rem;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        /* ===== FORMS & MODALS ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            width: 95%;
+            max-width: 500px;
+            box-shadow: var(--shadow);
+        }
+
+        .modal h2 {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        /* ===== TABLES ===== */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.875rem;
+        }
+
+        .data-table tr:hover {
+            background: var(--bg-hover);
+        }
+
+        /* ===== STATS CARDS ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .stat-card .stat-value.accent {
+            color: var(--accent);
+        }
+
+        .stat-card .stat-value.success {
+            color: var(--success);
+        }
+
+        .stat-card .stat-value.warning {
+            color: var(--warning);
+        }
+
+        .stat-card .stat-value.danger {
+            color: var(--danger);
+        }
+
+        /* ===== SECTION HEADERS ===== */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        /* ===== RULES LIST ===== */
+        .rule-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+        }
+
+        .rule-card:hover {
+            border-color: var(--accent);
+        }
+
+        .rule-info {
+            flex: 1;
+        }
+
+        .rule-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .rule-detail {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .rule-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.active {
+            background: var(--success);
+        }
+
+        .status-dot.inactive {
+            background: var(--danger);
+        }
+
+        /* ===== PIPELINE BAR ===== */
+        .pipeline-bar {
+            display: flex;
+            gap: 2px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .pipeline-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #fff;
+            min-width: 40px;
+            transition: all 0.3s;
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+
+        /* ===== LOADING ===== */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .loading .spinner {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        @media (max-width: 768px) {
+            .kanban-board {
+                flex-direction: column;
+            }
+
+            .kanban-column {
+                max-width: 100%;
+                min-width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-left">
+            <button class="btn-back" onclick="window.history.back()">← Voltar</button>
+            <h1>🏢 CRM Pipeline</h1>
+            <span class="badge">V7.0</span>
+        </div>
+        <div id="connectionStatus" style="font-size:0.8rem; color: var(--text-muted);">Conectando...</div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab active" data-tab="pipeline" onclick="switchTab('pipeline')">📊 Pipeline</button>
+        <button class="tab" data-tab="followup" onclick="switchTab('followup')">🔄 Follow-Up</button>
+        <button class="tab" data-tab="automation" onclick="switchTab('automation')">⚡ Automação</button>
+        <button class="tab" data-tab="deals" onclick="switchTab('deals')">💰 Deals</button>
+        <button class="tab" data-tab="reports" onclick="switchTab('reports')">📈 Relatórios</button>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+        <!-- ===== TAB: PIPELINE (KANBAN) ===== -->
+        <div id="tab-pipeline" class="tab-panel active">
+            <div class="loading" id="kanbanLoading">
+                <div class="spinner"></div>
+                <p style="margin-top:12px;">Carregando pipeline...</p>
+            </div>
+            <div id="kanbanBoard" class="kanban-board" style="display:none;"></div>
+        </div>
+
+        <!-- ===== TAB: FOLLOW-UP ===== -->
+        <div id="tab-followup" class="tab-panel">
+            <div class="section-header">
+                <h2>🔄 Regras de Follow-Up</h2>
+                <button class="btn btn-primary" onclick="showNewRuleModal()">+ Nova Regra</button>
+            </div>
+            <div id="rulesList"></div>
+
+            <div class="section-header" style="margin-top:32px;">
+                <h2>📋 Jobs Recentes</h2>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table" id="jobsTable">
+                    <thead>
+                        <tr>
+                            <th>Lead</th>
+                            <th>Regra</th>
+                            <th>Canal</th>
+                            <th>Agendado</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== TAB: AUTOMAÇÃO ===== -->
+        <div id="tab-automation" class="tab-panel">
+            <div class="section-header">
+                <h2>⚡ Regras de Automação</h2>
+                <button class="btn btn-primary" onclick="showAutomationModal()">+ Nova Regra</button>
+            </div>
+            <p style="color:var(--text-secondary); margin-bottom:20px;">Configure gatilhos condicionais: quando um
+                evento ocorre e uma condição é atendida, a ação é executada automaticamente.</p>
+            <div id="automationCards">
+                <div class="rule-card">
+                    <div class="rule-info">
+                        <div class="rule-name">📥 Lead Novo → Pipeline</div>
+                        <div class="rule-detail"><span>Gatilho: Novo lead capturado</span><span>Ação: Adicionar ao
+                                estágio "Novo Lead"</span></div>
+                    </div>
+                    <div class="rule-actions"><span class="status-dot active"></span> <span
+                            style="font-size:0.8rem; color:var(--success);">Ativo (built-in)</span></div>
+                </div>
+            </div>
+            <div id="automationRulesList" style="margin-top:16px;"></div>
+
+            <div class="section-header" style="margin-top:32px;">
+                <h2>🔗 Webhooks Externos</h2>
+                <button class="btn btn-primary" onclick="showWebhookModal()">+ Novo Webhook</button>
+            </div>
+            <p style="color:var(--text-secondary); margin-bottom:20px;">Receba notificações HTTP em tempo real quando
+                eventos acontecerem no CRM.</p>
+            <div id="webhooksList"></div>
+        </div>
+
+        <!-- ===== TAB: DEALS ===== -->
+        <div id="tab-deals" class="tab-panel">
+            <div class="section-header">
+                <h2>💰 Negócios</h2>
+                <button class="btn btn-primary" onclick="showNewDealModal()">+ Novo Deal</button>
+            </div>
+            <div class="stats-grid" id="dealsStats"></div>
+            <div style="overflow-x:auto;">
+                <table class="data-table" id="dealsTable">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Lead</th>
+                            <th>Valor</th>
+                            <th>Probabilidade</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dealsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== TAB: RELATÓRIOS ===== -->
+        <div id="tab-reports" class="tab-panel">
+            <div class="section-header">
+                <h2>📈 Relatórios Comerciais</h2>
+            </div>
+            <div class="stats-grid" id="reportStats"></div>
+            <div style="margin-top:24px;">
+                <h3 style="font-size:1rem; margin-bottom:16px;">Distribuição por Estágio (Conversão)</h3>
+                <div id="pipelineBar" class="pipeline-bar"></div>
+                <div id="conversionByStage" class="stats-grid" style="margin-top:12px;"></div>
+            </div>
+            <div style="margin-top:24px;">
+                <h3 style="font-size:1rem; margin-bottom:16px;">Temperatura dos Leads</h3>
+                <div id="temperatureGrid" class="stats-grid"></div>
+            </div>
+            <div style="margin-top:24px;">
+                <h3 style="font-size:1rem; margin-bottom:16px;">⏱️ Métricas Avançadas</h3>
+                <div id="advancedMetrics" class="stats-grid"></div>
+            </div>
+            <div style="margin-top:24px;">
+                <h3 style="font-size:1rem; margin-bottom:16px;">💰 Receita por Canal</h3>
+                <div id="revenueByChannel"></div>
+            </div>
+            <div style="margin-top:24px;">
+                <h3 style="font-size:1rem; margin-bottom:16px;">Follow-Up Performance</h3>
+                <div id="followupPerf" class="stats-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: Nova Regra Follow-Up ===== -->
+    <div class="modal-overlay" id="ruleModal">
+        <div class="modal">
+            <h2>🔄 Nova Regra de Follow-Up</h2>
+            <div class="form-group"><label>Nome da Regra</label><input type="text" id="ruleName"
+                    placeholder="Ex: Follow-up 24h sem resposta"></div>
+            <div class="form-group"><label>Gatilho</label>
+                <select id="ruleTrigger">
+                    <option value="no_reply">Lead sem resposta</option>
+                    <option value="stage_change">Mudança de estágio</option>
+                    <option value="new_lead">Novo lead</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Delay (minutos)</label><input type="number" id="ruleDelay" value="1440"
+                    min="1"></div>
+            <div class="form-group"><label>Canal</label>
+                <select id="ruleChannel">
+                    <option value="email">📧 Email</option>
+                    <option value="whatsapp">💬 WhatsApp</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Template da Mensagem</label>
+                <textarea id="ruleTemplate"
+                    placeholder="Olá {{nome}}, tudo bem?&#10;Passando para saber se posso ajudar com mais alguma informação."></textarea>
+                <small style="color:var(--text-muted);">Use {{nome}}, {{email}}, {{telefone}} como variáveis</small>
+            </div>
+            <div class="form-group"><label>Máximo de Tentativas</label><input type="number" id="ruleMaxAttempts"
+                    value="3" min="1" max="10"></div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('ruleModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveRule()">Salvar Regra</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: Novo Deal ===== -->
+    <div class="modal-overlay" id="dealModal">
+        <div class="modal">
+            <h2>💰 Novo Negócio</h2>
+            <div class="form-group"><label>Lead</label><select id="dealLeadId"></select></div>
+            <div class="form-group"><label>Título</label><input type="text" id="dealTitle"
+                    placeholder="Ex: Pacote Premium"></div>
+            <div class="form-group"><label>Valor (R$)</label><input type="number" id="dealValue" placeholder="5000"
+                    step="0.01"></div>
+            <div class="form-group"><label>Probabilidade (%)</label><input type="number" id="dealProbability" value="50"
+                    min="0" max="100"></div>
+            <div class="form-group"><label>Previsão de Fechamento</label><input type="date" id="dealCloseDate"></div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('dealModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveDeal()">Criar Deal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: Automação ===== -->
+    <div class="modal-overlay" id="automationModal">
+        <div class="modal">
+            <h2>⚡ Nova Regra de Automação</h2>
+            <div class="form-group"><label>Nome da Regra</label><input type="text" id="autoName"
+                    placeholder="Ex: Lead quente → mover para Negociação"></div>
+            <div class="form-group"><label>Gatilho</label>
+                <select id="autoTrigger">
+                    <option value="new_lead">Novo lead criado</option>
+                    <option value="stage_change">Mudança de estágio</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Campo para Condição (opcional)</label>
+                <select id="autoCondField">
+                    <option value="">Sem condição (sempre)</option>
+                    <option value="temperature">Temperatura</option>
+                    <option value="source">Fonte</option>
+                    <option value="score">Score</option>
+                    <option value="estimated_value">Valor Estimado</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Operador</label>
+                <select id="autoCondOp">
+                    <option value="equals">É igual a</option>
+                    <option value="not_equals">É diferente de</option>
+                    <option value="contains">Contém</option>
+                    <option value="greater_than">Maior que</option>
+                    <option value="less_than">Menor que</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Valor da Condição</label><input type="text" id="autoCondValue"
+                    placeholder="Ex: hot, warm, 50"></div>
+            <div class="form-group"><label>Ação</label>
+                <select id="autoActionType">
+                    <option value="move_stage">Mover para estágio</option>
+                    <option value="update_temperature">Atualizar temperatura</option>
+                    <option value="add_activity">Adicionar atividade</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Alvo da Ação</label><input type="text" id="autoActionTarget"
+                    placeholder="ID do estágio, temperatura, ou texto"></div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('automationModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveAutomationRule()">Salvar Regra</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: Webhook ===== -->
+    <div class="modal-overlay" id="webhookModal">
+        <div class="modal">
+            <h2>🔗 Novo Webhook</h2>
+            <div class="form-group"><label>URL do Webhook</label><input type="url" id="webhookUrl"
+                    placeholder="https://example.com/webhook"></div>
+            <div class="form-group"><label>Evento</label>
+                <select id="webhookEvent">
+                    <option value="stage_change">Mudança de estágio</option>
+                    <option value="new_lead">Novo lead</option>
+                </select>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('webhookModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveWebhook()">Salvar Webhook</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIG =====
+        const API_KEY = localStorage.getItem('linkmagico_api_key') || new URLSearchParams(window.location.search).get('apiKey') || '';
+        const BASE_URL = window.location.origin;
+
+        function getHeaders() {
+            return { 'Content-Type': 'application/json', 'x-api-key': API_KEY };
+        }
+
+        async function apiFetch(path, options = {}) {
+            const url = `${BASE_URL}${path}${path.includes('?') ? '&' : '?'}apiKey=${encodeURIComponent(API_KEY)}`;
+            const res = await fetch(url, { headers: getHeaders(), ...options });
+            return res.json();
+        }
+
+        // ===== TABS =====
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            if (tabId === 'pipeline') loadKanban();
+            if (tabId === 'followup') loadFollowUp();
+            if (tabId === 'automation') loadAutomation();
+            if (tabId === 'deals') loadDeals();
+            if (tabId === 'reports') loadReports();
+        }
+
+        // ===== KANBAN =====
+        async function loadKanban() {
+            const loadingEl = document.getElementById('kanbanLoading');
+            const boardEl = document.getElementById('kanbanBoard');
+            loadingEl.style.display = 'block';
+            boardEl.style.display = 'none';
+
+            try {
+                const data = await apiFetch('/api/crm/leads?view=kanban');
+                if (!data.success) throw new Error(data.error);
+
+                boardEl.innerHTML = '';
+                const stages = data.stages || [];
+
+                stages.forEach(stage => {
+                    const col = document.createElement('div');
+                    col.className = 'kanban-column';
+                    col.innerHTML = `
+                <div class="kanban-column-header">
+                    <span class="stage-name">
+                        <span class="stage-dot" style="background:${stage.color}"></span>
+                        ${stage.name}
+                    </span>
+                    <span class="stage-count">${stage.leads.length}</span>
+                </div>
+                <div class="kanban-cards" data-stage-id="${stage.id}"
+                     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
+                     ondrop="handleDrop(event, '${stage.id}')">
+                    ${stage.leads.map(lead => renderKanbanCard(lead)).join('')}
+                </div>
+            `;
+                    boardEl.appendChild(col);
+                });
+
+                loadingEl.style.display = 'none';
+                boardEl.style.display = 'flex';
+                document.getElementById('connectionStatus').textContent = '🟢 Conectado';
+                document.getElementById('connectionStatus').style.color = 'var(--success)';
+            } catch (err) {
+                loadingEl.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>${err.message}</p><button class="btn btn-primary" onclick="loadKanban()">Tentar Novamente</button></div>`;
+                document.getElementById('connectionStatus').textContent = '🔴 Erro';
+                document.getElementById('connectionStatus').style.color = 'var(--danger)';
+            }
+        }
+
+        function renderKanbanCard(lead) {
+            const tempClass = lead.temperature || 'cold';
+            const tempLabel = { cold: '❄️ Frio', warm: '🌤️ Morno', hot: '🔥 Quente' }[tempClass] || '❄️ Frio';
+            const value = lead.estimated_value > 0 ? `R$ ${parseFloat(lead.estimated_value).toLocaleString('pt-BR')}` : '';
+
+            return `
+        <div class="kanban-card" draggable="true" data-lead-id="${lead.id}"
+             ondragstart="handleDragStart(event, '${lead.id}')">
+            <div class="lead-name">${lead.name || 'Sem nome'}</div>
+            <div class="lead-email">${lead.email || ''}</div>
+            <div class="lead-meta">
+                <span class="temp-badge ${tempClass}" onclick="cycleTemperature('${lead.id}', '${tempClass}')">${tempLabel}</span>
+                ${value ? `<span class="lead-value">${value}</span>` : ''}
+            </div>
+        </div>
+    `;
+        }
+
+        // ===== DRAG & DROP =====
+        let draggedLeadId = null;
+
+        function handleDragStart(event, leadId) {
+            draggedLeadId = leadId;
+            event.target.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleDrop(event, stageId) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            document.querySelectorAll('.kanban-card.dragging').forEach(c => c.classList.remove('dragging'));
+
+            if (!draggedLeadId) return;
+
+            try {
+                await apiFetch(`/api/crm/leads/${draggedLeadId}/stage`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ stage_id: stageId })
+                });
+                loadKanban(); // Reload
+            } catch (err) {
+                console.error('Erro ao mover lead:', err);
+            }
+            draggedLeadId = null;
+        }
+
+        async function cycleTemperature(leadId, current) {
+            const next = { cold: 'warm', warm: 'hot', hot: 'cold' }[current] || 'cold';
+            try {
+                await apiFetch(`/api/crm/leads/${leadId}/temperature`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ temperature: next })
+                });
+                loadKanban();
+            } catch (err) {
+                console.error('Erro ao atualizar temperatura:', err);
+            }
+        }
+
+        // ===== FOLLOW-UP =====
+        async function loadFollowUp() {
+            try {
+                const [rulesData, jobsData] = await Promise.all([
+                    apiFetch('/api/crm/followup/rules'),
+                    apiFetch('/api/crm/followup/jobs')
+                ]);
+
+                const rulesList = document.getElementById('rulesList');
+                const rules = rulesData.rules || [];
+
+                if (rules.length === 0) {
+                    rulesList.innerHTML = '<div class="empty-state"><div class="icon">🔄</div><p>Nenhuma regra de follow-up configurada.</p><button class="btn btn-primary" onclick="showNewRuleModal()">Criar Primeira Regra</button></div>';
+                } else {
+                    rulesList.innerHTML = rules.map(rule => `
+                <div class="rule-card">
+                    <div class="rule-info">
+                        <div class="rule-name"><span class="status-dot ${rule.active ? 'active' : 'inactive'}"></span> ${rule.name}</div>
+                        <div class="rule-detail">
+                            <span>📌 ${({ no_reply: 'Sem resposta', stage_change: 'Mudança de estágio', new_lead: 'Novo lead' })[rule.trigger_type] || rule.trigger_type}</span>
+                            <span>⏱️ ${formatDelay(rule.delay_minutes)}</span>
+                            <span>${rule.channel === 'email' ? '📧' : '💬'} ${rule.channel}</span>
+                            <span>🔁 Max ${rule.max_attempts}x</span>
+                        </div>
+                    </div>
+                    <div class="rule-actions">
+                        <button class="btn btn-danger btn-sm" onclick="deleteRule('${rule.id}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+                }
+
+                // Jobs
+                const jobsBody = document.getElementById('jobsBody');
+                const jobs = jobsData.jobs || [];
+                if (jobs.length === 0) {
+                    jobsBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px;">Nenhum job de follow-up</td></tr>';
+                } else {
+                    jobsBody.innerHTML = jobs.map(job => `
+                <tr>
+                    <td>${job.lead_name || job.lead_email}</td>
+                    <td>${job.rule_name}</td>
+                    <td>${job.channel === 'email' ? '📧' : '💬'} ${job.channel}</td>
+                    <td>${new Date(job.scheduled_for).toLocaleString('pt-BR')}</td>
+                    <td><span class="temp-badge ${getJobStatusClass(job.status)}">${getJobStatusLabel(job.status)}</span></td>
+                </tr>
+            `).join('');
+                }
+            } catch (err) {
+                console.error('Erro ao carregar follow-up:', err);
+            }
+        }
+
+        function formatDelay(minutes) {
+            if (minutes < 60) return `${minutes} min`;
+            if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
+            return `${Math.round(minutes / 1440)} dia(s)`;
+        }
+
+        function getJobStatusClass(s) {
+            return { pending: 'warm', processing: 'warm', sent: 'cold', cancelled: '', failed: 'hot' }[s] || '';
+        }
+
+        function getJobStatusLabel(s) {
+            return { pending: '⏳ Pendente', processing: '⚙️ Processando', sent: '✅ Enviado', cancelled: '🚫 Cancelado', failed: '❌ Falhou' }[s] || s;
+        }
+
+        // ===== DEALS =====
+        async function loadDeals() {
+            try {
+                const [dealsData, analyticsData] = await Promise.all([
+                    apiFetch('/api/crm/deals'),
+                    apiFetch('/api/crm/analytics')
+                ]);
+
+                const deals = dealsData.deals || [];
+                const revenue = analyticsData.analytics?.revenue || {};
+
+                document.getElementById('dealsStats').innerHTML = `
+            <div class="stat-card"><div class="stat-label">Deals Abertos</div><div class="stat-value accent">${revenue.open?.count || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Valor Total</div><div class="stat-value success">R$ ${(revenue.open?.total || 0).toLocaleString('pt-BR')}</div></div>
+            <div class="stat-card"><div class="stat-label">Valor Ponderado</div><div class="stat-value warning">R$ ${(revenue.open?.weighted || 0).toLocaleString('pt-BR')}</div></div>
+            <div class="stat-card"><div class="stat-label">Ganhos</div><div class="stat-value success">${revenue.won?.count || 0}</div></div>
+        `;
+
+                const dealsBody = document.getElementById('dealsBody');
+                if (deals.length === 0) {
+                    dealsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px;">Nenhum deal criado</td></tr>';
+                } else {
+                    dealsBody.innerHTML = deals.map(deal => `
+                <tr>
+                    <td>${deal.title || 'Sem título'}</td>
+                    <td>${deal.lead_name || deal.lead_email || '—'}</td>
+                    <td style="color:var(--success);font-weight:600;">R$ ${parseFloat(deal.value || 0).toLocaleString('pt-BR')}</td>
+                    <td>${deal.probability}%</td>
+                    <td><span class="temp-badge ${deal.status === 'won' ? 'cold' : deal.status === 'lost' ? 'hot' : 'warm'}">${deal.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="updateDealStatus('${deal.id}', 'won')">✅</button>
+                        <button class="btn btn-sm btn-danger" onclick="updateDealStatus('${deal.id}', 'lost')">❌</button>
+                    </td>
+                </tr>
+            `).join('');
+                }
+
+                // Popular select de leads no modal de deal
+                const leadsData = await apiFetch('/api/crm/leads');
+                const selectEl = document.getElementById('dealLeadId');
+                selectEl.innerHTML = (leadsData.leads || []).map(l => `<option value="${l.id}">${l.name || l.email}</option>`).join('');
+            } catch (err) {
+                console.error('Erro ao carregar deals:', err);
+            }
+        }
+
+        // ===== REPORTS =====
+        async function loadReports() {
+            try {
+                const data = await apiFetch('/api/crm/analytics');
+                if (!data.success) throw new Error(data.error);
+                const a = data.analytics;
+                const adv = a.advancedMetrics || {};
+
+                document.getElementById('reportStats').innerHTML = `
+                    <div class="stat-card"><div class="stat-label">Total Leads CRM</div><div class="stat-value accent">${a.totalLeads || 0}</div></div>
+                    <div class="stat-card"><div class="stat-label">Deals Abertos</div><div class="stat-value warning">${a.deals?.totalDeals || 0}</div></div>
+                    <div class="stat-card"><div class="stat-label">Receita Estimada</div><div class="stat-value success">R$ ${(a.deals?.totalValue || 0).toLocaleString('pt-BR')}</div></div>
+                    <div class="stat-card"><div class="stat-label">Receita Ponderada</div><div class="stat-value accent">R$ ${(a.deals?.weightedValue || 0).toLocaleString('pt-BR')}</div></div>
+                `;
+
+                // Pipeline bar
+                const byStage = a.byStage || [];
+                const total = byStage.reduce((s, v) => s + v.count, 0) || 1;
+                document.getElementById('pipelineBar').innerHTML = byStage.map(s =>
+                    `<div class="pipeline-segment" style="background:${s.color}; flex:${Math.max(s.count / total, 0.05)};" title="${s.name}: ${s.count} (${s.conversionRate || 0}%)">${s.count > 0 ? s.count : ''}</div>`
+                ).join('');
+
+                // Conversion by stage (percentages)
+                const convEl = document.getElementById('conversionByStage');
+                if (convEl) {
+                    convEl.innerHTML = byStage.map(s =>
+                        `<div class="stat-card"><div class="stat-label">${s.name}</div><div class="stat-value" style="color:${s.color}">${s.conversionRate || 0}%</div></div>`
+                    ).join('');
+                }
+
+                // Temperature grid
+                const t = a.byTemperature || {};
+                document.getElementById('temperatureGrid').innerHTML = `
+                    <div class="stat-card"><div class="stat-label">❄️ Frios</div><div class="stat-value" style="color:var(--cold)">${t.cold || 0}</div></div>
+                    <div class="stat-card"><div class="stat-label">🌤️ Mornos</div><div class="stat-value" style="color:var(--warm)">${t.warm || 0}</div></div>
+                    <div class="stat-card"><div class="stat-label">🔥 Quentes</div><div class="stat-value" style="color:var(--hot)">${t.hot || 0}</div></div>
+                `;
+
+                // Advanced metrics
+                const advEl = document.getElementById('advancedMetrics');
+                if (advEl) {
+                    advEl.innerHTML = `
+                        <div class="stat-card"><div class="stat-label">⏱️ Tempo Médio Fechamento</div><div class="stat-value accent">${adv.avgTimeToCloseDays || 0} dias</div></div>
+                        <div class="stat-card"><div class="stat-label">📩 Taxa de Resposta</div><div class="stat-value success">${adv.followupResponseRate || 0}%</div></div>
+                        <div class="stat-card"><div class="stat-label">🔁 Média Tentativas</div><div class="stat-value warning">${adv.avgAttemptsUntilResponse || 0}</div></div>
+                    `;
+                }
+
+                // Revenue by channel
+                const chanEl = document.getElementById('revenueByChannel');
+                if (chanEl) {
+                    const channels = adv.revenueByChannel || [];
+                    if (channels.length === 0) {
+                        chanEl.innerHTML = '<p style="color:var(--text-muted)">Nenhum dado de receita por canal ainda.</p>';
+                    } else {
+                        chanEl.innerHTML = '<div class="stats-grid">' + channels.map(c =>
+                            `<div class="stat-card"><div class="stat-label">${c.source}</div><div class="stat-value success">R$ ${c.totalValue.toLocaleString('pt-BR')}</div><div style="font-size:0.75rem;color:var(--text-muted)">${c.dealCount} deals</div></div>`
+                        ).join('') + '</div>';
+                    }
+                }
+
+                // Follow-up performance
+                const fu = a.followup || {};
+                document.getElementById('followupPerf').innerHTML = `
+                    <div class="stat-card"><div class="stat-label">⏳ Pendentes</div><div class="stat-value warning">${fu.pending || 0}</div></div>
+                    <div class="stat-card"><div class="stat-label">✅ Enviados</div><div class="stat-value success">${fu.sent || 0}</div></div>
+                    <div class="stat-card"><div class="stat-label">🚫 Cancelados</div><div class="stat-value" style="color:var(--text-muted)">${fu.cancelled || 0}</div></div>
+                    <div class="stat-card"><div class="stat-label">❌ Falhas</div><div class="stat-value danger">${fu.failed || 0}</div></div>
+                `;
+            } catch (err) {
+                document.getElementById('reportStats').innerHTML = `<div class="empty-state"><p>Erro: ${err.message}</p></div>`;
+            }
+        }
+
+        // ===== MODALS =====
+        function showNewRuleModal() { document.getElementById('ruleModal').classList.add('active'); }
+        function showNewDealModal() { document.getElementById('dealModal').classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        async function saveRule() {
+            try {
+                const rule = {
+                    name: document.getElementById('ruleName').value,
+                    trigger_type: document.getElementById('ruleTrigger').value,
+                    delay_minutes: parseInt(document.getElementById('ruleDelay').value),
+                    channel: document.getElementById('ruleChannel').value,
+                    message_template: document.getElementById('ruleTemplate').value,
+                    max_attempts: parseInt(document.getElementById('ruleMaxAttempts').value)
+                };
+
+                if (!rule.name || !rule.message_template) {
+                    alert('Nome e template são obrigatórios');
+                    return;
+                }
+
+                await apiFetch('/api/crm/followup/rules', { method: 'POST', body: JSON.stringify(rule) });
+                closeModal('ruleModal');
+                loadFollowUp();
+            } catch (err) {
+                alert('Erro ao salvar regra: ' + err.message);
+            }
+        }
+
+        async function deleteRule(ruleId) {
+            if (!confirm('Remover esta regra? Jobs pendentes serão cancelados.')) return;
+            try {
+                await apiFetch(`/api/crm/followup/rules/${ruleId}`, { method: 'DELETE' });
+                loadFollowUp();
+            } catch (err) {
+                alert('Erro ao remover: ' + err.message);
+            }
+        }
+
+        async function saveDeal() {
+            try {
+                const deal = {
+                    lead_id: document.getElementById('dealLeadId').value,
+                    title: document.getElementById('dealTitle').value,
+                    value: parseFloat(document.getElementById('dealValue').value) || 0,
+                    probability: parseInt(document.getElementById('dealProbability').value) || 50,
+                    expected_close_date: document.getElementById('dealCloseDate').value || null
+                };
+
+                if (!deal.lead_id) { alert('Selecione um lead'); return; }
+
+                await apiFetch('/api/crm/deals', { method: 'POST', body: JSON.stringify(deal) });
+                closeModal('dealModal');
+                loadDeals();
+            } catch (err) {
+                alert('Erro ao criar deal: ' + err.message);
+            }
+        }
+
+        async function updateDealStatus(dealId, status) {
+            try {
+                await apiFetch(`/api/crm/deals/${dealId}`, { method: 'PUT', body: JSON.stringify({ status }) });
+                loadDeals();
+            } catch (err) {
+                alert('Erro: ' + err.message);
+            }
+        }
+
+        // ===== AUTOMATION =====
+        async function loadAutomation() {
+            try {
+                const [rulesData, webhooksData] = await Promise.all([
+                    apiFetch('/api/crm/automation/rules'),
+                    apiFetch('/api/crm/webhooks')
+                ]);
+
+                // Render automation rules
+                const rules = rulesData.rules || [];
+                const rulesList = document.getElementById('automationRulesList');
+                if (rules.length === 0) {
+                    rulesList.innerHTML = '<p style="color:var(--text-muted)">Nenhuma regra personalizada configurada.</p>';
+                } else {
+                    const triggerLabels = { new_lead: 'Novo lead', stage_change: 'Mudança de estágio' };
+                    const actionLabels = { move_stage: 'Mover estágio', update_temperature: 'Atualizar temperatura', add_activity: 'Adicionar atividade' };
+                    rulesList.innerHTML = rules.map(rule => `
+                        <div class="rule-card">
+                            <div class="rule-info">
+                                <div class="rule-name"><span class="status-dot ${rule.active ? 'active' : 'inactive'}"></span> ${rule.name}</div>
+                                <div class="rule-detail">
+                                    <span>📌 ${triggerLabels[rule.trigger_type] || rule.trigger_type}</span>
+                                    ${rule.condition_field ? `<span>🔍 ${rule.condition_field} ${rule.condition_operator} ${rule.condition_value}</span>` : ''}
+                                    <span>➡️ ${actionLabels[rule.action_type] || rule.action_type}: ${rule.action_target || '-'}</span>
+                                </div>
+                            </div>
+                            <div class="rule-actions">
+                                <button class="btn btn-sm btn-secondary" onclick="toggleAutomationRule('${rule.id}', ${!rule.active})">${rule.active ? '⏸ Pausar' : '▶ Ativar'}</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteAutomationRule('${rule.id}')">Excluir</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                // Render webhooks
+                const webhooks = webhooksData.webhooks || [];
+                const webhooksList = document.getElementById('webhooksList');
+                if (webhooks.length === 0) {
+                    webhooksList.innerHTML = '<p style="color:var(--text-muted)">Nenhum webhook configurado.</p>';
+                } else {
+                    webhooksList.innerHTML = webhooks.map(wh => `
+                        <div class="rule-card">
+                            <div class="rule-info">
+                                <div class="rule-name"><span class="status-dot ${wh.active ? 'active' : 'inactive'}"></span> ${wh.url}</div>
+                                <div class="rule-detail"><span>📡 Evento: ${wh.event_type}</span></div>
+                            </div>
+                            <div class="rule-actions">
+                                <button class="btn btn-sm btn-danger" onclick="deleteWebhook('${wh.id}')">Excluir</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Erro ao carregar automações:', err);
+            }
+        }
+
+        function showAutomationModal() { document.getElementById('automationModal').classList.add('active'); }
+        function showWebhookModal() { document.getElementById('webhookModal').classList.add('active'); }
+
+        async function saveAutomationRule() {
+            try {
+                const rule = {
+                    name: document.getElementById('autoName').value,
+                    trigger_type: document.getElementById('autoTrigger').value,
+                    condition_field: document.getElementById('autoCondField').value || null,
+                    condition_operator: document.getElementById('autoCondOp').value,
+                    condition_value: document.getElementById('autoCondValue').value || null,
+                    action_type: document.getElementById('autoActionType').value,
+                    action_target: document.getElementById('autoActionTarget').value || null
+                };
+                if (!rule.name) { alert('Nome é obrigatório'); return; }
+                await apiFetch('/api/crm/automation/rules', { method: 'POST', body: JSON.stringify(rule) });
+                closeModal('automationModal');
+                loadAutomation();
+            } catch (err) {
+                alert('Erro ao salvar regra: ' + err.message);
+            }
+        }
+
+        async function deleteAutomationRule(ruleId) {
+            if (!confirm('Remover esta regra de automação?')) return;
+            try {
+                await apiFetch(`/api/crm/automation/rules/${ruleId}`, { method: 'DELETE' });
+                loadAutomation();
+            } catch (err) { alert('Erro: ' + err.message); }
+        }
+
+        async function toggleAutomationRule(ruleId, active) {
+            try {
+                await apiFetch(`/api/crm/automation/rules/${ruleId}/toggle`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ active })
+                });
+                loadAutomation();
+            } catch (err) { alert('Erro: ' + err.message); }
+        }
+
+        async function saveWebhook() {
+            try {
+                const url = document.getElementById('webhookUrl').value;
+                const event_type = document.getElementById('webhookEvent').value;
+                if (!url) { alert('URL é obrigatória'); return; }
+                await apiFetch('/api/crm/webhooks', { method: 'POST', body: JSON.stringify({ url, event_type }) });
+                closeModal('webhookModal');
+                loadAutomation();
+            } catch (err) { alert('Erro ao salvar webhook: ' + err.message); }
+        }
+
+        async function deleteWebhook(webhookId) {
+            if (!confirm('Remover este webhook?')) return;
+            try {
+                await apiFetch(`/api/crm/webhooks/${webhookId}`, { method: 'DELETE' });
+                loadAutomation();
+            } catch (err) { alert('Erro: ' + err.message); }
+        }
+
+        // ===== INIT =====
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!API_KEY) {
+                document.getElementById('connectionStatus').textContent = '🔴 Sem API Key';
+                document.getElementById('connectionStatus').style.color = 'var(--danger)';
+                document.querySelector('.content').innerHTML = '<div class="empty-state"><div class="icon">🔑</div><p>API Key não encontrada. Faça login no painel principal primeiro.</p><a href="/" class="btn btn-primary">Ir para Login</a></div>';
+                return;
+            }
+            loadKanban();
+        });
+    </script>
+</body>
+
+</html>

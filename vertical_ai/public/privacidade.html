@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Política de Privacidade — LinkMágico</title>
+<meta name="description" content="Política de Privacidade da plataforma LinkMágico — Como protegemos seus dados em conformidade com a LGPD.">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#06060e;--surface:#0d1117;--border:rgba(255,255,255,.08);--text:#c8d6e5;--text-bright:#f0f4ff;--purple:#7c3aed;--green:#10b981;--font:'Inter',sans-serif}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.7;min-height:100vh}
+.container{max-width:800px;margin:0 auto;padding:40px 24px 80px}
+.back-link{display:inline-flex;align-items:center;gap:8px;color:var(--purple);text-decoration:none;font-size:.9rem;font-weight:500;margin-bottom:32px;transition:opacity .2s}
+.back-link:hover{opacity:.7}
+h1{font-size:2rem;font-weight:700;color:var(--text-bright);margin-bottom:8px}
+.subtitle{color:var(--text);font-size:.95rem;margin-bottom:40px;opacity:.7}
+h2{font-size:1.3rem;font-weight:600;color:var(--text-bright);margin:36px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+h3{font-size:1.05rem;font-weight:600;color:var(--text-bright);margin:24px 0 12px}
+p,li{font-size:.92rem;margin-bottom:12px}
+ul,ol{padding-left:20px;margin-bottom:16px}
+li{margin-bottom:8px}
+.highlight{background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px;padding:20px;margin:20px 0}
+.contact-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:20px;margin:20px 0}
+.contact-box a{color:var(--green);text-decoration:none;font-weight:500}
+.contact-box a:hover{text-decoration:underline}
+.footer-legal{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);text-align:center;font-size:.8rem;opacity:.5}
+strong{color:var(--text-bright)}
+a{color:var(--purple)}
+</style>
+</head>
+<body>
+<div class="container">
+<a href="https://site.linkmagico.app.br" class="back-link">← Voltar para o site</a>
+
+<h1>🔒 Política de Privacidade — LinkMágico</h1>
+<p class="subtitle">Última atualização: 30 de Maio de 2026</p>
+
+<h2>1. Introdução</h2>
+<p>Esta Política de Privacidade descreve como o <strong>LinkMágico</strong> (acessível em <a href="https://linkmagico.app.br">linkmagico.app.br</a>) coleta, utiliza, armazena e protege seus dados pessoais, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong>.</p>
+
+<h2>2. Dados que Coletamos</h2>
+
+<h3>2.1 Dados do Titular da Conta (Usuário)</h3>
+<ul>
+<li><strong>Nome</strong> — para identificação na plataforma</li>
+<li><strong>Email</strong> — para login, comunicações e recuperação de senha</li>
+<li><strong>Senha</strong> — armazenada com hash criptográfico (nunca em texto plano)</li>
+<li><strong>WhatsApp</strong> (opcional) — para suporte e notificações</li>
+<li><strong>Dados de pagamento</strong> — processados exclusivamente pela Stripe (não armazenamos dados de cartão)</li>
+</ul>
+
+<h3>2.2 Dados dos Visitantes/Leads (capturados pelo chatbot)</h3>
+<ul>
+<li>Nome, email e telefone (quando fornecidos voluntariamente na conversa)</li>
+<li>Histórico de conversas com o chatbot</li>
+<li>Dados de navegação (URL de origem, timestamps)</li>
+</ul>
+
+<h3>2.3 Dados Técnicos</h3>
+<ul>
+<li>Endereço IP (para segurança e rate limiting)</li>
+<li>User-Agent do navegador</li>
+<li>Cookies de sessão (essenciais para autenticação)</li>
+</ul>
+
+<h2>3. Como Usamos seus Dados</h2>
+<ul>
+<li>Prover e manter o funcionamento da plataforma</li>
+<li>Processar pagamentos e gerenciar assinaturas</li>
+<li>Enviar notificações relevantes sobre o serviço</li>
+<li>Melhorar a experiência do usuário e funcionalidades</li>
+<li>Cumprir obrigações legais e regulatórias</li>
+<li>Prevenir fraudes e garantir a segurança do sistema</li>
+</ul>
+
+<div class="highlight">
+<p><strong>Importante:</strong> Seus dados nunca são vendidos, alugados ou compartilhados com terceiros para fins de marketing. Os dados dos leads capturados pelo chatbot pertencem exclusivamente ao titular da conta.</p>
+</div>
+
+<h2>4. Compartilhamento de Dados</h2>
+<p>Compartilhamos dados apenas com:</p>
+<ul>
+<li><strong>Stripe</strong> — para processamento de pagamentos</li>
+<li><strong>Render</strong> — infraestrutura de hospedagem</li>
+<li><strong>Twilio/Evolution API</strong> — integração WhatsApp (quando ativada pelo usuário)</li>
+<li><strong>OpenAI</strong> — processamento de IA para geração de respostas do chatbot</li>
+</ul>
+<p>Todos os parceiros acima possuem políticas de privacidade próprias e operam em conformidade com padrões internacionais de segurança.</p>
+
+<h2>5. Armazenamento e Segurança</h2>
+<ul>
+<li>Todos os dados são transmitidos via <strong>HTTPS/TLS</strong></li>
+<li>Senhas são armazenadas com <strong>hash bcrypt</strong></li>
+<li>Acesso ao banco de dados é restrito e protegido por autenticação</li>
+<li>Sistema multi-tenant com isolamento de dados entre contas</li>
+<li>Backups automáticos para recuperação de dados</li>
+</ul>
+
+<h2>6. Seus Direitos (LGPD)</h2>
+<p>Você tem direito a:</p>
+<ul>
+<li><strong>Acesso</strong> — solicitar cópia dos seus dados pessoais</li>
+<li><strong>Correção</strong> — atualizar dados incorretos ou incompletos</li>
+<li><strong>Exclusão</strong> — solicitar a remoção dos seus dados</li>
+<li><strong>Portabilidade</strong> — exportar seus dados em formato legível</li>
+<li><strong>Revogação de consentimento</strong> — retirar permissões a qualquer momento</li>
+<li><strong>Informação</strong> — saber com quem seus dados são compartilhados</li>
+</ul>
+<p>Para exercer qualquer direito, entre em contato conosco pelos canais abaixo.</p>
+
+<h2>7. Cookies</h2>
+<p>Utilizamos apenas <strong>cookies essenciais</strong> para:</p>
+<ul>
+<li>Manter sua sessão de login ativa</li>
+<li>Lembrar preferências da plataforma</li>
+<li>Garantir segurança (CSRF protection)</li>
+</ul>
+<p>Não utilizamos cookies de rastreamento publicitário ou de terceiros.</p>
+
+<h2>8. Retenção de Dados</h2>
+<ul>
+<li>Dados da conta são mantidos enquanto a conta estiver ativa</li>
+<li>Após cancelamento, dados são mantidos por 90 dias para possível reativação</li>
+<li>Após 90 dias, dados são excluídos permanentemente, exceto quando exigido por lei</li>
+<li>Logs de segurança são mantidos por 12 meses</li>
+</ul>
+
+<h2>9. Menores de Idade</h2>
+<p>O LinkMágico não é destinado a menores de 18 anos. Não coletamos intencionalmente dados de menores. Se tomarmos conhecimento de dados de menores, serão excluídos imediatamente.</p>
+
+<h2>10. Alterações nesta Política</h2>
+<p>Esta política pode ser atualizada periodicamente. Alterações significativas serão comunicadas por email ou pela plataforma. A data de atualização no topo desta página sempre reflete a versão vigente.</p>
+
+<h2>11. Contato do Encarregado (DPO)</h2>
+<div class="contact-box">
+<p><strong>LinkMágico — Privacidade e Proteção de Dados</strong></p>
+<p>📱 WhatsApp: <a href="https://wa.me/5511925312151" target="_blank">+55 11 92531-2151</a></p>
+<p>📸 Instagram: <a href="https://www.instagram.com/linkmagico.ia" target="_blank">@linkmagico.ia</a></p>
+<p>🌐 Site: <a href="https://site.linkmagico.app.br" target="_blank">site.linkmagico.app.br</a></p>
+<p>💻 Plataforma: <a href="https://linkmagico.app.br" target="_blank">linkmagico.app.br</a></p>
+</div>
+
+<div class="footer-legal">
+<p>© 2025–2026 LinkMágico — Todos os direitos reservados</p>
+<p><a href="/termos.html">Termos de Uso</a></p>
+</div>
+</div>
+</body>
+</html>

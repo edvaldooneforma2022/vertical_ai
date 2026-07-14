@@ -1,0 +1,287 @@
+
+    <!-- ========================================
+     BLOCO COMPLEMENTAR — TESTE INTERATIVO (INTEGRADO)
+     Encapsulado em .lkc-block para evitar conflitos
+     ======================================== -->
+    <style>
+    .lkc-block{--lkc-bg:#0a0a0f;--lkc-surface:#13131a;--lkc-surface2:#1c1c28;--lkc-border:#2a2a3d;--lkc-purple:#7c3aed;--lkc-purple-light:#9f67ff;--lkc-green:#10b981;--lkc-green-light:#34d399;--lkc-text:#f1f0ff;--lkc-text-muted:#8b8aa0;--lkc-radius:14px;font-family:'Inter',sans-serif;color:var(--lkc-text);line-height:1.6;background:var(--lkc-bg);padding:60px 0;width:100vw!important;max-width:100vw!important;position:relative;left:50%;right:50%;margin-left:-50vw!important;margin-right:-50vw!important;overflow:hidden}
+    .lkc-block .lkc-inner{max-width:880px;margin:0 auto;padding:0 20px}
+    .lkc-block .lkc-curiosity{max-width:700px;margin:0 auto;padding:0 20px 30px}
+    .lkc-block .lkc-curiosity-card{background:var(--lkc-surface);border:1px solid var(--lkc-border);border-radius:20px;padding:32px 28px;position:relative;overflow:hidden}
+    .lkc-block .lkc-curiosity-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--lkc-purple),var(--lkc-green))}
+    .lkc-block .lkc-curiosity h3{font-size:1.15rem;font-weight:700;margin-bottom:20px;text-align:center;color:var(--lkc-text)}
+    .lkc-block .lkc-curiosity-msgs{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+    .lkc-block .lkc-c-msg{background:var(--lkc-surface2);border:1px solid var(--lkc-border);border-radius:12px;padding:10px 14px;font-size:.88rem;display:flex;align-items:center;gap:10px;animation:lkcFadeUp .4s ease both}
+    .lkc-block .lkc-c-msg:nth-child(2){animation-delay:.1s}.lkc-block .lkc-c-msg:nth-child(3){animation-delay:.2s}.lkc-block .lkc-c-msg:nth-child(4){animation-delay:.3s}
+    .lkc-block .lkc-c-msg-origin{font-size:.7rem;color:var(--lkc-purple-light);font-weight:600;white-space:nowrap}
+    .lkc-block .lkc-c-msg-text{color:var(--lkc-text-muted)}
+    .lkc-block .lkc-curiosity-highlight{color:var(--lkc-green-light);font-weight:600;font-size:.95rem;margin-bottom:16px;text-align:center}
+    .lkc-block .lkc-curiosity-cta{text-align:center;margin-top:4px}
+    .lkc-block .lkc-vsl-section{margin:24px 0 20px;text-align:center}
+    .lkc-block .lkc-vsl-title{font-size:.95rem;color:var(--lkc-text);font-weight:600;margin-bottom:14px;line-height:1.5}
+    .lkc-block .lkc-vsl-wrap{width:100%;max-width:300px;margin:0 auto;border-radius:16px;border:1px solid var(--lkc-border);background:#000;overflow:hidden}
+    .lkc-block .lkc-vsl-wrap iframe{display:block;width:100%;aspect-ratio:9/16;border:0}
+    .lkc-block .lkc-vsl-credibility{text-align:center;font-size:.82rem;color:var(--lkc-text-muted);margin-top:12px;font-style:italic}
+    .lkc-block .lkc-btn-primary{display:block;width:100%;background:linear-gradient(135deg,var(--lkc-purple),var(--lkc-purple-light));color:#fff;border:none;border-radius:var(--lkc-radius);padding:16px 24px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;letter-spacing:.01em;text-decoration:none;text-align:center}
+    .lkc-block .lkc-btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(124,58,237,.4)}
+    .lkc-block .lkc-btn-green{background:linear-gradient(135deg,#059669,var(--lkc-green-light));animation:lkcPulseGreen 2.5s infinite}
+    @keyframes lkcPulseGreen{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.35)}50%{box-shadow:0 0 0 12px rgba(16,185,129,0)}}
+    .lkc-block .lkc-btn-outline{background:none;border:2px solid var(--lkc-border);color:var(--lkc-text);border-radius:var(--lkc-radius);padding:14px 20px;font-size:.92rem;font-weight:600;cursor:pointer;transition:border-color .2s,background .2s;font-family:inherit;width:100%}
+    .lkc-block .lkc-btn-outline:hover{border-color:var(--lkc-purple-light);background:rgba(124,58,237,.08)}
+    .lkc-block .lkc-disclaimer{text-align:center;color:var(--lkc-text-muted);font-size:.78rem;margin-top:10px}
+    .lkc-block .lkc-social-proof-bar{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;padding:14px 20px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:14px;margin:0 auto 30px;max-width:700px}
+    .lkc-block .lkc-sp-item{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--lkc-text-muted);white-space:nowrap}
+    .lkc-block .lkc-sp-dot{width:8px;height:8px;border-radius:50%;background:var(--lkc-green);animation:lkcPulse 2s infinite}
+    .lkc-block .lkc-sp-item strong{color:var(--lkc-green-light)}
+    @keyframes lkcPulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .lkc-block .lkc-demo-zone{padding:20px 20px 40px}
+    .lkc-block .lkc-section-title{text-align:center;font-size:clamp(1.5rem,3.2vw,2.2rem);font-weight:800;margin-bottom:10px;color:var(--lkc-text)}
+    .lkc-block .lkc-section-sub{text-align:center;color:var(--lkc-text-muted);margin-bottom:44px;font-size:.95rem}
+    .lkc-block .lkc-demo-container{max-width:640px;margin:0 auto;background:var(--lkc-surface);border:1px solid var(--lkc-border);border-radius:24px;padding:36px 32px;box-shadow:0 0 60px rgba(124,58,237,.1)}
+    .lkc-block .lkc-demo-step{display:none}.lkc-block .lkc-demo-step.lkc-active{display:block}
+    .lkc-block .lkc-step-headline{font-size:1.5rem;font-weight:800;margin-bottom:8px;line-height:1.25;color:var(--lkc-text)}
+    .lkc-block .lkc-step-sub{color:var(--lkc-text-muted);font-size:.9rem;margin-bottom:24px;line-height:1.65}
+    .lkc-block .lkc-input-wrap{position:relative;margin-bottom:12px}
+    .lkc-block .lkc-input-wrap input{width:100%;max-width:100%;box-sizing:border-box;background:var(--lkc-surface2);border:2px solid var(--lkc-border);border-radius:var(--lkc-radius);padding:15px 16px;font-size:.95rem;color:var(--lkc-text);font-family:inherit;transition:border-color .25s;outline:none}
+    .lkc-block .lkc-input-wrap input:focus{border-color:var(--lkc-purple)}
+    .lkc-block .lkc-input-wrap input::placeholder{color:var(--lkc-text-muted)}
+    .lkc-block .lkc-url-error{color:#f87171;font-size:.82rem;margin-bottom:10px;display:none}
+    .lkc-block .lkc-examples-section{margin-top:20px;padding-top:20px;border-top:1px solid var(--lkc-border)}
+    .lkc-block .lkc-examples-label{font-size:.8rem;color:var(--lkc-text-muted);margin-bottom:10px;text-align:center}
+    .lkc-block .lkc-examples-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .lkc-block .lkc-example-btn{background:var(--lkc-surface2);border:1px solid var(--lkc-border);color:var(--lkc-text);border-radius:10px;padding:10px 12px;font-size:.82rem;cursor:pointer;transition:border-color .2s,background .2s;font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px}
+    .lkc-block .lkc-example-btn:hover{border-color:var(--lkc-purple-light);background:rgba(124,58,237,.1)}
+    .lkc-block .lkc-example-btn .lkc-emoji{font-size:1.1rem}
+    .lkc-block .lkc-loading-icon{font-size:2.8rem;margin-bottom:20px;animation:lkcSpin 3s linear infinite}
+    @keyframes lkcSpin{to{transform:rotate(360deg)}}
+    @keyframes lkcFadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .lkc-block .lkc-loading h2{font-size:1.3rem;font-weight:700;margin-bottom:6px;text-align:center;color:var(--lkc-text)}
+    .lkc-block .lkc-loading-msg{color:var(--lkc-text-muted);font-size:.9rem;margin-bottom:24px;min-height:22px;text-align:center}
+    .lkc-block .lkc-progress-bar-wrap{background:var(--lkc-surface2);border-radius:999px;height:7px;overflow:hidden;margin-bottom:10px}
+    .lkc-block .lkc-progress-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--lkc-purple),var(--lkc-green));width:0%;transition:width .35s ease}
+    .lkc-block .lkc-progress-pct{font-size:.8rem;color:var(--lkc-text-muted);text-align:center}
+    .lkc-block .lkc-chat-header{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--lkc-border);margin-bottom:14px}
+    .lkc-block .lkc-chat-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--lkc-purple),var(--lkc-green));display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .lkc-block .lkc-chat-name{font-weight:700;font-size:.9rem;color:var(--lkc-text)}
+    .lkc-block .lkc-chat-status{font-size:.78rem;color:var(--lkc-green);display:flex;align-items:center;gap:5px}
+    .lkc-block .lkc-chat-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--lkc-green);display:inline-block}
+    .lkc-block .lkc-timer-bar{background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:var(--lkc-radius);padding:9px 14px;font-size:.82rem;color:var(--lkc-purple-light);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+    .lkc-block .lkc-messages-wrap{background:var(--lkc-surface2);border-radius:var(--lkc-radius);padding:14px;min-height:240px;max-height:360px;overflow-y:auto;margin-bottom:14px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+    .lkc-block .lkc-msg{max-width:82%;padding:10px 14px;border-radius:16px;font-size:.87rem;line-height:1.55;animation:lkcFadeUp .3s ease}
+    .lkc-block .lkc-msg-bot{background:var(--lkc-surface);border:1px solid var(--lkc-border);align-self:flex-start;border-bottom-left-radius:4px;color:var(--lkc-text)}
+    .lkc-block .lkc-msg-client{background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);align-self:flex-end;border-bottom-right-radius:4px;color:var(--lkc-text)}
+    .lkc-block .lkc-msg-client-label{font-size:.7rem;color:var(--lkc-purple-light);font-weight:600;margin-bottom:3px}
+    .lkc-block .lkc-msg-typing{background:var(--lkc-surface);border:1px solid var(--lkc-border);align-self:flex-start;border-bottom-left-radius:4px;padding:12px 16px}
+    .lkc-block .lkc-dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--lkc-text-muted);margin:0 2px;animation:lkcBounce .9s infinite}
+    .lkc-block .lkc-dots span:nth-child(2){animation-delay:.15s}.lkc-block .lkc-dots span:nth-child(3){animation-delay:.3s}
+    @keyframes lkcBounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+    .lkc-block .lkc-client-counter{text-align:center;padding:10px 0;font-size:.82rem;color:var(--lkc-text-muted);margin-top:8px}
+    .lkc-block .lkc-client-counter strong{color:var(--lkc-green-light);font-size:1.1rem}
+    .lkc-block .lkc-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+    .lkc-block .lkc-type-btn{background:var(--lkc-surface2);border:2px solid var(--lkc-border);color:var(--lkc-text);border-radius:14px;padding:16px 14px;font-size:.88rem;cursor:pointer;transition:border-color .25s,background .25s,transform .15s;font-family:inherit;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+    .lkc-block .lkc-type-btn:hover{border-color:var(--lkc-purple-light);background:rgba(124,58,237,.08);transform:translateY(-2px)}
+    .lkc-block .lkc-type-btn .lkc-t-icon{font-size:1.6rem}.lkc-block .lkc-type-btn .lkc-t-label{font-weight:600;font-size:.82rem}
+    .lkc-block .lkc-step-confirm{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:14px;padding:16px 20px;text-align:center;margin-bottom:18px;font-size:.9rem;color:var(--lkc-green-light);animation:lkcFadeUp .4s ease}
+    .lkc-block .lkc-wow-box{background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(16,185,129,.08));border:1px solid var(--lkc-border);border-radius:16px;padding:24px 20px;text-align:center;margin-top:18px;animation:lkcFadeUp .5s ease}
+    .lkc-block .lkc-wow-stat{font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--lkc-green),var(--lkc-green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .lkc-block .lkc-wow-text{color:var(--lkc-text-muted);font-size:.9rem;margin-top:6px}
+    .lkc-block .lkc-wow-cta{color:var(--lkc-text);font-weight:700;font-size:1.05rem;margin-top:14px}
+    .lkc-block .lkc-ig-sim-box{background:var(--lkc-surface2);border:1px solid var(--lkc-border);border-radius:16px;padding:20px;margin-top:16px;text-align:center;animation:lkcFadeUp .4s ease}
+    .lkc-block .lkc-ig-sim-box p{font-size:.9rem;color:var(--lkc-text-muted);margin-bottom:12px}
+    .lkc-block .lkc-btn-ig{background:linear-gradient(135deg,#E1306C,#833AB4,#5851DB);color:#fff;border:none;border-radius:var(--lkc-radius);padding:14px 20px;font-size:.92rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:inherit;width:100%}
+    .lkc-block .lkc-btn-ig:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(131,58,180,.4)}
+    .lkc-block .lkc-offer-section{display:none;border-top:1px solid var(--lkc-border);margin-top:20px;padding-top:26px;text-align:center;animation:lkcFadeUp .5s ease}
+    .lkc-block .lkc-offer-label{font-size:.78rem;color:var(--lkc-text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+    .lkc-block .lkc-offer-title{font-size:1.35rem;font-weight:800;margin-bottom:6px;color:var(--lkc-text)}
+    .lkc-block .lkc-offer-price{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,var(--lkc-green),var(--lkc-green-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+    .lkc-block .lkc-offer-price-sub{font-size:.82rem;color:var(--lkc-text-muted);margin-bottom:20px}
+    .lkc-block .lkc-offer-perks{list-style:none;margin-bottom:20px;text-align:left;display:inline-block;padding:0}
+    .lkc-block .lkc-offer-perks li{font-size:.88rem;margin-bottom:7px;display:flex;align-items:center;gap:8px;color:var(--lkc-text)}
+    .lkc-block .lkc-offer-perks li::before{content:'✅';font-size:.9rem}
+
+    /* NOTIFICATION TOAST */
+    .lkc-toast{position:fixed;bottom:24px;left:24px;background:rgba(19,19,26,.96);border:1px solid rgba(42,42,61,.8);border-radius:12px;padding:12px 18px;font-size:.82rem;color:#8b8aa0;z-index:9998;display:flex;align-items:center;gap:8px;animation:lkcSlideInToast .4s ease,lkcFadeOutToast .4s ease 3.6s forwards;max-width:340px;width:fit-content;box-shadow:0 8px 24px rgba(0,0,0,.5);font-family:'Inter',system-ui,sans-serif;backdrop-filter:blur(8px)}
+    @keyframes lkcSlideInToast{from{transform:translateX(-30px);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes lkcFadeOutToast{to{opacity:0;transform:translateX(-20px)}}
+    /* FOMO NOTIFICATION */
+    .lkc-fomo-toast{position:fixed;bottom:80px;left:24px;background:rgba(19,19,26,.96);border:1px solid rgba(42,42,61,.8);border-radius:12px;padding:12px 16px;font-size:.85rem;color:#c4c3d4;z-index:9999;display:flex;align-items:center;gap:10px;animation:lkcSlideInToast .4s ease,lkcFadeOutToast .4s ease 4.6s forwards;max-width:340px;width:fit-content;box-shadow:0 8px 24px rgba(0,0,0,.5);font-family:'Inter',system-ui,sans-serif;backdrop-filter:blur(8px)}
+    .lkc-fomo-toast strong{color:#f1f0ff}
+    .lkc-fomo-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#10b981);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;color:#fff;font-weight:600}
+    @media(max-width:768px){
+      .lkc-block{padding:40px 0}
+      .lkc-block .lkc-inner{padding:0 16px}
+      .lkc-block .lkc-curiosity{padding:0 12px 24px}
+      .lkc-block .lkc-curiosity-card{padding:24px 18px}
+      .lkc-block .lkc-curiosity h3{font-size:1.05rem}
+      .lkc-block .lkc-vsl-wrap{max-width:260px}
+      .lkc-block .lkc-social-proof-bar{gap:16px;padding:12px 16px;margin-bottom:24px}
+      .lkc-block .lkc-demo-container{padding:28px 20px;border-radius:18px}
+      .lkc-block .lkc-step-headline{font-size:1.25rem}
+      .lkc-block .lkc-type-grid{grid-template-columns:1fr 1fr;gap:8px}
+      .lkc-block .lkc-type-btn{padding:12px 10px;font-size:.82rem}
+      .lkc-block .lkc-messages-wrap{min-height:200px;max-height:320px;padding:12px}
+      .lkc-block .lkc-section-title{font-size:1.4rem}
+    }
+    @media(max-width:480px){
+      .lkc-block .lkc-inner{padding:0 10px}
+      .lkc-block .lkc-curiosity{padding:0 6px 20px}
+      .lkc-block .lkc-curiosity-card{padding:20px 14px;border-radius:16px}
+      .lkc-block .lkc-curiosity h3{font-size:.98rem;margin-bottom:14px}
+      .lkc-block .lkc-c-msg{padding:8px 10px;font-size:.82rem;gap:8px}
+      .lkc-block .lkc-c-msg-origin{font-size:.65rem}
+      .lkc-block .lkc-vsl-wrap{max-width:260px}
+      .lkc-block .lkc-vsl-title{font-size:.88rem}
+      .lkc-block .lkc-btn-primary{padding:14px 18px;font-size:.92rem}
+      .lkc-block .lkc-social-proof-bar{flex-direction:column;align-items:center;gap:8px;padding:10px 14px}
+      .lkc-block .lkc-demo-container{padding:22px 16px;border-radius:16px;box-shadow:0 0 30px rgba(124,58,237,.08)}
+      .lkc-block .lkc-step-headline{font-size:1.15rem}
+      .lkc-block .lkc-step-sub{font-size:.84rem;margin-bottom:18px}
+      .lkc-block .lkc-input-wrap input{padding:13px 14px;font-size:.9rem}
+      .lkc-block .lkc-examples-grid{grid-template-columns:1fr}
+      .lkc-block .lkc-example-btn{padding:10px 14px;font-size:.82rem}
+      .lkc-block .lkc-type-grid{gap:6px}
+      .lkc-block .lkc-type-btn{padding:12px 8px;border-radius:12px}
+      .lkc-block .lkc-type-btn .lkc-t-icon{font-size:1.3rem}
+      .lkc-block .lkc-type-btn .lkc-t-label{font-size:.76rem}
+      .lkc-block .lkc-chat-header{gap:10px}
+      .lkc-block .lkc-chat-avatar{width:36px;height:36px;font-size:1.1rem}
+      .lkc-block .lkc-chat-name{font-size:.84rem}
+      .lkc-block .lkc-timer-bar{padding:8px 12px;font-size:.78rem}
+      .lkc-block .lkc-messages-wrap{min-height:180px;max-height:280px;padding:10px}
+      .lkc-block .lkc-msg{padding:8px 12px;font-size:.82rem;max-width:88%}
+      .lkc-block .lkc-wow-box{padding:18px 16px}
+      .lkc-block .lkc-wow-stat{font-size:1.5rem}
+      .lkc-block .lkc-wow-text{font-size:.82rem}
+      .lkc-block .lkc-wow-cta{font-size:.92rem}
+      .lkc-block .lkc-offer-price{font-size:1.8rem}
+      .lkc-block .lkc-offer-title{font-size:1.15rem}
+      .lkc-block .lkc-section-title{font-size:1.2rem}
+      .lkc-block .lkc-section-sub{font-size:.88rem;margin-bottom:30px}
+    }
+    @media(max-width:360px){
+      .lkc-block .lkc-curiosity-card{padding:16px 12px}
+      .lkc-block .lkc-demo-container{padding:18px 14px}
+      .lkc-block .lkc-vsl-wrap{max-width:230px}
+      .lkc-block .lkc-type-grid{grid-template-columns:1fr 1fr}
+      .lkc-block .lkc-type-btn{padding:10px 6px}
+      .lkc-block .lkc-step-headline{font-size:1.05rem}
+    }
+    </style>
+
+    <div id="lkc-complementary-block" class="lkc-block">
+      <div class="lkc-inner">
+        <div class="lkc-curiosity">
+          <div class="lkc-curiosity-card">
+            <h3>💬 Perguntas reais que clientes fazem todos os dias:</h3>
+            <div class="lkc-curiosity-msgs">
+              <div class="lkc-c-msg"><span class="lkc-c-msg-origin">Instagram</span><span class="lkc-c-msg-text">Vocês atendem aos sábados?</span></div>
+              <div class="lkc-c-msg"><span class="lkc-c-msg-origin">WhatsApp</span><span class="lkc-c-msg-text">Esse produto funciona mesmo?</span></div>
+              <div class="lkc-c-msg"><span class="lkc-c-msg-origin">Site</span><span class="lkc-c-msg-text">Qual o prazo de entrega?</span></div>
+              <div class="lkc-c-msg"><span class="lkc-c-msg-origin">Google</span><span class="lkc-c-msg-text">Posso falar com alguém?</span></div>
+            </div>
+            <p class="lkc-curiosity-highlight">⚡ Agora imagine um sistema respondendo tudo isso automaticamente.</p>
+            <div class="lkc-vsl-section">
+              <div class="lkc-vsl-title">⚡ Veja em segundos como o sistema é poderoso atendendo clientes automaticamente.</div>
+              <div class="lkc-vsl-wrap">
+                <iframe src="https://www.youtube.com/embed/FRVnsTet8Y8?rel=0&modestbranding=1" title="Link Mágico — Demonstração Rápida" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+              </div>
+              <p class="lkc-vsl-credibility">Sistema em produção utilizado por empreendedores reais para automatizar atendimento.</p>
+            </div>
+            <div class="lkc-curiosity-cta">
+              <button class="lkc-btn-primary" onclick="document.getElementById('lkc-demo-zone').scrollIntoView({behavior:'smooth'})">VER ISSO FUNCIONANDO AGORA →</button>
+            </div>
+          </div>
+        </div>
+        <div class="lkc-social-proof-bar">
+          <div class="lkc-sp-item"><span class="lkc-sp-dot"></span> <strong id="lkc-sp-counter">2.847</strong> atendimentos hoje</div>
+          <div class="lkc-sp-item">👁 <strong id="lkc-sp-visitors">23</strong> pessoas testando agora</div>
+        </div>
+        <div id="lkc-demo-zone" class="lkc-demo-zone">
+          <div class="lkc-section-title">Teste o sistema agora</div>
+          <div class="lkc-section-sub">Descreva qualquer negócio e veja o atendimento funcionando em segundos.</div>
+          <div class="lkc-demo-container">
+            <div id="lkc-step-url" class="lkc-demo-step lkc-active">
+              <div class="lkc-step-headline">Qual é o seu negócio? 👇</div>
+              <div class="lkc-step-sub">Cole um link, uma rede social ou simplesmente descreva o tipo de negócio.<br>O sistema detecta automaticamente.</div>
+              <div class="lkc-input-wrap"><input type="text" id="lkc-url-input" placeholder="Ex: Clínica de estética em SP, ou cole um link..." autocomplete="off"></div>
+              <div class="lkc-url-error" id="lkc-url-error">Por favor, descreva seu negócio ou cole um link.</div>
+              <button class="lkc-btn-primary" onclick="lkcIniciarDemo()">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
+              <p class="lkc-disclaimer">Sem cadastro · 100% gratuito para testar</p>
+              <div class="lkc-examples-section">
+                <div class="lkc-examples-label">Ou teste com um exemplo pronto:</div>
+                <div class="lkc-examples-grid">
+                  <button class="lkc-example-btn" onclick="lkcTestarExemplo('curso')"><span class="lkc-emoji">📚</span> Curso online</button>
+                  <button class="lkc-example-btn" onclick="lkcTestarExemplo('clinica')"><span class="lkc-emoji">🏥</span> Clínica / Consultório</button>
+                  <button class="lkc-example-btn" onclick="lkcTestarExemplo('loja')"><span class="lkc-emoji">🛍️</span> Loja virtual</button>
+                  <button class="lkc-example-btn" onclick="lkcTestarExemplo('afiliado')"><span class="lkc-emoji">📢</span> Afiliado digital</button>
+                </div>
+              </div>
+            </div>
+            <div id="lkc-step-type" class="lkc-demo-step">
+              <div class="lkc-step-headline">Vamos simular seu atendimento automático 🎯</div>
+              <div class="lkc-step-sub">Qual é o seu tipo de negócio?</div>
+              <div class="lkc-type-grid">
+                <button class="lkc-type-btn" onclick="lkcEscolherTipo('infoproduto')"><span class="lkc-t-icon">📚</span><span class="lkc-t-label">Curso / Infoproduto</span></button>
+                <button class="lkc-type-btn" onclick="lkcEscolherTipo('negocio_local')"><span class="lkc-t-icon">🏥</span><span class="lkc-t-label">Negócio Local</span></button>
+                <button class="lkc-type-btn" onclick="lkcEscolherTipo('ecommerce')"><span class="lkc-t-icon">🛍️</span><span class="lkc-t-label">E-commerce</span></button>
+                <button class="lkc-type-btn" onclick="lkcEscolherTipo('marketing')"><span class="lkc-t-icon">📢</span><span class="lkc-t-label">Afiliado</span></button>
+                <button class="lkc-type-btn" onclick="lkcEscolherTipo('servicos')"><span class="lkc-t-icon">💼</span><span class="lkc-t-label">Prestação de Serviço</span></button>
+                <button class="lkc-type-btn" onclick="lkcEscolherTipo('emagrecimento')"><span class="lkc-t-icon">💪</span><span class="lkc-t-label">Saúde / Fitness</span></button>
+              </div>
+            </div>
+            <div id="lkc-step-name" class="lkc-demo-step">
+              <div class="lkc-step-confirm" id="lkc-type-confirm">✅ Tipo selecionado</div>
+              <div class="lkc-step-headline">Qual é o nome do seu negócio? ✍️</div>
+              <div class="lkc-step-sub">Pode ser o nome da sua empresa, marca, curso ou perfil.</div>
+              <div class="lkc-input-wrap"><input type="text" id="lkc-name-input" placeholder="Ex: Clínica Bella Estética" autocomplete="off" maxlength="50"></div>
+              <button class="lkc-btn-primary" onclick="lkcConfirmarNome()">CONTINUAR →</button>
+              <p class="lkc-disclaimer">Isso personaliza a demonstração para você</p>
+            </div>
+            <div id="lkc-step-loading" class="lkc-demo-step lkc-loading" style="text-align:center;padding:10px 0">
+              <div class="lkc-loading-icon">⚙️</div>
+              <h2>Preparando seu atendimento...</h2>
+              <p class="lkc-loading-msg" id="lkc-loading-msg">Iniciando...</p>
+              <div class="lkc-progress-bar-wrap"><div class="lkc-progress-bar-fill" id="lkc-progress-fill"></div></div>
+              <p class="lkc-progress-pct" id="lkc-progress-pct">0%</p>
+            </div>
+            <div id="lkc-step-chat" class="lkc-demo-step">
+              <div class="lkc-chat-header">
+                <div class="lkc-chat-avatar">🤖</div>
+                <div>
+                  <div class="lkc-chat-name" id="lkc-chat-name">Atendimento Automático</div>
+                  <div class="lkc-chat-status">Online</div>
+                </div>
+              </div>
+              <div class="lkc-timer-bar">⚡ Demonstração ativa por <span id="lkc-session-timer">05:00</span></div>
+              <div class="lkc-messages-wrap" id="lkc-messages-wrap"></div>
+              <div class="lkc-client-counter">Clientes atendidos nesta demonstração: <strong id="lkc-client-count">0</strong></div>
+              <div class="lkc-wow-box" id="lkc-wow-box" style="display:none">
+                <div class="lkc-wow-stat">⚡ <span id="lkc-wow-count">5</span> clientes atendidos</div>
+                <div class="lkc-wow-text">Seu atendimento automático respondeu todas as perguntas sem intervenção humana.</div>
+                <div class="lkc-wow-cta" id="lkc-wow-name-cta">Imagine isso respondendo todos os visitantes do seu negócio.</div>
+              </div>
+              <div class="lkc-ig-sim-box" id="lkc-ig-sim-box" style="display:none">
+                <p>📸 Quer ver como ficaria no seu Instagram?</p>
+                <button class="lkc-btn-ig" onclick="lkcSimularInstagram()">Simular no meu Instagram →</button>
+              </div>
+              <button class="lkc-btn-outline" style="margin-top:16px" onclick="lkcReiniciarDemo()">🔄 Testar outro negócio</button>
+              <div id="lkc-offer-section" class="lkc-offer-section">
+                <div class="lkc-offer-label">✅ Sistema configurado com sucesso</div>
+                <div class="lkc-offer-title">Ative seu atendimento automático</div>
+                <div class="lkc-offer-price">R$97<span style="font-size:1.1rem;color:var(--lkc-text-muted)">/ano</span></div>
+                <div class="lkc-offer-price-sub">Menos de R$8/mês · Cancele quando quiser</div>
+                <ul class="lkc-offer-perks">
+                  <li>Sistema treinado nas informações do seu negócio</li>
+                  <li>Atendimento 24h por dia, 7 dias por semana</li>
+                  <li>Captura automática de contatos</li>
+                  <li>Funciona em site, WhatsApp e Instagram</li>
+                  <li>Painel de acompanhamento completo</li>
+                </ul>
+                <button class="lkc-btn-primary lkc-btn-green" onclick="window.open('https://pay.hotmart.com/G103177435I','_blank')">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
+                <p class="lkc-disclaimer">🛡️ Garantia de 7 dias · Sem riscos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>

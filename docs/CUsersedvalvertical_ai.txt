@@ -1,0 +1,473 @@
+"C:\Users\edval\vertical_ai"
+GitHub:
+https://github.com/edvaldooneforma2022/vertical_ai
+Render:
+https://linkmagico.app.br/
+
+
+# BRIEFING OFICIAL — MODERNIZAÇÃO DA INTERFACE DO LINKMÁGICO V7
+
+## Objetivo
+
+Executar uma modernização completa da interface (UX/UI) do LinkMágico, elevando significativamente a percepção de qualidade, profissionalismo, simplicidade e fluidez da plataforma.
+
+IMPORTANTE:
+
+Esta tarefa NÃO é uma refatoração do sistema.
+
+Esta tarefa NÃO é uma alteração da arquitetura.
+
+Esta tarefa NÃO autoriza mudanças na lógica de negócio.
+
+Esta tarefa NÃO deve modificar qualquer funcionalidade existente.
+
+Todo o comportamento atual do sistema deve permanecer exatamente igual.
+
+O objetivo é exclusivamente melhorar a experiência do usuário, organização visual e fluxo de utilização.
+
+A plataforma já possui meses de desenvolvimento e diversas integrações críticas funcionando.
+
+Portanto, qualquer alteração deve respeitar integralmente a implementação atual.
+
+---
+
+# REGRAS OBRIGATÓRIAS
+
+• Não alterar APIs.
+
+• Não alterar banco de dados.
+
+• Não alterar estrutura das integrações.
+
+• Não alterar rotas.
+
+• Não alterar autenticação.
+
+• Não alterar lógica do backend.
+
+• Não alterar comportamento dos módulos existentes.
+
+• Não remover nenhuma funcionalidade.
+
+• Não alterar funcionamento do assistente IA.
+
+• Não alterar funcionamento do CRM.
+
+• Não alterar captura de leads.
+
+• Não alterar Analytics.
+
+• Não alterar sistema de templates.
+
+• Não alterar documentação.
+
+• Não alterar sistema de afiliados.
+
+• Não alterar módulos administrativos.
+
+Todo o trabalho deverá ocorrer exclusivamente na camada de apresentação (Frontend/UI/UX).
+
+---
+
+# OBJETIVO DE UX
+
+O usuário deve conseguir criar seu primeiro vendedor automático com o menor esforço cognitivo possível.
+
+Toda informação que não seja essencial para a ativação inicial deverá ser reduzida, reorganizada ou apresentada apenas quando necessária.
+
+A experiência deve transmitir imediatamente:
+
+• simplicidade
+
+• velocidade
+
+• confiança
+
+• inteligência
+
+• profissionalismo
+
+---
+
+# PRIMEIRA TELA
+
+A primeira tela deve responder apenas uma pergunta:
+
+"Qual é o link da sua página?"
+
+Eliminar qualquer excesso de leitura inicial.
+
+O usuário deve visualizar imediatamente:
+
+Campo Nome
+
+Campo URL
+
+Botão principal
+
+Nada além disso deve competir visualmente com a ação principal.
+
+---
+
+# ONBOARDING
+
+Substituir textos longos por onboarding guiado utilizando Drive.js.
+
+Fluxo sugerido:
+
+Boas-vindas
+
+↓
+
+Destacar campo URL
+
+↓
+
+Explicar em uma frase
+
+↓
+
+Destacar Nome
+
+↓
+
+Explicar rapidamente
+
+↓
+
+Destacar botão Ativar
+
+↓
+
+Concluir
+
+O onboarding deve ser opcional e reapresentável pelo usuário.
+
+---
+
+# BLOCO "IMPORTANTE"
+
+O bloco atual com diversas explicações deve deixar de ser o primeiro elemento da experiência.
+
+Transformá-lo em:
+
+"Saiba como funciona"
+
+ou
+
+"Entenda a tecnologia"
+
+Apenas para quem desejar aprofundar.
+
+---
+
+# GUIA RÁPIDO
+
+Manter o vídeo.
+
+Reposicionar para uma área de maior destaque.
+
+Criar aparência premium.
+
+Inserir miniatura profissional.
+
+Adicionar botão:
+
+Assistir agora
+
+Tempo do vídeo.
+
+---
+
+# HIERARQUIA VISUAL
+
+Criar hierarquia clara.
+
+1° ação principal
+
+2° orientação
+
+3° recursos adicionais
+
+Todo elemento secundário deve competir menos pela atenção.
+
+---
+
+# BOTÃO PRINCIPAL
+
+O botão Ativar Assistente IA deve ser o maior destaque da página.
+
+Mais contraste.
+
+Maior presença visual.
+
+Estado ativo/inativo extremamente claro.
+
+---
+
+# CAMPOS
+
+Melhorar:
+
+Espaçamento
+
+Tipografia
+
+Contraste
+
+Feedback visual
+
+Estados:
+
+Focus
+
+Hover
+
+Erro
+
+Sucesso
+
+Loading
+
+---
+
+# OPÇÕES AVANÇADAS
+
+Continuar ocultas.
+
+Apenas expandir quando solicitado.
+
+Nunca ocupar espaço visual desnecessário.
+
+---
+
+# REDES SOCIAIS
+
+Transformar os cartões em exemplos de utilização.
+
+Exemplo:
+
+Instagram
+
+Cole um perfil ou postagem
+
+YouTube
+
+Cole um vídeo
+
+TikTok
+
+Cole um vídeo
+
+Facebook
+
+Cole sua página
+
+O objetivo é ensinar visualmente que qualquer página pode ser utilizada.
+
+---
+
+# MENSAGENS
+
+Substituir mensagens negativas.
+
+Exemplo:
+
+Remover:
+
+"Você ainda não começou"
+
+Utilizar:
+
+"Seu vendedor pode estar ativo em menos de 2 minutos."
+
+ou
+
+"Comece criando seu primeiro vendedor."
+
+Toda comunicação deve ser positiva.
+
+---
+
+# ÍCONES
+
+Não utilizar emojis.
+
+Utilizar exclusivamente:
+
+Font Awesome
+
+Heroicons
+
+Lucide
+
+SVGs próprios
+
+Ícones consistentes.
+
+Mesmo estilo visual.
+
+---
+
+# DESIGN
+
+Manter identidade visual do LinkMágico.
+
+Não transformar em outro produto.
+
+Manter:
+
+cores
+
+gradientes
+
+marca
+
+tipografia
+
+porém elevar o acabamento.
+
+Objetivo:
+
+aparência de SaaS internacional.
+
+---
+
+# MICROINTERAÇÕES
+
+Adicionar:
+
+Fade suave
+
+Loading elegante
+
+Hover discreto
+
+Transições leves
+
+Feedback visual moderno
+
+Sem exageros.
+
+---
+
+# RESPONSIVIDADE
+
+Garantir funcionamento perfeito em:
+
+Android
+
+iPhone
+
+Tablets
+
+Notebook
+
+Desktop
+
+Ultrawide
+
+Nenhum componente pode quebrar.
+
+Nenhum texto pode cortar.
+
+Nenhum botão pode sobrepor outro.
+
+Nenhum card pode sair da tela.
+
+---
+
+# PERFORMANCE
+
+Não degradar desempenho.
+
+Evitar bibliotecas pesadas.
+
+Preservar velocidade atual.
+
+---
+
+# ACESSIBILIDADE
+
+Melhorar contraste.
+
+Áreas clicáveis maiores.
+
+Leitura confortável.
+
+Boa navegação por teclado quando aplicável.
+
+---
+
+# TESTES OBRIGATÓRIOS
+
+Antes da entrega validar:
+
+✓ criação de assistente
+
+✓ edição
+
+✓ exclusão
+
+✓ captura da URL
+
+✓ analytics
+
+✓ CRM
+
+✓ templates
+
+✓ afiliados
+
+✓ WhatsApp
+
+✓ integrações
+
+✓ login
+
+✓ cadastro
+
+✓ painel
+
+✓ onboarding
+
+✓ responsividade
+
+Nenhuma funcionalidade poderá apresentar regressão.
+
+---
+
+# OBJETIVO FINAL
+
+Ao concluir este trabalho, o usuário deve ter a percepção de estar utilizando uma plataforma SaaS moderna, sofisticada e internacional.
+
+A navegação deve ser intuitiva.
+
+O aprendizado deve ocorrer naturalmente.
+
+A experiência deve transmitir confiança imediatamente.
+
+A identidade do LinkMágico deve ser preservada, porém com acabamento visual significativamente superior.
+
+O sucesso desta tarefa será medido por três critérios:
+
+1. Zero regressões funcionais.
+
+2. Redução da carga cognitiva do usuário.
+
+3. Aumento perceptível da qualidade visual, fluidez e profissionalismo da plataforma.
+
+REGRA ABSOLUTA (NÃO NEGOCIÁVEL):
+Você só pode aplicar correções se, e somente se:
+- NÃO IMPACTAR nenhuma funcionalidade existente.
+- NÃO QUEBRAR rotas, fluxos, segurança, tenancy, billing, backup, autenticação, integrações WhatsApp, geração de widget ou lógicas atuais.
+- Toda alteração deve ser incremental, isolada, reversível e protegida por fallback.
+
+Se houver qualquer risco:
+- Use feature flags.
+- Use try/catch com fallback para comportamento atual.
+- Adicione logs detalhados.
+
+Em seguida execute os commits e push
+PowerShell não aceita &&. Use ;:
+

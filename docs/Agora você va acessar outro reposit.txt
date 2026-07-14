@@ -1,0 +1,29 @@
+Agora você va acessar outro repositório. Acesse os códigos do site e atualize a URL de "https://linkmagico.app.br/l/Fbjq1y" para "https://linkmagico.app.br/l/hqajtX" do botão "Ver o vendedor automático ao vivo" e também troque o script do widget (Chat balão flutuante) pelo novo que está aqui ""C:\Users\edval\Downloads\linkMágico Chatbot Widget v2.0.txt""  SITE LINK MÁGICO
+
+C:\Users\edval\Downloads\site_repo
+
+GitHub:
+
+https://github.com/linkmagicobot-ia/site.git
+
+Render:
+
+https://site.linkmagico.app.br/ 
+
+CONTEXTO: 
+Fale sempre na minha língua português do Brasil.
+Você está atuando sobre a plataforma Link Mágico V7.0/ V8.0. Um sistema robusto e completo + um código servidor de +12 mil linhas, ou seja, um SaaS DE CRM + Chatbot multi-tenant com integrações WhatsApp (Twilio/Evolution), sistema de billing, analytics, widget whitelabel e painel admin, pipeline, follow-up, captura de leads, agendamento, widget inline (balão flutuante para sites) estratégias conversacionais de vendas + sistemas avançados de inteligências de intenção, condução, vendas "Comportamento de Vendas da IA: ⚡ Automático, 🎛️ Manual, ⚫ Desligado", e muito mais funcionalidades poderosas não listadas aqui e etc... Atenção para NÃO IMPACTAR nenhuma das rotas, lógicas estratégica, fluxos do sistema, configurações e etc.
+
+REGRA ABSOLUTA (NÃO NEGOCIÁVEL):
+Você só pode aplicar correções se, e somente se:
+- NÃO IMPACTAR nenhuma funcionalidade existente.
+- NÃO QUEBRAR rotas, fluxos, segurança, tenancy, billing, backup, autenticação, integrações WhatsApp, geração de widget ou lógicas atuais.
+- Toda alteração deve ser incremental, isolada, reversível e protegida por fallback.
+
+Se houver qualquer risco:
+- Use feature flags.
+- Use try/catch com fallback para comportamento atual.
+- Adicione logs detalhados.
+
+Em seguida execute os commits e push
+PowerShell não aceita &&. Use ;:

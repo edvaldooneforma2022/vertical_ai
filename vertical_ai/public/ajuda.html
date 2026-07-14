@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Ajuda — LinkMágico™</title>
+    <meta name="description" content="Central de Ajuda do LinkMágico™. Tire suas dúvidas sobre a plataforma de automação conversacional com IA, configurações, integrações e muito mais.">
+    <meta name="keywords" content="LinkMágico, ajuda, suporte, IA, automação, vendedor automático, chatbot, FAQ">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Central de Ajuda — LinkMágico™">
+    <meta property="og:description" content="Encontre respostas, tutoriais e guias completos sobre a plataforma LinkMágico™.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: rgba(30, 41, 59, 0.8);
+            --bg-card-hover: rgba(30, 41, 59, 1);
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+            --green: #10b981;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: rgba(148, 163, 184, 0.12);
+            --border-hover: rgba(148, 163, 184, 0.25);
+            --radius: 16px;
+            --radius-sm: 12px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+            --gradient-blue-purple: linear-gradient(135deg, var(--blue), var(--purple));
+            --gradient-green-blue: linear-gradient(135deg, var(--green), var(--blue));
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* === HEADER === */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+        }
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 10px;
+            transition: all 0.25s ease;
+            border: 1px solid transparent;
+        }
+        .back-btn:hover {
+            color: var(--text-primary);
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+        .header-logo {
+            font-size: 18px;
+            font-weight: 700;
+            background: var(--gradient-blue-purple);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* === HERO === */
+        .hero {
+            position: relative;
+            padding: 80px 24px 60px;
+            text-align: center;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.06) 40%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 18px;
+            border-radius: 100px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: var(--blue);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            letter-spacing: 0.5px;
+        }
+        .hero h1 {
+            font-size: clamp(32px, 5vw, 52px);
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+        .hero h1 span {
+            background: var(--gradient-blue-purple);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 580px;
+            margin: 0 auto 40px;
+        }
+
+        /* === SEARCH === */
+        .search-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .search-container i {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 18px;
+            transition: color 0.25s;
+        }
+        .search-input {
+            width: 100%;
+            padding: 16px 20px 16px 52px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .search-input::placeholder { color: var(--text-muted); }
+        .search-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+        }
+        .search-input:focus + i,
+        .search-input:focus ~ i { color: var(--blue); }
+        .search-clear {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 16px;
+            display: none;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .search-clear:hover { color: var(--text-primary); }
+        .search-clear.visible { display: block; }
+        .search-results-info {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+            color: var(--text-muted);
+            display: none;
+        }
+        .search-results-info.visible { display: block; }
+
+        /* === CATEGORIES GRID === */
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+        .categories-section { padding: 20px 0 60px; }
+        .categories-section h2 {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+        }
+        .category-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        .category-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+        .category-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+        .category-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .category-icon.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .category-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
+        .category-icon.pink { background: linear-gradient(135deg, #ec4899, #db2777); }
+        .category-icon.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .category-icon.cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .category-icon.red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .category-icon.indigo { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+        .category-icon.teal { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+        .category-icon.rose { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+        .category-icon.amber { background: linear-gradient(135deg, #f59e0b, #b45309); }
+        .category-icon.sky { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+
+        .category-card span {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        /* === SECTIONS === */
+        .sections-wrapper { padding-bottom: 80px; }
+
+        .help-section {
+            margin-bottom: 32px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .help-section.hidden {
+            display: none;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-top: 20px;
+        }
+        .section-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .section-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        /* === ACCORDION === */
+        .accordion {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-bottom: 8px;
+            transition: border-color 0.3s;
+        }
+        .accordion:hover { border-color: var(--border-hover); }
+        .accordion.active { border-color: rgba(59, 130, 246, 0.3); }
+
+        .accordion-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+            gap: 16px;
+        }
+        .accordion-header:hover { background: rgba(255,255,255,0.02); }
+        .accordion-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+        }
+        .accordion-chevron {
+            font-size: 14px;
+            color: var(--text-muted);
+            transition: transform 0.35s ease;
+            flex-shrink: 0;
+        }
+        .accordion.active .accordion-chevron { transform: rotate(180deg); color: var(--blue); }
+
+        .accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        .accordion-content {
+            padding: 0 24px 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .accordion-content p { margin-bottom: 12px; }
+        .accordion-content ul, .accordion-content ol {
+            margin: 8px 0 12px 20px;
+        }
+        .accordion-content li { margin-bottom: 6px; }
+        .accordion-content strong { color: var(--text-primary); font-weight: 600; }
+        .accordion-content .tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 2px 4px 2px 0;
+        }
+        .tag-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .tag-green { background: rgba(16,185,129,0.15); color: #34d399; }
+        .tag-purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+        .tag-orange { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .tag-red { background: rgba(239,68,68,0.15); color: #f87171; }
+
+        .step-list {
+            list-style: none !important;
+            margin-left: 0 !important;
+            counter-reset: step;
+        }
+        .step-list li {
+            counter-increment: step;
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 16px !important;
+        }
+        .step-list li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--gradient-blue-purple);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .feature-item i {
+            color: var(--green);
+            font-size: 14px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .feature-item span {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .info-card {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .info-card.tip { background: rgba(16,185,129,0.08); border-left: 3px solid var(--green); }
+        .info-card.warning { background: rgba(245,158,11,0.08); border-left: 3px solid #f59e0b; }
+        .info-card.danger { background: rgba(239,68,68,0.08); border-left: 3px solid #ef4444; }
+        .info-card i { font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+        .info-card.tip i { color: var(--green); }
+        .info-card.warning i { color: #f59e0b; }
+        .info-card.danger i { color: #ef4444; }
+        .info-card p { font-size: 13px; }
+
+        /* === CONTACT === */
+        .contact-section {
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+        }
+        .contact-section h2 {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .contact-section .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+        .contact-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 28px 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .contact-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+        .contact-card .c-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+        .contact-card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .contact-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* === FOOTER === */
+        .footer {
+            padding: 32px 24px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        .footer a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+        .footer a:hover { text-decoration: underline; }
+
+        /* === SCROLL TO TOP === */
+        .scroll-top {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--gradient-blue-purple);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(59,130,246,0.4);
+            z-index: 90;
+        }
+        .scroll-top.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .scroll-top:hover { transform: translateY(-2px) scale(1.05); }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .hero { padding: 50px 20px 40px; }
+            .hero p { font-size: 16px; }
+            .categories-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+            .category-card { padding: 20px 12px; }
+            .category-icon { width: 42px; height: 42px; font-size: 18px; }
+            .section-header h2 { font-size: 20px; }
+            .accordion-header { padding: 16px 18px; }
+            .accordion-header h3 { font-size: 14px; }
+            .accordion-content { padding: 0 18px 16px; font-size: 13px; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .contact-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .categories-grid { grid-template-columns: repeat(2, 1fr); }
+            .header-inner { height: 56px; }
+            .back-btn { font-size: 13px; padding: 6px 12px; }
+            .header-logo { font-size: 16px; }
+        }
+
+        /* Highlight animation */
+        .highlight-flash {
+            animation: flash 0.8s ease;
+        }
+        @keyframes flash {
+            0%, 100% { background: transparent; }
+            30% { background: rgba(59,130,246,0.08); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="header-inner">
+        <a href="/app" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Voltar ao Painel
+        </a>
+        <div class="header-logo">LinkMágico™ Ajuda</div>
+    </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-badge">
+        <i class="fas fa-book-open"></i>
+        Central de Ajuda
+    </div>
+    <h1>Como podemos <span>te ajudar?</span></h1>
+    <p>Encontre respostas rápidas, tutoriais e guias completos sobre a plataforma LinkMágico™.</p>
+
+    <div class="search-container">
+        <input type="text" class="search-input" id="searchInput" placeholder="Buscar por palavra-chave..." autocomplete="off">
+        <i class="fas fa-search"></i>
+        <button class="search-clear" id="searchClear" title="Limpar busca">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="search-results-info" id="searchInfo"></div>
+</section>
+
+<!-- CATEGORIES GRID -->
+<section class="categories-section">
+    <div class="container">
+        <h2>Navegue por Categoria</h2>
+        <div class="categories-grid">
+            <a class="category-card" data-target="sec-oque">
+                <div class="category-icon blue"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <span>O que é o LinkMágico?</span>
+            </a>
+            <a class="category-card" data-target="sec-como">
+                <div class="category-icon purple"><i class="fas fa-robot"></i></div>
+                <span>Vendedor Automático</span>
+            </a>
+            <a class="category-card" data-target="sec-passos">
+                <div class="category-icon green"><i class="fas fa-rocket"></i></div>
+                <span>Primeiros Passos</span>
+            </a>
+            <a class="category-card" data-target="sec-config">
+                <div class="category-icon orange"><i class="fas fa-sliders"></i></div>
+                <span>Configurações</span>
+            </a>
+            <a class="category-card" data-target="sec-integracoes">
+                <div class="category-icon cyan"><i class="fas fa-plug"></i></div>
+                <span>Integrações</span>
+            </a>
+            <a class="category-card" data-target="sec-funcionalidades">
+                <div class="category-icon indigo"><i class="fas fa-layer-group"></i></div>
+                <span>Funcionalidades</span>
+            </a>
+            <a class="category-card" data-target="sec-boas-praticas">
+                <div class="category-icon teal"><i class="fas fa-lightbulb"></i></div>
+                <span>Boas Práticas</span>
+            </a>
+            <a class="category-card" data-target="sec-faq">
+                <div class="category-icon pink"><i class="fas fa-circle-question"></i></div>
+                <span>FAQ</span>
+            </a>
+            <a class="category-card" data-target="sec-problemas">
+                <div class="category-icon red"><i class="fas fa-wrench"></i></div>
+                <span>Solução de Problemas</span>
+            </a>
+            <a class="category-card" data-target="sec-seguranca">
+                <div class="category-icon sky"><i class="fas fa-shield-halved"></i></div>
+                <span>Segurança</span>
+            </a>
+            <a class="category-card" data-target="sec-politica">
+                <div class="category-icon rose"><i class="fas fa-file-contract"></i></div>
+                <span>Política de Uso</span>
+            </a>
+            <a class="category-card" data-target="sec-suporte">
+                <div class="category-icon amber"><i class="fas fa-headset"></i></div>
+                <span>Suporte</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- SECTIONS -->
+<div class="container sections-wrapper">
+
+    <!-- O QUE É -->
+    <div class="help-section" id="sec-oque" data-keywords="o que é linkmagico plataforma saas automação conversacional ia vendedor automático">
+        <div class="section-header">
+            <div class="section-icon blue"><i class="fas fa-wand-magic-sparkles"></i></div>
+            <h2>O que é o LinkMágico™?</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Visão geral da plataforma</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>O <strong>LinkMágico™</strong> é uma plataforma SaaS de automação conversacional com Inteligência Artificial. Ela transforma suas páginas em verdadeiros vendedores automáticos que trabalham 24 horas por dia, 7 dias por semana.</p>
+                    <p>Com o LinkMágico™ você pode:</p>
+                    <div class="feature-grid">
+                        <div class="feature-item"><i class="fas fa-check"></i><span>Iniciar conversas automaticamente com visitantes</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i><span>Responder perguntas com IA treinada</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i><span>Quebrar objeções em tempo real</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i><span>Apresentar produtos de forma persuasiva</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i><span>Conduzir visitantes até a conversão</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i><span>Reduzir abandono de páginas</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i><span>Aumentar engajamento e tempo de permanência</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i><span>Automatizar atendimento por completo</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMO FUNCIONA -->
+    <div class="help-section" id="sec-como" data-keywords="como funciona vendedor automático monitoramento interação chat ia fluxo conversão">
+        <div class="section-header">
+            <div class="section-icon purple"><i class="fas fa-robot"></i></div>
+            <h2>Como funciona o vendedor automático?</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Fluxo completo de funcionamento</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>O vendedor automático do LinkMágico™ segue um fluxo inteligente para converter visitantes:</p>
+                    <ol class="step-list">
+                        <li><strong>Monitoramento da interação do visitante</strong> — A IA acompanha o comportamento do usuário na página, identificando o momento ideal para iniciar contato.</li>
+                        <li><strong>Abertura automática do chat</strong> — O widget do chat é exibido automaticamente no momento estratégico, chamando a atenção do visitante.</li>
+                        <li><strong>IA treinada para responder perguntas</strong> — A inteligência artificial responde dúvidas do visitante de forma natural e precisa, com base nas instruções configuradas.</li>
+                        <li><strong>Fluxos inteligentes de conversão</strong> — A conversa é direcionada por fluxos pensados para guiar o visitante em direção à ação desejada (compra, cadastro, agendamento).</li>
+                        <li><strong>Condução automática da conversa</strong> — A IA mantém o controle do diálogo, fazendo perguntas estratégicas, oferecendo soluções e superando objeções até a conversão final.</li>
+                    </ol>
+                    <div class="info-card tip">
+                        <i class="fas fa-lightbulb"></i>
+                        <p>Todo o processo é <strong>100% automático</strong>. Você configura uma vez e a IA trabalha para você 24 horas por dia.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRIMEIROS PASSOS -->
+    <div class="help-section" id="sec-passos" data-keywords="primeiros passos começar iniciar configurar assistente nome url site ativar automático">
+        <div class="section-header">
+            <div class="section-icon green"><i class="fas fa-rocket"></i></div>
+            <h2>Primeiros Passos</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Como começar em 3 passos simples</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>Começar com o LinkMágico™ é extremamente simples. Siga estes 3 passos:</p>
+                    <ol class="step-list">
+                        <li><strong>Dê um nome ao assistente</strong> — Escolha um nome que represente sua marca ou produto. Esse nome será exibido no cabeçalho do chat para seus visitantes.</li>
+                        <li><strong>Cole a URL do seu site</strong> — Informe o endereço da página onde o assistente atuará. O LinkMágico™ se conecta à sua página automaticamente.</li>
+                        <li><strong>Clique em "Ativar Assistente IA"</strong> — Com um único clique, seu vendedor automático entra em ação e começa a atender visitantes imediatamente.</li>
+                    </ol>
+                    <div class="info-card tip">
+                        <i class="fas fa-circle-check"></i>
+                        <p>O <strong>modo automático já vem ativado</strong> por padrão! Isso significa que o assistente começará a operar assim que for criado, sem necessidade de ajustes extras.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIGURAÇÕES DA IA -->
+    <div class="help-section" id="sec-config" data-keywords="configurações ia mensagem inicial saudação personalidade formal persuasivo amigável objetivo vender leads whatsapp checkout">
+        <div class="section-header">
+            <div class="section-icon orange"><i class="fas fa-sliders"></i></div>
+            <h2>Configurações da IA</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Mensagem Inicial</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>A mensagem inicial é o primeiro contato do seu assistente com o visitante. Configure-a com cuidado:</p>
+                    <ul>
+                        <li><strong>Saudação</strong> — Defina como o assistente cumprimenta o visitante (ex: "Oi! 👋 Posso te ajudar?")</li>
+                        <li><strong>Tom da conversa</strong> — Escolha se a abordagem será casual, profissional ou entusiasmada</li>
+                        <li><strong>CTA (Chamada para ação)</strong> — Inclua uma ação clara logo na primeira mensagem (ex: "Quer ver como funciona?")</li>
+                    </ul>
+                    <div class="info-card tip">
+                        <i class="fas fa-lightbulb"></i>
+                        <p>Mensagens curtas e humanas têm <strong>taxa de resposta até 3x maior</strong> do que mensagens genéricas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Personalidade do Assistente</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>Escolha o estilo de comunicação que melhor se encaixa no seu negócio:</p>
+                    <ul>
+                        <li><span class="tag tag-blue">Formal</span> — Tom profissional e respeitoso, ideal para consultorias e serviços B2B</li>
+                        <li><span class="tag tag-purple">Persuasivo</span> — Focado em conversão, usa gatilhos mentais e urgência</li>
+                        <li><span class="tag tag-green">Amigável</span> — Comunicação leve e próxima, perfeito para e-commerce e varejo</li>
+                        <li><span class="tag tag-orange">Consultivo</span> — Faz perguntas para entender a necessidade antes de oferecer soluções</li>
+                        <li><span class="tag tag-red">Direto</span> — Vai direto ao ponto, sem rodeios, ideal para produtos de decisão rápida</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Objetivo do Assistente</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>Defina o objetivo principal do seu assistente para que a IA direcione a conversa corretamente:</p>
+                    <ul>
+                        <li><strong>Vender</strong> — Conduzir o visitante diretamente para a compra do produto ou serviço</li>
+                        <li><strong>Captar Leads</strong> — Coletar informações de contato (nome, email, telefone)</li>
+                        <li><strong>Responder Dúvidas</strong> — Atuar como suporte, tirando dúvidas frequentes dos visitantes</li>
+                        <li><strong>Conduzir para WhatsApp</strong> — Direcionar o visitante para uma conversa no WhatsApp</li>
+                        <li><strong>Conduzir para Checkout</strong> — Levar o visitante diretamente para a página de pagamento</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INTEGRAÇÕES -->
+    <div class="help-section" id="sec-integracoes" data-keywords="integrações instagram facebook ads google ads tiktok ads páginas funis landing page checkout saas plataformas">
+        <div class="section-header">
+            <div class="section-icon cyan"><i class="fas fa-plug"></i></div>
+            <h2>Integrações</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Plataformas e canais compatíveis</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>O LinkMágico™ se integra com as principais plataformas e canais de tráfego:</p>
+                    <p><strong>Redes Sociais & Ads:</strong></p>
+                    <div class="feature-grid">
+                        <div class="feature-item"><i class="fab fa-instagram"></i><span>Instagram (bio, stories, DM)</span></div>
+                        <div class="feature-item"><i class="fab fa-facebook"></i><span>Facebook Ads</span></div>
+                        <div class="feature-item"><i class="fab fa-google"></i><span>Google Ads</span></div>
+                        <div class="feature-item"><i class="fab fa-tiktok"></i><span>TikTok Ads</span></div>
+                    </div>
+                    <p style="margin-top:16px"><strong>Páginas e Funis:</strong></p>
+                    <div class="feature-grid">
+                        <div class="feature-item"><i class="fas fa-globe"></i><span>Páginas próprias (qualquer domínio)</span></div>
+                        <div class="feature-item"><i class="fas fa-filter"></i><span>Funis de vendas</span></div>
+                        <div class="feature-item"><i class="fas fa-file-lines"></i><span>Landing pages</span></div>
+                        <div class="feature-item"><i class="fas fa-cart-shopping"></i><span>Checkout externo</span></div>
+                    </div>
+                    <p style="margin-top:16px"><strong>Plataformas:</strong></p>
+                    <div class="feature-grid">
+                        <div class="feature-item"><i class="fas fa-cloud"></i><span>Plataformas SaaS diversas</span></div>
+                        <div class="feature-item"><i class="fas fa-code"></i><span>Qualquer site com HTML</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FUNCIONALIDADES -->
+    <div class="help-section" id="sec-funcionalidades" data-keywords="funcionalidades atendimento 24h conversação natural retenção conversão multi llm saas widget inline balão link curto dashboard analytics base conhecimento faq pipeline crm leads agendamento">
+        <div class="section-header">
+            <div class="section-icon indigo"><i class="fas fa-layer-group"></i></div>
+            <h2>Funcionalidades</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Todas as funcionalidades da plataforma</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <div class="feature-grid">
+                        <div class="feature-item"><i class="fas fa-clock"></i><span><strong>Atendimento 24h</strong> — Funciona ininterruptamente, sem pausas</span></div>
+                        <div class="feature-item"><i class="fas fa-comments"></i><span><strong>Conversação inteligente</strong> — Respostas naturais e contextuais</span></div>
+                        <div class="feature-item"><i class="fas fa-magnet"></i><span><strong>Retenção de visitantes</strong> — Mantém o visitante engajado na página</span></div>
+                        <div class="feature-item"><i class="fas fa-bullseye"></i><span><strong>Conversão automatizada</strong> — Fluxos que conduzem à ação</span></div>
+                        <div class="feature-item"><i class="fas fa-brain"></i><span><strong>Multi-LLM</strong> — Suporte a múltiplos modelos de linguagem</span></div>
+                        <div class="feature-item"><i class="fas fa-server"></i><span><strong>Arquitetura SaaS</strong> — Escalável e robusta</span></div>
+                        <div class="feature-item"><i class="fas fa-comment-dots"></i><span><strong>Widget Inline</strong> — Balão flutuante integrado à página</span></div>
+                        <div class="feature-item"><i class="fas fa-link"></i><span><strong>Link curto</strong> — Compartilhável em qualquer canal</span></div>
+                        <div class="feature-item"><i class="fas fa-chart-line"></i><span><strong>Dashboard Analytics</strong> — Métricas em tempo real</span></div>
+                        <div class="feature-item"><i class="fas fa-book"></i><span><strong>Base de Conhecimento</strong> — FAQs e documentação</span></div>
+                        <div class="feature-item"><i class="fas fa-diagram-project"></i><span><strong>Pipeline CRM</strong> — Gestão de oportunidades</span></div>
+                        <div class="feature-item"><i class="fas fa-user-plus"></i><span><strong>Captura de Leads</strong> — Formulários inteligentes</span></div>
+                        <div class="feature-item"><i class="fas fa-calendar-check"></i><span><strong>Agendamento</strong> — Marcação de horários integrada</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOAS PRÁTICAS -->
+    <div class="help-section" id="sec-boas-praticas" data-keywords="boas práticas tráfego qualificado páginas simples mensagens humanas testes cta abordagem vídeos demonstração">
+        <div class="section-header">
+            <div class="section-icon teal"><i class="fas fa-lightbulb"></i></div>
+            <h2>Boas Práticas</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Dicas para maximizar resultados</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <ol class="step-list">
+                        <li><strong>Use tráfego qualificado</strong> — Direcione visitantes que já têm interesse no seu produto. Tráfego frio exige mais aquecimento e a IA performa melhor com leads pré-qualificados.</li>
+                        <li><strong>Use páginas simples e objetivas</strong> — Páginas com menos distrações e foco em uma única oferta convertem mais. Evite excesso de links externos.</li>
+                        <li><strong>Configure mensagens humanas e naturais</strong> — Evite textos robóticos. Escreva como se fosse uma pessoa real iniciando uma conversa genuína.</li>
+                        <li><strong>Faça testes de CTA e abordagem</strong> — Teste diferentes mensagens iniciais, tons de conversa e chamadas para ação. Pequenas mudanças podem gerar grandes resultados.</li>
+                        <li><strong>Demonstre a IA funcionando (vídeos)</strong> — Grave vídeos mostrando a IA em ação para convencer leads ou audiência sobre o potencial do sistema.</li>
+                    </ol>
+                    <div class="info-card tip">
+                        <i class="fas fa-trophy"></i>
+                        <p><strong>Dica de ouro:</strong> Combine tráfego qualificado + mensagem personalizada + página simples para atingir taxas de conversão acima da média.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="help-section" id="sec-faq" data-keywords="faq perguntas frequentes afiliados negócios locais programar automático celular cancelar online 24h">
+        <div class="section-header">
+            <div class="section-icon pink"><i class="fas fa-circle-question"></i></div>
+            <h2>Perguntas Frequentes (FAQ)</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Funciona para afiliados?</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p><strong>Sim!</strong> O LinkMágico™ é perfeito para afiliados. Você pode usar em:</p>
+                    <ul>
+                        <li>Páginas de pré-venda com link de afiliado</li>
+                        <li>Bio do Instagram com link para o assistente</li>
+                        <li>Tráfego direto (Facebook Ads, Google Ads, TikTok Ads)</li>
+                        <li>Páginas de captura para construir listas</li>
+                        <li>Qualquer funil de vendas como afiliado</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Funciona para negócios locais?</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p><strong>Sim!</strong> Negócios locais são um dos principais casos de uso. Exemplos:</p>
+                    <div class="feature-grid">
+                        <div class="feature-item"><i class="fas fa-stethoscope"></i><span>Clínicas e consultórios</span></div>
+                        <div class="feature-item"><i class="fas fa-utensils"></i><span>Restaurantes e delivery</span></div>
+                        <div class="feature-item"><i class="fas fa-building"></i><span>Imobiliárias</span></div>
+                        <div class="feature-item"><i class="fas fa-store"></i><span>Lojas físicas e virtuais</span></div>
+                        <div class="feature-item"><i class="fas fa-shopping-bag"></i><span>E-commerce</span></div>
+                        <div class="feature-item"><i class="fas fa-cut"></i><span>Salões e estúdios</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Preciso saber programar?</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p><strong>Não!</strong> O LinkMágico™ foi criado para ser 100% acessível. Você não precisa de nenhum conhecimento técnico. Tudo é configurado pelo painel visual, sem necessidade de código.</p>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>A IA responde automaticamente?</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p><strong>Sim!</strong> A IA responde automaticamente a todas as mensagens dos visitantes, em tempo real, 24 horas por dia. Você configura as instruções e a IA cuida do resto.</p>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Funciona no celular?</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p><strong>Sim!</strong> Tanto o painel de controle quanto o widget do chat são totalmente responsivos e funcionam perfeitamente em smartphones e tablets.</p>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Posso cancelar quando quiser?</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p><strong>Sim!</strong> Não há fidelidade ou multa. Você pode cancelar sua assinatura a qualquer momento diretamente pelo painel, sem burocracia.</p>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>O sistema fica online 24h?</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p><strong>Sim!</strong> O LinkMágico™ roda em infraestrutura cloud de alta disponibilidade. O sistema fica online 24 horas por dia, 7 dias por semana, garantindo que nenhum visitante fique sem atendimento.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOLUÇÃO DE PROBLEMAS -->
+    <div class="help-section" id="sec-problemas" data-keywords="solução problemas vendedor não aparece chat não inicia ia respondeu errado link ativação cache scripts navegador anônima prompts">
+        <div class="section-header">
+            <div class="section-icon red"><i class="fas fa-wrench"></i></div>
+            <h2>Solução de Problemas</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:8px;font-size:13px"></i> O vendedor não apareceu na página</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>Se o widget do vendedor não aparece na sua página, verifique:</p>
+                    <ul>
+                        <li><strong>Link correto</strong> — Confirme que a URL configurada no painel é exatamente a mesma da página</li>
+                        <li><strong>Ativação</strong> — Verifique se o assistente está com status "Ativo" no painel</li>
+                        <li><strong>Configurações</strong> — Certifique-se de que todas as configurações obrigatórias foram preenchidas</li>
+                        <li><strong>Navegador</strong> — Teste em outro navegador ou limpe o cache do atual</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:8px;font-size:13px"></i> O chat não inicia a conversa</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>Se o widget aparece mas o chat não inicia:</p>
+                    <ul>
+                        <li><strong>Conflito de scripts</strong> — Outros scripts na página podem estar interferindo. Teste desativando extensões do navegador</li>
+                        <li><strong>Cache</strong> — Limpe o cache do navegador (Ctrl + Shift + Delete) ou force o reload (Ctrl + Shift + R)</li>
+                        <li><strong>Configuração desativada</strong> — Verifique se o modo automático está ativado nas configurações</li>
+                    </ul>
+                    <div class="info-card warning">
+                        <i class="fas fa-lightbulb"></i>
+                        <p><strong>Dica:</strong> Tente abrir a página em uma aba anônima (Ctrl + Shift + N). Isso elimina cache e extensões como possíveis causas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:8px;font-size:13px"></i> A IA respondeu errado</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>Se a IA deu respostas incorretas ou fora do contexto:</p>
+                    <ul>
+                        <li><strong>Revise as instruções</strong> — Volte ao painel e confira se as instruções e contexto do assistente estão claros e completos</li>
+                        <li><strong>Simplifique os prompts</strong> — Instruções muito longas ou confusas podem gerar respostas imprecisas. Seja claro e objetivo</li>
+                        <li><strong>Ajuste o contexto</strong> — Adicione mais informações sobre o produto/serviço para que a IA tenha base de conhecimento suficiente</li>
+                    </ul>
+                    <div class="info-card tip">
+                        <i class="fas fa-circle-info"></i>
+                        <p>A qualidade das respostas da IA é diretamente proporcional à qualidade das instruções que você fornece. Invista tempo na configuração!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEGURANÇA -->
+    <div class="help-section" id="sec-seguranca" data-keywords="segurança conexões seguras arquitetura protegida isolamento sessões proteção acesso infraestrutura cloud lgpd dados">
+        <div class="section-header">
+            <div class="section-icon sky"><i class="fas fa-shield-halved"></i></div>
+            <h2>Segurança</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>Como protegemos seus dados</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>A segurança é prioridade máxima no LinkMágico™. Veja como protegemos sua conta e seus dados:</p>
+                    <div class="feature-grid">
+                        <div class="feature-item"><i class="fas fa-lock"></i><span><strong>Conexões seguras</strong> — Toda comunicação é criptografada via HTTPS/TLS</span></div>
+                        <div class="feature-item"><i class="fas fa-server"></i><span><strong>Arquitetura protegida</strong> — Servidores com firewall e monitoramento contínuo</span></div>
+                        <div class="feature-item"><i class="fas fa-user-shield"></i><span><strong>Isolamento de sessões</strong> — Cada conta é completamente isolada das demais</span></div>
+                        <div class="feature-item"><i class="fas fa-key"></i><span><strong>Proteção de acesso</strong> — Autenticação segura com tokens criptografados</span></div>
+                        <div class="feature-item"><i class="fas fa-cloud"></i><span><strong>Infraestrutura cloud</strong> — Hospedagem em nuvem com alta disponibilidade e redundância</span></div>
+                        <div class="feature-item"><i class="fas fa-scale-balanced"></i><span><strong>Conforme LGPD</strong> — Em total conformidade com a Lei Geral de Proteção de Dados</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POLÍTICA DE USO -->
+    <div class="help-section" id="sec-politica" data-keywords="política uso proibido spam golpes conteúdo ilegal automação abusiva phishing regras termos">
+        <div class="section-header">
+            <div class="section-icon rose"><i class="fas fa-file-contract"></i></div>
+            <h2>Política de Uso</h2>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <h3>O que é proibido na plataforma</h3>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>Para manter a qualidade e segurança da plataforma, é <strong>estritamente proibido</strong>:</p>
+                    <div class="info-card danger">
+                        <i class="fas fa-ban"></i>
+                        <div>
+                            <p style="margin-bottom:8px"><strong>Usos proibidos:</strong></p>
+                            <ul>
+                                <li><strong>Spam</strong> — Envio de mensagens em massa não solicitadas</li>
+                                <li><strong>Golpes e fraudes</strong> — Uso da plataforma para enganar pessoas</li>
+                                <li><strong>Conteúdo ilegal</strong> — Qualquer conteúdo que viole a lei brasileira</li>
+                                <li><strong>Automação abusiva</strong> — Uso de bots para explorar a plataforma</li>
+                                <li><strong>Phishing</strong> — Tentativas de roubo de dados pessoais</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <p>Violações podem resultar em suspensão ou banimento da conta. Para mais detalhes, consulte os <a href="/termos-de-uso.html" style="color:var(--blue)">Termos de Uso</a> completos.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUPORTE -->
+    <div class="help-section" id="sec-suporte" data-keywords="suporte contato ajuda email comunidade central">
+        <div class="section-header">
+            <div class="section-icon amber"><i class="fas fa-headset"></i></div>
+            <h2>Suporte</h2>
+        </div>
+        <div class="contact-section" style="border-top:none;padding-top:0">
+            <p class="subtitle">Escolha o canal de atendimento que preferir.</p>
+            <div class="contact-grid">
+                <a href="/ajuda.html" class="contact-card">
+                    <div class="c-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)"><i class="fas fa-book-open"></i></div>
+                    <h3>Central de Ajuda</h3>
+                    <p>Você está aqui! Navegue pelas seções acima para encontrar respostas rápidas.</p>
+                </a>
+                <a href="/comunidade" class="contact-card">
+                    <div class="c-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)"><i class="fas fa-users"></i></div>
+                    <h3>Comunidade Oficial</h3>
+                    <p>Conecte-se com outros usuários, compartilhe estratégias e tire dúvidas.</p>
+                </a>
+                <a href="mailto:suporte@linkmagico.app.br" class="contact-card">
+                    <div class="c-icon" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="fas fa-envelope"></i></div>
+                    <h3>Email de Suporte</h3>
+                    <p>suporte@linkmagico.app.br<br>Resposta em até 24 horas úteis.</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <p>© LinkMágico™ — Todos os direitos reservados</p>
+</footer>
+
+<!-- SCROLL TO TOP -->
+<button class="scroll-top" id="scrollTop" title="Voltar ao topo">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+<script>
+    // === ACCORDION ===
+    function toggleAccordion(header) {
+        const accordion = header.parentElement;
+        const body = accordion.querySelector('.accordion-body');
+        const isActive = accordion.classList.contains('active');
+
+        if (isActive) {
+            body.style.maxHeight = null;
+            accordion.classList.remove('active');
+        } else {
+            body.style.maxHeight = body.scrollHeight + 'px';
+            accordion.classList.add('active');
+        }
+    }
+
+    // === CATEGORY CARDS NAVIGATION ===
+    document.querySelectorAll('.category-card[data-target]').forEach(card => {
+        card.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = card.getAttribute('data-target');
+            const target = document.getElementById(targetId);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                target.classList.add('highlight-flash');
+                setTimeout(() => target.classList.remove('highlight-flash'), 1000);
+
+                // Auto-open first accordion in section
+                const firstAccordion = target.querySelector('.accordion:not(.active)');
+                if (firstAccordion) {
+                    const header = firstAccordion.querySelector('.accordion-header');
+                    if (header) toggleAccordion(header);
+                }
+            }
+        });
+    });
+
+    // === SEARCH ===
+    const searchInput = document.getElementById('searchInput');
+    const searchClear = document.getElementById('searchClear');
+    const searchInfo = document.getElementById('searchInfo');
+    const sections = document.querySelectorAll('.help-section');
+    const categoriesSection = document.querySelector('.categories-section');
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        searchClear.classList.toggle('visible', query.length > 0);
+
+        if (query.length === 0) {
+            sections.forEach(s => s.classList.remove('hidden'));
+            categoriesSection.style.display = '';
+            searchInfo.classList.remove('visible');
+            return;
+        }
+
+        let visibleCount = 0;
+        sections.forEach(section => {
+            const keywords = (section.getAttribute('data-keywords') || '').toLowerCase();
+            const text = section.textContent.toLowerCase();
+            const match = keywords.includes(query) || text.includes(query);
+            section.classList.toggle('hidden', !match);
+            if (match) visibleCount++;
+        });
+
+        categoriesSection.style.display = 'none';
+
+        searchInfo.textContent = visibleCount > 0
+            ? `${visibleCount} seção(ões) encontrada(s) para "${this.value}"`
+            : `Nenhum resultado encontrado para "${this.value}"`;
+        searchInfo.classList.add('visible');
+
+        // Auto-expand matching accordions
+        sections.forEach(section => {
+            if (!section.classList.contains('hidden')) {
+                section.querySelectorAll('.accordion').forEach(acc => {
+                    const content = acc.textContent.toLowerCase();
+                    if (content.includes(query) && !acc.classList.contains('active')) {
+                        const header = acc.querySelector('.accordion-header');
+                        if (header) toggleAccordion(header);
+                    }
+                });
+            }
+        });
+    });
+
+    searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+    });
+
+    // === SCROLL TO TOP ===
+    const scrollTopBtn = document.getElementById('scrollTop');
+    window.addEventListener('scroll', () => {
+        scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
+    });
+    scrollTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // === KEYBOARD SHORTCUT ===
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+K or Cmd+K focuses search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+        }
+        // Escape clears search
+        if (e.key === 'Escape' && document.activeElement === searchInput) {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+            searchInput.blur();
+        }
+    });
+</script>
+
+</body>
+</html>
