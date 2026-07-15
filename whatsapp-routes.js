@@ -327,7 +327,11 @@ module.exports = function (app, logger) {
                 // CRÍTICO: Configurar webhook para que mensagens cheguem ao Link Mágico
                 try {
                     const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
-                    const webhookUrl = `${APP_URL}/api/webhook/evolution`;
+                    // SEC-10: Incluir webhook_secret na URL (Evolution Go não suporta headers customizados)
+                    const webhookSecret = process.env.EVOLUTION_WEBHOOK_SECRET || process.env.CENTRAL_EVOLUTION_API_KEY || '';
+                    const webhookUrl = webhookSecret
+                        ? `${APP_URL}/api/webhook/evolution?webhook_secret=${encodeURIComponent(webhookSecret)}`
+                        : `${APP_URL}/api/webhook/evolution`;
                     await axios.post(
                         `${CENTRAL_EVOLUTION_URL}/instance/connect`,
                         {
@@ -336,7 +340,7 @@ module.exports = function (app, logger) {
                         },
                         { headers: { apikey: instanceToken }, timeout: 15000 }
                     );
-                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado: ${webhookUrl}`);
+                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado: ${APP_URL}/api/webhook/evolution (secret=${webhookSecret ? 'YES' : 'NO'})`);
                 } catch (whErr) {
                     logger.warn(`📱 [WA-SAAS] ⚠️ Aviso ao configurar webhook:`, whErr.response?.data || whErr.message);
                 }

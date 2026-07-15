@@ -467,15 +467,18 @@ class WhatsAppChannel {
             }
 
             // ═══ SEC-10: Autenticação do webhook (Feature Flag) ═══
+            // Evolution Go NÃO suporta headers customizados em webhooks.
+            // Solução: secret embutido na URL → ?webhook_secret=TOKEN
             if (FEATURE_EVOLUTION_WEBHOOK_AUTH && EVOLUTION_WEBHOOK_SECRET) {
-                // Verificar header apikey OU instanceToken no body
+                // Verificar: 1) query string  2) header apikey  3) body.instanceToken
+                const querySecret = req.query?.webhook_secret || '';
                 const headerKey = req.headers['apikey'] || req.headers['x-api-key'] || '';
                 const bodyToken = body.instanceToken || '';
-                const candidateKey = headerKey || bodyToken;
+                const candidateKey = querySecret || headerKey || bodyToken;
 
                 if (!candidateKey) {
                     webhookMetrics.rejected_auth++;
-                    console.error(`🚫 [SEC-10] Webhook REJEITADO — sem apikey/instanceToken | IP=${webhookIp}`);
+                    console.error(`🚫 [SEC-10] Webhook REJEITADO — sem webhook_secret/apikey/instanceToken | IP=${webhookIp}`);
                     return;
                 }
 
@@ -486,7 +489,7 @@ class WhatsAppChannel {
                     if (keyBuffer.length !== secretBuffer.length ||
                         !crypto.timingSafeEqual(keyBuffer, secretBuffer)) {
                         webhookMetrics.rejected_auth++;
-                        console.error(`🚫 [SEC-10] Webhook REJEITADO — apikey inválida | IP=${webhookIp}`);
+                        console.error(`🚫 [SEC-10] Webhook REJEITADO — secret inválido | IP=${webhookIp}`);
                         return;
                     }
                 } catch (compareErr) {
