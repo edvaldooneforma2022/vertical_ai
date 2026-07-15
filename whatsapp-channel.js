@@ -1192,10 +1192,19 @@ class WhatsAppChannel {
         text = text.replace(/\n{3,}/g, '\n\n');
         text = text.trim();
 
-        // Truncar se necessário (limite WhatsApp: 4096 chars)
+        // FIX-09: Truncar com proteção de surrogate pairs + limpar emojis quebrados
         if (text.length > WA_MSG_MAX_LEN) {
-            text = text.substring(0, WA_MSG_MAX_LEN - 20) + '\n\n_(continua...)_';
+            // Truncar respeitando surrogate pairs
+            let end = WA_MSG_MAX_LEN - 20;
+            const code = text.charCodeAt(end - 1);
+            if (code >= 0xD800 && code <= 0xDBFF) end--;
+            text = text.slice(0, end) + '\n\n_(continua...)_';
         }
+        // FIX-09: Remover emojis quebrados (U+FFFD) e surrogate pairs órfãos
+        text = text
+            .replace(/\uFFFD/g, '')
+            .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '')
+            .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
 
         return text;
     }

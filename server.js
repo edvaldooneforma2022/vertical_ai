@@ -7971,6 +7971,12 @@ ANTI-ERRO CRÍTICO:
             .replace(/<s>\s*\[OUT\]/g, '')
             .replace(/<[^>]*>/g, '')
             .replace(/\[((?!http|https|www| arsenalsecre).+?)\]/gi, '') // Limpa colchetes APENAS se não parecer uma URL ou domínio
+            // FIX-09: Remover emojis quebrados (U+FFFD) causados por truncamento da LLM no max_tokens
+            .replace(/\uFFFD/g, '')
+            // FIX-09: Remover surrogate pairs órfãos (high surrogate sem low, ou vice-versa)
+            .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '')
+            .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+            .replace(/\s+$/gm, '') // Limpar espaços residuais no fim de linhas
             .trim();
         
         if (finalResponse !== response && (response.includes('http') || response.includes('arsenalsecre'))) {
@@ -9122,6 +9128,16 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             }
         } catch (_v21CtaErr) {
             console.warn('[V21@chat-universal] CTA Priority erro (sem impacto):', _v21CtaErr.message);
+        }
+
+        // FIX-09: Limpar emojis quebrados e surrogate pairs órfãos antes de retornar (chat-universal)
+        if (typeof finalResponse === 'string') {
+            finalResponse = finalResponse
+                .replace(/\uFFFD/g, '')
+                .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '')
+                .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+                .replace(/\s+$/gm, '')
+                .trim();
         }
 
         return res.json({
