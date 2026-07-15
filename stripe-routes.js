@@ -302,9 +302,9 @@ function registerStripeRoutes(app) {
                     return res.status(400).json({ error: 'Webhook signature verification failed' });
                 }
             } else {
-                // Sem webhook secret (dev mode)
-                event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-                console.warn('⚠️ [Stripe Webhook] Sem STRIPE_WEBHOOK_SECRET — aceitando sem verificação');
+                // SEC-06: Rejeitar webhook sem secret configurado (segurança)
+                console.error('❌ [SEC-06] STRIPE_WEBHOOK_SECRET não configurado — webhook rejeitado');
+                return res.status(500).json({ error: 'Webhook secret not configured' });
             }
 
             console.log(`💳 [Stripe Webhook] Evento recebido: ${event.type}`);

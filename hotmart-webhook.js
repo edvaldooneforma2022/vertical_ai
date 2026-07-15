@@ -84,10 +84,13 @@ function hashKey(key) {
  */
 function validateHottok(receivedHottok) {
     if (!HOTTOK) {
-        console.warn('⚠️ [Hotmart] HOTMART_HOTTOK não configurado — pulando validação (INSEGURO em produção!)');
-        return true; // Em dev, permite sem hottok
+        // SEC-07: Rejeitar quando não configurado (segurança)
+        console.error('🚫 [SEC-07] HOTMART_HOTTOK não configurado — webhook rejeitado por segurança');
+        return false;
     }
-    return receivedHottok === HOTTOK;
+    // SEC-07: Comparação timing-safe
+    if (!receivedHottok || receivedHottok.length !== HOTTOK.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(receivedHottok, 'utf8'), Buffer.from(HOTTOK, 'utf8'));
 }
 
 /**
@@ -467,7 +470,7 @@ router.get('/api/webhooks/hotmart/status', (req, res) => {
     res.json({
         success: true,
         service: 'Hotmart Webhook — Provisionamento Automático',
-        configured: !!HOTTOK,
+        configured: '***',  // SEC-08: Não revelar estado de configuração
         emailService: emailService ? emailService.configured : false,
         defaultPlan: DEFAULT_PLAN,
         platformUrl: PLATFORM_URL,
