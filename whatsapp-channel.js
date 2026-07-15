@@ -43,6 +43,56 @@ const AI_TIMEOUT        = 30000;    // 30 segundos para resposta da IA
 const SCHED_EXPIRY_MS   = 86400000; // 24h — slots expiram após 1 dia
 
 // ════════════════════════════════════════════════════════════════
+// SEC-09: Deduplicação por waMessageId (anti-replay)
+// Cache em memória com TTL de 5 minutos
+// ════════════════════════════════════════════════════════════════
+const PROCESSED_MSG_IDS = new Map();
+const MSG_ID_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+// Cleanup periódico do cache de deduplicação (a cada 5 min)
+setInterval(() => {
+    const now = Date.now();
+    let cleaned = 0;
+    for (const [id, ts] of PROCESSED_MSG_IDS) {
+        if (now - ts > MSG_ID_TTL_MS) {
+            PROCESSED_MSG_IDS.delete(id);
+            cleaned++;
+        }
+    }
+    if (cleaned > 0) {
+        console.log(`🧹 [SEC-09] Cache dedup: ${cleaned} IDs expirados removidos, ${PROCESSED_MSG_IDS.size} ativos`);
+    }
+}, MSG_ID_TTL_MS);
+
+// ════════════════════════════════════════════════════════════════
+// SEC-10: Feature Flag — Autenticação do webhook Evolution
+// FEATURE_EVOLUTION_WEBHOOK_AUTH=true → obriga validação de apikey/instanceToken
+// FEATURE_EVOLUTION_WEBHOOK_AUTH=false (default) → comportamento atual
+// ════════════════════════════════════════════════════════════════
+const FEATURE_EVOLUTION_WEBHOOK_AUTH = process.env.FEATURE_EVOLUTION_WEBHOOK_AUTH === 'true';
+const EVOLUTION_WEBHOOK_SECRET = process.env.EVOLUTION_WEBHOOK_SECRET
+    || process.env.CENTRAL_EVOLUTION_API_KEY
+    || '';
+
+// ════════════════════════════════════════════════════════════════
+// SEC-12: Métricas de webhook (contadores in-memory)
+// ════════════════════════════════════════════════════════════════
+const webhookMetrics = {
+    received: 0,
+    rejected_auth: 0,
+    rejected_rate_limit: 0,
+    duplicated: 0,
+    processed: 0,
+    errors: 0,
+    last_reset: new Date().toISOString()
+};
+
+// SEC-12: Rate limiting do webhook por IP (100 req/min)
+const WEBHOOK_IP_LIMITS = new Map();
+const WH_IP_MAX_PER_MIN = 100;
+const WH_IP_WINDOW_MS = 60000;
+
+// ════════════════════════════════════════════════════════════════
 // V21 FEATURE FLAG: Rollback instantâneo para pipeline anterior
 // WA_USE_FULL_PIPELINE=true  → /api/process-chat-inteligente (Link Curto)
 // WA_USE_FULL_PIPELINE=false → /api/chat-universal (legado)
@@ -359,11 +409,31 @@ class WhatsAppChannel {
                 channel: 'whatsapp',
                 active: true,
                 providers: ['evolution', 'twilio'],
-                version: 'WA-CHANNEL-001'
+                version: 'WA-CHANNEL-002-SEC',
+                security: {
+                    webhookAuth: FEATURE_EVOLUTION_WEBHOOK_AUTH ? 'enabled' : 'disabled',
+                    dedup: 'enabled',
+                    dedupCacheSize: PROCESSED_MSG_IDS.size
+                }
             });
         });
 
-        console.log('📱 [WA-CHANNEL] Rotas de webhook registradas: /api/webhook/evolution, /api/webhook/twilio');
+        // ── SEC-12: Métricas de webhook (admin only via x-admin-key) ──
+        app.get('/api/whatsapp/webhook-metrics', (req, res) => {
+            const adminKey = req.headers['x-admin-key'] || '';
+            const expectedKey = process.env.ADMIN_API_KEY || '';
+            if (!expectedKey || adminKey !== expectedKey) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+            res.json({
+                success: true,
+                metrics: webhookMetrics,
+                dedupCacheSize: PROCESSED_MSG_IDS.size,
+                ipRateLimitEntries: WEBHOOK_IP_LIMITS.size
+            });
+        });
+
+        console.log(`📱 [WA-CHANNEL] Rotas registradas | Auth: ${FEATURE_EVOLUTION_WEBHOOK_AUTH ? '✅ ON' : '⚠️ OFF'} | Dedup: ✅ ON`);
     }
 
     // ============================================================
@@ -373,14 +443,68 @@ class WhatsAppChannel {
         // Ack imediato — Evolution reenvia se não receber 200 rápido
         res.status(200).json({ received: true });
 
+        // SEC-12: Contabilizar recebimento
+        webhookMetrics.received++;
+
         try {
             const body = req.body || {};
+            const webhookIp = req.ip || req.connection?.remoteAddress || 'unknown';
 
-            // ═══ OBSERVABILIDADE: log permanente ═══
+            // ═══ SEC-12: Rate limiting por IP ═══
+            const now = Date.now();
+            const ipEntry = WEBHOOK_IP_LIMITS.get(webhookIp) || { count: 0, windowStart: now };
+            if (now - ipEntry.windowStart > WH_IP_WINDOW_MS) {
+                ipEntry.count = 0;
+                ipEntry.windowStart = now;
+            }
+            ipEntry.count++;
+            WEBHOOK_IP_LIMITS.set(webhookIp, ipEntry);
+
+            if (ipEntry.count > WH_IP_MAX_PER_MIN) {
+                webhookMetrics.rejected_rate_limit++;
+                console.warn(`🚫 [SEC-12] Webhook rate limit excedido: IP=${webhookIp} count=${ipEntry.count}`);
+                return;
+            }
+
+            // ═══ SEC-10: Autenticação do webhook (Feature Flag) ═══
+            if (FEATURE_EVOLUTION_WEBHOOK_AUTH && EVOLUTION_WEBHOOK_SECRET) {
+                // Verificar header apikey OU instanceToken no body
+                const headerKey = req.headers['apikey'] || req.headers['x-api-key'] || '';
+                const bodyToken = body.instanceToken || '';
+                const candidateKey = headerKey || bodyToken;
+
+                if (!candidateKey) {
+                    webhookMetrics.rejected_auth++;
+                    console.error(`🚫 [SEC-10] Webhook REJEITADO — sem apikey/instanceToken | IP=${webhookIp}`);
+                    return;
+                }
+
+                // Comparação timing-safe para evitar timing attacks
+                try {
+                    const keyBuffer = Buffer.from(candidateKey, 'utf8');
+                    const secretBuffer = Buffer.from(EVOLUTION_WEBHOOK_SECRET, 'utf8');
+                    if (keyBuffer.length !== secretBuffer.length ||
+                        !crypto.timingSafeEqual(keyBuffer, secretBuffer)) {
+                        webhookMetrics.rejected_auth++;
+                        console.error(`🚫 [SEC-10] Webhook REJEITADO — apikey inválida | IP=${webhookIp}`);
+                        return;
+                    }
+                } catch (compareErr) {
+                    webhookMetrics.rejected_auth++;
+                    console.error(`🚫 [SEC-10] Webhook REJEITADO — erro na comparação | IP=${webhookIp}`);
+                    return;
+                }
+            } else if (!FEATURE_EVOLUTION_WEBHOOK_AUTH) {
+                // Log de aviso (apenas 1x a cada 100 requests para não poluir)
+                if (webhookMetrics.received % 100 === 1) {
+                    console.warn(`⚠️ [SEC-10] FEATURE_EVOLUTION_WEBHOOK_AUTH desligada — webhook operando sem autenticação`);
+                }
+            }
+
+            // ═══ SEC-11: Log sanitizado (sem PII) ═══
             console.log(`📱 [WA-WEBHOOK] ══════════════════════════════════════`);
-            console.log(`📱 [WA-WEBHOOK] POST /api/webhook/evolution RECEBIDO`);
+            console.log(`📱 [WA-WEBHOOK] POST /api/webhook/evolution RECEBIDO | IP=${webhookIp}`);
             console.log(`📱 [WA-WEBHOOK] Body keys: ${Object.keys(body).join(', ')}`);
-            console.log(`📱 [WA-WEBHOOK] Body (1500 chars): ${JSON.stringify(body).substring(0, 1500)}`);
 
             // ═══ EXTRAIR CAMPOS COMUNS ═══
             const event    = body.event || body.type || '';
@@ -456,14 +580,25 @@ class WhatsAppChannel {
             // Evolution Go v0.7.1: PushName está dentro de data.Info.PushName
             const pushName = data.Info?.PushName || data.PushName || data.pushName || body.pushName || '';
 
-            console.log(`📱 [WA-WEBHOOK] phone='${phone}' pushName='${pushName}' text='${text.substring(0, 80)}'`);
+            // SEC-11: Log sanitizado — telefone parcialmente mascarado, sem texto da mensagem
+            console.log(`📱 [WA-WEBHOOK] phone='${phone.substring(0, 6)}***' text_len=${text.length}`);
 
             if (!phone || !text.trim()) {
                 console.log(`📱 [WA-WEBHOOK] ❌ phone ou text vazio — descartando`);
                 return;
             }
 
-            console.log(`📱 [EVOLUTION MESSAGE RECEIVED] ${phone} (${pushName}): "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
+            // ═══ SEC-09: Deduplicação por waMessageId ═══
+            if (waMessageId) {
+                if (PROCESSED_MSG_IDS.has(waMessageId)) {
+                    webhookMetrics.duplicated++;
+                    console.log(`🔁 [SEC-09] Mensagem duplicada ignorada: ${waMessageId.substring(0, 16)}...`);
+                    return;
+                }
+                PROCESSED_MSG_IDS.set(waMessageId, Date.now());
+            }
+
+            console.log(`📱 [EVOLUTION MESSAGE RECEIVED] phone=${phone.substring(0, 6)}*** len=${text.length} msgId=${(waMessageId || 'N/A').substring(0, 12)}`);
 
             // Rate limit
             if (!this._checkRateLimit(phone)) {
@@ -494,9 +629,11 @@ class WhatsAppChannel {
                 instanceName: instance,  // ← instância que recebeu
                 instanceToken: body.instanceToken || ''  // ← token para autenticação
             });
+            webhookMetrics.processed++;
             console.log(`📱 [EVOLUTION MESSAGE PROCESSED] ✅`);
 
         } catch (error) {
+            webhookMetrics.errors++;
             console.error('📱 [WA-CHANNEL] ❌ Erro no webhook Evolution:', error.message, error.stack);
         }
     }
