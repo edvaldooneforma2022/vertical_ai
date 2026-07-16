@@ -7971,12 +7971,15 @@ ANTI-ERRO CRÍTICO:
             .replace(/<s>\s*\[OUT\]/g, '')
             .replace(/<[^>]*>/g, '')
             .replace(/\[((?!http|https|www| arsenalsecre).+?)\]/gi, '') // Limpa colchetes APENAS se não parecer uma URL ou domínio
-            // FIX-09: Remover emojis quebrados (U+FFFD) causados por truncamento da LLM no max_tokens
-            .replace(/\uFFFD/g, '')
-            // FIX-09: Remover surrogate pairs órfãos (high surrogate sem low, ou vice-versa)
-            .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '')
-            .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
-            .replace(/\s+$/gm, '') // Limpar espaços residuais no fim de linhas
+            // FIX-09v2: Limpeza completa de emojis corrompidos/órfãos
+            .replace(/\uFFFD/g, '')                                    // Replacement character
+            .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '')       // High surrogate órfão
+            .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')      // Low surrogate órfão
+            .replace(/(?<![\u200D\uFE0E\uFE0F\p{Emoji}])[\uFE0E\uFE0F]/gu, '') // Variation selectors órfãos
+            .replace(/(?<![\p{Emoji}])[\u{1F3FB}-\u{1F3FF}]/gu, '')    // Skin tone modifiers órfãos
+            .replace(/(?<![\p{Emoji}])\u20E3/gu, '')                    // Enclosing keycap órfão
+            .replace(/(?<![\p{Emoji}])\u200D/gu, '')                    // ZWJ órfão
+            .replace(/\s+$/gm, '')                                     // Espaços residuais
             .trim();
         
         if (finalResponse !== response && (response.includes('http') || response.includes('arsenalsecre'))) {
@@ -9130,12 +9133,16 @@ app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boo
             console.warn('[V21@chat-universal] CTA Priority erro (sem impacto):', _v21CtaErr.message);
         }
 
-        // FIX-09: Limpar emojis quebrados e surrogate pairs órfãos antes de retornar (chat-universal)
+        // FIX-09v2: Limpeza completa de emojis corrompidos/órfãos (chat-universal)
         if (typeof finalResponse === 'string') {
             finalResponse = finalResponse
                 .replace(/\uFFFD/g, '')
                 .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '')
                 .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+                .replace(/(?<![\u200D\uFE0E\uFE0F\p{Emoji}])[\uFE0E\uFE0F]/gu, '')
+                .replace(/(?<![\p{Emoji}])[\u{1F3FB}-\u{1F3FF}]/gu, '')
+                .replace(/(?<![\p{Emoji}])\u20E3/gu, '')
+                .replace(/(?<![\p{Emoji}])\u200D/gu, '')
                 .replace(/\s+$/gm, '')
                 .trim();
         }
