@@ -13207,6 +13207,69 @@ try {
         } catch (_v14BootErr) {
             console.warn('[V14] ⚠️ Erro na inicialização (sem impacto):', _v14BootErr.message);
         }
+
+        // ═══ SEC-10 ACTIVATION: Auto-registro do webhook com secret ═══
+        // Quando FEATURE_EVOLUTION_WEBHOOK_AUTH=true, atualiza a URL do webhook
+        // na Evolution Go para incluir ?webhook_secret=TOKEN automaticamente.
+        // Roda após startup (setTimeout 5s) — totalmente encapsulado.
+        setTimeout(async () => {
+            try {
+                const _sec10Enabled = process.env.FEATURE_EVOLUTION_WEBHOOK_AUTH === 'true';
+                const _sec10EvolutionUrl = process.env.CENTRAL_EVOLUTION_URL || '';
+                const _sec10ApiKey = process.env.CENTRAL_EVOLUTION_API_KEY || '';
+                const _sec10Secret = process.env.EVOLUTION_WEBHOOK_SECRET || _sec10ApiKey || '';
+                const _sec10AppUrl = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
+
+                if (_sec10Enabled && _sec10EvolutionUrl && _sec10Secret) {
+                    console.log('');
+                    console.log('═══════════════════════════════════════════');
+                    console.log('  🔒 SEC-10: WEBHOOK AUTH — ATIVAÇÃO');
+                    console.log('═══════════════════════════════════════════');
+
+                    const _sec10WebhookUrl = `${_sec10AppUrl}/api/webhook/evolution?webhook_secret=${encodeURIComponent(_sec10Secret)}`;
+                    const _sec10Axios = require('axios');
+
+                    const _sec10Resp = await _sec10Axios.post(
+                        `${_sec10EvolutionUrl}/instance/connect`,
+                        {
+                            webhookUrl: _sec10WebhookUrl,
+                            subscribe: ['MESSAGE']
+                        },
+                        { headers: { apikey: _sec10ApiKey }, timeout: 15000 }
+                    ).catch(err => {
+                        if (err.response?.status === 400 || err.response?.data?.message?.includes?.('connected')) {
+                            console.log('  ℹ️ Instância já conectada — tentando via webhook/set...');
+                            return _sec10Axios.put(
+                                `${_sec10EvolutionUrl}/webhook/set`,
+                                { url: _sec10WebhookUrl, events: ['MESSAGES_UPSERT'], enabled: true },
+                                { headers: { apikey: _sec10ApiKey }, timeout: 15000 }
+                            ).catch(fallbackErr => {
+                                console.warn('  ⚠️ Fallback webhook/set também falhou:', fallbackErr.response?.data?.message || fallbackErr.message);
+                                return null;
+                            });
+                        }
+                        throw err;
+                    });
+
+                    if (_sec10Resp) {
+                        console.log(`  ✅ Webhook URL atualizada com secret na Evolution Go`);
+                        console.log(`  🔗 URL: ${_sec10AppUrl}/api/webhook/evolution?webhook_secret=***`);
+                    } else {
+                        console.warn('  ⚠️ Não foi possível atualizar automaticamente.');
+                        console.warn('  📋 AÇÃO MANUAL: Atualize a webhook URL na Evolution Go para:');
+                        console.warn(`     ${_sec10WebhookUrl}`);
+                    }
+
+                    console.log('  🔐 Auth: ATIVADA (timing-safe comparison)');
+                    console.log('═══════════════════════════════════════════');
+
+                } else if (_sec10Enabled && !_sec10Secret) {
+                    console.warn('⚠️ [SEC-10] FEATURE_EVOLUTION_WEBHOOK_AUTH=true mas sem CENTRAL_EVOLUTION_API_KEY!');
+                }
+            } catch (_sec10BootErr) {
+                console.warn('[SEC-10] ⚠️ Erro na auto-ativação (sem impacto):', _sec10BootErr.message);
+            }
+        }, 5000); // Aguarda 5s após startup para garantir que tudo está pronto
     });
 
 })();
