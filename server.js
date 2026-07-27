@@ -3680,23 +3680,42 @@ app.use(session(sessionConfig));
 
 // ===== Middleware =====
 app.use(helmet({
-    // SEC-03: CSP em report-only (monitora sem bloquear)
+    // SEC-03 v2: CSP com Feature Flag para enforcement
+    // FEATURE_CSP_ENFORCEMENT=true → bloqueia violações (enforcement)
+    // FEATURE_CSP_ENFORCEMENT=false/ausente → apenas reporta (report-only) [default]
     contentSecurityPolicy: {
-        reportOnly: true,
+        reportOnly: process.env.FEATURE_CSP_ENFORCEMENT !== 'true',
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "http:"],
             styleSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
             imgSrc: ["'self'", "data:", "https:", "http:", "blob:"],
-            connectSrc: ["'self'", "https:", "http:"],
+            connectSrc: ["'self'", "https:", "http:", "wss:"],
             fontSrc: ["'self'", "https:", "data:"],
             frameSrc: ["'self'", "https:", "http:"],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
+            formAction: ["'self'", "https:"],
+            reportUri: "/api/security/csp-report"
         }
     },
     crossOriginEmbedderPolicy: false
 }));
+
+// SEC-03 v2: Endpoint para receber relatórios de violação CSP
+app.post('/api/security/csp-report', express.json({ type: ['application/json', 'application/csp-report'] }), (req, res) => {
+    try {
+        const report = req.body?.['csp-report'] || req.body || {};
+        const violation = {
+            directive: report['violated-directive'] || report['effectiveDirective'] || 'unknown',
+            blocked: report['blocked-uri'] || 'unknown',
+            document: report['document-uri'] || 'unknown',
+            timestamp: new Date().toISOString()
+        };
+        console.log(`🚨 [CSP-VIOLATION] ${violation.directive} | blocked=${violation.blocked} | doc=${violation.document}`);
+    } catch (_) { /* silencioso */ }
+    res.status(204).send();
+});
 
 app.use(cors({
     origin: function (origin, callback) {
