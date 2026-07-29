@@ -3680,43 +3680,24 @@ app.use(session(sessionConfig));
 
 // ===== Middleware =====
 app.use(helmet({
-    // SEC-03 v3: CSP com Feature Flag para enforcement
-    // FEATURE_CSP_ENFORCEMENT=true → bloqueia violações (enforcement)
-    // FEATURE_CSP_ENFORCEMENT=false/ausente → apenas reporta (report-only) [default]
+    // SEC-03 FINAL: CSP report-only (monitora sem bloquear)
+    // Enforcement requer testes em staging — mantido report-only por segurança
     contentSecurityPolicy: {
-        reportOnly: process.env.FEATURE_CSP_ENFORCEMENT !== 'true',
+        reportOnly: true,
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "http:", "data:", "blob:"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "http:"],
             styleSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
             imgSrc: ["'self'", "data:", "https:", "http:", "blob:"],
-            connectSrc: ["'self'", "https:", "http:", "wss:", "ws:", "data:", "blob:"],
+            connectSrc: ["'self'", "https:", "http:", "wss:"],
             fontSrc: ["'self'", "https:", "data:"],
-            frameSrc: ["'self'", "https:", "http:", "data:", "blob:"],
+            frameSrc: ["'self'", "https:", "http:"],
             objectSrc: ["'none'"],
-            baseUri: ["'self'"],
-            workerSrc: ["'self'", "blob:"],
-            childSrc: ["'self'", "blob:"],
-            mediaSrc: ["'self'", "https:", "http:", "data:", "blob:"]
+            baseUri: ["'self'"]
         }
     },
     crossOriginEmbedderPolicy: false
 }));
-
-// SEC-03 v2: Endpoint para receber relatórios de violação CSP
-app.post('/api/security/csp-report', express.json({ type: ['application/json', 'application/csp-report'] }), (req, res) => {
-    try {
-        const report = req.body?.['csp-report'] || req.body || {};
-        const violation = {
-            directive: report['violated-directive'] || report['effectiveDirective'] || 'unknown',
-            blocked: report['blocked-uri'] || 'unknown',
-            document: report['document-uri'] || 'unknown',
-            timestamp: new Date().toISOString()
-        };
-        console.log(`🚨 [CSP-VIOLATION] ${violation.directive} | blocked=${violation.blocked} | doc=${violation.document}`);
-    } catch (_) { /* silencioso */ }
-    res.status(204).send();
-});
 
 app.use(cors({
     origin: function (origin, callback) {
