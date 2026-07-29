@@ -3680,23 +3680,24 @@ app.use(session(sessionConfig));
 
 // ===== Middleware =====
 app.use(helmet({
-    // SEC-03 v2: CSP com Feature Flag para enforcement
+    // SEC-03 v3: CSP com Feature Flag para enforcement
     // FEATURE_CSP_ENFORCEMENT=true → bloqueia violações (enforcement)
     // FEATURE_CSP_ENFORCEMENT=false/ausente → apenas reporta (report-only) [default]
     contentSecurityPolicy: {
         reportOnly: process.env.FEATURE_CSP_ENFORCEMENT !== 'true',
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "http:"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "http:", "data:", "blob:"],
             styleSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
             imgSrc: ["'self'", "data:", "https:", "http:", "blob:"],
-            connectSrc: ["'self'", "https:", "http:", "wss:"],
+            connectSrc: ["'self'", "https:", "http:", "wss:", "ws:", "data:", "blob:"],
             fontSrc: ["'self'", "https:", "data:"],
-            frameSrc: ["'self'", "https:", "http:"],
+            frameSrc: ["'self'", "https:", "http:", "data:", "blob:"],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
-            formAction: ["'self'", "https:"],
-            reportUri: "/api/security/csp-report"
+            workerSrc: ["'self'", "blob:"],
+            childSrc: ["'self'", "blob:"],
+            mediaSrc: ["'self'", "https:", "http:", "data:", "blob:"]
         }
     },
     crossOriginEmbedderPolicy: false
