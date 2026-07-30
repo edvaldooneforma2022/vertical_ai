@@ -4902,20 +4902,43 @@ app.get("/chatbot", async (req, res) => {
             showPoweredBy: req.query.wlPoweredBy !== '0' // Default true
         };
 
-        // 🎨 Se não tiver cores na URL e tiver apiKey, buscar do banco de dados
-        if (!whitelabel.primaryColor && apiKey) {
+        // 🎨 WL-MULTI-002: Se tiver wlId (assistente específico), buscar WL por ele primeiro
+        const wlId = req.query.wlId || null;
+        if (!whitelabel.primaryColor && (wlId || apiKey)) {
             try {
-                const wlResult = await whitelabelManager.getConfig(apiKey);
-                if (wlResult.success && !wlResult.isDefault && wlResult.settings) {
-                    whitelabel = {
-                        companyName: wlResult.settings.companyName || whitelabel.companyName,
-                        logoUrl: wlResult.settings.logoUrl || whitelabel.logoUrl,
-                        primaryColor: wlResult.settings.primaryColor || null,
-                        secondaryColor: wlResult.settings.secondaryColor || null,
-                        showPoweredBy: wlResult.settings.showPoweredBy !== false,
-                        welcomeMessage: wlResult.settings.welcomeMessage || null
-                    };
-                    console.log(`🎨 Whitelabel carregado do banco para /chatbot (tenant: ${apiKey})`);
+                let wlResult = null;
+                // Passo 1: Tentar config específica do assistente (wlId = short_code)
+                if (wlId) {
+                    wlResult = await whitelabelManager.getConfig(wlId);
+                    if (wlResult.success && !wlResult.isDefault && wlResult.settings) {
+                        whitelabel = {
+                            companyName: wlResult.settings.companyName || whitelabel.companyName,
+                            logoUrl: wlResult.settings.logoUrl || whitelabel.logoUrl,
+                            primaryColor: wlResult.settings.primaryColor || null,
+                            secondaryColor: wlResult.settings.secondaryColor || null,
+                            showPoweredBy: wlResult.settings.showPoweredBy !== false,
+                            welcomeMessage: wlResult.settings.welcomeMessage || null
+                        };
+                        console.log(`🎨 Whitelabel carregado para assistente: ${wlId}`);
+                        wlResult = null; // Já encontrou, não precisa do fallback
+                    } else {
+                        wlResult = null; // Não encontrou, vai para fallback
+                    }
+                }
+                // Passo 2: Fallback — config do tenant (apiKey) = comportamento anterior
+                if (!whitelabel.primaryColor && apiKey) {
+                    wlResult = await whitelabelManager.getConfig(apiKey);
+                    if (wlResult && wlResult.success && !wlResult.isDefault && wlResult.settings) {
+                        whitelabel = {
+                            companyName: wlResult.settings.companyName || whitelabel.companyName,
+                            logoUrl: wlResult.settings.logoUrl || whitelabel.logoUrl,
+                            primaryColor: wlResult.settings.primaryColor || null,
+                            secondaryColor: wlResult.settings.secondaryColor || null,
+                            showPoweredBy: wlResult.settings.showPoweredBy !== false,
+                            welcomeMessage: wlResult.settings.welcomeMessage || null
+                        };
+                        console.log(`🎨 Whitelabel carregado do banco para /chatbot (tenant: ${apiKey})`);
+                    }
                 }
             } catch (wlError) {
                 console.warn('Não foi possível carregar whitelabel do banco:', wlError.message);
@@ -12546,13 +12569,21 @@ try {
                 logger.error('Erro no tracking de analytics:', analyticsError);
             }
 
-            // 🎨 Buscar configuração de whitelabel para este tenant
+            // 🎨 WL-MULTI-001: Buscar whitelabel ESPECÍFICO do assistente, fallback para tenant
             let whitelabel = {};
             try {
-                const wlResult = await whitelabelManager.getConfig(shortUrl.api_key);
+                // Passo 1: Tentar config específica do assistente (por short_code)
+                let wlResult = await whitelabelManager.getConfig(shortCode);
                 if (wlResult.success && !wlResult.isDefault) {
                     whitelabel = wlResult.settings || {};
-                    logger.info(`🎨 Whitelabel carregado para tenant ${shortUrl.api_key}`);
+                    logger.info(`🎨 Whitelabel carregado para assistente específico: ${shortCode}`);
+                } else {
+                    // Passo 2: Fallback — config do tenant (por api_key) = comportamento anterior
+                    wlResult = await whitelabelManager.getConfig(shortUrl.api_key);
+                    if (wlResult.success && !wlResult.isDefault) {
+                        whitelabel = wlResult.settings || {};
+                        logger.info(`🎨 Whitelabel carregado via fallback tenant: ${shortUrl.api_key}`);
+                    }
                 }
             } catch (wlError) {
                 logger.warn('Não foi possível carregar whitelabel:', wlError);
@@ -12565,6 +12596,9 @@ try {
                 instructions: shortUrl.instructions || '',
                 apiKey: shortUrl.api_key
             });
+
+            // WL-MULTI-001: Passar identificador do assistente para /chatbot
+            params.set('wlId', shortCode);
 
             // Adicionar parâmetros de whitelabel se existirem
             if (whitelabel.companyName) params.set('wlCompany', whitelabel.companyName);

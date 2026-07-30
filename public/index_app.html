@@ -4012,6 +4012,15 @@
                         </ul>
                     </div>
 
+                                        <!-- WL-MULTI-004: Seletor de assistente para whitelabel individual -->
+                    <div style="background:#334155; padding:1rem 1.5rem; border-radius:12px; margin-bottom:1.5rem; border-left:4px solid #10b981;">
+                        <label style="color:#10b981; display:block; margin-bottom:0.5rem; font-weight:600;">🎯 Aplicar Whitelabel para:</label>
+                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:0.75rem;">Selecione um assistente específico ou &quot;Todos&quot; para aplicar a mesma marca a todos.</p>
+                        <select id="wl-assistant-selector" onchange="onWlAssistantChange()" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; font-size:0.95rem; cursor:pointer;">
+                            <option value="">🔄 Carregando assistentes...</option>
+                        </select>
+                    </div>
+
                     <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
                         <h3 style="color:#cbd5e1; margin-bottom:1rem;">⚙️ Configuração da Marca</h3>
 
@@ -5882,7 +5891,9 @@
                     return;
                 }
 
-                const chatbotId = sessionData.apiKey; // Usar API key como chatbotId
+                // WL-MULTI-005: Usar assistente selecionado, fallback para apiKey
+                const selector = document.getElementById('wl-assistant-selector');
+                const chatbotId = (selector && selector.value) ? selector.value : sessionData.apiKey;
 
                 const response = await fetch(`/api/whitelabel/${encodeURIComponent(chatbotId)}`, {
                     method: 'POST',
@@ -5951,7 +5962,9 @@
                     return;
                 }
 
-                const chatbotId = sessionData.apiKey; // Usar API key como chatbotId
+                // WL-MULTI-005: Usar assistente selecionado, fallback para apiKey
+                const selector = document.getElementById('wl-assistant-selector');
+                const chatbotId = (selector && selector.value) ? selector.value : sessionData.apiKey;
 
                 const response = await fetch(`/api/whitelabel/${encodeURIComponent(chatbotId)}`);
                 const data = await response.json();
@@ -5976,7 +5989,7 @@
 
                     // Atualizar preview com valores carregados
                     updateWhitelabelPreview(config);
-                    console.log('📋 Configuração Whitelabel carregada para tenant:', chatbotId);
+                    console.log('📋 Configuração Whitelabel carregada para:', chatbotId);
                 }
 
                 // FIX-WL-004: Mostrar toggle showPoweredBy se plano permite (Pro/Business)
@@ -6018,6 +6031,86 @@
 
         // Inicializar listeners quando DOM estiver pronto
         document.addEventListener('DOMContentLoaded', setupWhitelabelPreviewListeners);
+
+        // ═══ WL-MULTI-006: Funções para seletor de assistente no Whitelabel ═══
+
+        // Carregar lista de assistentes no dropdown
+        async function loadWlAssistants() {
+            try {
+                const selector = document.getElementById('wl-assistant-selector');
+                if (!selector) return;
+
+                const apiKey = localStorage.getItem('linkmagico_api_key') || '';
+                const response = await fetch('/api/assistants?apiKey=' + encodeURIComponent(apiKey));
+                const data = await response.json();
+
+                // Limpar e popular dropdown
+                selector.innerHTML = '';
+
+                // Opção padrão: Todos (usa apiKey = comportamento anterior)
+                const optAll = document.createElement('option');
+                optAll.value = '';
+                optAll.textContent = '🌐 Todos os Assistentes (Padrão do Tenant)';
+                selector.appendChild(optAll);
+
+                if (data.success && data.assistants && data.assistants.length > 0) {
+                    data.assistants.forEach(function(a) {
+                        const opt = document.createElement('option');
+                        opt.value = a.shortCode || a.id;
+                        opt.textContent = '🤖 ' + (a.name || 'Assistente ' + a.id);
+                        selector.appendChild(opt);
+                    });
+                    console.log('🎯 WL-MULTI: ' + data.assistants.length + ' assistentes carregados no seletor');
+                }
+            } catch (error) {
+                console.warn('WL-MULTI: Erro ao carregar assistentes:', error.message);
+                const selector = document.getElementById('wl-assistant-selector');
+                if (selector) {
+                    selector.innerHTML = '<option value="">🌐 Todos os Assistentes (Padrão)</option>';
+                }
+            }
+        }
+
+        // Quando o usuário seleciona um assistente diferente, recarregar config
+        async function onWlAssistantChange() {
+            try {
+                // Limpar campos atuais
+                document.getElementById('wl-company').value = '';
+                document.getElementById('wl-logo').value = '';
+                document.getElementById('wl-primary').value = '#3b82f6';
+                document.getElementById('wl-secondary').value = '#8b5cf6';
+                document.getElementById('wl-welcome').value = '';
+
+                // Recarregar config do assistente selecionado
+                await loadWhitelabelConfig();
+
+                const selector = document.getElementById('wl-assistant-selector');
+                const selected = selector ? (selector.options[selector.selectedIndex]?.text || 'Todos') : 'Todos';
+                const statusEl = document.getElementById('wl-status');
+                if (statusEl) {
+                    statusEl.innerHTML = '<span style="color:#60a5fa;">📋 Configuração carregada para: ' + selected + '</span>';
+                    setTimeout(function() { statusEl.innerHTML = ''; }, 3000);
+                }
+            } catch (error) {
+                console.warn('WL-MULTI: Erro ao trocar assistente:', error.message);
+            }
+        }
+
+        // Carregar assistentes quando a aba whitelabel é aberta
+        document.addEventListener('DOMContentLoaded', function() {
+            var wlTab = document.getElementById('tab-whitelabel');
+            if (wlTab) {
+                var observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(m) {
+                        if (m.attributeName === 'style' && wlTab.style.display !== 'none') {
+                            loadWlAssistants();
+                        }
+                    });
+                });
+                observer.observe(wlTab, { attributes: true, attributeFilter: ['style'] });
+            }
+        });
+
 
 
         async function loadLeadsStats() {

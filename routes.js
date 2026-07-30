@@ -853,6 +853,7 @@ function setupRoutes(app) {
                 .filter(s => s.status === 'active' || !s.status)
                 .map(s => ({
                     id: s.id,
+                    shortCode: s.short_code,
                     name: s.robot_name || s.short_code,
                     shortUrl: `${req.protocol}://${req.get('host')}/s/${s.short_code}`,
                     salesUrl: s.sales_url || '',

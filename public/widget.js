@@ -170,8 +170,9 @@
         loadWhitelabelColors: async function () {
             try {
                 const apiBase = this.config.apiBase;
-                // Usar apiKey da configuração, do token ou 'default' como fallback
-                const chatbotId = this.config.apiKey || this.token || 'default';
+                // WL-MULTI-003: Priorizar chatbotId (short_code) sobre apiKey para WL per-assistente
+                // Fallback: apiKey (comportamento anterior) → token → 'default'
+                const chatbotId = this.config.chatbotId || this.config.apiKey || this.token || 'default';
 
                 // Usar endpoint público (não requer autenticação)
                 // SAFE PATCH - WL-V4-001: Removido Content-Type header do GET para evitar CORS preflight
