@@ -240,6 +240,7 @@ module.exports = function (app, logger) {
 
             // Evolution Go v0.7.1: verificar se instância já existe usando token salvo
             let instanceToken = existingSettings?.evolution_api_key || null;
+            let needsReconnect = false; // FIX-WA-ZOMBIE: flag para reconexão
             try {
                 if (instanceToken) {
                     const checkResp = await axios.get(
@@ -249,9 +250,12 @@ module.exports = function (app, logger) {
                     const statusData = checkResp.data?.data || {};
                     instanceExists = statusData.Connected !== undefined;
 
-                    // PROTEÇÃO: se instância está morta (QR expirou, disconnect permanente), deletar e recriar
+                    // FIX-WA-ZOMBIE: Se instância existe mas está desconectada, tentar resolver
                     if (instanceExists && !statusData.Connected && !statusData.LoggedIn) {
-                        // Verificar se tem disconnect_reason (QR limit, etc.)
+                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} existe mas DESCONECTADA — verificando motivo...`);
+                        
+                        // Verificar disconnect_reason para decidir ação
+                        let shouldDelete = false;
                         try {
                             const allResp = await axios.get(
                                 `${CENTRAL_EVOLUTION_URL}/instance/all`,
@@ -259,27 +263,38 @@ module.exports = function (app, logger) {
                             );
                             const instances = allResp.data?.data || [];
                             const thisInstance = instances.find(i => i.name === instanceName);
-                            if (thisInstance?.disconnect_reason && thisInstance.disconnect_reason.includes('QR code limit')) {
-                                logger.info(`📱 [WA-SAAS] Instância ${instanceName} com QR expirado — deletando para recriar...`);
+                            
+                            // FIX-WA-ZOMBIE: Deletar para QUALQUER disconnect (não apenas QR limit)
+                            // Status "close", QR expirado, sessão revogada — todos precisam recriar
+                            if (thisInstance && (thisInstance.disconnect_reason || thisInstance.status === 'close')) {
+                                const reason = thisInstance.disconnect_reason || thisInstance.status || 'unknown';
+                                logger.info(`📱 [WA-SAAS] Instância ${instanceName} morta (reason: ${reason}) — deletando para recriar...`);
+                                shouldDelete = true;
                                 try {
                                     await axios.delete(
                                         `${CENTRAL_EVOLUTION_URL}/instance/delete/${thisInstance.id}`,
                                         { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 10000 }
                                     );
-                                    logger.info(`📱 [WA-SAAS] ✅ Instância expirada ${instanceName} deletada`);
+                                    logger.info(`📱 [WA-SAAS] ✅ Instância zombie ${instanceName} deletada`);
+                                    instanceExists = false;
+                                    instanceToken = null;
                                 } catch (delErr) {
-                                    logger.warn(`📱 [WA-SAAS] Aviso ao deletar instância expirada:`, delErr.message);
+                                    logger.warn(`📱 [WA-SAAS] Aviso ao deletar instância zombie:`, delErr.message);
+                                    // Fallback: marcar para reconexão ao invés de falhar
+                                    needsReconnect = true;
                                 }
-                                instanceExists = false;
-                                instanceToken = null;
+                            } else {
+                                // Instância desconectada mas sem reason — tentar reconectar
+                                needsReconnect = true;
                             }
                         } catch (checkAllErr) {
                             logger.warn(`📱 [WA-SAAS] Aviso ao verificar disconnect_reason:`, checkAllErr.message);
+                            needsReconnect = true; // Na dúvida, tenta reconectar
                         }
                     }
 
                     if (instanceExists) {
-                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existe (Connected: ${statusData.Connected})`);
+                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existe (Connected: ${statusData.Connected}, needsReconnect: ${needsReconnect})`);
                     }
                 }
             } catch (checkErr) {
@@ -322,8 +337,10 @@ module.exports = function (app, logger) {
             // Buscar QR Code (Evolution Go: GET /instance/qr com token da instância)
             let qrcode = null;
 
-            // Após criar instância nova: configurar webhook + aguardar inicialização
-            if (!instanceExists) {
+            // FIX-WA-ZOMBIE: Chamar /instance/connect quando:
+            // 1. Instância é nova (!instanceExists original), OU
+            // 2. Instância existe mas precisa reconectar (needsReconnect)
+            if (!instanceExists || needsReconnect) {
                 // CRÍTICO: Configurar webhook para que mensagens cheguem ao Link Mágico
                 try {
                     const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
@@ -340,7 +357,7 @@ module.exports = function (app, logger) {
                         },
                         { headers: { apikey: instanceToken }, timeout: 15000 }
                     );
-                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado: ${APP_URL}/api/webhook/evolution (secret=${webhookSecret ? 'YES' : 'NO'})`);
+                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado: ${APP_URL}/api/webhook/evolution (secret=${webhookSecret ? 'YES' : 'NO'}, reconnect=${needsReconnect})`);
                 } catch (whErr) {
                     logger.warn(`📱 [WA-SAAS] ⚠️ Aviso ao configurar webhook:`, whErr.response?.data || whErr.message);
                 }
