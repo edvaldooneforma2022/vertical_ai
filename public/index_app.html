@@ -4396,7 +4396,15 @@
             document.getElementById('tab-' + tabName).style.display = 'block';
 
             // Ativar tab
-            event.target.classList.add('active');
+            // FIX-WA-TAB: Guard para chamadas programáticas (sem evento de click)
+            if (typeof event !== 'undefined' && event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                document.querySelectorAll('.new-tab').forEach(function(el) {
+                    var oc = el.getAttribute('onclick') || '';
+                    if (oc.indexOf("'" + tabName + "'") !== -1) el.classList.add('active');
+                });
+            }
 
             // Carregar dados da tab
             if (tabName === 'analytics') loadAnalytics();
