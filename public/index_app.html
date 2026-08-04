@@ -3536,7 +3536,7 @@
                                     <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
                                     <span style="color:#fbbf24;font-weight:600;">WhatsApp não conectado</span>
                                 </div>
-                                <button id="waSaasConnectBtn" onclick="waSaasConnect()"
+                                <button id="waSaasConnectBtn" onclick="if(this.disabled)return;this.disabled=true;waSaasConnect().finally(()=>{this.disabled=false;})"
                                     style="width:100%;background:linear-gradient(135deg,#25d366,#128C7E);color:white;border:none;padding:1rem 1.5rem;border-radius:12px;cursor:pointer;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;transition:all 0.3s;">
                                     <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Gerar QR Code do WhatsApp
                                 </button>
@@ -3605,6 +3605,9 @@
                             <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:1rem;">
                                 Se você possui sua própria instância Evolution API ou conta Twilio, configure aqui.
                             </p>
+
+                            <!-- FIX-WA-DOM: Elemento de status que o JS referencia -->
+                            <div id="whatsapp-current-status" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:1rem; margin-bottom:1rem;"></div>
 
                             <!-- Escolha do Provedor (formulário original preservado 100%) -->
                             <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
@@ -6740,6 +6743,12 @@
 
                 const statusEl = document.getElementById('whatsapp-current-status');
 
+                // FIX-WA-DOM: Guard contra elemento ausente (fallback seguro)
+                if (!statusEl) {
+                    console.warn('[WA-SETTINGS] Elemento whatsapp-current-status não encontrado — ignorando');
+                    return;
+                }
+
                 if (data.configured) {
                     let html = '<div style="color:#10b981; margin-bottom:0.5rem;">';
                     html += '✅ <strong>WhatsApp Configurado</strong>';
@@ -6769,8 +6778,11 @@
                 }
             } catch (error) {
                 console.error('Erro ao carregar configurações WhatsApp:', error);
-                document.getElementById('whatsapp-current-status').innerHTML =
-                    '<div style="color:#ef4444;">❌ Erro ao carregar status</div>';
+                // FIX-WA-DOM: Guard no catch também
+                try {
+                    var _waStatusEl = document.getElementById('whatsapp-current-status');
+                    if (_waStatusEl) _waStatusEl.innerHTML = '<div style="color:#ef4444;">❌ Erro ao carregar status</div>';
+                } catch(e) { /* fail-safe */ }
             }
         }
 
