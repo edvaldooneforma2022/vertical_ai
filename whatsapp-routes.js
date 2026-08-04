@@ -357,7 +357,7 @@ module.exports = function (app, logger) {
                         { headers: { apikey: instanceToken }, timeout: 15000 }
                     );
                     // Evolution Go retorna: { data: { Qrcode: "data:image/png;base64,..." } }
-                    qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.base64 || null;
+                    qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.data?.qrcode || qrResp.data?.base64 || null;
                     if (qrcode) {
                         logger.info(`📱 [WA-SAAS] ✅ QR Code obtido na tentativa ${attempt} (${qrcode.length} chars)`);
                         break;
