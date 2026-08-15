@@ -375,7 +375,8 @@ module.exports = function (app, logger) {
                         `${CENTRAL_EVOLUTION_URL}/instance/connect`,
                         {
                             webhookUrl: webhookUrl,
-                            subscribe: ['MESSAGE']
+                            subscribe: ['MESSAGE'],
+                            immediate: true
                         },
                         { headers: { apikey: instanceToken }, timeout: 15000 }
                     );
