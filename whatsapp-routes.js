@@ -307,12 +307,46 @@ module.exports = function (app, logger) {
                     );
                     logger.info(`📱 [WA-SAAS] ✅ Instância ${instanceName} criada com sucesso (Evolution Go)`);
                 } catch (createErr) {
-                    // Se erro é "instance already exists", tudo bem — idempotente
+                    // FIX-WA-ZOMBIE-v2b: se instância "already exists", é um ZOMBIE — deletar e recriar
                     if (createErr.response?.data?.error?.includes?.('already') ||
                         createErr.response?.data?.message?.includes?.('already') ||
                         createErr.response?.status === 409) {
-                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existia (idempotente)`);
-                        instanceExists = true;
+                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já existia como zombie — deletando com GLOBAL KEY...`);
+                        try {
+                            // Buscar ID do zombie usando GLOBAL API KEY
+                            const allResp = await axios.get(
+                                `${CENTRAL_EVOLUTION_URL}/instance/all`,
+                                { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 8000 }
+                            );
+                            const instances = allResp.data?.data || [];
+                            const zombie = instances.find(i => i.name === instanceName);
+                            if (zombie) {
+                                logger.info(`📱 [WA-SAAS] Zombie encontrado: id=${zombie.id}, status=${zombie.status || 'unknown'}, reason=${zombie.disconnect_reason || 'N/A'}`);
+                                await axios.delete(
+                                    `${CENTRAL_EVOLUTION_URL}/instance/delete/${zombie.id}`,
+                                    { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 10000 }
+                                );
+                                logger.info(`📱 [WA-SAAS] ✅ Zombie ${instanceName} deletado com sucesso`);
+                            }
+                        } catch (delZombieErr) {
+                            logger.warn(`📱 [WA-SAAS] Aviso ao deletar zombie:`, delZombieErr.message);
+                        }
+                        // Recriar instância com novo token
+                        try {
+                            instanceToken = generateInstanceToken(tenantId);
+                            await axios.post(
+                                `${CENTRAL_EVOLUTION_URL}/instance/create`,
+                                { name: instanceName, token: instanceToken },
+                                { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
+                            );
+                            logger.info(`📱 [WA-SAAS] ✅ Instância ${instanceName} recriada após limpeza de zombie`);
+                        } catch (retryErr) {
+                            logger.error(`📱 [WA-SAAS] ❌ Falha ao recriar após limpeza:`, retryErr.response?.data || retryErr.message);
+                            return res.status(500).json({
+                                success: false,
+                                error: 'Falha ao criar instância WhatsApp. Tente novamente.'
+                            });
+                        }
                     } else {
                         logger.error(`📱 [WA-SAAS] ❌ Erro ao criar instância:`, createErr.response?.data || createErr.message);
                         return res.status(500).json({
