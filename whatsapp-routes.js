@@ -357,59 +357,87 @@ module.exports = function (app, logger) {
                 }
             }
 
-            // Buscar QR Code (Evolution Go: GET /instance/qr com token da instância)
+            // FIX-WA-QR-DEFINITIVO: Baseado 100% no Swagger da Evolution GO
             let qrcode = null;
 
-            // Após criar instância nova: configurar webhook + aguardar inicialização
-            // (RESTAURADO do commit 05d10d5 que funcionava)
-            if (!instanceExists) {
-                // CRÍTICO: Configurar webhook para que mensagens cheguem ao Link Mágico
-                try {
-                    const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
-                    // SEC-10: Incluir webhook_secret na URL (Evolution Go não suporta headers customizados)
-                    const webhookSecret = process.env.EVOLUTION_WEBHOOK_SECRET || process.env.CENTRAL_EVOLUTION_API_KEY || '';
-                    const webhookUrl = webhookSecret
-                        ? `${APP_URL}/api/webhook/evolution?webhook_secret=${encodeURIComponent(webhookSecret)}`
-                        : `${APP_URL}/api/webhook/evolution`;
-                    await axios.post(
-                        `${CENTRAL_EVOLUTION_URL}/instance/connect`,
-                        {
-                            webhookUrl: webhookUrl,
-                            subscribe: ['MESSAGE'],
-                            immediate: true
-                        },
-                        { headers: { apikey: instanceToken }, timeout: 15000 }
-                    );
-                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado: ${APP_URL}/api/webhook/evolution (secret=${webhookSecret ? 'YES' : 'NO'})`);
-                } catch (whErr) {
-                    logger.warn(`📱 [WA-SAAS] ⚠️ Aviso ao configurar webhook:`, whErr.response?.data || whErr.message);
+            // POST /instance/connect: INICIA a conexão + configura webhook + RETORNA QR na resposta
+            try {
+                const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
+                const webhookSecret = process.env.EVOLUTION_WEBHOOK_SECRET || process.env.CENTRAL_EVOLUTION_API_KEY || '';
+                const webhookUrl = webhookSecret
+                    ? `${APP_URL}/api/webhook/evolution?webhook_secret=${encodeURIComponent(webhookSecret)}`
+                    : `${APP_URL}/api/webhook/evolution`;
+
+                logger.info(`📱 [WA-SAAS] POST /instance/connect com immediate:true...`);
+                const connectResp = await axios.post(
+                    `${CENTRAL_EVOLUTION_URL}/instance/connect`,
+                    {
+                        webhookUrl: webhookUrl,
+                        subscribe: ['MESSAGE'],
+                        immediate: true
+                    },
+                    { headers: { apikey: instanceToken }, timeout: 20000 }
+                );
+
+                // DEBUG: logar TODA a resposta para encontrar onde o QR está
+                const respData = connectResp.data;
+                logger.info(`📱 [WA-SAAS] POST /instance/connect response keys: ${JSON.stringify(Object.keys(respData || {}))}`);
+                logger.info(`📱 [WA-SAAS] POST /instance/connect response: ${JSON.stringify(respData).substring(0, 500)}`);
+
+                // Extrair QR de TODOS os campos possíveis
+                qrcode = respData?.qrcode?.base64
+                    || respData?.qrcode
+                    || respData?.base64
+                    || respData?.data?.Qrcode
+                    || respData?.data?.qrcode
+                    || respData?.data?.base64
+                    || respData?.code
+                    || respData?.qr
+                    || null;
+
+                // Se qrcode é um objeto, tentar extrair base64 dele
+                if (qrcode && typeof qrcode === 'object') {
+                    qrcode = qrcode.base64 || qrcode.code || qrcode.qrcode || null;
                 }
 
-                logger.info(`📱 [WA-SAAS] Aguardando 3s para Evolution Go inicializar sessão...`);
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                if (qrcode) {
+                    logger.info(`📱 [WA-SAAS] ✅ QR Code obtido do POST /instance/connect (${qrcode.length} chars)`);
+                } else {
+                    logger.info(`📱 [WA-SAAS] POST /instance/connect OK mas QR não veio na resposta. Webhook configurado.`);
+                }
+            } catch (connectErr) {
+                logger.warn(`📱 [WA-SAAS] ⚠️ POST /instance/connect: status=${connectErr.response?.status} data=${JSON.stringify(connectErr.response?.data)} msg=${connectErr.message}`);
             }
 
-            // Retry: tentar buscar QR até 3 vezes (Evolution Go: GET /instance/qr)
-            // RESTAURADO do commit 05d10d5 — este é o endpoint correto da Evolution GO
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                    const qrResp = await axios.get(
-                        `${CENTRAL_EVOLUTION_URL}/instance/qr`,
-                        { headers: { apikey: instanceToken }, timeout: 15000 }
-                    );
-                    // Evolution Go retorna: { data: { Qrcode: "data:image/png;base64,..." } }
-                    qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.data?.qrcode || qrResp.data?.base64 || null;
-                    if (qrcode) {
-                        logger.info(`📱 [WA-SAAS] ✅ QR Code obtido na tentativa ${attempt} (${qrcode.length} chars)`);
-                        break;
+            // Fallback: se QR não veio no POST, tentar GET /instance/qr
+            if (!qrcode) {
+                logger.info(`📱 [WA-SAAS] Aguardando 5s + tentando GET /instance/qr como fallback...`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        const qrResp = await axios.get(
+                            `${CENTRAL_EVOLUTION_URL}/instance/qr`,
+                            { headers: { apikey: instanceToken }, timeout: 15000 }
+                        );
+                        logger.info(`📱 [WA-SAAS] GET /instance/qr response: ${JSON.stringify(qrResp.data).substring(0, 500)}`);
+                        qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.data?.qrcode || qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || qrResp.data?.code || null;
+                        if (qrcode && typeof qrcode === 'object') {
+                            qrcode = qrcode.base64 || qrcode.code || null;
+                        }
+                        if (qrcode) {
+                            logger.info(`📱 [WA-SAAS] ✅ QR Code obtido do GET /instance/qr na tentativa ${attempt} (${qrcode.length} chars)`);
+                            break;
+                        }
+                        logger.info(`📱 [WA-SAAS] QR vazio na tentativa ${attempt}/3, aguardando 3s...`);
+                        if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 3000));
+                    } catch (qrErr) {
+                        logger.warn(`📱 [WA-SAAS] GET /instance/qr tentativa ${attempt}/3: status=${qrErr.response?.status} data=${JSON.stringify(qrErr.response?.data)} msg=${qrErr.message}`);
+                        if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 3000));
                     }
-                    logger.info(`📱 [WA-SAAS] QR vazio na tentativa ${attempt}, aguardando 2s...`);
-                    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
-                } catch (qrErr) {
-                    logger.warn(`📱 [WA-SAAS] Tentativa ${attempt}/3 QR: status=${qrErr.response?.status} data=${JSON.stringify(qrErr.response?.data)} msg=${qrErr.message}`);
-                    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
+
 
             // Salvar/atualizar no banco
             try {
