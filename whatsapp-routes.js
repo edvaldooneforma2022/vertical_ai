@@ -249,33 +249,37 @@ module.exports = function (app, logger) {
                     const statusData = checkResp.data?.data || {};
                     instanceExists = statusData.Connected !== undefined;
 
-                    // PROTEÇÃO: se instância está morta (QR expirou, disconnect permanente), deletar e recriar
+                    // FIX-WA-ZOMBIE-v2: se instância está morta por QUALQUER motivo, deletar e recriar
+                    // (Corrige bug onde só "QR code limit" era tratado, causando zombies permanentes)
                     if (instanceExists && !statusData.Connected && !statusData.LoggedIn) {
-                        // Verificar se tem disconnect_reason (QR limit, etc.)
+                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} morta (Connected=${statusData.Connected}, LoggedIn=${statusData.LoggedIn}) — deletando para recriar...`);
                         try {
+                            // Buscar ID da instância para deletar
                             const allResp = await axios.get(
                                 `${CENTRAL_EVOLUTION_URL}/instance/all`,
                                 { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 8000 }
                             );
                             const instances = allResp.data?.data || [];
                             const thisInstance = instances.find(i => i.name === instanceName);
-                            if (thisInstance?.disconnect_reason && thisInstance.disconnect_reason.includes('QR code limit')) {
-                                logger.info(`📱 [WA-SAAS] Instância ${instanceName} com QR expirado — deletando para recriar...`);
+                            if (thisInstance) {
+                                const reason = thisInstance.disconnect_reason || 'sem motivo registrado';
+                                logger.info(`📱 [WA-SAAS] Motivo da morte: ${reason}`);
                                 try {
                                     await axios.delete(
                                         `${CENTRAL_EVOLUTION_URL}/instance/delete/${thisInstance.id}`,
                                         { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 10000 }
                                     );
-                                    logger.info(`📱 [WA-SAAS] ✅ Instância expirada ${instanceName} deletada`);
+                                    logger.info(`📱 [WA-SAAS] ✅ Instância zombie ${instanceName} deletada`);
                                 } catch (delErr) {
-                                    logger.warn(`📱 [WA-SAAS] Aviso ao deletar instância expirada:`, delErr.message);
+                                    logger.warn(`📱 [WA-SAAS] Aviso ao deletar instância zombie:`, delErr.message);
                                 }
-                                instanceExists = false;
-                                instanceToken = null;
                             }
                         } catch (checkAllErr) {
-                            logger.warn(`📱 [WA-SAAS] Aviso ao verificar disconnect_reason:`, checkAllErr.message);
+                            logger.warn(`📱 [WA-SAAS] Aviso ao buscar instâncias para limpeza:`, checkAllErr.message);
                         }
+                        // Sempre recriar — mesmo se a deleção falhar, tentar criar nova
+                        instanceExists = false;
+                        instanceToken = null;
                     }
 
                     if (instanceExists) {
@@ -397,12 +401,24 @@ module.exports = function (app, logger) {
             // Invalidar cache
             clearTenantCache(apiKey);
 
-            res.json({
-                success: true,
-                instanceName,
-                qrcode,
-                message: qrcode ? 'Escaneie o QR Code com seu WhatsApp' : 'Instância conectada ou aguardando QR'
-            });
+            // FIX: retornar success:false quando QR é null (não mascarar falha)
+            if (qrcode) {
+                res.json({
+                    success: true,
+                    instanceName,
+                    qrcode,
+                    message: 'Escaneie o QR Code com seu WhatsApp'
+                });
+            } else {
+                logger.warn(`📱 [WA-SAAS] ⚠️ QR Code não gerado após 3 tentativas para ${instanceName}`);
+                res.json({
+                    success: false,
+                    instanceName,
+                    qrcode: null,
+                    error: 'QR Code não foi gerado. Tente novamente em alguns segundos.',
+                    message: 'Falha ao gerar QR Code — tente novamente'
+                });
+            }
 
         } catch (error) {
             logger.error('📱 [WA-SAAS] Erro no connect:', error);
@@ -626,7 +642,8 @@ module.exports = function (app, logger) {
                     `${CENTRAL_EVOLUTION_URL}/instance/connect/${instanceName}`,
                     { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
                 );
-                qrcode = qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || qrResp.data?.code || null;
+                // FIX: unificar lógica de extração QR com /connect (Evolution Go compatível)
+                qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.data?.qrcode || qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || qrResp.data?.code || null;
             } catch (qrErr) {
                 // Se já conectado, a Evolution pode retornar erro
                 if (qrErr.response?.status === 400 || qrErr.response?.data?.message?.includes?.('connected')) {
