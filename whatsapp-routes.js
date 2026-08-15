@@ -357,58 +357,56 @@ module.exports = function (app, logger) {
                 }
             }
 
-            // Buscar QR Code
+            // Buscar QR Code (Evolution Go: GET /instance/qr com token da instância)
             let qrcode = null;
 
-            // Após criar instância nova: aguardar inicialização (SEM chamar POST /instance/connect antes)
+            // Após criar instância nova: configurar webhook + aguardar inicialização
+            // (RESTAURADO do commit 05d10d5 que funcionava)
             if (!instanceExists) {
-                logger.info(`📱 [WA-SAAS] Aguardando 5s para Evolution Go inicializar sessão...`);
-                await new Promise(resolve => setTimeout(resolve, 5000));
-            }
-
-            // FIX-WA-QR-v3: usar GET /instance/connect/${name} com GLOBAL KEY
-            // (mesmo método do /reconnect que funciona)
-            for (let attempt = 1; attempt <= 5; attempt++) {
-                try {
-                    const qrResp = await axios.get(
-                        `${CENTRAL_EVOLUTION_URL}/instance/connect/${instanceName}`,
-                        { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
-                    );
-                    // Extrair QR de TODOS os formatos possíveis da Evolution Go
-                    qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.data?.qrcode || qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || qrResp.data?.code || null;
-                    if (qrcode) {
-                        logger.info(`📱 [WA-SAAS] ✅ QR Code obtido na tentativa ${attempt} (${qrcode.length} chars)`);
-                        break;
-                    }
-                    logger.info(`📱 [WA-SAAS] QR vazio na tentativa ${attempt}, aguardando 3s...`);
-                    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));
-                } catch (qrErr) {
-                    // Se já conectado, retornar sucesso sem QR
-                    if (qrErr.response?.status === 400 || qrErr.response?.data?.message?.includes?.('connected')) {
-                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já está conectada!`);
-                        return res.json({ success: true, instanceName, status: 'already_connected', message: 'WhatsApp já está conectado!' });
-                    }
-                    logger.warn(`📱 [WA-SAAS] Tentativa ${attempt}/5 QR:`, qrErr.response?.data || qrErr.message);
-                    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));
-                }
-            }
-
-            // FIX-WA-QR-v3b: Configurar webhook APÓS obter QR (não antes, para não consumir a sessão)
-            if (qrcode) {
+                // CRÍTICO: Configurar webhook para que mensagens cheguem ao Link Mágico
                 try {
                     const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
+                    // SEC-10: Incluir webhook_secret na URL (Evolution Go não suporta headers customizados)
                     const webhookSecret = process.env.EVOLUTION_WEBHOOK_SECRET || process.env.CENTRAL_EVOLUTION_API_KEY || '';
                     const webhookUrl = webhookSecret
                         ? `${APP_URL}/api/webhook/evolution?webhook_secret=${encodeURIComponent(webhookSecret)}`
                         : `${APP_URL}/api/webhook/evolution`;
                     await axios.post(
                         `${CENTRAL_EVOLUTION_URL}/instance/connect`,
-                        { webhookUrl: webhookUrl, subscribe: ['MESSAGE'] },
+                        {
+                            webhookUrl: webhookUrl,
+                            subscribe: ['MESSAGE']
+                        },
                         { headers: { apikey: instanceToken }, timeout: 15000 }
                     );
-                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado APÓS QR: ${APP_URL}/api/webhook/evolution`);
+                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado: ${APP_URL}/api/webhook/evolution (secret=${webhookSecret ? 'YES' : 'NO'})`);
                 } catch (whErr) {
                     logger.warn(`📱 [WA-SAAS] ⚠️ Aviso ao configurar webhook:`, whErr.response?.data || whErr.message);
+                }
+
+                logger.info(`📱 [WA-SAAS] Aguardando 3s para Evolution Go inicializar sessão...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+
+            // Retry: tentar buscar QR até 3 vezes (Evolution Go: GET /instance/qr)
+            // RESTAURADO do commit 05d10d5 — este é o endpoint correto da Evolution GO
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const qrResp = await axios.get(
+                        `${CENTRAL_EVOLUTION_URL}/instance/qr`,
+                        { headers: { apikey: instanceToken }, timeout: 15000 }
+                    );
+                    // Evolution Go retorna: { data: { Qrcode: "data:image/png;base64,..." } }
+                    qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.data?.qrcode || qrResp.data?.base64 || null;
+                    if (qrcode) {
+                        logger.info(`📱 [WA-SAAS] ✅ QR Code obtido na tentativa ${attempt} (${qrcode.length} chars)`);
+                        break;
+                    }
+                    logger.info(`📱 [WA-SAAS] QR vazio na tentativa ${attempt}, aguardando 2s...`);
+                    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
+                } catch (qrErr) {
+                    logger.warn(`📱 [WA-SAAS] Tentativa ${attempt}/3 QR: status=${qrErr.response?.status} data=${JSON.stringify(qrErr.response?.data)} msg=${qrErr.message}`);
+                    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
 
