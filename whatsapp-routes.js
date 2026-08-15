@@ -357,38 +357,17 @@ module.exports = function (app, logger) {
                 }
             }
 
-            // Buscar QR Code (Evolution Go: GET /instance/qr com token da instância)
+            // Buscar QR Code
             let qrcode = null;
 
-            // Após criar instância nova: configurar webhook + aguardar inicialização
+            // Após criar instância nova: aguardar inicialização (SEM chamar POST /instance/connect antes)
             if (!instanceExists) {
-                // CRÍTICO: Configurar webhook para que mensagens cheguem ao Link Mágico
-                try {
-                    const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
-                    // SEC-10: Incluir webhook_secret na URL (Evolution Go não suporta headers customizados)
-                    const webhookSecret = process.env.EVOLUTION_WEBHOOK_SECRET || process.env.CENTRAL_EVOLUTION_API_KEY || '';
-                    const webhookUrl = webhookSecret
-                        ? `${APP_URL}/api/webhook/evolution?webhook_secret=${encodeURIComponent(webhookSecret)}`
-                        : `${APP_URL}/api/webhook/evolution`;
-                    await axios.post(
-                        `${CENTRAL_EVOLUTION_URL}/instance/connect`,
-                        {
-                            webhookUrl: webhookUrl,
-                            subscribe: ['MESSAGE']
-                        },
-                        { headers: { apikey: instanceToken }, timeout: 15000 }
-                    );
-                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado: ${APP_URL}/api/webhook/evolution (secret=${webhookSecret ? 'YES' : 'NO'})`);
-                } catch (whErr) {
-                    logger.warn(`📱 [WA-SAAS] ⚠️ Aviso ao configurar webhook:`, whErr.response?.data || whErr.message);
-                }
-
-                logger.info(`📱 [WA-SAAS] Aguardando 3s para Evolution Go inicializar sessão...`);
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                logger.info(`📱 [WA-SAAS] Aguardando 5s para Evolution Go inicializar sessão...`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
             }
 
             // FIX-WA-QR-v3: usar GET /instance/connect/${name} com GLOBAL KEY
-            // (mesmo método do /reconnect que funciona — /instance/qr retorna "no QR code available")
+            // (mesmo método do /reconnect que funciona)
             for (let attempt = 1; attempt <= 5; attempt++) {
                 try {
                     const qrResp = await axios.get(
@@ -411,6 +390,25 @@ module.exports = function (app, logger) {
                     }
                     logger.warn(`📱 [WA-SAAS] Tentativa ${attempt}/5 QR:`, qrErr.response?.data || qrErr.message);
                     if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+            }
+
+            // FIX-WA-QR-v3b: Configurar webhook APÓS obter QR (não antes, para não consumir a sessão)
+            if (qrcode) {
+                try {
+                    const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'https://linkmagico.app.br';
+                    const webhookSecret = process.env.EVOLUTION_WEBHOOK_SECRET || process.env.CENTRAL_EVOLUTION_API_KEY || '';
+                    const webhookUrl = webhookSecret
+                        ? `${APP_URL}/api/webhook/evolution?webhook_secret=${encodeURIComponent(webhookSecret)}`
+                        : `${APP_URL}/api/webhook/evolution`;
+                    await axios.post(
+                        `${CENTRAL_EVOLUTION_URL}/instance/connect`,
+                        { webhookUrl: webhookUrl, subscribe: ['MESSAGE'] },
+                        { headers: { apikey: instanceToken }, timeout: 15000 }
+                    );
+                    logger.info(`📱 [WA-SAAS] ✅ Webhook configurado APÓS QR: ${APP_URL}/api/webhook/evolution`);
+                } catch (whErr) {
+                    logger.warn(`📱 [WA-SAAS] ⚠️ Aviso ao configurar webhook:`, whErr.response?.data || whErr.message);
                 }
             }
 
