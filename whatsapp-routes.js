@@ -387,24 +387,30 @@ module.exports = function (app, logger) {
                 await new Promise(resolve => setTimeout(resolve, 3000));
             }
 
-            // Retry: tentar buscar QR até 3 vezes (Evolution Go pode demorar para gerar)
-            for (let attempt = 1; attempt <= 3; attempt++) {
+            // FIX-WA-QR-v3: usar GET /instance/connect/${name} com GLOBAL KEY
+            // (mesmo método do /reconnect que funciona — /instance/qr retorna "no QR code available")
+            for (let attempt = 1; attempt <= 5; attempt++) {
                 try {
                     const qrResp = await axios.get(
-                        `${CENTRAL_EVOLUTION_URL}/instance/qr`,
-                        { headers: { apikey: instanceToken }, timeout: 15000 }
+                        `${CENTRAL_EVOLUTION_URL}/instance/connect/${instanceName}`,
+                        { headers: { apikey: CENTRAL_EVOLUTION_API_KEY }, timeout: 15000 }
                     );
-                    // Evolution Go retorna: { data: { Qrcode: "data:image/png;base64,..." } }
-                    qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.data?.qrcode || qrResp.data?.base64 || null;
+                    // Extrair QR de TODOS os formatos possíveis da Evolution Go
+                    qrcode = qrResp.data?.data?.Qrcode || qrResp.data?.data?.qrcode || qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || qrResp.data?.code || null;
                     if (qrcode) {
                         logger.info(`📱 [WA-SAAS] ✅ QR Code obtido na tentativa ${attempt} (${qrcode.length} chars)`);
                         break;
                     }
-                    logger.info(`📱 [WA-SAAS] QR vazio na tentativa ${attempt}, aguardando 2s...`);
-                    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
+                    logger.info(`📱 [WA-SAAS] QR vazio na tentativa ${attempt}, aguardando 3s...`);
+                    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));
                 } catch (qrErr) {
-                    logger.warn(`📱 [WA-SAAS] Tentativa ${attempt}/3 QR:`, qrErr.response?.data || qrErr.message);
-                    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
+                    // Se já conectado, retornar sucesso sem QR
+                    if (qrErr.response?.status === 400 || qrErr.response?.data?.message?.includes?.('connected')) {
+                        logger.info(`📱 [WA-SAAS] Instância ${instanceName} já está conectada!`);
+                        return res.json({ success: true, instanceName, status: 'already_connected', message: 'WhatsApp já está conectado!' });
+                    }
+                    logger.warn(`📱 [WA-SAAS] Tentativa ${attempt}/5 QR:`, qrErr.response?.data || qrErr.message);
+                    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));
                 }
             }
 
