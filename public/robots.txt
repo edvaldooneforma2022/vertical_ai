@@ -1,0 +1,11 @@
+# Link Mágico - Robots.txt
+# https://linkmagico.app.br
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /data/
+Disallow: /l/
+
+Sitemap: https://linkmagico.app.br/sitemap.xml
