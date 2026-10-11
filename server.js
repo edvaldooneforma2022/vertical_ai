@@ -3838,6 +3838,15 @@ if (process.env.FEATURE_WIDGET_TOKEN !== 'false') {
     }
 }
 
+// ===== SEO: Sitemap e Robots.txt (público, sem autenticação) =====
+// DEVE ficar ANTES do app.use(requireApiKey) para não exigir login
+app.get("/sitemap.xml", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "sitemap.xml"));
+});
+app.get("/robots.txt", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "robots.txt"));
+});
+
 app.use(requireApiKey);
 
 // ===== Health Check (para UptimeRobot e monitoramento) =====
@@ -3957,14 +3966,6 @@ app.get("/healthz", async (req, res) => {
             timestamp: new Date().toISOString()
         });
     }
-});
-
-// ===== SEO: Sitemap e Robots.txt (público, sem autenticação) =====
-app.get("/sitemap.xml", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "sitemap.xml"));
-});
-app.get("/robots.txt", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "robots.txt"));
 });
 
 // ===== Static Files with API Key Protection =====
