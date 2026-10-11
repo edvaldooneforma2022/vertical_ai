@@ -3959,6 +3959,14 @@ app.get("/healthz", async (req, res) => {
     }
 });
 
+// ===== SEO: Sitemap e Robots.txt (público, sem autenticação) =====
+app.get("/sitemap.xml", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "sitemap.xml"));
+});
+app.get("/robots.txt", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "robots.txt"));
+});
+
 // ===== Static Files with API Key Protection =====
 app.get("/", (req, res) => {
     // ✅ ENTERPRISE: verificar UUID do tenant (não a string da API Key)
