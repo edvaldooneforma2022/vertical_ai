@@ -12922,16 +12922,6 @@ try {
         }
     }
 
-    // ===== V8.0 LGPD CONSENT INITIALIZATION =====
-    if (lgpdConsentManager) {
-        try {
-            lgpdConsentManager.initialize(db);
-            console.log('✅ [V8.0] LGPD Consent Manager inicializado');
-        } catch (e) {
-            console.log('⚠️ [V8.0] LGPD Consent Manager falhou:', e.message);
-        }
-    }
-
     // ===== V8.0 ENCRYPTION MANAGER INITIALIZATION =====
     if (encryptionManager) {
         try {
