@@ -31,6 +31,20 @@ if (USE_POSTGRES) {
         connectionTimeoutMillis: 2000,
     });
 
+    // 🛡️ R2: Capturar erros de clientes ociosos no pool
+    // Sem este handler, um erro em conexão idle vira uncaughtException e mata o processo
+    // REVERSÍVEL: remover este bloco restaura o comportamento anterior
+    pool.on('error', (err, client) => {
+        // Não imprimir connectionString, credenciais ou dados de clientes
+        console.error(JSON.stringify({
+            level: 'error',
+            event: 'pg_pool_idle_error',
+            error: String(err && err.message || err),
+            code: String(err && err.code || ''),
+            timestamp: new Date().toISOString()
+        }));
+    });
+
     db = {
         query: (text, params) => pool.query(text, params),
         pool: pool
