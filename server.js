@@ -12985,7 +12985,7 @@ try {
     // ===== V8.0 ENCRYPTION MANAGER INITIALIZATION =====
     if (encryptionManager) {
         try {
-            encryptionManager.initialize();
+            await encryptionManager.initialize(); // R3.3: await — fn é async
             console.log('✅ [V8.0] Encryption Manager inicializado');
         } catch (e) {
             console.log('⚠️ [V8.0] Encryption Manager falhou:', e.message);
@@ -13144,10 +13144,10 @@ try {
     if (process.env.FEATURE_ONBOARDING_EMAILS !== 'false') {
         try {
             const { initEmailQueue, processEmailQueue } = require('./email-queue-worker');
-            initEmailQueue();
-            setInterval(processEmailQueue, 5 * 60 * 1000); // A cada 5 minutos
+            initEmailQueue().catch(e => console.warn('⚠️ [EmailQueue] Init falhou:', e.message)); // R3.4a
+            setInterval(() => processEmailQueue().catch(e => console.error('❌ [EmailQueue] Interval:', e.message)), 5 * 60 * 1000); // R3.4b
             // Processar imediatamente na inicialização (emails pendentes)
-            setTimeout(processEmailQueue, 10000);
+            setTimeout(() => processEmailQueue().catch(e => console.error('❌ [EmailQueue] Boot:', e.message)), 10000); // R3.4c
             console.log('📧 [Onboarding] Email Queue Worker ativo (interval: 5min)');
         } catch (e) {
             console.warn('⚠️ [Onboarding] Email Queue Worker não disponível:', e.message);
@@ -13198,9 +13198,9 @@ try {
             const { scheduleWeeklyReports } = require('./weekly-report');
             // Agendar para executar 1x por semana (segunda-feira 9h)
             const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-            setInterval(scheduleWeeklyReports, WEEK_MS);
+            setInterval(() => scheduleWeeklyReports().catch(e => console.error('❌ [WeeklyReport] Interval:', e.message)), WEEK_MS); // R3.5a
             // Primeira execução: 30s após boot (para testar)
-            setTimeout(scheduleWeeklyReports, 30000);
+            setTimeout(() => scheduleWeeklyReports().catch(e => console.error('❌ [WeeklyReport] Boot:', e.message)), 30000); // R3.5b
             console.log('📊 Weekly Report habilitado (interval: 7 dias)');
         } catch (e) {
             console.warn('⚠️ Weekly Report não disponível:', e.message);
@@ -13366,4 +13366,14 @@ try {
         }, 5000); // Aguarda 5s após startup para garantir que tudo está pronto
     });
 
-})();
+})().catch(err => {
+    // R3.1: Captura rejeições que escapem dos try/catch internos da IIFE
+    console.error(JSON.stringify({
+        level: 'fatal',
+        event: 'startup_iife_rejection',
+        error: String(err && err.message || err),
+        stack: String(err && err.stack || ''),
+        timestamp: new Date().toISOString()
+    }));
+    process.exit(1);
+});
