@@ -1,4 +1,64 @@
 
+// ═══════════════════════════════════════════════════════════════════
+// 🛡️ GLOBAL ERROR HANDLERS — Diagnóstico de falhas fatais
+// Registrados ANTES de qualquer require() para capturar erros de carga
+// REVERSÍVEL: remover este bloco restaura o comportamento anterior
+// ═══════════════════════════════════════════════════════════════════
+let _fatalShutdownInProgress = false;
+
+process.on('uncaughtException', (err, origin) => {
+    if (_fatalShutdownInProgress) return; // Evita re-entrância
+    _fatalShutdownInProgress = true;
+    try {
+        const mem = process.memoryUsage();
+        console.error(JSON.stringify({
+            level: 'fatal',
+            event: 'uncaughtException',
+            origin: String(origin || 'uncaughtException'),
+            error: String(err && err.message || err),
+            stack: String(err && err.stack || ''),
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            pid: process.pid,
+            memory: {
+                rss: Math.round(mem.rss / 1024 / 1024),
+                heapUsed: Math.round(mem.heapUsed / 1024 / 1024)
+            }
+        }));
+    } catch (_) {
+        // Se até o logging falhar, tenta stderr direto
+        try { process.stderr.write('FATAL: uncaughtException logging failed\n'); } catch (__) {}
+    }
+    // Encerramento controlado — process.exit é síncrono para stdout flush no Node.js
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    if (_fatalShutdownInProgress) return;
+    _fatalShutdownInProgress = true;
+    try {
+        const mem = process.memoryUsage();
+        const errMsg = reason instanceof Error ? reason.message : String(reason || 'unknown');
+        const errStack = reason instanceof Error ? reason.stack : '';
+        console.error(JSON.stringify({
+            level: 'fatal',
+            event: 'unhandledRejection',
+            error: errMsg,
+            stack: String(errStack),
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            pid: process.pid,
+            memory: {
+                rss: Math.round(mem.rss / 1024 / 1024),
+                heapUsed: Math.round(mem.heapUsed / 1024 / 1024)
+            }
+        }));
+    } catch (_) {
+        try { process.stderr.write('FATAL: unhandledRejection logging failed\n'); } catch (__) {}
+    }
+    process.exit(1);
+});
+
 // FIX-09v3: Função reutilizável de limpeza de emojis quebrados/órfãos
 // Remove: U+FFFD, surrogates órfãos, variation selectors órfãos,
 // skin tone modifiers sem base, enclosing keycap, ZWJ órfão
