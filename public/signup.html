@@ -425,9 +425,24 @@
             var data = await res.json();
 
             if (data.success) {
-                // Redirecionar para página de sucesso com a API Key
+                // A3: Salvar API key e preservar plano selecionado
                 sessionStorage.setItem('lm_signup_data', JSON.stringify(data));
-                window.location.href = '/signup-success.html';
+                if (data.apiKey) {
+                    try {
+                        sessionStorage.setItem('lm_api_key', data.apiKey);
+                        localStorage.setItem('lm_api_key', data.apiKey);
+                        localStorage.setItem('linkmagico_key', data.apiKey);
+                    } catch(e) {}
+                }
+
+                // A3: Se veio com plano pré-selecionado, ir direto ao pricing para checkout
+                var pendingPlan = new URLSearchParams(window.location.search).get('plan') || '';
+                if (pendingPlan && ['starter', 'pro', 'business'].indexOf(pendingPlan) !== -1 && data.apiKey) {
+                    sessionStorage.setItem('lm_pending_plan', pendingPlan);
+                    window.location.href = '/pricing.html?plan=' + encodeURIComponent(pendingPlan);
+                } else {
+                    window.location.href = '/signup-success.html';
+                }
             } else {
                 showAlert(data.error || 'Erro ao criar conta. Tente novamente.', 'error');
                 btn.classList.remove('loading');

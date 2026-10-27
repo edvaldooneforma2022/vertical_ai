@@ -57,9 +57,17 @@ async function ensureAffiliatesTables() {
                 amount_cents INT DEFAULT 0,
                 commission_cents INT DEFAULT 0,
                 status TEXT DEFAULT 'pending',
+                stripe_event_id TEXT,
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )
         `);
+
+        // Índice de unicidade para idempotência de comissões por evento Stripe
+        await db.query(`
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_commission_stripe_event
+            ON affiliate_commissions(stripe_event_id)
+            WHERE stripe_event_id IS NOT NULL
+        `).catch(() => {});
 
         // Index para busca rápida
         await db.query(`
@@ -279,8 +287,9 @@ async function registerReferral(tenantId, referralCode) {
  * @param {string} apiKey — API Key do tenant que pagou
  * @param {string} planId — Plano contratado
  * @param {number} amountCents — Valor pago em centavos
+ * @param {string} [stripeEventId] — ID do evento Stripe para idempotência
  */
-async function registerCommission(apiKey, planId, amountCents) {
+async function registerCommission(apiKey, planId, amountCents, stripeEventId) {
     if (!FEATURE_ENABLED) return;
 
     try {
@@ -310,11 +319,30 @@ async function registerCommission(apiKey, planId, amountCents) {
 
         const commissionCents = Math.round(amountCents * COMMISSION_PERCENT / 100);
 
-        await db.query(
-            `INSERT INTO affiliate_commissions (affiliate_tenant_id, referred_tenant_id, event_type, plan_id, amount_cents, commission_cents, status)
-             VALUES ($1, $2, 'payment', $3, $4, $5, 'pending')`,
-            [affiliateRows[0].id, rows[0].id, planId, amountCents, commissionCents]
-        );
+        if (stripeEventId) {
+            // R1: Inserção idempotente — ON CONFLICT no stripe_event_id único.
+            // Se o mesmo evento já gerou comissão, a inserção é ignorada silenciosamente.
+            const insertResult = await db.query(
+                `INSERT INTO affiliate_commissions (affiliate_tenant_id, referred_tenant_id, event_type, plan_id, amount_cents, commission_cents, status, stripe_event_id)
+                 VALUES ($1, $2, 'payment', $3, $4, $5, 'pending', $6)
+                 ON CONFLICT (stripe_event_id) WHERE stripe_event_id IS NOT NULL
+                 DO NOTHING
+                 RETURNING id`,
+                [affiliateRows[0].id, rows[0].id, planId, amountCents, commissionCents, stripeEventId]
+            );
+            const insertRows = insertResult.rows || insertResult;
+            if (insertRows.length === 0) {
+                console.log(`⏭️ [Affiliates] Comissão já registrada para evento ${stripeEventId} — ignorando duplicata`);
+                return;
+            }
+        } else {
+            // Fallback sem stripeEventId (compatibilidade retroativa)
+            await db.query(
+                `INSERT INTO affiliate_commissions (affiliate_tenant_id, referred_tenant_id, event_type, plan_id, amount_cents, commission_cents, status)
+                 VALUES ($1, $2, 'payment', $3, $4, $5, 'pending')`,
+                [affiliateRows[0].id, rows[0].id, planId, amountCents, commissionCents]
+            );
+        }
 
         console.log(`💰 [Affiliates] Comissão registrada: R$${(commissionCents / 100).toFixed(2)} (${COMMISSION_PERCENT}% de R$${(amountCents / 100).toFixed(2)}) para afiliado ${affiliateRows[0].id.substring(0, 8)}...`);
     } catch (e) {

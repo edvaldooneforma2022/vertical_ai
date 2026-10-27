@@ -4506,7 +4506,7 @@ app.delete("/admin/leads/:id", requireApiKey, (req, res) => {
 });
 
 // ===== ROTAS DE BACKUP DE LEADS =====
-app.post("/admin/leads/backup/create", requireApiKey, (req, res) => {
+app.post("/admin/leads/backup/create", requireApiKey, ...[billingMiddleware].filter(Boolean), (req, res) => {
     const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
@@ -4598,7 +4598,7 @@ app.get("/admin/appointments/:id", requireApiKey, (req, res) => {
 });
 
 // Criar novo agendamento
-app.post("/api/appointments", requireApiKey, (req, res) => {
+app.post("/api/appointments", requireApiKey, ...[billingMiddleware].filter(Boolean), (req, res) => {
     const apiKey = req.session.validatedApiKey || req.body.apiKey || req.query.apiKey || (req.session.user && req.session.user.apiKey ? req.session.user.apiKey : null);
 
     if (!apiKey) {
@@ -12255,7 +12255,7 @@ try {
     // ===== ROTAS DAS NOVAS INTEGRAÇÕES V3.0 =====
 
     // Gmail Integration
-    app.post('/api/gmail/send', requireApiKeyV3, async (req, res) => {
+    app.post('/api/gmail/send', requireApiKeyV3, ...[billingMiddleware].filter(Boolean), async (req, res) => {
         try {
             const { to, subject, html, text } = req.body;
             const result = await gmailManager.sendEmail({ to, subject, html, text });
@@ -12306,7 +12306,7 @@ try {
         });
 
         // POST adicionar data bloqueada
-        app.post('/api/availability/blocked', requireApiKeyV3, async (req, res) => {
+        app.post('/api/availability/blocked', requireApiKeyV3, ...[billingMiddleware].filter(Boolean), async (req, res) => {
             try {
                 const apiKey = req.session.validatedApiKey || req.query.apiKey || req.body.apiKey;
                 const tenantId = apiKey;
@@ -12381,7 +12381,7 @@ try {
     }
 
     // WhatsApp Integration
-    app.post('/api/whatsapp/send', requireApiKeyV3, async (req, res) => {
+    app.post('/api/whatsapp/send', requireApiKeyV3, ...[billingMiddleware].filter(Boolean), async (req, res) => {
         try {
             const { to, message } = req.body;
             const result = await whatsappManager.sendMessage(to, message);
@@ -12398,7 +12398,7 @@ try {
     });
 
     // ChatGPT Integration
-    app.post('/api/chatgpt/generate', requireApiKeyV3, async (req, res) => {
+    app.post('/api/chatgpt/generate', requireApiKeyV3, ...[billingMiddleware].filter(Boolean), async (req, res) => {
         try {
             const { prompt, model, pageContent } = req.body;
             const result = await chatgptManager.generateResponse(prompt, pageContent, model);
@@ -12420,7 +12420,7 @@ try {
     });
 
     // Whitelabel System
-    app.post('/api/whitelabel/:chatbotId', requireApiKeyV3, validateChatbotOwnership, async (req, res) => {
+    app.post('/api/whitelabel/:chatbotId', requireApiKeyV3, ...[billingMiddleware].filter(Boolean), validateChatbotOwnership, async (req, res) => {
         try {
             const { chatbotId } = req.params;
             const config = req.body;
@@ -12501,7 +12501,7 @@ try {
         }
     });
 
-    app.post('/api/leads/structured', requireApiKeyV3, async (req, res) => {
+    app.post('/api/leads/structured', requireApiKeyV3, ...[billingMiddleware].filter(Boolean), async (req, res) => {
         try {
             const { chatbotId, leadData, metadata } = req.body;
             const lead = await structuredLeadsManager.saveLead(chatbotId, leadData, metadata);
@@ -12693,7 +12693,7 @@ try {
      * Cria um novo short URL para um tenant
      * Body: { robotName, salesUrl, instructions, apiKey }
      */
-    app.post('/api/create-short-url', async (req, res) => {
+    app.post('/api/create-short-url', requireApiKey, ...[billingMiddleware].filter(Boolean), async (req, res) => {
         try {
             const { robotName, salesUrl, instructions, apiKey } = req.body;
 

@@ -133,7 +133,63 @@ function getBillingMigrations() {
         `CREATE INDEX IF NOT EXISTS idx_quarantine_tenant 
             ON tenant_quarantine(tenant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_quarantine_status 
-            ON tenant_quarantine(status)`
+            ON tenant_quarantine(status)`,
+
+        // ===== 7. IDEMPOTÊNCIA DE WEBHOOKS STRIPE (A1) =====
+        `CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+            id SERIAL PRIMARY KEY,
+            stripe_event_id VARCHAR(255) NOT NULL,
+            event_type VARCHAR(100) NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'processing',
+            processed_at TIMESTAMP,
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT uq_stripe_event_id UNIQUE (stripe_event_id)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_stripe_events_type
+            ON stripe_webhook_events(event_type)`,
+        `CREATE INDEX IF NOT EXISTS idx_stripe_events_status
+            ON stripe_webhook_events(status)`,
+        `CREATE INDEX IF NOT EXISTS idx_stripe_events_created
+            ON stripe_webhook_events(created_at)`,
+
+        // ===== 8. CAMPOS DE ESTADO DE ASSINATURA STRIPE (A2/M3) =====
+        `DO $$ BEGIN
+            ALTER TABLE tenants ADD COLUMN subscription_status VARCHAR(30) DEFAULT 'none';
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$`,
+        `DO $$ BEGIN
+            ALTER TABLE tenants ADD COLUMN subscription_current_period_end TIMESTAMP;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$`,
+        `DO $$ BEGIN
+            ALTER TABLE tenants ADD COLUMN subscription_cancel_at_period_end BOOLEAN DEFAULT false;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$`,
+        `DO $$ BEGIN
+            ALTER TABLE tenants ADD COLUMN billing_status_updated_at TIMESTAMP;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$`,
+
+        // ===== 9. IDEMPOTÊNCIA DE COMISSÕES DE AFILIADOS (R1) =====
+        `DO $$ BEGIN
+            ALTER TABLE affiliate_commissions ADD COLUMN stripe_event_id TEXT;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$`,
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_commission_stripe_event
+         ON affiliate_commissions(stripe_event_id)
+         WHERE stripe_event_id IS NOT NULL`,
+
+        // ===== 10. LEASE DE IDEMPOTÊNCIA (C2) =====
+        // Colunas para controle de propriedade exclusiva no processamento de webhooks
+        `DO $$ BEGIN
+            ALTER TABLE stripe_webhook_events ADD COLUMN processor_id VARCHAR(32);
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$`,
+        `DO $$ BEGIN
+            ALTER TABLE stripe_webhook_events ADD COLUMN locked_at TIMESTAMP;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$`
     ];
 }
 

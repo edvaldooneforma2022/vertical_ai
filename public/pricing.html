@@ -703,6 +703,16 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        // A3: Verificar se veio com plano pré-selecionado (preservado do cadastro)
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var preselectedPlan = params.get('plan');
+            if (preselectedPlan && ['starter', 'pro', 'business'].indexOf(preselectedPlan) !== -1) {
+                // Salvar no sessionStorage para uso após login
+                try { sessionStorage.setItem('lm_pending_plan', preselectedPlan); } catch(e) {}
+            }
+        })();
+
         // Verificar se usuário está logado (tem API Key na session)
         function getApiKey() {
             try {
@@ -866,6 +876,28 @@
         if (new URLSearchParams(window.location.search).get('cancelled') === 'true') {
             setTimeout(() => showToast('Checkout cancelado. Você pode tentar novamente quando quiser.'), 500);
         }
+
+        // A3: Redirecionar ao signup preservando o plano selecionado
+        function goToSignupWithPlan() {
+            var plan = _pendingPlanId || sessionStorage.getItem('lm_pending_plan') || '';
+            closeApiKeyModal();
+            var url = '/signup.html';
+            if (plan) url += '?plan=' + encodeURIComponent(plan);
+            window.location.href = url;
+        }
+
+        // A3: Após login/cadastro, se há plano pendente e API key disponível, iniciar checkout
+        (function autoCheckoutPendingPlan() {
+            try {
+                var apiKey = getApiKey();
+                var pendingPlan = sessionStorage.getItem('lm_pending_plan');
+                if (apiKey && pendingPlan && ['starter', 'pro', 'business'].indexOf(pendingPlan) !== -1) {
+                    sessionStorage.removeItem('lm_pending_plan');
+                    // Pequeno delay para a página carregar visualmente
+                    setTimeout(function() { subscribe(pendingPlan); }, 800);
+                }
+            } catch(e) {}
+        })();
     </script>
 
 <!-- SAFE PATCH — Modal API Key -->
@@ -878,7 +910,7 @@
             <button class="btn-cancel" onclick="closeApiKeyModal()">Cancelar</button>
             <button class="btn-confirm" onclick="confirmApiKeyModal()">Continuar</button>
         </div>
-        <div class="modal-signup">Não tem conta? <a href="/signup.html">Criar conta grátis →</a></div>
+        <div class="modal-signup">Não tem conta? <a href="#" onclick="goToSignupWithPlan(); return false;">Criar conta grátis →</a></div>
     </div>
 </div>
 </body>
