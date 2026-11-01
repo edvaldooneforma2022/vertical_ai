@@ -420,11 +420,28 @@ class WhatsAppChannel {
 
         // ── SEC-12: Métricas de webhook (admin only via x-admin-key) ──
         app.get('/api/whatsapp/webhook-metrics', (req, res) => {
-            const adminKey = req.headers['x-admin-key'] || '';
-            const expectedKey = process.env.ADMIN_API_KEY || '';
-            if (!expectedKey || adminKey !== expectedKey) {
+            const expectedKey = process.env.ADMIN_API_KEY;
+
+            // Se ADMIN_API_KEY não está configurada, rota indisponível
+            if (!expectedKey) {
+                return res.status(503).json({ error: 'Admin não configurado' });
+            }
+
+            const providedKey = req.headers['x-admin-key'] || '';
+
+            if (!providedKey) {
                 return res.status(403).json({ error: 'Forbidden' });
             }
+
+            // Comparação timing-safe
+            const expectedBuf = Buffer.from(expectedKey, 'utf8');
+            const providedBuf = Buffer.from(providedKey, 'utf8');
+
+            if (expectedBuf.length !== providedBuf.length ||
+                !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+
             res.json({
                 success: true,
                 metrics: webhookMetrics,

@@ -12184,14 +12184,9 @@ try {
 
 setupRoutes(app);
 
-// ===== ROTAS ADMIN V8.0 =====
-try {
-    const adminRoutesV8 = require('./lib/admin-routes-v8');
-    app.use('/admin/v8', adminRoutesV8);
-    console.log('✅ [V8.0] Rotas Admin montadas em /admin/v8');
-} catch (e) {
-    console.log('⚠️ [V8.0] Rotas Admin não disponíveis:', e.message);
-}
+// REMOVIDO (Deploy #1 — SEC): Primeira montagem V8 redundante.
+// A montagem definitiva ocorre após await initialize() (L12958-12965),
+// garantindo que todos os módulos V8.0 estejam inicializados.
 
 
 
