@@ -3797,32 +3797,53 @@ async function validateApiKey(apiKey) {
                 success: true,
                 tenant: {
                     id: result.tenantId,
-                    name: result.name || `Tenant ${result.tenantId.substring(0, 8)}`,
-                    plan: result.plan || 'basic',
-                    status: 'active',
+                    name: result.tenantName || `Tenant ${result.tenantId.substring(0, 8)}`,
+                    plan: result.tenantPlan || 'basic',
+                    status: result.tenantStatus,
                     apiKey: apiKey,
                     scopes: result.scopes,
+                    allowedIps: result.allowedIps || [],
+                    allowedDomains: result.allowedDomains || [],
                     keyId: result.keyId
                 }
             };
         }
-        return { success: false, error: result.reason || 'API Key inválida ou revogada' };
+        // [FASE 2C.1] Propagar reasonCode e isInfraError
+        return {
+            success: false,
+            error: result.reason || 'API Key inválida ou revogada',
+            reasonCode: result.reasonCode || 'UNKNOWN',
+            isInfraError: result.isInfraError || false
+        };
     } catch (error) {
         logger.error("Error validating API key via Manager:", error.message);
-        return { success: false, error: 'Erro interno na validação' };
+        return { success: false, error: 'Erro interno na validação', reasonCode: 'INFRA_ERROR', isInfraError: true };
     }
 }
 
 // ===== API Key Middleware (Real-time Protection) =====
 async function requireApiKey(req, res, next) {
+    const destroySession = (sess) => new Promise((resolve) => {
+        if (!sess || typeof sess.destroy !== 'function') return resolve();
+        let done = false;
+        const finish = () => { if (!done) { done = true; resolve(); } };
+        try {
+            sess.destroy((err) => {
+                if (err) console.error('⚠️ [SESSION] Erro ao destruir sessão V1:', err?.message || err);
+                finish();
+            });
+            if (sess.destroy.length === 0) finish();
+        } catch (e) { finish(); }
+    });
     // 1. Rotas Públicas (Bypass)
     const publicPaths = [
         "/", "/validate-api-key", "/chat.html", "/chatbot",
         "/health", "/healthz", "/api/webhooks/hotmart",
         "/api/webhooks/hotmart/status",
         "/api/capture-lead",
-        "/api/process-chat-inteligente",
-        "/api/chat-universal",
+        // [FASE 2C.2B-1] Removidos de publicPaths — autenticação obrigatória via middleware global
+        // "/api/process-chat-inteligente",
+        // "/api/chat-universal",
         "/api/track-event",
         "/api/track-conversion",
         "/signup.html",
@@ -3851,10 +3872,16 @@ async function requireApiKey(req, res, next) {
     }
 
     // 2. Tentar validar via Header/Query/Body
-    let apiKey = req.headers['x-api-key'] || req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+    const authHeaderV1 = req.headers['authorization'];
+    const bearerKeyV1 = (typeof authHeaderV1 === 'string' && /^Bearer\s+(\S+)$/i.test(authHeaderV1))
+        ? authHeaderV1.match(/^Bearer\s+(\S+)$/i)[1]
+        : null;
+    let apiKey = req.headers['x-api-key'] || req.query.apiKey || req.body.apiKey || bearerKeyV1;
 
     if (apiKey) {
         const validation = await validateApiKey(apiKey);
+
+        // [FASE 2C.1] Classificação estruturada de erros
         if (validation.success) {
             req.session.tenantId = validation.tenant.id;
             req.session.validatedApiKey = apiKey;
@@ -3863,27 +3890,85 @@ async function requireApiKey(req, res, next) {
             req.session.status = validation.tenant.status;
             req.cliente = validation.tenant;
             return next();
-        } else {
-            return res.status(401).json({ success: false, error: validation.error });
         }
+
+        if (validation.isInfraError) {
+            return res.status(503).json({ success: false, error: 'Serviço temporariamente indisponível.' });
+        }
+
+        if (validation.reasonCode === 'TENANT_SUSPENDED') {
+            return res.status(403).json({ success: false, error: validation.error });
+        }
+
+        return res.status(401).json({ success: false, error: validation.error });
     }
 
-    // 3. Validar Sessão Existente com CHECK DE STATUS EM TEMPO REAL
-    if (req.session && req.session.tenantId && req.session.validatedApiKey) {
-        const manager = getApiKeyManager();
-        const verification = await manager.validateKey(req.session.validatedApiKey);
+    // 3. [FASE 2C.1] Revalidar Sessão Existente com verificação em tempo real
+    if (req.session && req.session.validatedApiKey) {
+        let verification;
+
+        try {
+            const manager = getApiKeyManager();
+            verification = await manager.validateKey(req.session.validatedApiKey);
+        } catch (revalErr) {
+            console.error('❌ [requireApiKey] Erro ao revalidar sessão:', revalErr.message);
+            return res.status(503).json({ success: false, error: 'Serviço temporariamente indisponível.' });
+        }
 
         if (verification.valid) {
-            req.cliente = req.session.clientData;
+            // [FASE 2C.1] Verificar divergência de UUID (inclusive sessões antigas com clientData.id)
+            const existingTenantId = req.session.tenantId || req.session.clientData?.id;
+            if (existingTenantId && verification.tenantId !== existingTenantId) {
+                console.error(`🚫 [SECURITY] UUID divergente na sessão V1: session=${existingTenantId}, revalidated=${verification.tenantId}`);
+                await destroySession(req.session);
+                // [FASE 2C.2B-1] Rotas de API recebem JSON; rotas web mantêm redirect
+                if (req.path === '/api/process-chat-inteligente' || req.path === '/api/chat-universal') {
+                    return res.status(401).json({ success: false, error: 'Credencial revogada.' });
+                }
+                return res.redirect("/?error=key_revoked");
+            }
+
+            // [FASE 2C.1] Reconstruir clientData com dados canônicos
+            const refreshedClientData = {
+                id: verification.tenantId,
+                name: verification.tenantName || `Tenant ${verification.tenantId.substring(0, 8)}`,
+                plan: verification.tenantPlan || 'basic',
+                status: verification.tenantStatus,
+                apiKey: req.session.validatedApiKey,
+                scopes: verification.scopes,
+                allowedIps: verification.allowedIps || [],
+                allowedDomains: verification.allowedDomains || [],
+                keyId: verification.keyId
+            };
+
+            req.session.tenantId = verification.tenantId;
+            req.session.clientData = refreshedClientData;
+            req.session.status = verification.tenantStatus;
+            req.session.plan = refreshedClientData.plan;
+            req.cliente = refreshedClientData;
             return next();
-        } else {
-            logger.warn(`🚫 [SECURITY] Revoking session for tenant ${req.session.tenantId}: API Key is no longer valid.`);
-            req.session.destroy();
-            return res.redirect("/?error=key_revoked");
         }
+
+        // [FASE 2C.1] Classificação de falha na revalidação
+        if (verification.isInfraError) {
+            console.error('❌ [requireApiKey] Erro de infra na revalidação de sessão');
+            return res.status(503).json({ success: false, error: 'Serviço temporariamente indisponível.' });
+        }
+
+        logger.warn(`🚫 [SECURITY] Revoking session for tenant ${req.session.tenantId || req.session.clientData?.id}: ${verification.reason}`);
+        await destroySession(req.session);
+        // [FASE 2C.2B-1] Rotas de API recebem JSON; rotas web mantêm redirect
+        if (req.path === '/api/process-chat-inteligente' || req.path === '/api/chat-universal') {
+            return res.status(401).json({ success: false, error: 'Credencial revogada.' });
+        }
+        return res.redirect("/?error=key_revoked");
     }
 
     // 4. Sem acesso: Redirecionar para login
+    // [FASE 2C.2B-1] Rotas de API recebem JSON; rotas web mantêm redirect
+    if (req.path === '/api/process-chat-inteligente' || req.path === '/api/chat-universal') {
+        return res.status(401).json({ success: false, error: 'Autenticação obrigatória.' });
+    }
     return res.redirect("/");
 }
 
@@ -8552,7 +8637,12 @@ app.get("/api/appointments/:leadId", async (req, res) => {
 
 // ===== ENDPOINT CHAT COM CAPTURA DE LEAD =====
 
-app.post("/api/chat-universal", ...[requireApiKey, billingMiddleware].filter(Boolean), async (req, res) => {
+app.post("/api/chat-universal", ...[billingMiddleware].filter(Boolean), async (req, res) => {
+    // [FASE 2C.2B-1] Defesa em profundidade — tenant UUID obrigatório
+    const tenantId = req.cliente?.id;
+    if (!tenantId) {
+        return res.status(401).json({ success: false, error: 'Autenticação obrigatória.' });
+    }
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
@@ -9330,7 +9420,12 @@ function applyDecisionCoreSafe({
   }
 }
 
-app.post("/api/process-chat-inteligente", ...[requireApiKey, billingMiddleware].filter(Boolean), async (req, res) => {
+app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean), async (req, res) => {
+    // [FASE 2C.2B-1] Defesa em profundidade — tenant UUID obrigatório
+    const tenantId = req.cliente?.id;
+    if (!tenantId) {
+        return res.status(401).json({ success: false, error: 'Autenticação obrigatória.' });
+    }
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
     const leadSystem = getLeadSystem(apiKey);
     analytics.chatRequests++;
@@ -12102,43 +12197,152 @@ url_origem: window.location.href,
 // ===== CONFIGURAR NOVAS ROTAS =====
 
 // ===== MIDDLEWARE DE AUTENTICAÇÃO PARA ROTAS V3.0 =====
-// FIX-SCHED-001: Corrigido para async/await (validateApiKey é async)
+// [FASE 2C.1] Propagação de UUID canônico, revalidação em tempo real e fail-closed
 async function requireApiKeyV3(req, res, next) {
+    const destroySession = (sess) => new Promise((resolve) => {
+        if (!sess || typeof sess.destroy !== 'function') return resolve();
+        let done = false;
+        const finish = () => { if (!done) { done = true; resolve(); } };
+        try {
+            sess.destroy((err) => {
+                if (err) console.error('⚠️ [SESSION] Erro ao destruir sessão V3:', err?.message || err);
+                finish();
+            });
+            if (sess.destroy.length === 0) finish();
+        } catch (e) { finish(); }
+    });
     try {
-        let apiKey = req.query.apiKey || req.body.apiKey || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+        const authHeader = req.headers['authorization'];
+        const bearerKey = (typeof authHeader === 'string' && /^Bearer\s+(\S+)$/i.test(authHeader))
+            ? authHeader.match(/^Bearer\s+(\S+)$/i)[1]
+            : null;
+        let apiKey = req.headers['x-api-key'] || req.query.apiKey || req.body.apiKey || bearerKey;
 
+        // 1. Validação direta da API Key fornecida na requisição
         if (apiKey) {
             const validation = await validateApiKey(apiKey);
+
+            // [FASE 2C.1] Erro de infraestrutura → 503 fail-closed
+            if (!validation.success && validation.isInfraError) {
+                console.error('❌ [requireApiKeyV3] Erro de infraestrutura na validação da key');
+                return res.status(503).json({
+                    success: false,
+                    error: 'Serviço temporariamente indisponível. Tente novamente.'
+                });
+            }
+
+            // [FASE 2C.1] Tenant suspenso → 403
+            if (!validation.success && validation.reasonCode === 'TENANT_SUSPENDED') {
+                return res.status(403).json({
+                    success: false,
+                    error: validation.error
+                });
+            }
+
             if (validation.success) {
+                // [FASE 2C.1] Propagação completa do UUID canônico e metadados
+                const clientData = validation.tenant;
+                req.session.tenantId = clientData.id;         // UUID canônico
                 req.session.validatedApiKey = apiKey;
-                // FIX-SCHED-001b: validateApiKey retorna .tenant, não .client
-                const clientData = validation.client || validation.tenant;
                 req.session.clientData = clientData;
+                req.session.plan = clientData.plan;
+                req.session.status = clientData.status;
                 req.cliente = clientData;
                 return next();
             }
+
+            // Key inválida, revogada ou expirada → 401
+            return res.status(401).json({
+                success: false,
+                error: validation.error || 'API Key inválida ou revogada'
+            });
         }
 
-        // Fallback: sessão já validada (ex: painel admin)
+        // 2. [FASE 2C.1] Revalidação de sessão existente com verificação em tempo real
         if (req.session && req.session.validatedApiKey) {
-            req.cliente = req.session.clientData;
-            return next();
+            let verification;
+
+            try {
+                const manager = getApiKeyManager();
+                verification = await manager.validateKey(req.session.validatedApiKey);
+            } catch (revalErr) {
+                console.error('❌ [requireApiKeyV3] Erro ao revalidar sessão:', revalErr.message);
+                return res.status(503).json({
+                    success: false,
+                    error: 'Serviço temporariamente indisponível. Tente novamente.'
+                });
+            }
+
+            if (verification.valid) {
+                // [FASE 2C.1] Verificar divergência de UUID (inclusive sessões antigas com clientData.id)
+                const existingTenantId = req.session.tenantId || req.session.clientData?.id;
+                if (existingTenantId && verification.tenantId !== existingTenantId) {
+                    console.error(`🚫 [SECURITY] UUID divergente na sessão V3: session=${existingTenantId}, revalidated=${verification.tenantId}`);
+                    await destroySession(req.session);
+                    return res.status(401).json({
+                        success: false,
+                        error: 'Sessão inválida. Faça login novamente.'
+                    });
+                }
+
+                // [FASE 2C.1] Reconstruir clientData a partir dos dados canônicos revalidados
+                const refreshedClientData = {
+                    id: verification.tenantId,
+                    name: verification.tenantName || `Tenant ${verification.tenantId.substring(0, 8)}`,
+                    plan: verification.tenantPlan || 'basic',
+                    status: verification.tenantStatus,
+                    apiKey: req.session.validatedApiKey,
+                    scopes: verification.scopes,
+                    allowedIps: verification.allowedIps || [],
+                    allowedDomains: verification.allowedDomains || [],
+                    keyId: verification.keyId
+                };
+
+                req.session.tenantId = verification.tenantId;
+                req.session.clientData = refreshedClientData;
+                req.session.plan = refreshedClientData.plan;
+                req.session.status = verification.tenantStatus;
+                req.cliente = refreshedClientData;
+                return next();
+            }
+
+            // Falha na revalidação
+            if (verification.isInfraError) {
+                console.error('❌ [requireApiKeyV3] Erro de infra na revalidação de sessão');
+                return res.status(503).json({
+                    success: false,
+                    error: 'Serviço temporariamente indisponível. Tente novamente.'
+                });
+            }
+
+            if (verification.reasonCode === 'TENANT_SUSPENDED') {
+                logger.warn(`🚫 [SECURITY] Tenant suspenso na revalidação V3: ${req.session.tenantId || req.session.clientData?.id}`);
+                await destroySession(req.session);
+                return res.status(403).json({
+                    success: false,
+                    error: 'Conta suspensa. Entre em contato com o suporte.'
+                });
+            }
+
+            logger.warn(`🚫 [SECURITY] Revoking session V3 for tenant ${req.session.tenantId || req.session.clientData?.id}: ${verification.reason}`);
+            await destroySession(req.session);
+            return res.status(401).json({
+                success: false,
+                error: 'Sessão expirada ou revogada. Faça login novamente.'
+            });
         }
 
+        // 3. Sem key e sem sessão → 401
         return res.status(401).json({
             success: false,
             error: "API Key não fornecida ou inválida. Autenticação necessária."
         });
     } catch (error) {
-        console.error('❌ [requireApiKeyV3] Erro na autenticação:', error.message);
-        // Fallback seguro: se tem sessão válida, continua
-        if (req.session && req.session.validatedApiKey) {
-            req.cliente = req.session.clientData;
-            return next();
-        }
-        return res.status(401).json({
+        // [FASE 2C.1] FAIL-CLOSED: erro inesperado nunca chama next()
+        console.error('❌ [requireApiKeyV3] Erro inesperado:', error.message);
+        return res.status(503).json({
             success: false,
-            error: "Erro interno na autenticação."
+            error: 'Erro interno na autenticação. Tente novamente.'
         });
     }
 }

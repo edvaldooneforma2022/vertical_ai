@@ -90,114 +90,185 @@ class ApiKeyManager {
     }
 
     /**
-     * Validar API key
+     * Validar API key (FASE 2C.1 — Identidade Canônica do Tenant)
+     *
+     * Fluxo:
+     * 1. Cache otimiza validação criptográfica da credencial (bcrypt/hash).
+     * 2. Expiração V2 é verificada em todo cache hit positivo.
+     * 3. Status do tenant é consultado em tempo real a cada requisição.
+     *
      * @param {string} rawKey - Key raw fornecida pelo cliente
-     * @returns {{ valid: boolean, tenantId?: string, scopes?: string[], reason?: string }}
+     * @returns {{ valid: boolean, tenantId?: string, tenantName?: string, tenantPlan?: string, tenantStatus?: string, scopes?: string[], reason?: string, reasonCode?: string, isInfraError?: boolean }}
      */
     async validateKey(rawKey) {
         if (!this.enabled || !rawKey) {
-            return { valid: false, reason: 'Sistema de keys desabilitado' };
+            return { valid: false, reason: 'Sistema de keys desabilitado', reasonCode: 'SYSTEM_DISABLED', isInfraError: true };
         }
 
-        // Check cache primeiro
+        // Cache otimiza validação da CREDENCIAL (bcrypt/hash), não do tenant
         const cached = this._getCached(rawKey);
-        if (cached) return cached;
+        if (cached && !cached.valid) {
+            // Resultado negativo cacheado (key bloqueada) — retornar direto
+            return cached;
+        }
 
         const isV2 = rawKey.startsWith('lm_live_') || rawKey.startsWith('lm_test_');
 
-        try {
-            if (isV2) {
-                // --- LÓGICA V2 (Sistema Novo) ---
-                const prefix = rawKey.substring(0, 12);
-                const result = await this.db.query(
-                    `SELECT * FROM api_keys_v2 WHERE key_prefix = $1`,
-                    [prefix]
-                );
+        let keyResult;
 
-                if (result.rows.length === 0) return { valid: false, reason: 'Key não encontrada' };
-
-                for (const row of result.rows) {
-                    const matches = await bcrypt.compare(rawKey, row.key_hash);
-                    if (matches) {
-                        if (row.status !== 'active') {
-                            console.log(`🚫 [SECURITY] Key V2 BLOQUEADA (status=${row.status}): tenant=${row.tenant_id}`);
-                            return { valid: false, reason: 'Key revogada ou inativa' };
-                        }
-                        if (row.expires_at && new Date(row.expires_at) < new Date()) return { valid: false, reason: 'Key expirada' };
-
-                        const validResult = {
-                            valid: true,
-                            keyId: row.id,
-                            tenantId: row.tenant_id,
-                            scopes: typeof row.scopes === 'string' ? JSON.parse(row.scopes) : row.scopes,
-                            allowedIps: typeof row.allowed_ips === 'string' ? JSON.parse(row.allowed_ips) : row.allowed_ips,
-                            allowedDomains: typeof row.allowed_domains === 'string' ? JSON.parse(row.allowed_domains) : row.allowed_domains
-                        };
-
-                        this.db.query(
-                            `UPDATE api_keys_v2 SET last_used_at = CURRENT_TIMESTAMP, usage_count = usage_count + 1 WHERE id = $1`,
-                            [row.id]
-                        ).catch(() => { });
-
-                        this._setCache(rawKey, validResult);
-                        return validResult;
-                    }
+        if (cached && cached.valid) {
+            // [FASE 2C.1] Verificar expiração em tempo real, mesmo com cache hit
+            if (cached.expiresAt != null) {
+                const expiresAtMs = new Date(cached.expiresAt).getTime();
+                if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+                    this.validationCache.delete(rawKey);
+                    return { valid: false, reason: 'Key expirada ou com expiração inválida', reasonCode: 'KEY_EXPIRED' };
                 }
-            } else {
-                // --- LÓGICA LEGADO (Sistema Antigo) ---
-                // Busca 1: Por key_value (plaintext)
-                let result = await this.db.query(
-                    `SELECT * FROM api_keys WHERE key_value = $1`,
-                    [rawKey]
-                );
-
-                // Busca 2: Se não encontrou por plaintext, buscar por key_hash (SHA-256)
-                if (result.rows.length === 0) {
-                    const keyHash = require('crypto').createHash('sha256').update(rawKey).digest('hex');
-                    result = await this.db.query(
-                        `SELECT * FROM api_keys WHERE key_hash = $1`,
-                        [keyHash]
-                    );
-                }
-
-                if (result.rows.length === 0) return { valid: false, reason: 'Key legada não encontrada' };
-                const row = result.rows[0];
-
-                if (!row.active) {
-                    console.log(`🚫 [SECURITY] Key LEGADA BLOQUEADA (active=false): tenant=${row.tenant_id}, key_id=${row.id}`);
-                    const blockedResult = { valid: false, reason: 'Key legada revogada' };
-                    this._setCache(rawKey, blockedResult);
-                    return blockedResult;
-                }
-
-                // Verificar tenant ativo
-                try {
-                    const tenantCheck = await this.db.query(
-                        `SELECT status FROM tenants WHERE id = $1`,
-                        [row.tenant_id]
-                    );
-                    if (tenantCheck.rows.length > 0 && tenantCheck.rows[0].status !== 'active') {
-                        console.log(`🚫 [SECURITY] Tenant SUSPENSO: ${row.tenant_id}`);
-                        return { valid: false, reason: 'Tenant suspenso ou inativo' };
-                    }
-                } catch (e) { /* tenant check é best-effort */ }
-
-                const validResult = {
-                    valid: true,
-                    keyId: `legacy_${row.id}`,
-                    tenantId: row.tenant_id,
-                    scopes: ['*'],
-                    isLegacy: true
-                };
-
-                this._setCache(rawKey, validResult);
-                return validResult;
+            }
+            keyResult = cached;
+        } else {
+            // Validar credencial contra o banco
+            try {
+                keyResult = await this._validateCredential(rawKey, isV2);
+            } catch (error) {
+                console.error('❌ [API KEY MANAGER] Erro na validação da credencial:', error.message);
+                return { valid: false, reason: 'Erro interno na validação', reasonCode: 'INFRA_ERROR', isInfraError: true };
             }
 
-            return { valid: false, reason: 'Key inválida' };
-        } catch (error) {
-            console.error('❌ [API KEY MANAGER] Erro na validação:', error.message);
-            return { valid: false, reason: 'Erro interno na validação' };
+            if (!keyResult.valid) {
+                this._setCache(rawKey, keyResult);
+                return keyResult;
+            }
+
+            // Cachear resultado positivo da credencial (sem status do tenant)
+            this._setCache(rawKey, keyResult);
+        }
+
+        // [FASE 2C.1] SEMPRE verificar tenant em tempo real — não cacheado
+        try {
+            const tenantCheck = await this.db.query(
+                `SELECT name, plan, status FROM tenants WHERE id = $1`,
+                [keyResult.tenantId]
+            );
+
+            if (tenantCheck.rows.length === 0) {
+                console.log(`🚫 [SECURITY] Tenant NÃO ENCONTRADO: ${keyResult.tenantId}`);
+                return { valid: false, reason: 'Tenant não encontrado', reasonCode: 'TENANT_NOT_FOUND' };
+            }
+
+            const tenant = tenantCheck.rows[0];
+
+            if (tenant.status !== 'active') {
+                console.log(`🚫 [SECURITY] Tenant SUSPENSO: ${keyResult.tenantId}, status=${tenant.status}`);
+                return { valid: false, reason: 'Tenant suspenso ou inativo', reasonCode: 'TENANT_SUSPENDED' };
+            }
+
+            // Retornar resultado completo com dados canônicos atuais do tenant
+            return {
+                valid: true,
+                keyId: keyResult.keyId,
+                tenantId: keyResult.tenantId,
+                tenantStatus: tenant.status,
+                tenantName: tenant.name,
+                tenantPlan: tenant.plan || 'basic',
+                scopes: keyResult.scopes,
+                allowedIps: keyResult.allowedIps || [],
+                allowedDomains: keyResult.allowedDomains || [],
+                isLegacy: keyResult.isLegacy || false
+            };
+        } catch (tenantErr) {
+            console.error(`❌ [API KEY MANAGER] Erro ao verificar tenant ${keyResult.tenantId}:`, tenantErr.message);
+            return { valid: false, reason: 'Erro ao verificar status do tenant', reasonCode: 'INFRA_ERROR', isInfraError: true };
+        }
+    }
+
+    /**
+     * Validar credencial V1/V2 contra o banco (FASE 2C.1)
+     * Responsável apenas pela validação criptográfica da key.
+     * NÃO verifica status do tenant — isso é feito por validateKey().
+     *
+     * @param {string} rawKey - Key raw
+     * @param {boolean} isV2 - Se é key V2
+     * @returns {object} Resultado da validação da credencial
+     */
+    async _validateCredential(rawKey, isV2) {
+        if (isV2) {
+            // --- LÓGICA V2 (Sistema Novo) ---
+            const prefix = rawKey.substring(0, 12);
+            const result = await this.db.query(
+                `SELECT * FROM api_keys_v2 WHERE key_prefix = $1`,
+                [prefix]
+            );
+
+            if (result.rows.length === 0) return { valid: false, reason: 'Key não encontrada', reasonCode: 'KEY_NOT_FOUND' };
+
+            for (const row of result.rows) {
+                const matches = await bcrypt.compare(rawKey, row.key_hash);
+                if (matches) {
+                    if (row.status !== 'active') {
+                        console.log(`🚫 [SECURITY] Key V2 BLOQUEADA (status=${row.status}): tenant=${row.tenant_id}`);
+                        return { valid: false, reason: 'Key revogada ou inativa', reasonCode: 'KEY_REVOKED' };
+                    }
+                    // Verificação fail-closed de expiração
+                    if (row.expires_at != null) {
+                        const expiresAtMs = new Date(row.expires_at).getTime();
+                        if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+                            return { valid: false, reason: 'Key expirada ou com expiração inválida', reasonCode: 'KEY_EXPIRED' };
+                        }
+                    }
+
+                    // Atualizar uso (fire-and-forget)
+                    this.db.query(
+                        `UPDATE api_keys_v2 SET last_used_at = CURRENT_TIMESTAMP, usage_count = usage_count + 1 WHERE id = $1`,
+                        [row.id]
+                    ).catch(() => { });
+
+                    return {
+                        valid: true,
+                        keyId: row.id,
+                        tenantId: row.tenant_id,
+                        expiresAt: row.expires_at || null,
+                        scopes: typeof row.scopes === 'string' ? JSON.parse(row.scopes) : row.scopes,
+                        allowedIps: typeof row.allowed_ips === 'string' ? JSON.parse(row.allowed_ips) : row.allowed_ips,
+                        allowedDomains: typeof row.allowed_domains === 'string' ? JSON.parse(row.allowed_domains) : row.allowed_domains
+                    };
+                }
+            }
+            return { valid: false, reason: 'Key inválida', reasonCode: 'KEY_NOT_FOUND' };
+        } else {
+            // --- LÓGICA LEGADO V1 (Sistema Antigo) ---
+            // Busca 1: Por key_value (plaintext)
+            let result = await this.db.query(
+                `SELECT * FROM api_keys WHERE key_value = $1`,
+                [rawKey]
+            );
+
+            // Busca 2: Se não encontrou por plaintext, buscar por key_hash (SHA-256)
+            if (result.rows.length === 0) {
+                const keyHash = require('crypto').createHash('sha256').update(rawKey).digest('hex');
+                result = await this.db.query(
+                    `SELECT * FROM api_keys WHERE key_hash = $1`,
+                    [keyHash]
+                );
+            }
+
+            if (result.rows.length === 0) return { valid: false, reason: 'Key legada não encontrada', reasonCode: 'KEY_NOT_FOUND' };
+            const row = result.rows[0];
+
+            if (!row.active) {
+                console.log(`🚫 [SECURITY] Key LEGADA BLOQUEADA (active=false): tenant=${row.tenant_id}, key_id=${row.id}`);
+                return { valid: false, reason: 'Key legada revogada', reasonCode: 'KEY_REVOKED' };
+            }
+
+            return {
+                valid: true,
+                keyId: `legacy_${row.id}`,
+                tenantId: row.tenant_id,
+                scopes: ['*'],
+                allowedIps: [],
+                allowedDomains: [],
+                isLegacy: true
+            };
         }
     }
 
