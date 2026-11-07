@@ -802,6 +802,104 @@ function buildIdentityKey(leadId, conversationId) {
 }
 console.log('✅ [WA-CHANNEL-002] buildIdentityKey registrado (identidade híbrida sessão→lead)');
 
+// ═════════════════════════════════════════════════════════════════
+// FASE 2C.2B-2: Wrapper resolveIdentityKey — Identidade Canônica Multi-Tenant
+// Delega ao helper congelado (lib/tenant-identity-helper.js).
+// NÃO modifica o helper. NÃO substitui buildIdentityKey (código morto temporário).
+// ═════════════════════════════════════════════════════════════════
+const {
+    buildCanonicalIdentityKey,
+    validateTenantId,
+    UUID_REGEX,
+    LOCAL_ID_VALIDATORS,
+} = require('./lib/tenant-identity-helper');
+
+/**
+ * Constrói a identidade canônica de uma conversa, validando o tenant
+ * autenticado e delegando ao helper congelado.
+ *
+ * Proteções adicionais (além do helper):
+ *   - Intercepta qualquer conversationId com prefixo 't:' antes de delegar.
+ *   - Valida formato canônico: exatamente 4 partes, UUID, tipo, localId.
+ *   - Rejeita identidade de outro tenant (divergência).
+ *   - Emite aviso quando leadId é fornecido mas não utilizado.
+ *
+ * @param {string} tenantId - UUID canônico de tenants.id (req.cliente.id).
+ * @param {string|null} leadId - ID do lead, se disponível.
+ * @param {string|null} conversationId - ID da conversa, se disponível.
+ * @returns {string} Identidade canônica: t:<uuid>:<tipo>:<localId>.
+ * @throws {Error} Se tenantId inválido, tenant divergente, formato malformado,
+ *                 ou nenhuma identidade local determinável.
+ */
+function resolveIdentityKey(tenantId, leadId, conversationId) {
+    // 1. Validar tenant — obrigatório, fail-closed
+    const validTenant = validateTenantId(tenantId);
+
+    // 2. Interceptar prefixo reservado 't:' — ANTES de delegar ao helper
+    if (conversationId && typeof conversationId === 'string' && conversationId.startsWith('t:')) {
+        const parts = conversationId.split(':');
+
+        // Exigir exatamente 4 partes: t, uuid, tipo, localId
+        if (parts.length !== 4) {
+            throw new Error(
+                'IDENTITY_ERROR: formato canonico malformado — esperadas 4 partes, recebidas ' + parts.length
+            );
+        }
+
+        const [prefix, embeddedUuid, tipo, localId] = parts;
+
+        // Validar UUID embarcado
+        if (!UUID_REGEX.test(embeddedUuid)) {
+            throw new Error(
+                'IDENTITY_ERROR: UUID invalido no formato canonico'
+            );
+        }
+
+        // Comparar com tenant autenticado (ambos já normalizados)
+        if (embeddedUuid !== validTenant) {
+            throw new Error(
+                'IDENTITY_ERROR: tenant divergente na identidade canonica'
+            );
+        }
+
+        // Validar tipo
+        if (!LOCAL_ID_VALIDATORS[tipo]) {
+            throw new Error(
+                'IDENTITY_ERROR: tipo desconhecido no formato canonico: ' + tipo
+            );
+        }
+
+        // Validar localId
+        if (!LOCAL_ID_VALIDATORS[tipo].test(localId)) {
+            throw new Error(
+                'IDENTITY_ERROR: localId invalido para tipo ' + tipo
+            );
+        }
+
+        // Formato canônico válido, mesmo tenant → pass-through
+        if (leadId && typeof leadId === 'string' && leadId.trim().length > 0) {
+            console.warn('[IDENTITY] leadId fornecido mas nao utilizado (conversationId prevaleceu)');
+        }
+        return conversationId;
+    }
+
+    // 3. Delegar ao helper congelado
+    const result = buildCanonicalIdentityKey(validTenant, leadId, conversationId);
+
+    // 4. Observabilidade: avisar se leadId fornecido mas não utilizado
+    if (leadId && typeof leadId === 'string' && leadId.trim().length > 0) {
+        // Verificar se o resultado usou tipo 'lead' comparando com o formato esperado
+        // O helper retorna t:<uuid>:lead:<id> quando usa leadId
+        const resultParts = result.split(':');
+        if (resultParts.length === 4 && resultParts[2] !== 'lead') {
+            console.warn('[IDENTITY] leadId fornecido mas nao utilizado (conversationId prevaleceu)');
+        }
+    }
+
+    return result;
+}
+console.log('✅ [FASE 2C.2B-2] resolveIdentityKey registrado (wrapper multi-tenant)');
+
 // 🧠 Assistant Diagnostic System
 let _assistantDiagnostic = null;
 try {
