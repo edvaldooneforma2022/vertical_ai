@@ -50,7 +50,7 @@ const PROCESSED_MSG_IDS = new Map();
 const MSG_ID_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
 // Cleanup periódico do cache de deduplicação (a cada 5 min)
-setInterval(() => {
+const _msgIdDedupCleanupTimer = setInterval(() => {
     const now = Date.now();
     let cleaned = 0;
     for (const [id, ts] of PROCESSED_MSG_IDS) {
@@ -63,6 +63,9 @@ setInterval(() => {
         console.log(`🧹 [SEC-09] Cache dedup: ${cleaned} IDs expirados removidos, ${PROCESSED_MSG_IDS.size} ativos`);
     }
 }, MSG_ID_TTL_MS);
+if (_msgIdDedupCleanupTimer && typeof _msgIdDedupCleanupTimer.unref === 'function') {
+    _msgIdDedupCleanupTimer.unref();
+}
 
 // ════════════════════════════════════════════════════════════════
 // SEC-10: Feature Flag — Autenticação do webhook Evolution
@@ -114,6 +117,7 @@ class WhatsAppChannel {
      * @param {Function} deps.getLeadSystem - Factory de LeadCaptureSystem
      * @param {Object} deps.whatsappManager - whatsapp-integration singleton
      * @param {Object} deps.analytics       - Objeto de analytics global
+     * @param {Function} deps.getApiKeyManager - Factory do ApiKeyManager (Fase 2B)
      */
     constructor(deps) {
         this.db            = deps.db;
@@ -121,16 +125,35 @@ class WhatsAppChannel {
         this.getLeadSystem = deps.getLeadSystem;
         this.whatsappMgr   = deps.whatsappManager;
         this.analytics     = deps.analytics;
+        this.deps          = deps;  // Fase 2B: referência completa para _syncAppointmentToMemory
         this.serverPort    = parseInt(process.env.PORT, 10) || 3000;
 
         // Caches
         this._tenantCache  = new Map();   // instanceName → { apiKey, ... }
         this._rateLimits   = new Map();   // phone → [timestamps]
+        this._currentApiKey = null;       // @deprecated - mantido para compatibilidade, não usar como identidade de requisições concorrentes
 
         // V22.1: Inicializar tabela de scheduling (PostgreSQL)
         this._initScheduleTable();
 
+        // Fase 2B: Reconciliar agendamentos travados em booking_in_progress
+        this._reconcileStaleBookings();
+        this._reconcileInterval = setInterval(() => this._reconcileStaleBookings(), 300000); // 5 min
+        if (this._reconcileInterval && typeof this._reconcileInterval.unref === 'function') {
+            this._reconcileInterval.unref();
+        }
+
         console.log('📱 [WA-CHANNEL] Módulo de canal WhatsApp inicializado');
+    }
+
+    /**
+     * Encerramento explícito de recursos e timers (usado para teardown gracioso em testes e shutdown).
+     */
+    destroy() {
+        if (this._reconcileInterval) {
+            clearInterval(this._reconcileInterval);
+            this._reconcileInterval = null;
+        }
     }
 
     // ============================================================
@@ -165,18 +188,26 @@ class WhatsAppChannel {
 
     /**
      * Buscar agendamento pendente para esta conversa (não expirado).
-     * @returns {Object|null} { id, calendar_hash, slots_json, state, selected_date, selected_time }
+     * Fase 2B: Filtrar por tenant_id para isolamento multi-tenant.
+     * @param {string} conversationId
+     * @param {string} tenantId - UUID do tenant (obrigatório)
+     * @returns {Object|null} { id, calendar_hash, slots_json, state, selected_date, selected_time, api_key, tenant_id }
      */
-    async _getSchedulePending(conversationId) {
+    async _getSchedulePending(conversationId, tenantId) {
         if (!this.USE_POSTGRES) return null;
+        if (!tenantId) {
+            console.warn('📅 [WA-SCHED] _getSchedulePending: tenantId ausente — recusando busca');
+            return null;
+        }
         try {
             const result = await this.db.query(
                 `SELECT * FROM wa_schedule_pending
                  WHERE conversation_id = $1
+                   AND tenant_id = $2
                    AND state IN ('offered', 'selected')
                    AND created_at > NOW() - INTERVAL '24 hours'
                  ORDER BY created_at DESC LIMIT 1`,
-                [conversationId]
+                [conversationId, tenantId]
             );
             return result?.rows?.[0] || null;
         } catch (err) {
@@ -186,25 +217,83 @@ class WhatsAppChannel {
     }
 
     /**
-     * Salvar oferta de agendamento (slots disponíveis).
+     * Salvar oferta de agendamento (slots disponíveis) — versão transacional.
+     * Fase 2B: Usa transação PostgreSQL, inclui tenant_id, retorna boolean.
+     * @param {string} conversationId
+     * @param {string} apiKey
+     * @param {string} calendarHash
+     * @param {Array} slots
+     * @param {string|null} leadId
+     * @param {string} tenantId - UUID do tenant (obrigatório)
+     * @returns {boolean} true se persistiu, false se falhou
+     */
+    async _saveScheduleOfferStrict(conversationId, apiKey, calendarHash, slots, leadId, tenantId) {
+        if (!this.USE_POSTGRES) return false;
+        if (!tenantId) {
+            console.warn('📅 [WA-SCHED] _saveScheduleOfferStrict: tenantId ausente — persistência cancelada');
+            return false;
+        }
+
+        // FASE 2B FAIL-CLOSED: Bloquear persistência se infraestrutura falhou
+        if (this.deps?.isSchedulingInfrastructureReady && !this.deps.isSchedulingInfrastructureReady()) {
+            console.error('🚫 [WA-SCHED][FAIL-CLOSED] _saveScheduleOfferStrict abortado: infraestrutura de agendamento indisponível');
+            return false;
+        }
+
+        let client;
+        try {
+            client = await this.db.pool.connect();
+            await client.query('BEGIN');
+
+            // Invalidar ofertas anteriores desta conversa E tenant
+            await client.query(
+                `UPDATE wa_schedule_pending SET state = 'expired', updated_at = NOW()
+                 WHERE conversation_id = $1 AND tenant_id = $2 AND state IN ('offered', 'selected')`,
+                [conversationId, tenantId]
+            );
+
+            // Inserir nova oferta com tenant_id
+            await client.query(
+                `INSERT INTO wa_schedule_pending
+                 (conversation_id, api_key, calendar_hash, slots_json, state, lead_id, tenant_id)
+                 VALUES ($1, $2, $3, $4, 'offered', $5, $6)`,
+                [conversationId, apiKey, calendarHash, JSON.stringify(slots), leadId || null, tenantId]
+            );
+
+            await client.query('COMMIT');
+            console.log(`📅 [WA-SCHED] Oferta salva: ${slots.length} slots | conv=${conversationId.substring(0, 20)} | tenant=${tenantId.substring(0, 8)}`);
+            return true;
+        } catch (err) {
+            if (client) {
+                try { await client.query('ROLLBACK'); } catch {}
+            }
+            console.warn('📅 [WA-SCHED] Erro ao salvar oferta:', err.message);
+            return false;
+        } finally {
+            if (client) {
+                try { client.release(); } catch {}
+            }
+        }
+    }
+
+    /**
+     * @deprecated Usar _saveScheduleOfferStrict. Mantido para referência.
      */
     async _saveScheduleOffer(conversationId, apiKey, calendarHash, slots, leadId) {
         if (!this.USE_POSTGRES) return;
         try {
-            // Invalidar ofertas anteriores desta conversa
             await this.db.query(
                 `UPDATE wa_schedule_pending SET state = 'expired', updated_at = NOW()
                  WHERE conversation_id = $1 AND state IN ('offered', 'selected')`,
                 [conversationId]
             );
-            // Inserir nova oferta
             await this.db.query(
                 `INSERT INTO wa_schedule_pending
                  (conversation_id, api_key, calendar_hash, slots_json, state, lead_id)
                  VALUES ($1, $2, $3, $4, 'offered', $5)`,
                 [conversationId, apiKey, calendarHash, JSON.stringify(slots), leadId || null]
             );
-            console.log(`📅 [WA-SCHED] Oferta salva: ${slots.length} slots | conv=${conversationId.substring(0, 20)}`);
+            console.log(`📅 [WA-SCHED] Oferta salva (legado): ${slots.length} slots`);
         } catch (err) {
             console.warn('📅 [WA-SCHED] Erro ao salvar oferta:', err.message);
         }
@@ -212,18 +301,30 @@ class WhatsAppChannel {
 
     /**
      * Atualizar estado do agendamento pendente.
+     * Fase 2B: Filtrar por tenant_id, retornar boolean.
+     * @param {number} pendingId
+     * @param {string} state
+     * @param {string|null} selectedDate
+     * @param {string|null} selectedTime
+     * @param {string} tenantId - UUID do tenant (obrigatório)
+     * @returns {boolean} true se atualizou exatamente 1 linha
      */
-    async _updateScheduleState(pendingId, state, selectedDate, selectedTime) {
-        if (!this.USE_POSTGRES) return;
+    async _updateScheduleState(pendingId, state, selectedDate, selectedTime, tenantId) {
+        if (!this.USE_POSTGRES || !tenantId) {
+            console.warn('📅 [WA-SCHED] _updateScheduleState: postgres ou tenantId ausente');
+            return false;
+        }
         try {
-            await this.db.query(
+            const result = await this.db.query(
                 `UPDATE wa_schedule_pending
                  SET state = $1, selected_date = $2, selected_time = $3, updated_at = NOW()
-                 WHERE id = $4`,
-                [state, selectedDate || null, selectedTime || null, pendingId]
+                 WHERE id = $4 AND tenant_id = $5`,
+                [state, selectedDate || null, selectedTime || null, pendingId, tenantId]
             );
+            return result.rowCount === 1;
         } catch (err) {
             console.warn('📅 [WA-SCHED] Erro ao atualizar estado:', err.message);
+            return false;
         }
     }
 
@@ -231,12 +332,31 @@ class WhatsAppChannel {
      * Verificar se a mensagem é uma resposta de agendamento.
      * Retorna a resposta pronta OU null (pass-through para pipeline normal).
      *
+     * Fase 2B: Recebe tenantId para isolamento multi-tenant.
+     * Usa _executeBookingDirect em vez de _executeBooking (HTTP loopback).
+     *
      * INTERRUPTÍVEL: Se a mensagem não é numérica nem confirmação,
      * retorna null → pipeline normal responde → estado permanece.
+     *
+     * @param {string} conversationId
+     * @param {string} message
+     * @param {string} apiKey
+     * @param {Object} lead
+     * @param {string} tenantId - UUID do tenant (obrigatório)
      */
-    async _handleScheduleResponse(conversationId, message, apiKey, lead) {
+    async _handleScheduleResponse(conversationId, message, apiKey, lead, tenantId) {
+        if (!tenantId) {
+            console.warn('📅 [WA-SCHED] _handleScheduleResponse: tenantId ausente — ignorando');
+            return null;
+        }
+
+        // FASE 2B FAIL-CLOSED: Se a infraestrutura de agendamento estiver indisponível
+        if (this.deps?.isSchedulingInfrastructureReady && !this.deps.isSchedulingInfrastructureReady()) {
+            console.warn('📅 [WA-SCHED][FAIL-CLOSED] Agendamento temporariamente indisponível devido a falha na infraestrutura de integridade');
+            return '⚠️ O agendamento está temporariamente indisponível para manutenção de segurança. Por favor, tente novamente mais tarde.';
+        }
         try {
-            const pending = await this._getSchedulePending(conversationId);
+            const pending = await this._getSchedulePending(conversationId, tenantId);
             if (!pending) return null;
 
             const msg = (message || '').trim().toLowerCase();
@@ -248,7 +368,7 @@ class WhatsAppChannel {
                 const slots = JSON.parse(pending.slots_json || '[]');
                 if (!isNaN(num) && num >= 1 && num <= slots.length) {
                     const chosen = slots[num - 1];
-                    await this._updateScheduleState(pending.id, 'selected', chosen.date, chosen.time);
+                    await this._updateScheduleState(pending.id, 'selected', chosen.date, chosen.time, tenantId);
                     const dateFormatted = chosen.date.split('-').reverse().join('/');
                     console.log(`📅 [WA-SCHED] Slot selecionado: #${num} → ${chosen.dayName} ${chosen.date} ${chosen.time}`);
                     return `Perfeito! Confirme seu agendamento:\n\n📅 ${chosen.dayName} — ${dateFormatted}\n🕒 ${chosen.time}\n\nDigite *SIM* para confirmar ou *NÃO* para cancelar.`;
@@ -261,31 +381,31 @@ class WhatsAppChannel {
             // ── STATE: selected (aguardando confirmação SIM/NÃO) ──
             if (pending.state === 'selected') {
                 if (msg === 'sim' || msg === 'confirmo' || msg === 'confirmar' || msg === 's') {
-                    // Executar booking via API existente
-                    try {
-                        const bookResult = await this._executeBooking(
-                            pending.calendar_hash,
-                            pending.selected_date,
-                            pending.selected_time,
-                            lead
-                        );
-                        await this._updateScheduleState(pending.id, 'completed', pending.selected_date, pending.selected_time);
-                        if (bookResult?.success) {
-                            const dateFormatted = pending.selected_date.split('-').reverse().join('/');
-                            console.log(`📅 [WA-SCHED] ✅ Booking confirmado: ${pending.selected_date} ${pending.selected_time}`);
-                            return `✅ Agendamento confirmado!\n\n📅 ${dateFormatted}\n🕒 ${pending.selected_time}\n\nVocê receberá uma confirmação. Até breve! 🙌`;
+                    // Fase 2B: Booking direto via transação PostgreSQL (sem HTTP loopback)
+                    const bookResult = await this._executeBookingDirect(pending, lead, tenantId);
+
+                    if (bookResult.success) {
+                        const dateFormatted = pending.selected_date.split('-').reverse().join('/');
+                        if (bookResult.wasDuplicate) {
+                            console.log(`📅 [WA-SCHED] Booking idempotente: ${bookResult.appointmentId}`);
                         } else {
-                            await this._updateScheduleState(pending.id, 'error', pending.selected_date, pending.selected_time);
-                            return `⚠️ Houve um problema ao confirmar o agendamento. Por favor, tente novamente dizendo "quero agendar".`;
+                            console.log(`📅 [WA-SCHED] ✅ Booking confirmado: ${bookResult.appointmentId} | ${pending.selected_date} ${pending.selected_time}`);
                         }
-                    } catch (bookErr) {
-                        console.error('📅 [WA-SCHED] Erro no booking:', bookErr.message);
-                        await this._updateScheduleState(pending.id, 'error', null, null);
-                        return `⚠️ Erro ao confirmar agendamento. Tente novamente dizendo "quero agendar".`;
+                        // Atualizar array em memória (best-effort, com deduplicação e contexto seguro da requisição)
+                        this._syncAppointmentToMemory(pending, lead, bookResult.appointmentId, { apiKey, tenantId });
+
+                        return `✅ Agendamento confirmado!\n\n📅 ${dateFormatted}\n🕒 ${pending.selected_time}\n\nVocê receberá uma confirmação. Até breve! 🙌`;
                     }
+
+                    // Falha — distinguir motivo para log adequado
+                    if (bookResult.pendingState === 'completed') {
+                        console.warn(`[SCHEDULE] Pending ${pending.id} completed sem appointment recuperável`);
+                    }
+                    console.warn(`📅 [WA-SCHED] Booking falhou: reason=${bookResult.reason}`);
+                    return `⚠️ Houve um problema ao confirmar o agendamento. Por favor, tente novamente dizendo "quero agendar".`;
                 }
                 if (msg === 'não' || msg === 'nao' || msg === 'cancelar' || msg === 'n') {
-                    await this._updateScheduleState(pending.id, 'cancelled', null, null);
+                    await this._updateScheduleState(pending.id, 'cancelled', null, null, tenantId);
                     console.log(`📅 [WA-SCHED] Agendamento cancelado pelo usuário`);
                     return `Sem problemas! O agendamento foi cancelado. Se quiser reagendar, é só dizer "quero agendar" 😊`;
                 }
@@ -298,6 +418,365 @@ class WhatsAppChannel {
         } catch (err) {
             console.warn('📅 [WA-SCHED] Erro no handleScheduleResponse:', err.message);
             return null; // Fallback: pipeline normal
+        }
+    }
+
+    // ============================================================
+    // FASE 2B: BOOKING DIRETO (TRANSAÇÃO POSTGRESQL)
+    // Substitui o HTTP loopback (_executeBooking) para o fluxo WhatsApp.
+    // Transação única: CAS → INSERT appointment → UPDATE pending → COMMIT
+    // ============================================================
+
+    /**
+     * Executar booking diretamente no PostgreSQL com transação atômica.
+     * @param {Object} pending - Registro de wa_schedule_pending
+     * @param {Object} lead - Lead associado
+     * @param {string} tenantId - UUID do tenant
+     * @returns {{ success: boolean, appointmentId?: string, wasDuplicate?: boolean, reason?: string, pendingState?: string }}
+     */
+    async _executeBookingDirect(pending, lead, tenantId) {
+        if (!this.USE_POSTGRES) return { success: false, reason: 'no_postgres' };
+        if (!tenantId) return { success: false, reason: 'no_tenant' };
+
+        // FASE 2B FAIL-CLOSED: Bloquear confirmação se infraestrutura de integridade falhou
+        if (this.deps?.isSchedulingInfrastructureReady && !this.deps.isSchedulingInfrastructureReady()) {
+            console.error('🚫 [WA-SCHED][FAIL-CLOSED] _executeBookingDirect abortado: infraestrutura de agendamento indisponível');
+            return { success: false, reason: 'scheduling_infrastructure_unavailable' };
+        }
+
+        let client;
+        try {
+            client = await this.db.pool.connect();
+            await client.query('BEGIN');
+
+            // ── PASSO 1: CAS (Compare-And-Swap) ──
+            const cas = await client.query(
+                `UPDATE wa_schedule_pending
+                 SET state = 'booking_in_progress', updated_at = NOW()
+                 WHERE id = $1 AND tenant_id = $2 AND state = 'selected'
+                 RETURNING id`,
+                [pending.id, tenantId]
+            );
+
+            if (cas.rowCount !== 1) {
+                // CAS não adquiriu o pending.
+                await client.query('ROLLBACK');
+
+                // ── RECUPERAÇÃO IDEMPOTENTE ──
+                // Snapshot fresco após ROLLBACK — conexão ainda válida.
+                const currentState = await client.query(
+                    `SELECT state FROM wa_schedule_pending
+                     WHERE id = $1 AND tenant_id = $2`,
+                    [pending.id, tenantId]
+                );
+
+                const state = currentState.rows[0]?.state;
+
+                if (state === 'completed' || state === 'booking_in_progress') {
+                    // Pending já foi processado. Buscar appointment existente.
+                    const existingAppt = await client.query(
+                        `SELECT id FROM tenant_appointments
+                         WHERE schedule_ref_id = $1 AND tenant_uuid = $2`,
+                        [String(pending.id), tenantId]
+                    );
+
+                    if (existingAppt.rows.length > 0) {
+                        // Appointment encontrado e pertence ao tenant — sucesso idempotente.
+                        return {
+                            success: true,
+                            appointmentId: existingAppt.rows[0].id,
+                            wasDuplicate: true
+                        };
+                    }
+
+                    // Appointment não encontrado para este tenant — verificar inconsistência.
+                    const orphanCheck = await client.query(
+                        `SELECT id, tenant_uuid FROM tenant_appointments
+                         WHERE schedule_ref_id = $1`,
+                        [String(pending.id)]
+                    );
+                    if (orphanCheck.rows.length > 0) {
+                        console.error(
+                            `[SCHEDULE][INTEGRIDADE] schedule_ref_id=${pending.id} `
+                            + `pertence a tenant_uuid=${orphanCheck.rows[0].tenant_uuid}, `
+                            + `mas o pending pertence a tenant_id=${tenantId}`
+                        );
+                    }
+                }
+
+                return { success: false, reason: 'cas_failed', pendingState: state || 'not_found' };
+            }
+
+            // ── PASSO 2: INSERT appointment ──
+            const appointmentId = crypto.randomBytes(8).toString('hex');
+            const scheduleRefId = String(pending.id);
+
+            const insertResult = await client.query(
+                `INSERT INTO tenant_appointments
+                    (id, api_key, lead_id, datetime, status, notes, metadata,
+                     schedule_ref_id, tenant_uuid)
+                 VALUES ($1, $2, $3, $4, 'pendente', $5, $6, $7, $8)
+                 ON CONFLICT (schedule_ref_id)
+                    WHERE schedule_ref_id IS NOT NULL
+                 DO NOTHING
+                 RETURNING id`,
+                [
+                    appointmentId,
+                    pending.api_key,
+                    lead?.id || null,
+                    `${pending.selected_date} ${pending.selected_time}`,
+                    'Agendado via WhatsApp Conversacional',
+                    JSON.stringify({
+                        leadName:  lead?.nome || lead?.name || 'WhatsApp',
+                        leadEmail: lead?.email || '',
+                        leadPhone: lead?.wa_phone || lead?.telefone || '',
+                        robotName: 'WhatsApp Conversacional',
+                        createdAt: new Date().toISOString()
+                    }),
+                    scheduleRefId,
+                    tenantId
+                ]
+            );
+
+            // ── PASSO 3: Recuperar appointment (novo ou existente) ──
+            let finalAppointmentId;
+            if (insertResult.rows.length > 0) {
+                finalAppointmentId = insertResult.rows[0].id;
+            } else {
+                // Conflito no UNIQUE — SELECT separado com novo snapshot.
+                const existing = await client.query(
+                    `SELECT id FROM tenant_appointments
+                     WHERE schedule_ref_id = $1 AND tenant_uuid = $2`,
+                    [scheduleRefId, tenantId]
+                );
+                if (existing.rows.length === 0) {
+                    // Conflito no UNIQUE mas appointment pertence a outro tenant.
+                    const orphanCheck = await client.query(
+                        `SELECT id, tenant_uuid FROM tenant_appointments
+                         WHERE schedule_ref_id = $1`,
+                        [scheduleRefId]
+                    );
+                    if (orphanCheck.rows.length > 0) {
+                        console.error(
+                            `[SCHEDULE][INTEGRIDADE] schedule_ref_id=${scheduleRefId} `
+                            + `pertence a tenant_uuid=${orphanCheck.rows[0].tenant_uuid}, `
+                            + `esperado=${tenantId}`
+                        );
+                    }
+                    await client.query('ROLLBACK');
+                    return { success: false, reason: 'appointment_tenant_mismatch' };
+                }
+                finalAppointmentId = existing.rows[0].id;
+            }
+
+            // ── PASSO 4: UPDATE pending → completed ──
+            const complete = await client.query(
+                `UPDATE wa_schedule_pending
+                 SET state = 'completed', updated_at = NOW()
+                 WHERE id = $1 AND tenant_id = $2 AND state = 'booking_in_progress'`,
+                [pending.id, tenantId]
+            );
+
+            if (complete.rowCount !== 1) {
+                await client.query('ROLLBACK');
+                return { success: false, reason: 'completion_failed' };
+            }
+
+            // ── PASSO 5: COMMIT ──
+            await client.query('COMMIT');
+
+            return {
+                success: true,
+                appointmentId: finalAppointmentId,
+                wasDuplicate: insertResult.rows.length === 0
+            };
+
+        } catch (err) {
+            if (client) {
+                try { await client.query('ROLLBACK'); } catch {}
+            }
+            console.warn('[SCHEDULE] Falha no booking direto:', err.message);
+            return { success: false, reason: err.message };
+        } finally {
+            if (client) {
+                try { client.release(); } catch {}
+            }
+        }
+    }
+
+    // ============================================================
+    // FASE 2B: RECONCILIAÇÃO DE BOOKINGS TRAVADOS
+    // Pendentes em 'booking_in_progress' por mais de 5 minutos.
+    // ============================================================
+
+    /**
+     * Reconciliar bookings travados em 'booking_in_progress'.
+     * Se o appointment foi criado (schedule_ref_id encontrado em tenant_appointments),
+     * completar o pending. Caso contrário, reverter para 'selected' para retentativa.
+     */
+    async _reconcileStaleBookings() {
+        if (!this.USE_POSTGRES) return;
+        try {
+            const staleResult = await this.db.query(
+                `SELECT id, tenant_id FROM wa_schedule_pending
+                 WHERE state = 'booking_in_progress'
+                   AND updated_at < NOW() - INTERVAL '5 minutes'`
+            );
+
+            if (!staleResult.rows || staleResult.rows.length === 0) return;
+
+            for (const stale of staleResult.rows) {
+                try {
+                    // Verificar se appointment foi criado
+                    const apptCheck = await this.db.query(
+                        `SELECT id FROM tenant_appointments
+                         WHERE schedule_ref_id = $1 AND tenant_uuid = $2`,
+                        [String(stale.id), stale.tenant_id]
+                    );
+
+                    if (apptCheck.rows.length > 0) {
+                        // Appointment existe — completar o pending
+                        await this.db.query(
+                            `UPDATE wa_schedule_pending
+                             SET state = 'completed', updated_at = NOW()
+                             WHERE id = $1 AND tenant_id = $2 AND state = 'booking_in_progress'`,
+                            [stale.id, stale.tenant_id]
+                        );
+                        console.log(`📅 [WA-SCHED][RECONCILE] Pending ${stale.id} → completed (appointment encontrado)`);
+                    } else {
+                        // Appointment NÃO existe — reverter para retentativa
+                        await this.db.query(
+                            `UPDATE wa_schedule_pending
+                             SET state = 'selected', updated_at = NOW()
+                             WHERE id = $1 AND tenant_id = $2 AND state = 'booking_in_progress'`,
+                            [stale.id, stale.tenant_id]
+                        );
+                        console.log(`📅 [WA-SCHED][RECONCILE] Pending ${stale.id} → selected (sem appointment, retentativa habilitada)`);
+                    }
+                } catch (recErr) {
+                    console.warn(`📅 [WA-SCHED][RECONCILE] Erro no pending ${stale.id}:`, recErr.message);
+                }
+            }
+        } catch (err) {
+            // Reconciliação é best-effort — não bloqueia
+            console.warn('📅 [WA-SCHED][RECONCILE] Erro geral:', err.message);
+        }
+    }
+
+    // ============================================================
+    // FASE 2B: SINCRONIZAÇÃO DO APPOINTMENT NO ARRAY EM MEMÓRIA
+    // Best-effort — PostgreSQL é a fonte de verdade.
+    // ============================================================
+
+    /**
+     * Adicionar appointment ao array em memória do LeadCaptureSystem.
+     * Deduplicação por appointmentId. Atualiza ambos os singletons
+     * (key antiga do pending + key ativa do request) se diferentes.
+     *
+     * @param {Object} pending - Registro de wa_schedule_pending
+     * @param {Object} lead - Lead associado
+     * @param {string} appointmentId - ID do appointment criado
+     * @param {string} tenantId - UUID do tenant
+     */
+    _syncAppointmentToMemory(pending, lead, appointmentId, contextOrTenantId) {
+        try {
+            const tenantId = (typeof contextOrTenantId === 'object' ? contextOrTenantId?.tenantId : contextOrTenantId) || pending.tenant_id;
+            const requestApiKey = (typeof contextOrTenantId === 'object' ? contextOrTenantId?.apiKey : null);
+
+            if (!tenantId) {
+                console.warn('[SCHEDULE] _syncAppointmentToMemory: tenantId ausente — sync cancelado');
+                return;
+            }
+
+            const appointmentObj = {
+                id: appointmentId,
+                leadId: lead?.id || null,
+                datetime: `${pending.selected_date} ${pending.selected_time}`,
+                status: 'pendente',
+                notes: 'Agendado via WhatsApp Conversacional',
+                createdAt: new Date().toISOString(),
+                leadName:  lead?.nome || lead?.name || 'WhatsApp',
+                leadEmail: lead?.email || '',
+                leadPhone: lead?.wa_phone || lead?.telefone || '',
+                robotName: 'WhatsApp Conversacional'
+            };
+
+            // Função de sincronização com validação estrita de tenant_uuid
+            const syncToSingleton = async (targetApiKey) => {
+                if (!targetApiKey || !this.deps?.getLeadSystem) return;
+
+                let isTenantMatch = false;
+
+                // 1. Validar via API Key Manager se disponível
+                if (this.deps.getApiKeyManager) {
+                    try {
+                        const km = this.deps.getApiKeyManager();
+                        if (km) {
+                            const val = await km.validateKey(targetApiKey);
+                            if (val?.valid && String(val.tenantId) === String(tenantId)) {
+                                isTenantMatch = true;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[SCHEDULE] Erro ao validar tenant da chave para sync:', e.message);
+                    }
+                }
+
+                // 2. Verificar singleton existente
+                const leadSystem = this.deps.getLeadSystem(targetApiKey);
+                if (!leadSystem) return;
+
+                if (!isTenantMatch && leadSystem.tenantUuid) {
+                    if (String(leadSystem.tenantUuid) === String(tenantId)) {
+                        isTenantMatch = true;
+                    }
+                }
+
+                // Se API Key Manager está disponível e não validou o tenant, BLOQUEAR inserção!
+                if (!isTenantMatch && this.deps.getApiKeyManager) {
+                    console.warn(`[SCHEDULE][ISOLAMENTO] Bloqueada tentativa de inserir appointment no singleton ${targetApiKey.substring(0, 8)}...: tenantId incompatível com ${tenantId}`);
+                    return;
+                }
+
+                // Associar tenantUuid ao singleton caso ainda não possua
+                if (!leadSystem.tenantUuid) {
+                    leadSystem.tenantUuid = tenantId;
+                }
+
+                // Inicializar array de appointments com segurança
+                if (!leadSystem.appointments) {
+                    if (typeof leadSystem.loadAppointments === 'function') {
+                        leadSystem.appointments = leadSystem.loadAppointments();
+                    } else if (typeof leadSystem.loadAppointmentsSync === 'function') {
+                        leadSystem.appointments = leadSystem.loadAppointmentsSync();
+                    } else {
+                        leadSystem.appointments = [];
+                    }
+                }
+
+                // Deduplicação por ID
+                if (!leadSystem.appointments.some(a => a.id === appointmentId)) {
+                    leadSystem.appointments.push(appointmentObj);
+                }
+            };
+
+            // Sincronizar singleton da chave do pending
+            if (pending.api_key) {
+                syncToSingleton(pending.api_key).catch(() => {});
+            }
+
+            // Sincronizar singleton da chave ativa da requisição (se diferente e pertencer ao mesmo tenant)
+            if (requestApiKey && requestApiKey !== pending.api_key) {
+                syncToSingleton(requestApiKey).catch(() => {});
+            }
+
+            // Notificar recarga pontual de cache de tenant se disponível
+            if (typeof this.deps?.reloadTenantAppointmentsCache === 'function') {
+                this.deps.reloadTenantAppointmentsCache(tenantId).catch(() => {});
+            }
+        } catch (err) {
+            // Best-effort — PostgreSQL é a fonte de verdade
+            console.warn('[SCHEDULE] Erro ao sincronizar array:', err.message);
         }
     }
 
@@ -707,6 +1186,24 @@ class WhatsAppChannel {
     // ============================================================
     async _processIncomingMessage({ apiKey, channelMode, notifPhone, phone, pushName, text, waMessageId, provider, instanceName, instanceToken }) {
         try {
+            // Fase 2B: Resolver tenantId (UUID) a partir da apiKey
+            let tenantId = null;
+            try {
+                if (this.deps.getApiKeyManager) {
+                    const keyManager = this.deps.getApiKeyManager();
+                    if (keyManager) {
+                        const validation = await keyManager.validateKey(apiKey);
+                        if (validation?.valid && validation.tenantId) {
+                            tenantId = validation.tenantId;
+                        }
+                    }
+                }
+            } catch (tenantErr) {
+                console.warn('📅 [WA-SCHED][TENANT] Erro ao resolver tenantId:', tenantErr.message);
+            }
+            // Guardar apiKey ativa para _syncAppointmentToMemory (cenário pós-rotação)
+            this._currentApiKey = apiKey;
+
             // 1. Resolver ou criar lead pelo telefone
             const lead = await this._resolveLeadByPhone(apiKey, phone, pushName);
             // GARANTIA OMNICHANNEL (CENÁRIO B): Priorizar o conversationId do CRM (Widget) para unificar a memória da IA
@@ -745,8 +1242,9 @@ class WhatsAppChannel {
             // Se existe um agendamento pendente E a mensagem é numérica/confirmação,
             // responde direto sem chamar a IA (economia de tokens + fluxo limpo).
             // Se a mensagem NÃO é de agendamento, retorna null → pipeline normal.
+            // Fase 2B: Requer tenantId para isolamento multi-tenant.
             try {
-                const schedResponse = await this._handleScheduleResponse(conversationId, text, apiKey, lead);
+                const schedResponse = await this._handleScheduleResponse(conversationId, text, apiKey, lead, tenantId);
                 if (schedResponse) {
                     // Resposta de agendamento — enviar direto, sem chamar IA
                     const sendResult = await this._sendResponse(apiKey, phone, schedResponse, provider, instanceName, instanceToken);
@@ -817,36 +1315,46 @@ class WhatsAppChannel {
                 // Reutiliza: GET /api/public/availability/:hash + POST /api/public/book/:hash
                 // Estado: persistido em PostgreSQL (wa_schedule_pending)
                 // Fluxo: INTERRUPTÍVEL (perguntas normais passam) + RETOMÁVEL (número retoma)
+                // Fase 2B: Requer tenantId para isolamento multi-tenant.
                 if (aiResult.calendarHash && !adapted.includes('/agendar/')) {
+                    if (!tenantId) {
+                        console.log('📅 [WA-SCHED][TENANT] tenantId ausente — agendamento indisponível');
+                    } else {
                     const hasLeadData = lead && (lead.email || lead.telefone || lead.wa_phone);
                     if (hasLeadData || (aiResult.leadCapture && !aiResult.leadCapture.shouldCapture)) {
                         // Lead já capturado OU pipeline não pediu captura → oferecer slots
+                        // Fase 2B: try/catch separado (1) buscar slots, (2) persistir, (3) injetar
+                        let slotsResult = null;
                         try {
-                            const slotsResult = await this._fetchAndFormatSlots(aiResult.calendarHash);
-                            if (slotsResult && slotsResult.slots.length > 0) {
-                                // Salvar oferta no banco (persistente)
-                                await this._saveScheduleOffer(
-                                    conversationId, apiKey, aiResult.calendarHash,
-                                    slotsResult.slots, lead?.id
-                                );
+                            slotsResult = await this._fetchAndFormatSlots(aiResult.calendarHash);
+                        } catch (fetchErr) {
+                            console.warn(`📅 [WA-SCHED] Erro ao buscar slots:`, fetchErr.message);
+                        }
+
+                        if (slotsResult && slotsResult.slots.length > 0) {
+                            // Fase 2B: Persistir com transação e tenant_id
+                            const saved = await this._saveScheduleOfferStrict(
+                                conversationId, apiKey, aiResult.calendarHash,
+                                slotsResult.slots, lead?.id, tenantId
+                            );
+                            if (saved) {
                                 adapted += `\n\n${slotsResult.message}`;
                                 console.log(`📅 [WA-SCHED] Slots oferecidos: ${slotsResult.slots.length} opções | conv=${conversationId.substring(0, 20)}`);
                             } else {
-                                // Sem slots disponíveis — fallback texto
-                                adapted += `\n\n📅 No momento não há horários disponíveis para agendamento. Tente novamente mais tarde.`;
-                                console.log(`📅 [WA-SCHED] Sem slots disponíveis`);
+                                console.warn('📅 [WA-SCHED] Slots buscados mas não persistidos — não injetando no chat');
                             }
-                        } catch (schedErr) {
-                            console.warn(`📅 [WA-SCHED] Erro ao buscar slots (sem impacto):`, schedErr.message);
-                            // Fallback: URL legada (melhor que nada)
-                            const scheduleUrl = _channelSafeRouting.resolveScheduleUrl(aiResult.calendarHash, { channel: 'whatsapp' });
-                            adapted += `\n\n📅 Agende aqui:\n👉 ${scheduleUrl}`;
+                        } else if (slotsResult) {
+                            // Sem slots disponíveis — fallback texto
+                            adapted += `\n\n📅 No momento não há horários disponíveis para agendamento. Tente novamente mais tarde.`;
+                            console.log(`📅 [WA-SCHED] Sem slots disponíveis`);
                         }
+                        // Se slotsResult é null (erro na busca), não injetar nada — mais seguro que URL fallback
                     } else {
                         // Lead NÃO capturado E pipeline PEDIU captura → captura primeiro
                         // O agendamento aparecerá na próxima interação após captura
                         console.log(`📅 [WA-SCHED] Agendamento ADIADO — aguardando captura do lead`);
                     }
+                    } // fim if (tenantId)
                 }
             } catch (_v21TranslateErr) {
                 console.warn(`📱 [WA-V21] Erro na tradução de sinais (sem impacto):`, _v21TranslateErr.message);

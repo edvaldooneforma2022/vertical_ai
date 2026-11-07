@@ -15,6 +15,25 @@ const path = require('path');
 // Detectar ambiente e escolher banco apropriado
 const USE_POSTGRES = process.env.DATABASE_URL || process.env.USE_POSTGRES === 'true';
 
+// ════════════════════════════════════════════════════════════════
+// FASE 2B: ESTADO DE PRONTIDÃO DA INFRAESTRUTURA DE AGENDAMENTO (FAIL-CLOSED)
+// ════════════════════════════════════════════════════════════════
+let _schedulingInfrastructureReady = !USE_POSTGRES; // SQLite default true; PostgreSQL requer validação das migrations
+let _schedulingInfrastructureError = null;
+
+function isSchedulingInfrastructureReady() {
+    return _schedulingInfrastructureReady;
+}
+
+function getSchedulingInfrastructureError() {
+    return _schedulingInfrastructureError;
+}
+
+function setSchedulingInfrastructureReady(isReady, error = null) {
+    _schedulingInfrastructureReady = isReady;
+    _schedulingInfrastructureError = error;
+}
+
 let db;
 
 if (USE_POSTGRES) {
@@ -390,7 +409,8 @@ async function initializeDatabase() {
         // ═══════════════════════════════════════════════════════
         `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS password_hash TEXT`,
         `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS signup_source TEXT DEFAULT 'hotmart'`,
-        `CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email)`
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email)`,
+
     ];
 
     for (const migration of migrations) {
@@ -425,6 +445,12 @@ async function initializeDatabase() {
         }
     }
 
+    // ═══════════════════════════════════════════════════════
+    // FASE 2B — Migrations Críticas de Multi-tenant e Idempotência
+    // Executadas com validação estrutural em catálogos e fail-closed
+    // ═══════════════════════════════════════════════════════
+    await runPhase2bMigrations(db, USE_POSTGRES);
+
     // 🛡️ BILLING BLINDADO — Inicializar tabelas de billing (subscriptions, usage, keys, etc)
     try {
         const { runMigrations } = require('./billing-migrations');
@@ -433,6 +459,201 @@ async function initializeDatabase() {
     } catch (error) {
         console.log('⚠️ Falha ao rodar migrations de billing (não crítico):', error.message);
     }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════
+ * FASE 2B — Migrations Críticas de Multi-tenant e Idempotência
+ * Executadas com validação estrutural em catálogos e fail-closed
+ * ═══════════════════════════════════════════════════════
+ * @param {Object} [dbInstance=db] - Instância do banco de dados (Pool/db)
+ * @param {boolean} [usePostgres=USE_POSTGRES] - Flag indicando se é ambiente PostgreSQL
+ * @returns {Promise<{ success: boolean, error: string|null }>}
+ */
+async function runPhase2bMigrations(dbInstance = db, usePostgres = USE_POSTGRES) {
+    const phase2bMigrations = [
+        // Migration 2B-1A: tenant_id em wa_schedule_pending
+        `ALTER TABLE wa_schedule_pending ADD COLUMN IF NOT EXISTS tenant_id ${usePostgres ? 'UUID' : 'TEXT'}`,
+
+        // Migration 2B-1B: FK nomeada para tenants(id) com validação estrutural via catálogos
+        ...(usePostgres ? [`DO $$
+        DECLARE
+            v_constraint RECORD;
+            v_count INT;
+        BEGIN
+            -- 1. Validar constraint existente via catálogo pg_constraint
+            SELECT
+                c.conname,
+                ns_local.nspname AS local_schema,
+                tbl_local.relname AS local_table,
+                att_local.attname AS local_col,
+                ns_ref.nspname AS ref_schema,
+                tbl_ref.relname AS ref_table,
+                att_ref.attname AS ref_col,
+                c.contype
+            INTO v_constraint
+            FROM pg_constraint c
+            JOIN pg_class tbl_local ON tbl_local.oid = c.conrelid
+            JOIN pg_namespace ns_local ON ns_local.oid = tbl_local.relnamespace
+            JOIN pg_attribute att_local ON att_local.attrelid = tbl_local.oid AND att_local.attnum = c.conkey[1]
+            JOIN pg_class tbl_ref ON tbl_ref.oid = c.confrelid
+            JOIN pg_namespace ns_ref ON ns_ref.oid = tbl_ref.relnamespace
+            JOIN pg_attribute att_ref ON att_ref.attrelid = tbl_ref.oid AND att_ref.attnum = c.confkey[1]
+            WHERE c.conname = 'fk_wa_schedule_pending_tenant'
+              AND ns_local.nspname = current_schema();
+
+            IF FOUND THEN
+                -- Validar se a estrutura existente é idêntica à esperada
+                IF v_constraint.local_table != 'wa_schedule_pending' OR
+                   v_constraint.local_col != 'tenant_id' OR
+                   v_constraint.ref_table != 'tenants' OR
+                   v_constraint.ref_col != 'id' OR
+                   v_constraint.contype != 'f' THEN
+                    RAISE EXCEPTION 'Constraint homônima incompatível: % na tabela % (%). Esperado: wa_schedule_pending(tenant_id) -> tenants(id)',
+                        v_constraint.conname, v_constraint.local_table, v_constraint.local_col;
+                END IF;
+            ELSE
+                -- Verificar se existe constraint homônima de outro tipo no schema
+                SELECT COUNT(*) INTO v_count
+                FROM pg_constraint c
+                JOIN pg_namespace ns ON ns.oid = c.connamespace
+                WHERE c.conname = 'fk_wa_schedule_pending_tenant'
+                  AND ns.nspname = current_schema();
+
+                IF v_count > 0 THEN
+                    RAISE EXCEPTION 'Constraint homônima incompatível de outro tipo encontrada com nome fk_wa_schedule_pending_tenant';
+                END IF;
+
+                ALTER TABLE wa_schedule_pending
+                ADD CONSTRAINT fk_wa_schedule_pending_tenant
+                FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+            END IF;
+        END $$;`] : []),
+
+        // Migration 2B-1C: Índice composto para consultas de agendamento
+        `CREATE INDEX IF NOT EXISTS idx_wa_sched_tenant_conv_state
+         ON wa_schedule_pending (tenant_id, conversation_id, state, created_at DESC)`,
+
+        // Migration 2B-2A: schedule_ref_id em tenant_appointments
+        `ALTER TABLE tenant_appointments ADD COLUMN IF NOT EXISTS schedule_ref_id VARCHAR(255)`,
+
+        // Migration 2B-2B: Detecção de duplicidades prévia + Índice único parcial com validação de catálogo
+        ...(usePostgres ? [`DO $$
+        DECLARE
+            v_idx RECORD;
+            v_count INT;
+            v_dup_count INT;
+            v_dup_ids TEXT;
+        BEGIN
+            -- 1. DETECÇÃO DE DUPLICIDADES ANTES DE CRIAR O ÍNDICE (Item 4)
+            SELECT COUNT(*), string_agg(schedule_ref_id, ', ')
+            INTO v_dup_count, v_dup_ids
+            FROM (
+                SELECT schedule_ref_id
+                FROM tenant_appointments
+                WHERE schedule_ref_id IS NOT NULL
+                GROUP BY schedule_ref_id
+                HAVING COUNT(*) > 1
+                LIMIT 10
+            ) d;
+
+            IF v_dup_count > 0 THEN
+                RAISE EXCEPTION 'Detecção de duplicidades em schedule_ref_id impediu criação de índice único. Encontradas ocorrências duplicadas nos IDs: %. Dados preservados integralmente.', v_dup_ids;
+            END IF;
+
+            -- 2. VALIDAÇÃO ESTRUTURAL DO ÍNDICE EXISTENTE VIA CATÁLOGO
+            SELECT
+                idx_cls.relname AS index_name,
+                tbl_cls.relname AS table_name,
+                ns.nspname AS schema_name,
+                i.indisunique AS is_unique,
+                att.attname AS col_name,
+                pg_get_expr(i.indpred, i.indrelid) AS predicate
+            INTO v_idx
+            FROM pg_index i
+            JOIN pg_class idx_cls ON idx_cls.oid = i.indexrelid
+            JOIN pg_class tbl_cls ON tbl_cls.oid = i.indrelid
+            JOIN pg_namespace ns ON ns.oid = idx_cls.relnamespace
+            LEFT JOIN pg_attribute att ON att.attrelid = tbl_cls.oid AND att.attnum = i.indkey[0]
+            WHERE idx_cls.relname = 'idx_appointments_idempotency'
+              AND ns.nspname = current_schema();
+
+            IF FOUND THEN
+                IF v_idx.table_name != 'tenant_appointments' OR
+                   v_idx.is_unique != true OR
+                   v_idx.col_name != 'schedule_ref_id' OR
+                   v_idx.predicate IS DISTINCT FROM '(schedule_ref_id IS NOT NULL)' THEN
+                    RAISE EXCEPTION 'Índice homônimo incompatível encontrado: % na tabela % (unique: %, col: %, pred: %). Esperado: tenant_appointments(schedule_ref_id) UNIQUE WHERE schedule_ref_id IS NOT NULL',
+                        v_idx.index_name, v_idx.table_name, v_idx.is_unique, v_idx.col_name, v_idx.predicate;
+                END IF;
+            ELSE
+                SELECT COUNT(*) INTO v_count
+                FROM pg_class c
+                JOIN pg_namespace ns ON ns.oid = c.relnamespace
+                WHERE c.relname = 'idx_appointments_idempotency'
+                  AND ns.nspname = current_schema();
+
+                IF v_count > 0 THEN
+                    RAISE EXCEPTION 'Objeto homônimo incompatível encontrado com nome idx_appointments_idempotency';
+                END IF;
+
+                CREATE UNIQUE INDEX idx_appointments_idempotency
+                ON tenant_appointments (schedule_ref_id)
+                WHERE schedule_ref_id IS NOT NULL;
+            END IF;
+        END $$;`] : []),
+
+        // Migration 2B-3: Backfill tenant_uuid em tenant_appointments
+        // api_keys.tenant_id é UUID (FK para tenants.id UUID).
+        // tenant_appointments.tenant_uuid é UUID. Atribuição direta segura.
+        ...(usePostgres ? [`UPDATE tenant_appointments ta
+         SET tenant_uuid = ak.tenant_id
+         FROM api_keys ak
+         WHERE ta.api_key = ak.key_value
+           AND ta.tenant_uuid IS NULL
+           AND ak.tenant_id IS NOT NULL`] : [])
+    ];
+
+    let phase2bSuccess = true;
+    for (const migration of phase2bMigrations) {
+        try {
+            if (!usePostgres) {
+                const alterMatch = migration.match(/ALTER TABLE (\w+) ADD COLUMN (?:IF NOT EXISTS )?(\w+)/i);
+                if (alterMatch) {
+                    const [, tableName, colName] = alterMatch;
+                    try {
+                        const cols = await dbInstance.query(`PRAGMA table_info(${tableName})`);
+                        const colList = cols.rows || cols;
+                        const exists = colList.some(c => c.name === colName);
+                        if (exists) continue;
+                    } catch (pragmaErr) {
+                        continue;
+                    }
+                    const sqliteQuery = migration.replace(/ADD COLUMN IF NOT EXISTS/i, 'ADD COLUMN').replace(/REFERENCES \w+\(\w+\)/i, '');
+                    await dbInstance.query(sqliteQuery);
+                    continue;
+                }
+            }
+            await dbInstance.query(migration);
+        } catch (err) {
+            phase2bSuccess = false;
+            _schedulingInfrastructureReady = false;
+            _schedulingInfrastructureError = err.message;
+            console.error('❌ [FASE 2B][FAIL-CLOSED] Falha crítica nas migrations de agendamento:', err.message);
+            break; // Interromper migrations críticas restantes
+        }
+    }
+
+    if (phase2bSuccess) {
+        _schedulingInfrastructureReady = true;
+        _schedulingInfrastructureError = null;
+        console.log('✅ [FASE 2B] Estruturas de agendamento multi-tenant e idempotência validadas com sucesso.');
+    }
+
+    return {
+        success: phase2bSuccess,
+        error: _schedulingInfrastructureError
+    };
 }
 
 /**
@@ -1710,35 +1931,50 @@ const DatabaseHelpers = {
 
     /**
      * Salvar agendamento no PostgreSQL/SQLite
+     * Fase 2B: aceita opcionalmente scheduleRefId e tenantUuid
      */
     async saveAppointment(apiKey, appointmentData) {
         const query = USE_POSTGRES
-            ? `INSERT INTO tenant_appointments (id, api_key, lead_id, datetime, status, notes, metadata)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ? `INSERT INTO tenant_appointments (id, api_key, lead_id, datetime, status, notes, metadata, schedule_ref_id, tenant_uuid)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                ON CONFLICT (id) DO UPDATE SET
                    datetime = $4, status = $5, notes = $6, metadata = $7,
+                   schedule_ref_id = COALESCE($8, tenant_appointments.schedule_ref_id),
+                   tenant_uuid = COALESCE($9, tenant_appointments.tenant_uuid),
                    updated_at = CURRENT_TIMESTAMP
                RETURNING *`
             : `INSERT OR REPLACE INTO tenant_appointments (id, api_key, lead_id, datetime, status, notes, metadata, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
 
-        const params = [
-            appointmentData.id,
-            apiKey,
-            appointmentData.leadId || null,
-            appointmentData.datetime || null,
-            appointmentData.status || 'pendente',
-            appointmentData.notes || null,
-            // FIX-04 [V21.1-HARDENING]: Sanitizar Unicode surrogates antes de persistir
-            JSON.stringify(this._sanitizeForJson(appointmentData.metadata || {}))
-        ];
+        const params = USE_POSTGRES
+            ? [
+                appointmentData.id,
+                apiKey,
+                appointmentData.leadId || null,
+                appointmentData.datetime || null,
+                appointmentData.status || 'pendente',
+                appointmentData.notes || null,
+                // FIX-04 [V21.1-HARDENING]: Sanitizar Unicode surrogates antes de persistir
+                JSON.stringify(this._sanitizeForJson(appointmentData.metadata || {})),
+                appointmentData.scheduleRefId || null,
+                appointmentData.tenantUuid || null
+            ]
+            : [
+                appointmentData.id,
+                apiKey,
+                appointmentData.leadId || null,
+                appointmentData.datetime || null,
+                appointmentData.status || 'pendente',
+                appointmentData.notes || null,
+                JSON.stringify(this._sanitizeForJson(appointmentData.metadata || {}))
+            ];
 
         const result = await db.query(query, params);
-        return result.rows[0];
+        return result.rows?.[0];
     },
 
     /**
-     * Buscar todos os agendamentos de um tenant
+     * Buscar todos os agendamentos de um tenant (fallback legado por api_key)
      */
     async getAppointments(apiKey) {
         const query = USE_POSTGRES
@@ -1752,6 +1988,16 @@ const DatabaseHelpers = {
             }
             return apt;
         });
+    },
+
+    /**
+     * Fase 2B: Buscar agendamentos por tenant_uuid — sobrevive à rotação de API Key
+     */
+    async getAppointmentsByTenant(tenantUuid) {
+        if (!USE_POSTGRES || !tenantUuid) return [];
+        const query = `SELECT * FROM tenant_appointments WHERE tenant_uuid = $1 ORDER BY created_at DESC`;
+        const result = await db.query(query, [tenantUuid]);
+        return result.rows || [];
     },
 
     /**
@@ -2300,12 +2546,21 @@ const DatabaseHelpers = {
 
         await db.query(query, [assistantId, apiKey]);
         return assistant;
-    }
+    },
+
+    isSchedulingInfrastructureReady,
+    getSchedulingInfrastructureError,
+    setSchedulingInfrastructureReady,
+    runPhase2bMigrations
 };
 
 module.exports = {
     db,
     initializeDatabase,
+    runPhase2bMigrations,
     DatabaseHelpers,
-    USE_POSTGRES
+    USE_POSTGRES,
+    isSchedulingInfrastructureReady,
+    getSchedulingInfrastructureError,
+    setSchedulingInfrastructureReady
 };

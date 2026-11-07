@@ -231,6 +231,24 @@ try {
 }
 console.log('✅ Módulos V3.0 carregados');
 
+// ═══════════════════════════════════════════════════════════
+// FASE 2B: Rate limiter para endpoint público de booking
+// Módulo lib/booking-rate-limiter.js com comportamento FAIL-CLOSED
+// ═══════════════════════════════════════════════════════════
+const {
+    checkBookingRateLimit,
+    cleanupBookingRateLimitMap,
+    RATE_LIMIT_WINDOW_MS: BOOKING_RATE_LIMIT_WINDOW_MS,
+    RATE_LIMIT_MAX_REQUESTS: BOOKING_RATE_LIMIT_MAX_REQUESTS,
+    RATE_LIMIT_MAX_ENTRIES: BOOKING_RATE_LIMIT_MAX_ENTRIES
+} = require('./lib/booking-rate-limiter');
+
+const BOOKING_RATE_LIMIT_CLEANUP_MS = 300000;
+const _bookingRateLimitCleanupTimer = setInterval(cleanupBookingRateLimitMap, BOOKING_RATE_LIMIT_CLEANUP_MS);
+if (_bookingRateLimitCleanupTimer && typeof _bookingRateLimitCleanupTimer.unref === 'function') {
+    _bookingRateLimitCleanupTimer.unref();
+}
+
 // ===== MÓDULOS V8.0 - MELHORIAS AVANÇADAS =====
 let featureFlags = null;
 let auditLogger = null;
@@ -1986,9 +2004,34 @@ class LeadCaptureSystem {
     }
 
     // Inicializar agendamentos do PostgreSQL com migração
+    // Fase 2B: Carregar por tenant_uuid quando disponível (sobrevive à rotação de API Key)
     async initializeAppointmentsPostgres() {
         try {
-            const dbAppointments = await DatabaseHelpers.getAppointments(this.apiKey);
+            // Fase 2B: Resolver tenant_uuid a partir da apiKey
+            let tenantUuid = null;
+            try {
+                const tenantResult = await db.query(
+                    `SELECT tenant_id FROM api_keys WHERE key_value = $1 AND active = true LIMIT 1`,
+                    [this.apiKey]
+                );
+                tenantUuid = tenantResult.rows?.[0]?.tenant_id || null;
+            } catch (tenantErr) {
+                console.warn('📅 [APPOINTMENTS] Erro ao resolver tenant_uuid:', tenantErr.message);
+            }
+
+            this.tenantUuid = tenantUuid;
+
+            // Carregar appointments: por tenant_uuid (preferencial) ou por api_key (fallback legado)
+            let dbAppointments;
+            if (tenantUuid) {
+                dbAppointments = await DatabaseHelpers.getAppointmentsByTenant(tenantUuid);
+                if (dbAppointments.length > 0) {
+                    console.log(`🗄️ ${dbAppointments.length} agendamentos carregados por tenant_uuid=${tenantUuid.substring(0, 8)}...`);
+                }
+            }
+            if (!dbAppointments || dbAppointments.length === 0) {
+                dbAppointments = await DatabaseHelpers.getAppointments(this.apiKey);
+            }
 
             // Se PostgreSQL vazio e JSON tem dados, migrar
             if (dbAppointments.length === 0 && this.appointments.length > 0) {
@@ -2026,6 +2069,42 @@ class LeadCaptureSystem {
             }
         } catch (error) {
             console.error('❌ Erro ao inicializar PostgreSQL para agendamentos:', error);
+        }
+    }
+
+    /**
+     * Recarga pontual e segura dos agendamentos a partir do PostgreSQL por tenant_uuid.
+     * Fonte de verdade: PostgreSQL. Cache em memória atualizado sem alterar getLeadSystem().
+     *
+     * @param {string} tenantUuid - UUID do tenant
+     * @returns {Promise<boolean>} true se recarregado com sucesso
+     */
+    async reloadAppointmentsByTenant(tenantUuid) {
+        if (!USE_POSTGRES || !tenantUuid) return false;
+        try {
+            if (this.tenantUuid && String(this.tenantUuid) !== String(tenantUuid)) {
+                console.warn(`[APPOINTMENTS] Recarga bloqueada: singleton ${this.apiKey.substring(0, 8)}... pertence a tenant ${this.tenantUuid}, não ${tenantUuid}`);
+                return false;
+            }
+
+            const dbAppointments = await DatabaseHelpers.getAppointmentsByTenant(tenantUuid);
+            if (Array.isArray(dbAppointments)) {
+                this.tenantUuid = tenantUuid;
+                this.appointments = dbAppointments.map(apt => ({
+                    id: apt.id,
+                    leadId: apt.lead_id,
+                    datetime: apt.datetime,
+                    status: apt.status,
+                    notes: apt.notes,
+                    createdAt: apt.created_at,
+                    ...(apt.metadata || {})
+                }));
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.warn(`[APPOINTMENTS] Erro na recarga por tenant_uuid (${tenantUuid}):`, err.message);
+            return false;
         }
     }
 
@@ -2169,6 +2248,36 @@ function getLeadSystem(apiKey) {
     _leadSystemCache.set(apiKey, system);
     console.log(`📦 [LEADS] Singleton criado para tenant: ${apiKey.substring(0, 20)}...`);
     return system;
+}
+
+/**
+ * Recarga interna de cache para todos os singletons ativos correspondentes ao tenant_uuid.
+ * Apenas atualiza singletons que comprovadamente pertencem ao tenant.
+ *
+ * @param {string} tenantUuid - UUID do tenant
+ * @returns {Promise<number>} Quantidade de singletons atualizados
+ */
+async function reloadTenantAppointmentsCache(tenantUuid) {
+    if (!tenantUuid) return 0;
+    let updated = 0;
+    for (const [key, system] of _leadSystemCache.entries()) {
+        try {
+            if (system && (system.tenantUuid === tenantUuid || !system.tenantUuid)) {
+                let isMatch = system.tenantUuid === tenantUuid;
+                if (!isMatch && keyManager) {
+                    const val = await keyManager.validateKey(key);
+                    if (val?.valid && String(val.tenantId) === String(tenantUuid)) {
+                        isMatch = true;
+                    }
+                }
+                if (isMatch) {
+                    await system.reloadAppointmentsByTenant(tenantUuid);
+                    updated++;
+                }
+            }
+        } catch {}
+    }
+    return updated;
 }
 
 function getBackupSystem(leadSystem, apiKey) {
@@ -12532,6 +12641,12 @@ setupRoutes(app);
             }
         });
 
+        // ═══════════════════════════════════════════════════════
+        // FASE 2B: Rate limiter para endpoint público de booking
+        // Fail-closed: bloqueia se capacidade esgotada.
+        // ═══════════════════════════════════════════════════════
+        // (Implementação do rate limiter está definida em escopo superior)
+
         // 🌐 ROTAS PÚBLICAS (sem auth — usadas pelo calendário no chatbot)
         app.get('/api/public/availability/:hash', async (req, res) => {
             try {
@@ -12550,6 +12665,20 @@ setupRoutes(app);
 
         app.post('/api/public/book/:hash', async (req, res) => {
             try {
+                // Fase 2B FAIL-CLOSED: Bloquear agendamento se infraestrutura crítica falhou
+                if (typeof DatabaseHelpers.isSchedulingInfrastructureReady === 'function' && !DatabaseHelpers.isSchedulingInfrastructureReady()) {
+                    console.error('🚫 [PUBLIC-BOOK][FAIL-CLOSED] Agendamento bloqueado: infraestrutura crítica indisponível');
+                    return res.status(503).json({
+                        success: false,
+                        error: 'O serviço de agendamento está temporariamente indisponível para manutenção de segurança.'
+                    });
+                }
+
+                // Fase 2B: Rate limiting por hash (fail-closed)
+                if (!checkBookingRateLimit(req.params.hash)) {
+                    return res.status(429).json({ success: false, error: 'Limite de requisições excedido. Tente novamente em breve.' });
+                }
+
                 const apiKey = await schedulingManager.resolveApiKeyFromHash(req.params.hash);
                 if (!apiKey) {
                     return res.status(404).json({ success: false, error: 'Calendário não encontrado' });
@@ -12569,10 +12698,16 @@ setupRoutes(app);
                     notes: notes || 'Agendado via calendário',
                     robotName: 'Calendário Online'
                 });
-                res.json({ success: true, appointment });
+                // Fase 2B: Resposta sanitizada — não expor PII completo
+                res.json({
+                    success: true,
+                    appointmentId: appointment?.id,
+                    datetime: appointment?.datetime,
+                    status: appointment?.status
+                });
             } catch (error) {
                 console.error('❌ [Scheduling] Erro POST public book:', error.message);
-                res.status(500).json({ success: false, error: error.message });
+                res.status(500).json({ success: false, error: 'Erro interno ao processar agendamento' });
             }
         });
 
@@ -13143,8 +13278,11 @@ setupRoutes(app);
             db,
             USE_POSTGRES,
             getLeadSystem,
+            getApiKeyManager,  // Fase 2B: resolver tenantId (UUID)
             whatsappManager,
-            analytics
+            analytics,
+            isSchedulingInfrastructureReady: DatabaseHelpers.isSchedulingInfrastructureReady,
+            reloadTenantAppointmentsCache
         });
     } catch (waChannelErr) {
         console.warn('⚠️ [WA-CHANNEL] Canal WhatsApp não carregado (não bloqueia):', waChannelErr.message);
