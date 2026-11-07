@@ -6570,7 +6570,12 @@ function hasAnyUrl(text) {
 
 // ===== FUNÇÃO APRIMORADA DE RESPOSTA DA IA COM SUPERINTELIGÊNCIA =====
 // 🎯 FEATURE_CLEAN_CHAT_V2: chatbotId adicionado para buscar FAQs da Knowledge Base
-async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null, apiKey = null, chatbotId = null) {
+// [FASE 2C.2B-3] Propagação explícita de tenantId e identityKey
+async function generateAIResponse(userMessage, pageData = {}, conversationHistory = [], instructions = "", leadId = null, apiKey = null, chatbotId = null, tenantId, identityKey) {
+    // [FASE 2C.2B-3] Defesa em profundidade: tenantId e identityKey são obrigatórios (fail-closed)
+    if (!tenantId || !identityKey) {
+        throw new Error('IDENTITY_ERROR: tenantId e identityKey são obrigatórios');
+    }
     const startTime = Date.now();
     try {
         if (!userMessage || !String(userMessage).trim()) {
@@ -6671,8 +6676,8 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     const _v17CtxEnabled = _v14ContextLayer &&
                         (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
                     if (_v17CtxEnabled) {
-                        // WA-CHANNEL-002: Identidade híbrida (lead > session, NUNCA chatbotId)
-                        const _v17ConvId = buildIdentityKey(leadId, (pageData && pageData.conversationId));
+                        // [FASE 2C.2B-3] Usar identidade canônica propagada (NUNCA chatbotId)
+                        const _v17ConvId = identityKey;
                         if (_v17ConvId) {
                             const _v17CtxHistory = _v14ContextLayer.getMessagesForLLM(_v17ConvId, 6);
                             if (_v17CtxHistory.length > 0) {
@@ -6732,8 +6737,8 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     const _v17SaveEnabled = _v14ContextLayer &&
                         (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
                     if (_v17SaveEnabled) {
-                        // WA-CHANNEL-002: Identidade híbrida (lead > session, NUNCA chatbotId)
-                        const _v17ConvId = buildIdentityKey(leadId, (pageData && pageData.conversationId));
+                        // [FASE 2C.2B-3] Usar identidade canônica propagada (NUNCA chatbotId)
+                        const _v17ConvId = identityKey;
                         if (_v17ConvId) {
                             _v14ContextLayer.addMessage(_v17ConvId, 'user', cleanUserMessage);
                             _v14ContextLayer.addMessage(_v17ConvId, 'assistant', _v17Response);
@@ -6758,7 +6763,8 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         }
 
         // 🎯 SUPERINTELIGÊNCIA: Análise Avançada
-        const userId = leadId || `user_${Date.now()}`;
+        // [FASE 2C.2B-3] Usar identityKey como chave canônica de usuário (substitui leadId || user_timestamp)
+        const userId = identityKey;
         const estadoEmocional = superInteligenciaGlobal.analisarEstadoEmocional(cleanUserMessage);
 
         // 🎯 ATUALIZAR MEMÓRIA DO USUÁRIO
@@ -7145,9 +7151,9 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 console.log(`[V13] 🧩 1/6 Intent: ${_v13Intent.intent} (conf=${_v13Intent.confidence}) | pattern=${_v13Intent.matchedPattern}`);
 
                 // ─── PASSO 2: STATE MANAGER (score + máquina de estados) ───
-                // WA-CHANNEL-002: Identidade híbrida (lead > session, NUNCA chatbotId)
-                const _v13ConvId = buildIdentityKey(leadId, (pageData && pageData.conversationId));
-                console.log(`🔑 [WA-CHANNEL-002] V13 state | key=${_v13ConvId.substring(0, 25)}`);
+                // [FASE 2C.2B-3] Usar identidade canônica propagada (NUNCA chatbotId)
+                const _v13ConvId = identityKey;
+                console.log(`🔑 [FASE 2C.2B-3] V13 state | key=${_v13ConvId.substring(0, 25)}`);
                 const _v13StateResult = _v13StateManager.updateState(_v13ConvId, _v13Intent.intent, cleanUserMessage);
                 console.log(`[V13] 🧩 2/6 State: ${_v13StateResult.stage} (score=${_v13StateResult.score}) ${_v13StateResult.transition ? '⚡ ' + _v13StateResult.transition : ''}`);
 
@@ -8254,9 +8260,10 @@ ANTI-ERRO CRÍTICO:
                 }
 
                 // V11 Conversation State — memória anti-burrice
+                // [FASE 2C.2B-3] Usar identityKey canônica — NUNCA fallback para chatbotId ou 'unknown'
                 let _v11StateContext = '';
-                if (_v11ConversationState && (leadId || chatbotId)) {
-                    const _v11ConvId = leadId || chatbotId || 'unknown';
+                if (_v11ConversationState && identityKey) {
+                    const _v11ConvId = identityKey;
                     const _v11State = _v11ConversationState.getState(_v11ConvId);
                     _v11StateContext = _v11ConversationState.buildStateContext(_v11State);
                 }
@@ -8859,6 +8866,9 @@ app.post("/api/chat-universal", ...[billingMiddleware].filter(Boolean), async (r
         // MISSAO 42 FIX: garantir conversationId consistente (fallback se nao enviado)
         const conversationId = reqConvId || (leadId ? 'lead_' + leadId : 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
 
+        // [FASE 2C.2B-3] Construir identidade canônica UMA ÚNICA VEZ na fronteira autenticada
+        const identityKey = resolveIdentityKey(tenantId, leadId, conversationId);
+
         // [SALESMODE-FLOW-PATCH] Extrair salesMode e salesPreset do req.body de forma isolada
         let _reqSalesMode   = 'auto';
         let _reqSalesPreset = null;
@@ -9020,14 +9030,14 @@ app.post("/api/chat-universal", ...[billingMiddleware].filter(Boolean), async (r
             }
         } catch (_bikInjectErr) { /* silencioso */ }
 
-        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, effectiveLeadId || leadId, apiKey, robotName || null);
+        const aiResponse = await generateAIResponse(message, processedPageData || {}, [], instructions, effectiveLeadId || leadId, apiKey, robotName || null, tenantId, identityKey);
 
         // ═══ V14.1: SALVAR NO HISTÓRICO (para endpoint chat-universal / pipeline legado) ═══
         try {
             const _v14CuEnabled = _v14ContextLayer &&
                 (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
-            // WA-CHANNEL-002: Usar identidade híbrida (lead > session)
-            const _v14CuIdentityKey = buildIdentityKey(effectiveLeadId, conversationId);
+            // [FASE 2C.2B-3] Usar identidade canônica única já construída
+            const _v14CuIdentityKey = identityKey;
             if (_v14CuEnabled && _v14CuIdentityKey) {
                 // Nota: Se V13 pipeline rodou, ele já salvou internamente.
                 // Aqui salvamos para o caso do pipeline legado V0-V12 ter respondido.
@@ -9213,8 +9223,8 @@ app.post("/api/chat-universal", ...[billingMiddleware].filter(Boolean), async (r
                 }
 
                 // State Update — memória conversacional
-                if (_v11ConversationState && conversationId) {
-                    _v11ConversationState.updateState(conversationId, _v11Intent, message);
+                if (_v11ConversationState && identityKey) {
+                    _v11ConversationState.updateState(identityKey, _v11Intent, message);
                 }
             }
         } catch (_v11ActErr) {
@@ -9641,6 +9651,9 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
 
         // MISSAO 42 FIX: garantir conversationId consistente (fallback se nao enviado)
         const conversationId = reqConvId || (leadId ? 'lead_' + leadId : 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
+
+        // [FASE 2C.2B-3] Construir identidade canônica UMA ÚNICA VEZ na fronteira autenticada
+        const identityKey = resolveIdentityKey(tenantId, leadId, conversationId);
 
         if (!message) {
             return res.status(400).json({
@@ -10157,7 +10170,7 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
                     processedPageData.conversationId = conversationId;
                 }
             } catch (_bikInjectErr) { /* silencioso */ }
-            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, effectiveLeadId || leadId, apiKey, robotName || null);
+            const respostaIA = await generateAIResponse(message, processedPageData || {}, [], instructions, effectiveLeadId || leadId, apiKey, robotName || null, tenantId, identityKey);
 
             // 🎯 FEATURE_CLEAN_CHAT_V2: Pular pós-processamento emocional quando flag ativa
             if (process.env.FEATURE_CLEAN_CHAT_V2 === 'true' || (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_CLEAN_CHAT_V2'))) {
@@ -10189,8 +10202,8 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
         try {
             const _v14PciEnabled = _v14ContextLayer &&
                 (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_CONTEXT_LAYER'));
-            // WA-CHANNEL-002: Usar identidade híbrida (lead > session)
-            const _v14PciIdentityKey = buildIdentityKey(effectiveLeadId, conversationId);
+            // [FASE 2C.2B-3] Usar identidade canônica única já construída
+            const _v14PciIdentityKey = identityKey;
             if (_v14PciEnabled && _v14PciIdentityKey) {
                 const _v14PciHist = _v14ContextLayer.getHistory(_v14PciIdentityKey);
                 const _v14PciLast = _v14PciHist.length > 0 ? _v14PciHist[_v14PciHist.length - 1] : null;
@@ -10500,8 +10513,8 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
                 }
 
                 // State Update — memória conversacional
-                if (_v11ConversationState && conversationId) {
-                    _v11ConversationState.updateState(conversationId, _v11IntIntent, message);
+                if (_v11ConversationState && identityKey) {
+                    _v11ConversationState.updateState(identityKey, _v11IntIntent, message);
                 }
             }
         } catch (_v11IntActErr) {
@@ -10755,10 +10768,10 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
         // ═══════════════════════════════════════════════════════════════════
         try {
             const _v12StateEnabled = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V12_STATE_PROMPT');
-            if (_v12StateEnabled && _v11ConversationState && conversationId) {
+            if (_v12StateEnabled && _v11ConversationState && identityKey) {
                 const _v12Intent = _intDecision?.intent || 'neutral';
-                _v11ConversationState.updateState(conversationId, _v12Intent, message);
-                console.log(`[V12-STATE@inteligente] 📝 Estado atualizado: conv=${conversationId.substring(0,8)}... intent=${_v12Intent}`);
+                _v11ConversationState.updateState(identityKey, _v12Intent, message);
+                console.log(`[V12-STATE@inteligente] 📝 Estado atualizado: intent=${_v12Intent}`);
             }
         } catch (_v12StateErr) {
             console.warn('[V12-STATE@inteligente] ⚠️ Erro (sem impacto):', _v12StateErr.message);
