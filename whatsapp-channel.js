@@ -136,6 +136,10 @@ class WhatsAppChannel {
         // V22.1: Inicializar tabela de scheduling (PostgreSQL)
         this._initScheduleTable();
 
+        // Fila persistente e recuperação durável de mensagens Meta
+        this._isProcessingQueue = false;
+        this._queueWorkerInterval = null;
+
         // Fase 2B: Reconciliar agendamentos travados em booking_in_progress
         this._reconcileStaleBookings();
         this._reconcileInterval = setInterval(() => this._reconcileStaleBookings(), 300000); // 5 min
@@ -154,6 +158,7 @@ class WhatsAppChannel {
             clearInterval(this._reconcileInterval);
             this._reconcileInterval = null;
         }
+        this.stopQueueWorker();
     }
 
     // ============================================================
@@ -933,11 +938,517 @@ class WhatsAppChannel {
         });
 
         console.log(`📱 [WA-CHANNEL] Rotas registradas | Auth: ${FEATURE_EVOLUTION_WEBHOOK_AUTH ? '✅ ON' : '⚠️ OFF'} | Dedup: ✅ ON`);
+        this.startQueueWorker();
+    }
+
+    // ============================================================
+    // FILA PERSISTENTE E RECUPERAÇÃO DE MENSAGENS (QUEUE WORKER)
+    // ============================================================
+
+    /**
+     * Inicia o worker em segundo plano para varredura periódica da fila
+     */
+    startQueueWorker(intervalMs = 5000) {
+        if (this._queueWorkerInterval) return;
+        this._queueWorkerInterval = setInterval(() => {
+            this.processPendingQueue().catch(err => {
+                console.error('📱 [WA-QUEUE] Erro no worker periódico:', err.message);
+            });
+        }, intervalMs);
+        if (this._queueWorkerInterval && typeof this._queueWorkerInterval.unref === 'function') {
+            this._queueWorkerInterval.unref();
+        }
+        // Executar imediatamente a recuperação pós-boot
+        this.processPendingQueue().catch(err => {
+            console.error('📱 [WA-QUEUE] Erro na recuperação pós-boot:', err.message);
+        });
+    }
+
+    /**
+     * Encerra o worker de fila
+     */
+    stopQueueWorker() {
+        if (this._queueWorkerInterval) {
+            clearInterval(this._queueWorkerInterval);
+            this._queueWorkerInterval = null;
+        }
+    }
+
+    /**
+     * Marca status de mensagem como delivered com sucesso durável
+     */
+    async _markMessageDelivered(recordId, tenantUuid, waMessageId, leaseToken = null) {
+        if (!this.db) return;
+        try {
+            const q = this.USE_POSTGRES
+                ? `UPDATE whatsapp_messages
+                   SET status = 'delivered', locked_until = NULL, error_message = NULL, outbound_sent = true,
+                       outbound_status = CASE WHEN outbound_status = 'pending' THEN 'delivered' ELSE outbound_status END
+                   WHERE (id = $1 OR (tenant_uuid = $2 AND provider = 'meta' AND wa_message_id = $3))
+                     ${leaseToken ? 'AND (lease_token = $4 OR lease_token IS NULL)' : ''}`
+                : `UPDATE whatsapp_messages
+                   SET status = 'delivered', locked_until = NULL, error_message = NULL, outbound_sent = 1,
+                       outbound_status = CASE WHEN outbound_status = 'pending' THEN 'delivered' ELSE outbound_status END
+                   WHERE (id = ? OR (tenant_uuid = ? AND provider = 'meta' AND wa_message_id = ?))
+                     ${leaseToken ? 'AND (lease_token = ? OR lease_token IS NULL)' : ''}`;
+            const params = leaseToken
+                ? [recordId, tenantUuid, waMessageId, leaseToken]
+                : [recordId, tenantUuid, waMessageId];
+            await this.db.query(q, params);
+            if (waMessageId) {
+                PROCESSED_MSG_IDS.set(waMessageId, Date.now());
+            }
+        } catch (err) {
+            console.warn('📱 [WA-QUEUE] Erro ao marcar status delivered:', err.message);
+        }
+    }
+
+    /**
+     * Confirmação defensiva do lease exclusivo antes de executar processamento
+     */
+    async _confirmLeaseBeforeProcessing(recordId, leaseToken = null) {
+        if (!this.db || !recordId) return true;
+        try {
+            const q = this.USE_POSTGRES
+                ? `SELECT id FROM whatsapp_messages WHERE id = $1 AND status = 'processing' AND (locked_until IS NULL OR locked_until > CURRENT_TIMESTAMP) ${leaseToken ? 'AND (lease_token = $2 OR lease_token IS NULL)' : ''} LIMIT 1`
+                : `SELECT id FROM whatsapp_messages WHERE id = ? AND status = 'processing' AND (locked_until IS NULL OR locked_until > datetime('now')) ${leaseToken ? 'AND (lease_token = ? OR lease_token IS NULL)' : ''} LIMIT 1`;
+            const params = leaseToken ? [recordId, leaseToken] : [recordId];
+            const res = await this.db.query(q, params);
+            const rows = res?.rows || res;
+            return Array.isArray(rows) && rows.length > 0;
+        } catch (_) {
+            return true;
+        }
+    }
+
+    /**
+     * Renovação periódica do lease com CAS por lease_token
+     * Retorna true se a posse foi renovada com sucesso, false se a posse foi perdida para outro worker
+     */
+    async _renewLease(recordId, leaseToken, leaseSeconds = 60) {
+        if (!this.db || !recordId || !leaseToken) return false;
+        try {
+            const q = this.USE_POSTGRES
+                ? `UPDATE whatsapp_messages
+                   SET locked_until = CURRENT_TIMESTAMP + INTERVAL '${leaseSeconds} seconds'
+                   WHERE id = $1 AND lease_token = $2 AND status = 'processing'
+                   RETURNING id`
+                : `UPDATE whatsapp_messages
+                   SET locked_until = datetime('now', '+${leaseSeconds} seconds')
+                   WHERE id = ? AND lease_token = ? AND status = 'processing'`;
+            const res = await this.db.query(q, [recordId, leaseToken]);
+            if (res) {
+                if (typeof res.rowCount === 'number') return res.rowCount > 0;
+                if (typeof res.changes === 'number') return res.changes > 0;
+                if (Array.isArray(res.rows)) return res.rows.length > 0;
+            }
+            return false;
+        } catch (err) {
+            console.warn('⚠️ [WA-LEASE] Falha na query de renovação:', err.message);
+            return false;
+        }
+    }
+
+    /**
+     * Registra falha de processamento com backoff ou status final failed
+     */
+    async _markMessageFailed(recordId, errMessage, attempts, maxAttempts = 3, leaseToken = null) {
+        if (!this.db) return;
+        try {
+            const isFinalFailure = attempts >= maxAttempts;
+            const nextStatus = isFinalFailure ? 'failed' : 'retryable';
+            const backoffSeconds = Math.min(300, Math.pow(2, Math.max(1, attempts)) * 5); // 10s, 20s, 40s...
+
+            const q = this.USE_POSTGRES
+                ? `UPDATE whatsapp_messages
+                   SET status = $1,
+                       error_message = $2,
+                       locked_until = ${isFinalFailure ? 'NULL' : `CURRENT_TIMESTAMP + INTERVAL '${backoffSeconds} seconds'`}
+                   WHERE id = $3
+                     ${leaseToken ? 'AND (lease_token = $4 OR lease_token IS NULL)' : ''}`
+                : `UPDATE whatsapp_messages
+                   SET status = ?,
+                       error_message = ?,
+                       locked_until = ${isFinalFailure ? 'NULL' : `datetime('now', '+${backoffSeconds} seconds')`}
+                   WHERE id = ?
+                     ${leaseToken ? 'AND (lease_token = ? OR lease_token IS NULL)' : ''}`;
+            const params = leaseToken
+                ? [nextStatus, String(errMessage || '').substring(0, 500), recordId, leaseToken]
+                : [nextStatus, String(errMessage || '').substring(0, 500), recordId];
+            await this.db.query(q, params);
+        } catch (err) {
+            console.warn('📱 [WA-QUEUE] Erro ao atualizar falha na mensagem:', err.message);
+        }
+    }
+
+    /**
+     * Processamento durável da fila de mensagens pendentes (received, retryable com backoff vencido, lease expirado)
+     * Garante mutual exclusion via FOR UPDATE SKIP LOCKED (PostgreSQL) e atomic lease update
+     * @param {Object} options
+     * @param {number} [options.batchSize=10]
+     * @param {number} [options.leaseSeconds=60]
+     * @param {number} [options.maxAttempts=3]
+     * @returns {Promise<{ processed: number, skipped?: boolean }>}
+     */
+    async processPendingQueue({ batchSize = 10, leaseSeconds = 60, maxAttempts = 3 } = {}) {
+        if (!this.db || this._isProcessingQueue) return { processed: 0, skipped: true };
+        this._isProcessingQueue = true;
+
+        let processedCount = 0;
+        try {
+            let rowsToProcess = [];
+
+            if (this.USE_POSTGRES) {
+                const client = (typeof this.db.connect === 'function') ? await this.db.connect() : null;
+                try {
+                    if (client) {
+                        await client.query('BEGIN');
+                        const selectQ = `
+                            SELECT id, tenant_id, api_key, wa_message_id, wa_phone, content, metadata,
+                                   attempts, outbound_sent, outbound_status, outbound_wamid, tenant_uuid, status
+                            FROM whatsapp_messages
+                            WHERE provider = 'meta'
+                              AND direction = 'inbound'
+                              AND (
+                                  status = 'received'
+                                  OR (status = 'retryable' AND (locked_until IS NULL OR locked_until <= CURRENT_TIMESTAMP))
+                                  OR (status = 'processing' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP))
+                              )
+                              AND COALESCE(attempts, 0) < $1
+                            ORDER BY created_at ASC
+                            LIMIT $2
+                            FOR UPDATE SKIP LOCKED
+                        `;
+                        const res = await client.query(selectQ, [maxAttempts, batchSize]);
+                        rowsToProcess = res.rows || [];
+
+                        if (rowsToProcess.length > 0) {
+                            for (const row of rowsToProcess) {
+                                const leaseToken = crypto.randomUUID();
+                                row.leaseToken = leaseToken;
+                                await client.query(`
+                                    UPDATE whatsapp_messages
+                                    SET status = 'processing',
+                                        lease_token = $2,
+                                        locked_until = CURRENT_TIMESTAMP + INTERVAL '${leaseSeconds} seconds',
+                                        attempts = COALESCE(attempts, 0) + 1,
+                                        last_attempt_at = CURRENT_TIMESTAMP
+                                    WHERE id = $1
+                                `, [row.id, leaseToken]);
+                            }
+                        }
+                        await client.query('COMMIT');
+                    } else {
+                        const selectQ = `
+                            SELECT id, tenant_id, api_key, wa_message_id, wa_phone, content, metadata,
+                                   attempts, outbound_sent, outbound_status, outbound_wamid, tenant_uuid, status
+                            FROM whatsapp_messages
+                            WHERE provider = 'meta'
+                              AND direction = 'inbound'
+                              AND (
+                                  status = 'received'
+                                  OR (status = 'retryable' AND (locked_until IS NULL OR locked_until <= CURRENT_TIMESTAMP))
+                                  OR (status = 'processing' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP))
+                              )
+                              AND COALESCE(attempts, 0) < $1
+                            ORDER BY created_at ASC
+                            LIMIT $2
+                        `;
+                        const res = await this.db.query(selectQ, [maxAttempts, batchSize]);
+                        rowsToProcess = res.rows || [];
+                        for (const row of rowsToProcess) {
+                            const leaseToken = crypto.randomUUID();
+                            row.leaseToken = leaseToken;
+                            await this.db.query(`
+                                UPDATE whatsapp_messages
+                                SET status = 'processing',
+                                    lease_token = $2,
+                                    locked_until = CURRENT_TIMESTAMP + INTERVAL '${leaseSeconds} seconds',
+                                    attempts = COALESCE(attempts, 0) + 1,
+                                    last_attempt_at = CURRENT_TIMESTAMP
+                                WHERE id = $1
+                            `, [row.id, leaseToken]);
+                        }
+                    }
+                } catch (pgErr) {
+                    if (client) {
+                        try { await client.query('ROLLBACK'); } catch (_) {}
+                    }
+                    throw pgErr;
+                } finally {
+                    if (client && typeof client.release === 'function') {
+                        client.release();
+                    }
+                }
+            } else {
+                // SQLite
+                const selectQ = `
+                    SELECT id, tenant_id, api_key, wa_message_id, wa_phone, content, metadata,
+                           attempts, outbound_sent, outbound_status, outbound_wamid, tenant_uuid, status
+                    FROM whatsapp_messages
+                    WHERE provider = 'meta'
+                      AND direction = 'inbound'
+                      AND (
+                          status = 'received'
+                          OR (status = 'retryable' AND (locked_until IS NULL OR locked_until <= datetime('now')))
+                          OR (status = 'processing' AND (locked_until IS NULL OR locked_until < datetime('now')))
+                      )
+                      AND COALESCE(attempts, 0) < ?
+                    ORDER BY created_at ASC
+                    LIMIT ?
+                `;
+                const res = await this.db.query(selectQ, [maxAttempts, batchSize]);
+                rowsToProcess = res.rows || res || [];
+                for (const row of rowsToProcess) {
+                    const leaseToken = crypto.randomUUID();
+                    row.leaseToken = leaseToken;
+                    await this.db.query(`
+                        UPDATE whatsapp_messages
+                        SET status = 'processing',
+                            lease_token = ?,
+                            locked_until = datetime('now', '+${leaseSeconds} seconds'),
+                            attempts = COALESCE(attempts, 0) + 1,
+                            last_attempt_at = datetime('now')
+                        WHERE id = ?
+                    `, [leaseToken, row.id]);
+                }
+            }
+
+            for (const row of rowsToProcess) {
+                let meta = {};
+                try {
+                    meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
+                } catch (_) {}
+
+                const phoneNumberId = meta.phoneNumberId;
+                const wabaId = meta.wabaId;
+                const pushName = meta.pushName || '';
+                const currentAttempts = (row.attempts || 0) + 1;
+                const leaseToken = row.leaseToken || crypto.randomUUID();
+                let leaseLost = false;
+
+                // Heartbeat de renovação periódica do lease (a cada leaseSeconds / 3 segundos, ex: 20s para 60s)
+                const heartbeatIntervalMs = Math.max(5000, Math.floor((leaseSeconds / 3) * 1000));
+                const leaseHeartbeat = setInterval(async () => {
+                    try {
+                        const renewed = await this._renewLease(row.id, leaseToken, leaseSeconds);
+                        if (!renewed) {
+                            leaseLost = true;
+                            clearInterval(leaseHeartbeat);
+                            console.warn(`⚠️ [WA-LEASE] Perda de posse detectada para mensagem ${row.id}. Execução abortada.`);
+                        }
+                    } catch (heartbeatErr) {
+                        console.warn(`⚠️ [WA-LEASE] Erro no heartbeat da mensagem ${row.id}:`, heartbeatErr.message);
+                    }
+                }, heartbeatIntervalMs);
+
+                try {
+                    if (leaseLost) {
+                        console.warn(`⚠️ [WA-LEASE] Posse perdida antes do início para ${row.id}`);
+                        continue;
+                    }
+
+                    const tenantSettings = await this._resolveMetaTenant(phoneNumberId, wabaId);
+                    const apiKey = tenantSettings?.api_key || row.api_key;
+                    const tenantUuid = tenantSettings?.tenant_uuid || row.tenant_uuid;
+                    const token = tenantSettings?.meta_access_token;
+
+                    if (!tenantUuid) {
+                        throw new Error(`Tenant canônico não resolvido para mensagem ${row.id}`);
+                    }
+
+                    if (leaseLost) {
+                        console.warn(`⚠️ [WA-LEASE] Posse perdida antes do pipeline de IA para ${row.id}`);
+                        continue;
+                    }
+
+                    await this._processIncomingMessage({
+                        apiKey,
+                        channelMode: tenantSettings?.channel_mode || 'auto',
+                        notifPhone: tenantSettings?.notification_phone,
+                        phone: row.wa_phone,
+                        pushName,
+                        text: row.content,
+                        waMessageId: row.wa_message_id,
+                        provider: 'meta',
+                        instanceName: `meta_${phoneNumberId}`,
+                        instanceToken: token,
+                        extraOptions: {
+                            phoneNumberId,
+                            wabaId,
+                            accessToken: token,
+                            tenantUuid,
+                            persistedRecordId: row.id,
+                            outboundSent: !!row.outbound_sent,
+                            outboundStatus: row.outbound_status || (row.outbound_sent ? 'sent' : 'pending'),
+                            outboundWamid: row.outbound_wamid || null,
+                            leaseToken,
+                            isLeaseActive: () => !leaseLost
+                        }
+                    });
+
+                    if (leaseLost) {
+                        console.warn(`⚠️ [WA-LEASE] Posse perdida durante pipeline para ${row.id}. Não marcando status delivered.`);
+                        continue;
+                    }
+
+                    await this._markMessageDelivered(row.id, tenantUuid, row.wa_message_id, leaseToken);
+                    processedCount++;
+                } catch (err) {
+                    if (!leaseLost) {
+                        console.error(`📱 [WA-QUEUE] Erro no processamento de mensagem ${row.id}:`, err.message);
+                        await this._markMessageFailed(row.id, err.message, currentAttempts, maxAttempts, leaseToken);
+                    }
+                } finally {
+                    clearInterval(leaseHeartbeat);
+                }
+            }
+        } finally {
+            this._isProcessingQueue = false;
+        }
+
+        return { processed: processedCount };
     }
 
     // ============================================================
     // WEBHOOK — META WHATSAPP CLOUD API (Oficial v21.0)
     // ============================================================
+
+    /**
+     * Deduplicação resiliente L1 (memória) + L2 (PostgreSQL)
+     * Garante deduplicação mesmo após reinicialização do servidor ou entre múltiplas instâncias
+     */
+    async _isMessageAlreadyProcessed(waMessageId, tenantUuid, provider) {
+        if (!waMessageId) return false;
+        // L1: Cache em memória (< 1ms)
+        if (PROCESSED_MSG_IDS.has(waMessageId)) return true;
+
+        // L2: Persistência relacional PostgreSQL (resiliente a reinício e multi-instância)
+        if (this.db) {
+            try {
+                const query = this.USE_POSTGRES
+                    ? (tenantUuid
+                        ? `SELECT wa_message_id FROM whatsapp_messages WHERE wa_message_id = $1 AND tenant_uuid = $2 AND provider = $3 LIMIT 1`
+                        : `SELECT wa_message_id FROM whatsapp_messages WHERE wa_message_id = $1 LIMIT 1`)
+                    : (tenantUuid
+                        ? `SELECT wa_message_id FROM whatsapp_messages WHERE wa_message_id = ? AND tenant_uuid = ? AND provider = ? LIMIT 1`
+                        : `SELECT wa_message_id FROM whatsapp_messages WHERE wa_message_id = ? LIMIT 1`);
+                const params = tenantUuid ? [waMessageId, tenantUuid, provider || 'meta'] : [waMessageId];
+                const res = await this.db.query(query, params);
+                const rows = res?.rows || res;
+                if (rows && rows.length > 0 && rows[0].wa_message_id === waMessageId) {
+                    PROCESSED_MSG_IDS.set(waMessageId, Date.now());
+                    return true;
+                }
+            } catch (err) {
+                // Em caso de erro temporário no DB, não interrompe o fluxo de consulta
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Limpar cache de deduplicação (para testes e manutenção)
+     */
+    clearDedupCache() {
+        PROCESSED_MSG_IDS.clear();
+    }
+
+    /**
+     * Persistência durável e aquisição atômica antes do envio do ACK 200 (Requisitos B, C, D)
+     * Deduplica concorrentemente por (tenant_uuid, provider, wa_message_id) via índice único parcial
+     */
+    async _claimAndPersistInboundMessage({
+        apiKey, tenantUuid, waMessageId, senderPhone, text,
+        phoneNumberId, wabaId, pushName
+    }) {
+        // Requisito D: Validação fail-closed da identidade canônica (UUID v4)
+        if (!tenantUuid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(tenantUuid).trim())) {
+            console.warn(`📱 [META-DURABLE] ❌ Mensagem descartada: tenant_uuid inválido ou ausente (${tenantUuid})`);
+            return { claimed: false, reason: 'invalid_tenant_uuid' };
+        }
+
+        if (!waMessageId) {
+            return { claimed: false, reason: 'missing_wamid' };
+        }
+
+        // L1: Otimização rápida em memória (< 1ms) para mensagens já entregues
+        if (PROCESSED_MSG_IDS.has(waMessageId)) {
+            return { claimed: false, duplicate: true };
+        }
+
+        if (!this.db) {
+            return { claimed: false, reason: 'no_db' };
+        }
+
+        const id = crypto.randomBytes(12).toString('hex');
+        const canonicalTenantUuid = tenantUuid.trim().toLowerCase();
+        const metadata = JSON.stringify({ phoneNumberId, wabaId, pushName: pushName || '' });
+
+        const q = this.USE_POSTGRES
+            ? `INSERT INTO whatsapp_messages
+                (id, tenant_id, api_key, wa_message_id, wa_phone, direction, content, provider, tenant_uuid, status, metadata, attempts, outbound_sent, outbound_status, locked_until, last_attempt_at)
+                VALUES ($1, $2, $3, $4, $5, 'inbound', $6, 'meta', $7, 'received', $8, 0, false, 'pending', NULL, NULL)
+                ON CONFLICT (tenant_uuid, provider, wa_message_id) WHERE wa_message_id IS NOT NULL
+                DO NOTHING RETURNING id`
+            : `INSERT INTO whatsapp_messages
+                (id, tenant_id, api_key, wa_message_id, wa_phone, direction, content, provider, tenant_uuid, status, metadata, attempts, outbound_sent, outbound_status, locked_until, last_attempt_at)
+                VALUES (?, ?, ?, ?, ?, 'inbound', ?, 'meta', ?, 'received', ?, 0, 0, 'pending', NULL, NULL)
+                ON CONFLICT (tenant_uuid, provider, wa_message_id) WHERE wa_message_id IS NOT NULL
+                DO NOTHING`;
+
+        const params = [
+            id, canonicalTenantUuid, apiKey, waMessageId, senderPhone,
+            (text || '').substring(0, 10000), canonicalTenantUuid, metadata
+        ];
+
+        try {
+            const res = await this.db.query(q, params);
+            let isClaimed = false;
+            if (res) {
+                if (typeof res.rowCount === 'number') {
+                    isClaimed = res.rowCount > 0;
+                } else if (typeof res.changes === 'number') {
+                    isClaimed = res.changes > 0;
+                } else if (Array.isArray(res.rows)) {
+                    isClaimed = res.rows.length > 0;
+                }
+            }
+
+            if (isClaimed) {
+                return { claimed: true, id };
+            } else {
+                // Registro já existe no banco: verificar o status do registro existente
+                let existingStatus = 'delivered';
+                let existingRowId = null;
+                try {
+                    const checkQ = this.USE_POSTGRES
+                        ? `SELECT id, status, attempts, outbound_sent, outbound_status, outbound_wamid FROM whatsapp_messages WHERE tenant_uuid = $1 AND provider = 'meta' AND wa_message_id = $2 LIMIT 1`
+                        : `SELECT id, status, attempts, outbound_sent, outbound_status, outbound_wamid FROM whatsapp_messages WHERE tenant_uuid = ? AND provider = 'meta' AND wa_message_id = ? LIMIT 1`;
+                    const existingRes = await this.db.query(checkQ, [canonicalTenantUuid, waMessageId]);
+                    const existingRow = existingRes?.rows?.[0] || existingRes?.[0];
+                    if (existingRow) {
+                        existingStatus = existingRow.status || 'delivered';
+                        existingRowId = existingRow.id;
+                    }
+                } catch (_checkErr) {}
+
+                if (existingStatus === 'received' || existingStatus === 'retryable' || existingStatus === 'processing') {
+                    // Mensagem ainda em fila/processamento: disparar queue worker e indicar pendingQueue
+                    if (typeof this.processPendingQueue === 'function') {
+                        setImmediate(() => this.processPendingQueue().catch(() => {}));
+                    }
+                    return { claimed: false, pendingQueue: true, id: existingRowId };
+                }
+
+                PROCESSED_MSG_IDS.set(waMessageId, Date.now());
+                return { claimed: false, duplicate: true, id: existingRowId };
+            }
+        } catch (dbErr) {
+            console.error(`📱 [META-DURABLE] ❌ Falha de persistência no banco:`, dbErr.message);
+            throw dbErr; // Fail-closed: impede ACK 200
+        }
+    }
 
     /**
      * Webhook GET: Verificação do desafio da Meta (Webhook Handshake)
@@ -981,30 +1492,31 @@ class WhatsAppChannel {
     async _handleMetaWebhook(req, res) {
         try {
             const body = req.body || {};
-            const signatureHeader = req.headers['x-hub-signature-256'] || '';
+            const signatureHeader = req.headers?.['x-hub-signature-256'] || '';
             const webhookIp = req.ip || req.connection?.remoteAddress || 'unknown';
 
-            // 1. Validação de assinatura X-Hub-Signature-256 se configurada
-            const globalSecret = process.env.META_APP_SECRET;
-            if (signatureHeader || globalSecret) {
-                const isValid = await this._verifyMetaSignature(req, signatureHeader, body);
-                if (!isValid) {
-                    webhookMetrics.rejected_auth++;
-                    console.warn('📱 [META-WEBHOOK] Assinatura X-Hub-Signature-256 inválida ou ausente');
-                    return res.status(403).json({ error: 'Invalid signature' });
-                }
+            // 1. Validação de assinatura X-Hub-Signature-256 obrigatória (Correção A)
+            if (!signatureHeader) {
+                webhookMetrics.rejected_auth++;
+                console.warn('📱 [META-WEBHOOK] Assinatura X-Hub-Signature-256 ausente');
+                return res.status(403).json({ error: 'Signature header missing' });
             }
 
-            // Ack 200 rápido para a Meta
-            res.status(200).send('EVENT_RECEIVED');
-            webhookMetrics.received++;
+            const isValid = await this._verifyMetaSignature(req, signatureHeader, body);
+            if (!isValid) {
+                webhookMetrics.rejected_auth++;
+                console.warn('📱 [META-WEBHOOK] Assinatura X-Hub-Signature-256 inválida');
+                return res.status(403).json({ error: 'Invalid signature' });
+            }
 
             // Verificar se o objeto é whatsapp_business_account
             if (body.object !== 'whatsapp_business_account') {
-                return;
+                return res.status(200).send('EVENT_RECEIVED');
             }
 
             const entries = body.entry || [];
+            const claimedItems = [];
+
             for (const entry of entries) {
                 const wabaId = entry.id;
                 const changes = entry.changes || [];
@@ -1014,24 +1526,16 @@ class WhatsAppChannel {
                     const metadata = value.metadata || {};
                     const phoneNumberId = metadata.phone_number_id;
 
-                    // 1. Processar status updates (sent, delivered, read, failed)
+                    // Log de status updates (sent, delivered, read, failed)
                     if (Array.isArray(value.statuses)) {
                         for (const status of value.statuses) {
                             console.log(`📱 [META-STATUS] id=${status.id} status=${status.status} recipient=${status.recipient_id}`);
                         }
                     }
 
-                    // 2. Processar mensagens recebidas
+                    // Processar mensagens recebidas
                     if (Array.isArray(value.messages)) {
                         for (const msg of value.messages) {
-                            // Deduplicação pelo ID oficial da Meta (wamid)
-                            if (PROCESSED_MSG_IDS.has(msg.id)) {
-                                webhookMetrics.duplicate_ignored++;
-                                console.log(`📱 [META-DEDUP] Mensagem duplicada ignorada: ${msg.id}`);
-                                continue;
-                            }
-                            PROCESSED_MSG_IDS.set(msg.id, Date.now());
-
                             // Extrair texto da mensagem
                             let text = '';
                             if (msg.type === 'text') {
@@ -1052,41 +1556,72 @@ class WhatsAppChannel {
 
                             // Resolver tenant por phoneNumberId ou wabaId
                             const tenantSettings = await this._resolveMetaTenant(phoneNumberId, wabaId);
-                            if (!tenantSettings) {
-                                console.warn(`📱 [META-TENANT] Nenhum tenant encontrado para phoneNumberId=${phoneNumberId} wabaId=${wabaId}`);
+                            if (!tenantSettings || !tenantSettings.tenant_uuid) {
+                                console.warn(`📱 [META-TENANT] Nenhum tenant ativo com UUID canônico encontrado para phoneNumberId=${phoneNumberId} wabaId=${wabaId}`);
                                 continue;
                             }
 
-                            // Chamar pipeline central de conversação
-                            await this._processIncomingMessage({
+                            // 2. Persistência durável atômica ANTES do ACK HTTP 200 (Correções B e C)
+                            const claim = await this._claimAndPersistInboundMessage({
                                 apiKey: tenantSettings.api_key,
-                                channelMode: tenantSettings.channel_mode || 'auto',
-                                notifPhone: tenantSettings.notification_phone,
-                                phone: senderPhone,
-                                pushName: pushName,
-                                text: text,
+                                tenantUuid: tenantSettings.tenant_uuid,
                                 waMessageId: msg.id,
-                                provider: 'meta',
-                                instanceName: `meta_${phoneNumberId}`,
-                                instanceToken: tenantSettings.meta_access_token,
-                                extraOptions: {
-                                    phoneNumberId: phoneNumberId,
-                                    wabaId: wabaId,
-                                    accessToken: tenantSettings.meta_access_token,
-                                    tenantUuid: tenantSettings.tenant_uuid
+                                senderPhone,
+                                text,
+                                phoneNumberId,
+                                wabaId,
+                                pushName
+                            });
+
+                            if (!claim.claimed) {
+                                if (claim.duplicate) {
+                                    webhookMetrics.duplicate_ignored++;
+                                    console.log(`📱 [META-DEDUP] Mensagem duplicada ignorada: ${msg.id}`);
+                                } else if (claim.pendingQueue) {
+                                    console.log(`📱 [META-RETRY] Retry Meta recebido para mensagem pendente/em fila: ${msg.id}`);
                                 }
+                                continue;
+                            }
+
+                            claimedItems.push({
+                                msgId: msg.id,
+                                dbId: claim.id,
+                                tenantSettings,
+                                senderPhone,
+                                pushName,
+                                text,
+                                phoneNumberId,
+                                wabaId
                             });
                         }
                     }
                 }
             }
+
+            // 3. Ack HTTP 200 enviado à Meta APÓS a garantia de persistência durável no banco (Correção B)
+            res.status(200).send('EVENT_RECEIVED');
+            webhookMetrics.received++;
+
+            // 4. O worker durável (processPendingQueue) é o único consumidor autorizado.
+            // O webhook NÃO executa pipeline de IA, geração de resposta ou envio inline.
+            if (claimedItems.length > 0 && typeof this.processPendingQueue === 'function') {
+                setImmediate(() => {
+                    this.processPendingQueue().catch(queueErr => {
+                        console.error('📱 [WA-QUEUE] Erro no consumidor durável pós-webhook:', queueErr.message);
+                    });
+                });
+            }
+
         } catch (error) {
             console.error('📱 [META-WEBHOOK] Erro ao processar webhook:', error.message);
+            if (!res.headersSent) {
+                return res.status(500).json({ error: 'Internal server error processing webhook' });
+            }
         }
     }
 
     /**
-     * Validação timing-safe da assinatura HMAC SHA-256 do webhook Meta
+     * Validação timing-safe da assinatura HMAC SHA-256 do webhook Meta (Correção A)
      */
     async _verifyMetaSignature(req, signatureHeader, body) {
         if (!signatureHeader || !signatureHeader.startsWith('sha256=')) {
@@ -1124,7 +1659,14 @@ class WhatsAppChannel {
             return false;
         }
 
-        const rawBody = req.rawBody || Buffer.from(JSON.stringify(body));
+        let rawBody;
+        if (req.rawBody) {
+            rawBody = Buffer.isBuffer(req.rawBody) ? req.rawBody : Buffer.from(req.rawBody, 'utf8');
+        } else if (typeof req.body === 'string') {
+            rawBody = Buffer.from(req.body, 'utf8');
+        } else {
+            rawBody = Buffer.from(JSON.stringify(body));
+        }
 
         for (const secret of secretCandidates) {
             const hmac = crypto.createHmac('sha256', secret);
@@ -1359,9 +1901,10 @@ class WhatsAppChannel {
                 return;
             }
 
-            // ═══ SEC-09: Deduplicação por waMessageId ═══
+            // ═══ SEC-09: Deduplicação por waMessageId (L1 + L2) ═══
             if (waMessageId) {
-                if (PROCESSED_MSG_IDS.has(waMessageId)) {
+                const isDup = await this._isMessageAlreadyProcessed(waMessageId);
+                if (isDup) {
                     webhookMetrics.duplicated++;
                     console.log(`🔁 [SEC-09] Mensagem duplicada ignorada: ${waMessageId.substring(0, 16)}...`);
                     return;
@@ -1454,24 +1997,183 @@ class WhatsAppChannel {
     }
 
     // ============================================================
+    // DESPACHO SEGURO DE OUTBOUND (Máquina de estados: pending -> sending -> sent / outbound_unknown)
+    // ============================================================
+    async _dispatchOutboundWithSafety({
+        apiKey, phone, message, provider, instanceName, instanceToken,
+        extraOptions = {}, conversationId, lead, tenantId
+    }) {
+        const recordId = extraOptions?.persistedRecordId;
+        const leaseToken = extraOptions?.leaseToken;
+        const isLeaseActive = typeof extraOptions?.isLeaseActive === 'function' ? extraOptions.isLeaseActive : () => true;
+
+        // Se a posse do lease foi perdida pelo heartbeat, abortar imediatamente sem envio
+        if (!isLeaseActive()) {
+            console.warn(`⚠️ [WA-OUTBOUND] Posse do lease perdida pela flag de heartbeat. Envio outbound cancelado para ${recordId || phone}`);
+            return { success: false, leaseLost: true, blocked: true };
+        }
+
+        // Validação CAS no banco se leaseToken foi fornecido
+        if (recordId && leaseToken && this.db) {
+            try {
+                const leaseCheckQ = this.USE_POSTGRES
+                    ? `SELECT id FROM whatsapp_messages WHERE id = $1 AND (lease_token = $2 OR lease_token IS NULL) AND status = 'processing' LIMIT 1`
+                    : `SELECT id FROM whatsapp_messages WHERE id = ? AND (lease_token = ? OR lease_token IS NULL) AND status = 'processing' LIMIT 1`;
+                const checkRes = await this.db.query(leaseCheckQ, [recordId, leaseToken]);
+                const checkRows = checkRes?.rows || checkRes || [];
+                if (!Array.isArray(checkRows) || checkRows.length === 0) {
+                    console.warn(`⚠️ [WA-OUTBOUND] Posse do lease expirou no banco ou foi assumida por outro worker. Envio outbound abortado para ${recordId}`);
+                    return { success: false, leaseLost: true, blocked: true };
+                }
+            } catch (_chkErr) {}
+        }
+
+        let currentOutboundStatus = extraOptions?.outboundStatus || (extraOptions?.outboundSent ? 'sent' : 'pending');
+        let existingOutboundWamid = extraOptions?.outboundWamid || null;
+
+        if (recordId && this.db) {
+            try {
+                const statusQ = this.USE_POSTGRES
+                    ? `SELECT outbound_status, outbound_sent, outbound_wamid FROM whatsapp_messages WHERE id = $1 LIMIT 1`
+                    : `SELECT outbound_status, outbound_sent, outbound_wamid FROM whatsapp_messages WHERE id = ? LIMIT 1`;
+                const res = await this.db.query(statusQ, [recordId]);
+                const row = (res?.rows || res)?.[0];
+                if (row) {
+                    currentOutboundStatus = row.outbound_status || (row.outbound_sent ? 'sent' : 'pending');
+                    existingOutboundWamid = row.outbound_wamid || null;
+                }
+            } catch (_) {}
+        }
+
+        // 1. Mensagem já enviada com confirmação prévia
+        if (extraOptions?.outboundSent || currentOutboundStatus === 'sent') {
+            console.log(`📱 [WA-OUTBOUND] Outbound já havia sido enviado anteriormente para ${phone} (wamid=${existingOutboundWamid || 'already_sent'}), pulando reenvio.`);
+            return { success: true, messageId: existingOutboundWamid || 'already_sent', alreadySent: true };
+        }
+
+        // 2. Estado ambíguo (outbound_unknown): bloqueia reenvio automático para prevenir duplicações
+        if (currentOutboundStatus === 'outbound_unknown') {
+            console.warn(`⚠️ [WA-OUTBOUND-AMBIGUOUS] Mensagem ${recordId} está em estado 'outbound_unknown'. Reenvio automático bloqueado para evitar duplicação.`);
+            return { success: false, ambiguous: true, messageId: null, error: 'outbound_unknown' };
+        }
+
+        // 3. Estado 'sending' encontrado em retomada: indica interrupção ou queda durante o envio
+        if (currentOutboundStatus === 'sending') {
+            console.warn(`⚠️ [WA-OUTBOUND-AMBIGUOUS] Mensagem ${recordId} encontrada em estado 'sending' não concluído (provável crash). Marcando como 'outbound_unknown' e bloqueando reenvio.`);
+            if (recordId && this.db) {
+                try {
+                    const updQ = this.USE_POSTGRES
+                        ? `UPDATE whatsapp_messages SET outbound_status = 'outbound_unknown', error_message = 'Interrupção durante envio: resultado Meta ambíguo' WHERE id = $1`
+                        : `UPDATE whatsapp_messages SET outbound_status = 'outbound_unknown', error_message = 'Interrupção durante envio: resultado Meta ambíguo' WHERE id = ?`;
+                    await this.db.query(updQ, [recordId]);
+                } catch (_) {}
+            }
+            return { success: false, ambiguous: true, messageId: null, error: 'outbound_unknown' };
+        }
+
+        // 4. Registrar duravelmente estado 'sending' ANTES do POST externo à Meta
+        if (recordId && this.db) {
+            try {
+                const updQ = this.USE_POSTGRES
+                    ? `UPDATE whatsapp_messages SET outbound_status = 'sending' WHERE id = $1 ${leaseToken ? 'AND (lease_token = $2 OR lease_token IS NULL)' : ''}`
+                    : `UPDATE whatsapp_messages SET outbound_status = 'sending' WHERE id = ? ${leaseToken ? 'AND (lease_token = ? OR lease_token IS NULL)' : ''}`;
+                const updParams = leaseToken ? [recordId, leaseToken] : [recordId];
+                await this.db.query(updQ, updParams);
+            } catch (sendingErr) {
+                console.warn(`📱 [WA-OUTBOUND] Falha ao gravar status sending:`, sendingErr.message);
+            }
+        }
+
+        // 5. Executar chamada de envio
+        let sendResult = null;
+        try {
+            sendResult = await this._sendResponse(apiKey, phone, message, provider, instanceName, instanceToken, extraOptions);
+        } catch (callErr) {
+            console.error(`⚠️ [WA-OUTBOUND-TIMEOUT] Exceção na chamada de envio Meta:`, callErr.message);
+            if (recordId && this.db) {
+                try {
+                    const updQ = this.USE_POSTGRES
+                        ? `UPDATE whatsapp_messages SET outbound_status = 'outbound_unknown', error_message = $1 WHERE id = $2`
+                        : `UPDATE whatsapp_messages SET outbound_status = 'outbound_unknown', error_message = ? WHERE id = ?`;
+                    await this.db.query(updQ, [`Falha ambígua na chamada Meta: ${callErr.message}`.substring(0, 500), recordId]);
+                } catch (_) {}
+            }
+            throw callErr;
+        }
+
+        // 6. Tratar resultado da Meta
+        if (sendResult?.success) {
+            const outboundWamid = sendResult.messageId || null;
+            if (recordId && this.db) {
+                try {
+                    const updateSentQ = this.USE_POSTGRES
+                        ? `UPDATE whatsapp_messages
+                           SET outbound_status = 'sent', outbound_sent = true, outbound_wamid = $1, outbound_sent_at = CURRENT_TIMESTAMP
+                           WHERE id = $2 ${leaseToken ? 'AND (lease_token = $3 OR lease_token IS NULL)' : ''}`
+                        : `UPDATE whatsapp_messages
+                           SET outbound_status = 'sent', outbound_sent = 1, outbound_wamid = ?, outbound_sent_at = datetime('now')
+                           WHERE id = ? ${leaseToken ? 'AND (lease_token = ? OR lease_token IS NULL)' : ''}`;
+                    const updateSentParams = leaseToken ? [outboundWamid, recordId, leaseToken] : [outboundWamid, recordId];
+                    await this.db.query(updateSentQ, updateSentParams);
+                } catch (_sentErr) {
+                    console.warn('📱 [WA-QUEUE] Erro ao marcar outbound_status sent:', _sentErr.message);
+                }
+            }
+
+            // Registrar mensagem no log com direção outbound
+            await this._logMessage({
+                apiKey,
+                waMessageId: outboundWamid || '',
+                waPhone: phone,
+                direction: 'outbound',
+                content: message,
+                leadId: lead?.id,
+                conversationId,
+                provider,
+                tenantId,
+                tenantUuid: extraOptions?.tenantUuid || tenantId
+            });
+
+            return sendResult;
+        } else {
+            // Falha reportada pela Meta
+            const isAmbiguous = sendResult?.errorCode === 'ETIMEDOUT' ||
+                                sendResult?.errorCode === 'ECONNRESET' ||
+                                (typeof sendResult?.errorCode === 'number' && sendResult.errorCode >= 500 && sendResult.errorCode < 600);
+            const nextStatus = isAmbiguous ? 'outbound_unknown' : 'failed';
+            if (recordId && this.db) {
+                try {
+                    const updateSentQ = this.USE_POSTGRES
+                        ? `UPDATE whatsapp_messages SET outbound_status = $1, error_message = $2 WHERE id = $3`
+                        : `UPDATE whatsapp_messages SET outbound_status = ?, error_message = ? WHERE id = ?`;
+                    await this.db.query(updateSentQ, [nextStatus, String(sendResult?.error || '').substring(0, 500), recordId]);
+                } catch (_) {}
+            }
+            return sendResult;
+        }
+    }
+
+    // ============================================================
     // PROCESSAMENTO UNIFICADO (todos os provedores convergem aqui)
     // ============================================================
     async _processIncomingMessage({ apiKey, channelMode, notifPhone, phone, pushName, text, waMessageId, provider, instanceName, instanceToken, extraOptions = {} }) {
         try {
-            // Fase 2B: Resolver tenantId (UUID) a partir da apiKey
-            let tenantId = null;
-            try {
-                if (this.deps.getApiKeyManager) {
-                    const keyManager = this.deps.getApiKeyManager();
-                    if (keyManager) {
-                        const validation = await keyManager.validateKey(apiKey);
-                        if (validation?.valid && validation.tenantId) {
-                            tenantId = validation.tenantId;
+            // Fase 2B/2C: Resolver tenantId (UUID canônico) a partir de extraOptions ou apiKey
+            let tenantId = extraOptions?.tenantUuid || null;
+            if (!tenantId) {
+                try {
+                    if (this.deps.getApiKeyManager) {
+                        const keyManager = this.deps.getApiKeyManager();
+                        if (keyManager) {
+                            const validation = await keyManager.validateKey(apiKey);
+                            if (validation?.valid && validation.tenantId) {
+                                tenantId = validation.tenantId;
+                            }
                         }
                     }
+                } catch (tenantErr) {
+                    console.warn('📅 [WA-SCHED][TENANT] Erro ao resolver tenantId:', tenantErr.message);
                 }
-            } catch (tenantErr) {
-                console.warn('📅 [WA-SCHED][TENANT] Erro ao resolver tenantId:', tenantErr.message);
             }
             // Guardar apiKey ativa para _syncAppointmentToMemory (cenário pós-rotação)
             this._currentApiKey = apiKey;
@@ -1481,10 +2183,11 @@ class WhatsAppChannel {
             // GARANTIA OMNICHANNEL (CENÁRIO B): Priorizar o conversationId do CRM (Widget) para unificar a memória da IA
             const conversationId = lead?.conversationId || this._makeConversationId(phone, apiKey);
 
-            // 2. Registrar mensagem de entrada
+            // 2. Registrar mensagem de entrada (Correção D: identidade canônica)
             await this._logMessage({
                 apiKey, waMessageId, waPhone: phone, direction: 'inbound',
-                content: text, leadId: lead?.id, conversationId, provider, tenantId
+                content: text, leadId: lead?.id, conversationId, provider, tenantId,
+                tenantUuid: extraOptions?.tenantUuid || tenantId
             });
 
             // 3. Atualizar histórico do lead
@@ -1518,29 +2221,56 @@ class WhatsAppChannel {
             try {
                 const schedResponse = await this._handleScheduleResponse(conversationId, text, apiKey, lead, tenantId);
                 if (schedResponse) {
-                    // Resposta de agendamento — enviar direto, sem chamar IA
-                    const sendResult = await this._sendResponse(apiKey, phone, schedResponse, provider, instanceName, instanceToken, extraOptions);
-                    if (sendResult?.success) {
-                        await this._logMessage({
-                            apiKey, waMessageId: '', waPhone: phone,
-                            direction: 'outbound', content: schedResponse, leadId: lead?.id,
-                            conversationId, provider, tenantId
-                        });
-                    }
-                    console.log(`📅 [WA-SCHED] Resposta de agendamento enviada | conv=${conversationId.substring(0, 20)}`);
+                    // Resposta de agendamento — enviar com máquina de estados durável
+                    const sendResult = await this._dispatchOutboundWithSafety({
+                        apiKey,
+                        phone,
+                        message: schedResponse,
+                        provider,
+                        instanceName,
+                        instanceToken,
+                        extraOptions,
+                        conversationId,
+                        lead,
+                        tenantId
+                    });
+                    console.log(`📅 [WA-SCHED] Resposta de agendamento processada | conv=${conversationId.substring(0, 20)} | success=${sendResult?.success}`);
                     return;
                 }
             } catch (_schedErr) {
                 console.warn('📅 [WA-SCHED] Erro na interceptação (continuando pipeline):', _schedErr.message);
             }
 
+            // Verificar posse antes de chamar o modelo de IA
+            if (typeof extraOptions?.isLeaseActive === 'function' && !extraOptions.isLeaseActive()) {
+                console.warn('⚠️ [WA-PROCESS] Posse do lease perdida antes da chamada ao Brain. Abortando execução.');
+                return;
+            }
+
             // ── ⚡ AUTOMÁTICO / 🎛️ MANUAL ──
             // V21 PARITY: Chamar o mesmo endpoint do Link Curto
             const aiResult = await this._callUnifiedBrain(apiKey, text, conversationId, lead?.id);
 
+            // Verificar posse após a chamada ao Brain
+            if (typeof extraOptions?.isLeaseActive === 'function' && !extraOptions.isLeaseActive()) {
+                console.warn('⚠️ [WA-PROCESS] Posse do lease perdida após chamada ao Brain. Abortando execução sem efeitos colaterais.');
+                return;
+            }
+
             if (!aiResult || !aiResult.response) {
                 console.warn('📱 [WA-CHANNEL] IA sem resposta, enviando fallback');
-                await this._sendResponse(apiKey, phone, 'Recebi sua mensagem! Em breve retornaremos.', provider, instanceName, instanceToken, extraOptions);
+                await this._dispatchOutboundWithSafety({
+                    apiKey,
+                    phone,
+                    message: 'Recebi sua mensagem! Em breve retornaremos.',
+                    provider,
+                    instanceName,
+                    instanceToken,
+                    extraOptions,
+                    conversationId,
+                    lead,
+                    tenantId
+                });
                 return;
             }
 
@@ -1632,24 +2362,26 @@ class WhatsAppChannel {
                 console.warn(`📱 [WA-V21] Erro na tradução de sinais (sem impacto):`, _v21TranslateErr.message);
             }
 
-            // Enviar resposta
-            const sendResult = await this._sendResponse(apiKey, phone, adapted, provider, instanceName, instanceToken, extraOptions);
+            // Enviar resposta através do pipeline outbound com máquina de estados durável
+            const sendResult = await this._dispatchOutboundWithSafety({
+                apiKey,
+                phone,
+                message: adapted,
+                provider,
+                instanceName,
+                instanceToken,
+                extraOptions,
+                conversationId,
+                lead,
+                tenantId
+            });
 
-            // Registrar mensagem de saída
-            if (sendResult?.success) {
-                await this._logMessage({
-                    apiKey, waMessageId: sendResult.messageId || '', waPhone: phone,
-                    direction: 'outbound', content: adapted, leadId: lead?.id,
-                    conversationId, provider, tenantId
-                });
-
-                // Atualizar histórico com resposta da IA
-                if (lead) {
-                    try {
-                        const ls = this.getLeadSystem(apiKey);
-                        ls.updateLeadConversation(lead.id, adapted, false);
-                    } catch (e) { /* não bloqueia */ }
-                }
+            // Atualizar histórico com resposta da IA se envio for bem-sucedido
+            if (sendResult?.success && lead) {
+                try {
+                    const ls = this.getLeadSystem(apiKey);
+                    ls.updateLeadConversation(lead.id, adapted, false);
+                } catch (e) { /* não bloqueia */ }
             }
 
             // ════════════════════════════════════════════════════════════════
@@ -1680,6 +2412,7 @@ class WhatsAppChannel {
 
         } catch (error) {
             console.error('📱 [WA-CHANNEL] Erro ao processar mensagem:', error.message);
+            throw error;
         }
     }
 
@@ -2195,29 +2928,58 @@ class WhatsAppChannel {
     // ============================================================
     // LOG DE MENSAGENS (whatsapp_messages)
     // ============================================================
-    async _logMessage({ apiKey, waMessageId, waPhone, direction, content, leadId, conversationId, provider, tenantId }) {
+    async _logMessage({ apiKey, waMessageId, waPhone, direction, content, leadId, conversationId, provider, tenantId, tenantUuid }) {
         try {
-            if (!this.USE_POSTGRES) return; // Só loga em PostgreSQL
+            if (!this.USE_POSTGRES && !this.db) return; // Só loga se houver banco disponível
 
-            const id = crypto.randomBytes(12).toString('hex');
-            const resolvedTenantUuid = (typeof tenantId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId.trim()))
-                ? tenantId.trim().toLowerCase()
+            const candidateUuid = tenantUuid || tenantId;
+            const resolvedTenantUuid = (typeof candidateUuid === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(candidateUuid.trim()))
+                ? candidateUuid.trim().toLowerCase()
                 : null;
 
-            const q = `INSERT INTO whatsapp_messages
-                (id, tenant_id, api_key, wa_message_id, wa_phone, direction, content, lead_id, conversation_id, provider, tenant_uuid)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                ON CONFLICT DO NOTHING`;
+            // Requisito D: Fail-closed para provider Meta sem tenant_uuid canônico
+            if (provider === 'meta' && !resolvedTenantUuid) {
+                console.error('📱 [WA-LOG] ❌ Rejeição fail-closed: Mensagem Meta sem tenant_uuid canônico.');
+                return;
+            }
+
+            const canonicalTenantId = resolvedTenantUuid || apiKey;
+
+            // Se for mensagem de entrada da Meta já persistida no claim, atualizar lead e conversa (sem alterar status prematuramente)
+            if (provider === 'meta' && direction === 'inbound' && waMessageId) {
+                const updateQ = this.USE_POSTGRES
+                    ? `UPDATE whatsapp_messages
+                       SET lead_id = COALESCE($1, lead_id),
+                           conversation_id = COALESCE($2, conversation_id)
+                       WHERE tenant_uuid = $3 AND provider = 'meta' AND wa_message_id = $4`
+                    : `UPDATE whatsapp_messages
+                       SET lead_id = COALESCE(?, lead_id),
+                           conversation_id = COALESCE(?, conversation_id)
+                       WHERE tenant_uuid = ? AND provider = 'meta' AND wa_message_id = ?`;
+                const updateRes = await this.db.query(updateQ, [leadId || null, conversationId || '', resolvedTenantUuid, waMessageId]);
+                const updated = (updateRes?.rowCount > 0 || updateRes?.changes > 0);
+                if (updated) return;
+            }
+
+            const id = crypto.randomBytes(12).toString('hex');
+            const q = this.USE_POSTGRES
+                ? `INSERT INTO whatsapp_messages
+                    (id, tenant_id, api_key, wa_message_id, wa_phone, direction, content, lead_id, conversation_id, provider, tenant_uuid, status)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'delivered')
+                    ON CONFLICT (tenant_uuid, provider, wa_message_id) WHERE wa_message_id IS NOT NULL DO NOTHING`
+                : `INSERT INTO whatsapp_messages
+                    (id, tenant_id, api_key, wa_message_id, wa_phone, direction, content, lead_id, conversation_id, provider, tenant_uuid, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'delivered')
+                    ON CONFLICT (tenant_uuid, provider, wa_message_id) WHERE wa_message_id IS NOT NULL DO NOTHING`;
 
             await this.db.query(q, [
-                id, apiKey, apiKey,
+                id, canonicalTenantId, apiKey,
                 waMessageId || '', waPhone, direction,
-                (content || '').substring(0, 10000),  // limitar tamanho
+                (content || '').substring(0, 10000),
                 leadId || null, conversationId || '', provider || '',
                 resolvedTenantUuid
             ]);
         } catch (error) {
-            // Log falho não bloqueia o fluxo
             console.warn('📱 [WA-CHANNEL] Erro ao salvar log de mensagem:', error.message);
         }
     }

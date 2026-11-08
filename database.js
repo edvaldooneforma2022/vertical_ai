@@ -367,6 +367,11 @@ async function initializeDatabase() {
             provider VARCHAR(20),
             status VARCHAR(20) DEFAULT 'delivered',
             metadata ${USE_POSTGRES ? "JSONB DEFAULT '{}'" : "TEXT DEFAULT '{}'"},
+            attempts INTEGER DEFAULT 0,
+            locked_until ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'},
+            last_attempt_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'},
+            error_message TEXT,
+            outbound_sent ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'},
             created_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
         )`,
 
@@ -376,6 +381,15 @@ async function initializeDatabase() {
         `CREATE INDEX IF NOT EXISTS idx_wa_msg_lead ON whatsapp_messages(lead_id)`,
         `CREATE INDEX IF NOT EXISTS idx_wa_msg_conv ON whatsapp_messages(conversation_id)`,
         `CREATE INDEX IF NOT EXISTS idx_wa_msg_created ON whatsapp_messages(created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_wa_id ON whatsapp_messages(wa_message_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_status_locked ON whatsapp_messages (status, locked_until)`,
+
+        // Migrations de colunas para whatsapp_messages em bancos existentes
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS locked_until ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS last_attempt_at ${USE_POSTGRES ? 'TIMESTAMP' : 'DATETIME'}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS error_message TEXT`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS outbound_sent ${USE_POSTGRES ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'}`,
 
         // Índice para busca de lead por wa_phone
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_wa_phone ON tenant_leads(wa_phone)`,
@@ -687,18 +701,92 @@ function isUuid(val) {
 }
 
 /**
+ * 🔍 Verificação prévia de duplicidades históricas em whatsapp_messages
+ * para garantir que o índice único parcial 'uq_wa_msg_tenant_provider_wamid'
+ * possa ser criado com segurança sem falhar nem violar dados existentes.
+ *
+ * @param {Object} [dbInstance=db] - Instância do banco
+ * @param {boolean} [usePostgres=USE_POSTGRES] - Flag PostgreSQL
+ * @returns {Promise<{ hasDuplicates: boolean, count: number, groupsCount: number, duplicates: Array, error?: string }>}
+ */
+async function checkHistoricalDuplicatesForUniqueIndex(dbInstance = db, usePostgres = USE_POSTGRES) {
+    try {
+        let tableExists = false;
+        if (usePostgres) {
+            const check = await dbInstance.query(
+                "SELECT to_regclass('public.whatsapp_messages') AS exists_table"
+            );
+            tableExists = !!(check && check.rows && check.rows[0] && check.rows[0].exists_table);
+        } else {
+            const check = await dbInstance.query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='whatsapp_messages'"
+            );
+            const rows = check?.rows || check;
+            tableExists = Array.isArray(rows) && rows.length > 0;
+        }
+
+        if (!tableExists) {
+            return { hasDuplicates: false, count: 0, groupsCount: 0, duplicates: [] };
+        }
+
+        if (!usePostgres) {
+            const pragma = await dbInstance.query("PRAGMA table_info(whatsapp_messages)");
+            const cols = (pragma?.rows || pragma || []).map(c => c.name);
+            if (!cols.includes('tenant_uuid') || !cols.includes('provider') || !cols.includes('wa_message_id')) {
+                return { hasDuplicates: false, count: 0, groupsCount: 0, duplicates: [] };
+            }
+        }
+
+        const query = `
+            SELECT tenant_uuid, provider, wa_message_id, COUNT(*) AS count
+            FROM whatsapp_messages
+            WHERE wa_message_id IS NOT NULL
+            GROUP BY tenant_uuid, provider, wa_message_id
+            HAVING COUNT(*) > 1
+        `;
+
+        const result = await dbInstance.query(query);
+        const rows = result?.rows || result || [];
+
+        if (Array.isArray(rows) && rows.length > 0) {
+            const duplicates = rows.map(r => ({
+                tenant_uuid: r.tenant_uuid,
+                provider: r.provider,
+                wa_message_id: r.wa_message_id,
+                count: parseInt(r.count, 10)
+            }));
+            const totalCount = duplicates.reduce((acc, d) => acc + d.count, 0);
+            return {
+                hasDuplicates: true,
+                count: totalCount,
+                groupsCount: duplicates.length,
+                duplicates
+            };
+        }
+
+        return { hasDuplicates: false, count: 0, groupsCount: 0, duplicates: [] };
+    } catch (err) {
+        if (err.message && (err.message.includes('does not exist') || err.message.includes('não existe') || err.message.includes('column'))) {
+            return { hasDuplicates: false, count: 0, groupsCount: 0, duplicates: [] };
+        }
+        return { hasDuplicates: false, count: 0, groupsCount: 0, duplicates: [], error: err.message };
+    }
+}
+
+/**
  * ═══════════════════════════════════════════════════════
  * FASE 2C.3 — MIGRATIONS DE PERSISTÊNCIA MULTI-TENANT CANÔNICA (R-02 / R-01 / R-05)
  * ═══════════════════════════════════════════════════════
  * Executa migrações estruturais e idempotentes para:
- * 1. whatsapp_messages.tenant_uuid UUID + FK para tenants(id) + índice
+ * 1. whatsapp_messages.tenant_uuid UUID + colunas de fila durável + FK para tenants(id) + índice
  * 2. tenant_leads.tenant_uuid índice idx_tenant_leads_tenant_uuid
  * 3. learning_conversations.tenant_uuid UUID + índice idx_learning_conv_tenant_uuid
- * 4. Backfill conservador para registros legados associados a chaves V1 ativas
+ * 4. Validação prévia de duplicidades históricas antes do índice único parcial
+ * 5. Backfill conservador para registros legados associados a chaves V1 ativas
  *
  * @param {Object} [dbInstance=db] - Instância de conexão do banco
  * @param {boolean} [usePostgres=USE_POSTGRES] - Flag indicando se é ambiente PostgreSQL
- * @returns {Promise<{ success: boolean, error: string|null, stats?: Object }>}
+ * @returns {Promise<{ success: boolean, error: string|null, stats?: Object, duplicateDetails?: Object }>}
  */
 async function runPhase2c3Migrations(dbInstance = db, usePostgres = USE_POSTGRES) {
     const stats = {
@@ -706,9 +794,36 @@ async function runPhase2c3Migrations(dbInstance = db, usePostgres = USE_POSTGRES
         messagesBackfilled: 0
     };
 
-    const phase2c3Migrations = [
-        // Migration 2C.3-1A: tenant_uuid em whatsapp_messages
+    // Pré-validação 1: verificar duplicidades antes de qualquer alteração estrutural
+    const preCheck = await checkHistoricalDuplicatesForUniqueIndex(dbInstance, usePostgres);
+    if (preCheck.hasDuplicates) {
+        const errorMsg = `[MIGRATION-ABORTED] Duplicidades históricas detectadas em whatsapp_messages para (tenant_uuid, provider, wa_message_id). ` +
+            `Encontrados ${preCheck.groupsCount} grupos com duplicidade (total de ${preCheck.count} registros duplicados). ` +
+            `O índice único 'uq_wa_msg_tenant_provider_wamid' NÃO foi criado para preservar integralmente os dados existentes sem exclusão ou consolidação arbitrária. ` +
+            `Chaves duplicadas: ${JSON.stringify(preCheck.duplicates)}`;
+        console.error('❌ ' + errorMsg);
+        return {
+            success: false,
+            error: errorMsg,
+            stats,
+            duplicateDetails: preCheck
+        };
+    }
+
+    const phase2c3BaseMigrations = [
+        // Migration 2C.3-1A: tenant_uuid e colunas de fila/resiliência em whatsapp_messages
         `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS tenant_uuid ${usePostgres ? 'UUID' : 'TEXT'}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS locked_until ${usePostgres ? 'TIMESTAMP' : 'DATETIME'}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS last_attempt_at ${usePostgres ? 'TIMESTAMP' : 'DATETIME'}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS error_message TEXT`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS outbound_sent ${usePostgres ? 'BOOLEAN DEFAULT false' : 'INTEGER DEFAULT 0'}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS outbound_status ${usePostgres ? "VARCHAR(30) DEFAULT 'pending'" : "TEXT DEFAULT 'pending'"}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS outbound_wamid ${usePostgres ? 'VARCHAR(100)' : 'TEXT'}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS outbound_sent_at ${usePostgres ? 'TIMESTAMP' : 'DATETIME'}`,
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS lease_token ${usePostgres ? 'VARCHAR(100)' : 'TEXT'}`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_status_locked ON whatsapp_messages (status, locked_until)`,
+
         // Meta Cloud API colunas em whatsapp_settings
         `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_phone_number_id VARCHAR(50)`,
         `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_waba_id VARCHAR(50)`,
@@ -771,6 +886,11 @@ async function runPhase2c3Migrations(dbInstance = db, usePostgres = USE_POSTGRES
         // Migration 2C.3-1C: Índice para whatsapp_messages(tenant_uuid)
         `CREATE INDEX IF NOT EXISTS idx_wa_msg_tenant_uuid ON whatsapp_messages (tenant_uuid)`,
 
+        // Migration 2C.3-1D: Índice para whatsapp_messages(wa_message_id) para deduplicação persistente
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_wa_id ON whatsapp_messages (wa_message_id)`
+    ];
+
+    const phase2c3RemainingMigrations = [
         // Migration 2C.3-2: Índice para tenant_leads(tenant_uuid)
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_tenant_uuid ON tenant_leads (tenant_uuid)`,
 
@@ -799,17 +919,23 @@ async function runPhase2c3Migrations(dbInstance = db, usePostgres = USE_POSTGRES
            AND ak.tenant_id IS NOT NULL`] : [])
     ];
 
-    let phase2c3Success = true;
-    let phase2c3Error = null;
+    // Se PostgreSQL possuir suporte a transações no adaptador, usar client dedicado com BEGIN / COMMIT / ROLLBACK
+    const client = (usePostgres && typeof dbInstance.connect === 'function') ? await dbInstance.connect() : null;
+    const runner = client || dbInstance;
 
-    for (const migration of phase2c3Migrations) {
-        try {
+    try {
+        if (client) {
+            await client.query('BEGIN');
+        }
+
+        // 1. Executar migrações base (colunas e índices estruturais)
+        for (const migration of phase2c3BaseMigrations) {
             if (!usePostgres) {
                 const alterMatch = migration.match(/ALTER TABLE (\w+) ADD COLUMN (?:IF NOT EXISTS )?(\w+)/i);
                 if (alterMatch) {
                     const [, tableName, colName] = alterMatch;
                     try {
-                        const cols = await dbInstance.query(`PRAGMA table_info(${tableName})`);
+                        const cols = await runner.query(`PRAGMA table_info(${tableName})`);
                         const colList = cols.rows || cols;
                         const exists = colList.some(c => c.name === colName);
                         if (exists) continue;
@@ -817,33 +943,87 @@ async function runPhase2c3Migrations(dbInstance = db, usePostgres = USE_POSTGRES
                         continue;
                     }
                     const sqliteQuery = migration.replace(/ADD COLUMN IF NOT EXISTS/i, 'ADD COLUMN').replace(/REFERENCES \w+\(\w+\)/i, '');
-                    await dbInstance.query(sqliteQuery);
+                    await runner.query(sqliteQuery);
                     continue;
                 }
             }
-            const res = await dbInstance.query(migration);
+            await runner.query(migration);
+        }
+
+        // 2. Validação prévia de duplicidades históricas antes de criar o índice único
+        const dupCheck = await checkHistoricalDuplicatesForUniqueIndex(runner, usePostgres);
+        if (dupCheck.hasDuplicates) {
+            if (client) {
+                await client.query('ROLLBACK');
+            }
+            const errorMsg = `[MIGRATION-ABORTED] Duplicidades históricas detectadas em whatsapp_messages para (tenant_uuid, provider, wa_message_id). ` +
+                `Encontrados ${dupCheck.groupsCount} grupos com duplicidade (total de ${dupCheck.count} registros duplicados). ` +
+                `O índice único 'uq_wa_msg_tenant_provider_wamid' NÃO foi criado para preservar integralmente os dados existentes sem exclusão ou consolidação arbitrária. ` +
+                `Chaves duplicadas: ${JSON.stringify(dupCheck.duplicates)}`;
+            console.error('❌ ' + errorMsg);
+            return {
+                success: false,
+                error: errorMsg,
+                stats,
+                duplicateDetails: dupCheck
+            };
+        }
+
+        // 3. Criar índice único parcial de idempotência
+        await runner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_wa_msg_tenant_provider_wamid ON whatsapp_messages (tenant_uuid, provider, wa_message_id) WHERE wa_message_id IS NOT NULL`);
+
+        // 4. Executar migrações restantes (leads, learning_conversations, backfills)
+        for (const migration of phase2c3RemainingMigrations) {
+            if (!usePostgres) {
+                const alterMatch = migration.match(/ALTER TABLE (\w+) ADD COLUMN (?:IF NOT EXISTS )?(\w+)/i);
+                if (alterMatch) {
+                    const [, tableName, colName] = alterMatch;
+                    try {
+                        const cols = await runner.query(`PRAGMA table_info(${tableName})`);
+                        const colList = cols.rows || cols;
+                        const exists = colList.some(c => c.name === colName);
+                        if (exists) continue;
+                    } catch (pragmaErr) {
+                        continue;
+                    }
+                    const sqliteQuery = migration.replace(/ADD COLUMN IF NOT EXISTS/i, 'ADD COLUMN').replace(/REFERENCES \w+\(\w+\)/i, '');
+                    await runner.query(sqliteQuery);
+                    continue;
+                }
+            }
+            const res = await runner.query(migration);
             if (migration.startsWith('UPDATE tenant_leads') && res && typeof res.rowCount === 'number') {
                 stats.leadsBackfilled = res.rowCount;
             } else if (migration.startsWith('UPDATE whatsapp_messages') && res && typeof res.rowCount === 'number') {
                 stats.messagesBackfilled = res.rowCount;
             }
-        } catch (err) {
-            phase2c3Success = false;
-            phase2c3Error = err.message;
-            console.error('❌ [FASE 2C.3] Falha na migration de persistência canônica:', err.message);
-            break;
+        }
+
+        if (client) {
+            await client.query('COMMIT');
+        }
+
+        console.log('✅ [FASE 2C.3] Estruturas de persistência canônica multi-tenant validadas com sucesso.');
+        return {
+            success: true,
+            error: null,
+            stats
+        };
+    } catch (err) {
+        if (client) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+        }
+        console.error('❌ [FASE 2C.3] Falha na migration estrutural:', err.message);
+        return {
+            success: false,
+            error: err.message,
+            stats
+        };
+    } finally {
+        if (client && typeof client.release === 'function') {
+            client.release();
         }
     }
-
-    if (phase2c3Success) {
-        console.log('✅ [FASE 2C.3] Estruturas de persistência canônica multi-tenant validadas com sucesso.');
-    }
-
-    return {
-        success: phase2c3Success,
-        error: phase2c3Error,
-        stats
-    };
 }
 
 /**
@@ -3021,7 +3201,8 @@ const DatabaseHelpers = {
     getSchedulingInfrastructureError,
     setSchedulingInfrastructureReady,
     runPhase2bMigrations,
-    runPhase2c3Migrations
+    runPhase2c3Migrations,
+    checkHistoricalDuplicatesForUniqueIndex
 };
 
 module.exports = {
@@ -3029,6 +3210,7 @@ module.exports = {
     initializeDatabase,
     runPhase2bMigrations,
     runPhase2c3Migrations,
+    checkHistoricalDuplicatesForUniqueIndex,
     DatabaseHelpers,
     USE_POSTGRES,
     isSchedulingInfrastructureReady,
