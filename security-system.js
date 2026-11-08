@@ -7,20 +7,24 @@ const { performance } = require('perf_hooks');
 class SecuritySystem {
     constructor() {
         console.log("🛡️  SISTEMA DE SEGURANÇA AVANÇADO - Inicializando");
+
         this.threatDetection = new ThreatDetectionSystem();
         this.rateLimiter = new RateLimitSystem();
         this.inputValidator = new InputValidationSystem();
         this.firewall = new ApplicationFirewall();
         this.auditLogger = new SecurityAuditLogger();
+
         this.blockedIPs = new Set();
         this.suspiciousActivities = new Map();
         this.loginAttempts = new Map();
+
         this.startMonitoring();
     }
 
     // ===== MÉTODO PARA CONFIGURAR HELMET NO EXPRESS =====
     setupSecurityHeaders(app) {
         const helmet = require('helmet');
+
         app.use(helmet({
             contentSecurityPolicy: {
                 directives: {
@@ -44,6 +48,7 @@ class SecuritySystem {
             crossOriginOpenerPolicy: { policy: "same-origin" },
             crossOriginResourcePolicy: { policy: "same-origin" }
         }));
+
         console.log("✅ Headers de segurança configurados com Helmet");
     }
 
@@ -52,30 +57,42 @@ class SecuritySystem {
         return (req, res, next) => {
             const clientIP = this.getClientIP(req);
             const userAgent = req.get('User-Agent') || '';
+
             // 🔒 Verificar se IP está bloqueado
             if (this.blockedIPs.has(clientIP)) {
                 this.auditLogger.logBlockedAccess(req);
-                return res.status(403).json({                    success: false,                    error: "Acesso bloqueado por segurança"                });
+                return res.status(403).json({
+                    success: false,
+                    error: "Acesso bloqueado por segurança"
+                });
             }
 
             // 🚨 Detectar atividades suspeitas
             if (this.threatDetection.isSuspiciousRequest(req)) {
                 this.blockedIPs.add(clientIP);
                 this.auditLogger.logThreatDetected(req, 'Suspicious request pattern');
-                return res.status(403).json({                    success: false,                    error: "Atividade suspeita detectada"                });
+                return res.status(403).json({
+                    success: false,
+                    error: "Atividade suspeita detectada"
+                });
             }
 
             // ⚡ Rate Limiting por IP
             if (!this.rateLimiter.checkLimit(clientIP)) {
                 this.auditLogger.logRateLimitExceeded(req);
-                return res.status(429).json({                    success: false,                    error: "Muitas requisições. Tente novamente mais tarde."                });
+                return res.status(429).json({
+                    success: false,
+                    error: "Muitas requisições. Tente novamente mais tarde."
+                });
             }
 
             // 🛡️ Validar entrada de dados
             const validationResult = this.inputValidator.validateRequest(req);
             if (!validationResult.valid) {
                 this.auditLogger.logInvalidInput(req, validationResult.errors);
-                return res.status(400).json({                    success: false,                    error: "Dados de entrada inválidos",
+                return res.status(400).json({
+                    success: false,
+                    error: "Dados de entrada inválidos",
                     details: validationResult.errors
                 });
             }
@@ -88,7 +105,9 @@ class SecuritySystem {
     }
 
     getClientIP(req) {
-        return req.ip ||               req.connection.remoteAddress ||               req.socket.remoteAddress ||
+        return req.ip ||
+               req.connection.remoteAddress ||
+               req.socket.remoteAddress ||
                (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
                '0.0.0.0';
     }
@@ -191,11 +210,13 @@ class RateLimitSystem {
     checkLimit(ip, endpoint = 'default') {
         const now = Date.now();
         const limitConfig = this.limits[endpoint] || this.limits.default;
+
         if (!this.requests.has(ip)) {
             this.requests.set(ip, {});
         }
 
         const ipData = this.requests.get(ip);
+
         if (!ipData[endpoint]) {
             ipData[endpoint] = { count: 0, firstRequest: now };
         }
@@ -393,7 +414,8 @@ class ApplicationFirewall {
 
     checkPath(path) {
         const normalizedPath = path.toLowerCase();
-        return this.blockedPaths.some(blockedPath =>            normalizedPath.includes(blockedPath.toLowerCase())
+        return this.blockedPaths.some(blockedPath =>
+            normalizedPath.includes(blockedPath.toLowerCase())
         );
     }
 
@@ -401,7 +423,10 @@ class ApplicationFirewall {
         return (req, res, next) => {
             if (this.checkPath(req.path)) {
                 console.log(`🚨 FIREWALL: Tentativa de acesso a caminho bloqueado: ${req.path}`);
-                return res.status(403).json({                    success: false,                    error: "Acesso não autorizado"                });
+                return res.status(403).json({
+                    success: false,
+                    error: "Acesso não autorizado"
+                });
             }
             next();
         };
@@ -500,7 +525,9 @@ class SecurityAuditLogger {
     }
 
     getClientIP(req) {
-        return req.ip ||               req.connection.remoteAddress ||               req.socket.remoteAddress ||
+        return req.ip ||
+               req.connection.remoteAddress ||
+               req.socket.remoteAddress ||
                (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
                '0.0.0.0';
     }
