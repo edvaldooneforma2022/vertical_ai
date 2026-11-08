@@ -7654,6 +7654,363 @@
     })();
     </script>
 
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- WA-SAAS-META: Frontend Real Meta WhatsApp Cloud API (v21.0) -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <script>
+    function getEffectiveApiKey() {
+        return document.getElementById('apiKeyInput')?.value?.trim() ||
+               localStorage.getItem('linkmagico_api_key') ||
+               localStorage.getItem('lm_api_key') || '';
+    }
+
+    function getAuthHeaders() {
+        const key = getEffectiveApiKey();
+        return {
+            'Content-Type': 'application/json',
+            ...(key ? { 'X-API-Key': key } : {})
+        };
+    }
+
+    async function loadMetaWhatsAppSettings() {
+        const dot = document.getElementById('metaStatusIndicatorDot');
+        const title = document.getElementById('metaStatusTitle');
+        const details = document.getElementById('metaDetailsConnected');
+        const btnTest = document.getElementById('btnMetaTest');
+        const btnDisconnect = document.getElementById('btnMetaDisconnect');
+
+        try {
+            const res = await fetch('/api/whatsapp/settings', {
+                headers: getAuthHeaders()
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            const defaultWebhookUrl = window.location.origin + '/api/webhook/meta';
+            const webhookUrlInput = document.getElementById('metaWebhookUrlDisplay');
+            const verifyTokenInput = document.getElementById('metaVerifyTokenDisplay');
+
+            if (webhookUrlInput) webhookUrlInput.value = data.meta?.webhookUrl || defaultWebhookUrl;
+            if (verifyTokenInput) verifyTokenInput.value = data.meta?.verifyToken || data.settings?.meta_verify_token || 'lm_verify_meta_' + (getEffectiveApiKey().substring(0, 8) || 'default');
+
+            const isMetaConfigured = data.configured && (data.provider === 'meta' || data.meta?.phoneNumberId || data.settings?.meta_phone_number_id);
+
+            if (isMetaConfigured) {
+                if (dot) dot.style.background = '#25d366';
+                if (title) title.innerHTML = '<span style="color:#25d366;">🟢 Conectado Oficialmente</span> (Meta Cloud API v21.0)';
+                if (details) details.style.display = 'grid';
+
+                const phoneId = data.meta?.phoneNumberId || data.settings?.meta_phone_number_id || '—';
+                const wabaId = data.meta?.wabaId || data.settings?.meta_waba_id || '—';
+                const phone = data.meta?.phoneNumber || data.settings?.notification_phone || phoneId;
+
+                const connectedPhoneEl = document.getElementById('metaConnectedPhone');
+                const connectedPhoneIdEl = document.getElementById('metaConnectedPhoneId');
+                const connectedWabaIdEl = document.getElementById('metaConnectedWabaId');
+
+                if (connectedPhoneEl) connectedPhoneEl.textContent = phone;
+                if (connectedPhoneIdEl) connectedPhoneIdEl.textContent = phoneId;
+                if (connectedWabaIdEl) connectedWabaIdEl.textContent = wabaId;
+
+                if (btnTest) btnTest.disabled = false;
+                if (btnDisconnect) btnDisconnect.disabled = false;
+
+                const inputPhoneId = document.getElementById('meta-phone-id');
+                const inputWabaId = document.getElementById('meta-waba-id');
+                const inputVerifyToken = document.getElementById('meta-verify-token');
+                const inputNotif = document.getElementById('meta-notification-phone');
+
+                if (inputPhoneId && phoneId !== '—') inputPhoneId.value = phoneId;
+                if (inputWabaId && wabaId !== '—') inputWabaId.value = wabaId;
+                if (inputVerifyToken && data.meta?.verifyToken) inputVerifyToken.value = data.meta.verifyToken;
+                if (inputNotif && data.settings?.notification_phone) inputNotif.value = data.settings.notification_phone;
+            } else {
+                if (dot) dot.style.background = '#64748b';
+                if (title) title.innerHTML = '<span style="color:#94a3b8;">⚪ Não Conectado</span> (Insira suas credenciais abaixo)';
+                if (details) details.style.display = 'none';
+                if (btnTest) btnTest.disabled = true;
+                if (btnDisconnect) btnDisconnect.disabled = true;
+            }
+
+            const channelMode = data.channelMode || data.settings?.channel_mode || 'auto';
+            updateModeBadgeAndButtons(channelMode);
+            loadWhatsAppLiveMessages();
+
+        } catch (err) {
+            console.warn('[WA-META] Erro ao carregar configurações:', err.message);
+            if (title) title.textContent = 'Erro ao verificar conexão';
+        }
+    }
+
+    function updateModeBadgeAndButtons(mode) {
+        const badge = document.getElementById('metaCurrentModeBadge');
+        const btnAuto = document.getElementById('btnModeAuto');
+        const btnManual = document.getElementById('btnModeManual');
+        const btnOff = document.getElementById('btnModeOff');
+
+        if (badge) {
+            if (mode === 'auto') {
+                badge.textContent = '⚡ Automático';
+                badge.style.color = '#3b82f6';
+                badge.style.borderColor = '#3b82f6';
+            } else if (mode === 'manual') {
+                badge.textContent = '🎛️ Manual (Atendente)';
+                badge.style.color = '#f59e0b';
+                badge.style.borderColor = '#f59e0b';
+            } else {
+                badge.textContent = '⚫ Desligado';
+                badge.style.color = '#ef4444';
+                badge.style.borderColor = '#ef4444';
+            }
+        }
+
+        if (btnAuto) btnAuto.style.border = (mode === 'auto') ? '2px solid #3b82f6' : '1px solid #334155';
+        if (btnManual) btnManual.style.border = (mode === 'manual') ? '2px solid #f59e0b' : '1px solid #334155';
+        if (btnOff) btnOff.style.border = (mode === 'off') ? '2px solid #ef4444' : '1px solid #334155';
+    }
+
+    async function setWhatsAppMode(mode) {
+        try {
+            const res = await fetch('/api/whatsapp/mode', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ mode })
+            });
+            const data = await res.json();
+            if (data.success) {
+                updateModeBadgeAndButtons(mode);
+                alert(`✅ Modo alterado com sucesso para: ${mode === 'auto' ? '⚡ Automático' : mode === 'manual' ? '🎛️ Manual' : '⚫ Desligado'}`);
+            } else {
+                alert('Erro ao alterar modo: ' + (data.error || 'Falha na resposta'));
+            }
+        } catch (err) {
+            alert('Erro ao comunicar com o servidor: ' + err.message);
+        }
+    }
+
+    async function saveMetaWhatsAppSettings() {
+        const phoneId = document.getElementById('meta-phone-id')?.value?.trim();
+        const wabaId = document.getElementById('meta-waba-id')?.value?.trim();
+        const accessToken = document.getElementById('meta-access-token')?.value?.trim();
+        const verifyToken = document.getElementById('meta-verify-token')?.value?.trim();
+        const appSecret = document.getElementById('meta-app-secret')?.value?.trim();
+        const notifPhone = document.getElementById('meta-notification-phone')?.value?.trim();
+        const btn = document.getElementById('btnSaveMeta');
+
+        if (!phoneId) {
+            alert('Por favor, informe o Phone Number ID da Meta.');
+            return;
+        }
+        if (!accessToken) {
+            alert('Por favor, informe o Meta Access Token (permanente / System User).');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando e Validando...';
+        }
+
+        try {
+            const payload = {
+                provider: 'meta',
+                metaPhoneNumberId: phoneId,
+                metaWabaId: wabaId,
+                metaAccessToken: accessToken,
+                metaVerifyToken: verifyToken,
+                metaAppSecret: appSecret,
+                notificationPhone: notifPhone
+            };
+
+            const res = await fetch('/api/whatsapp/settings', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert('✅ Configurações da Meta Cloud API salvas com sucesso! As credenciais foram criptografadas com AES-256 no banco de dados.');
+                const tokenInput = document.getElementById('meta-access-token');
+                if (tokenInput) tokenInput.value = '';
+                const secretInput = document.getElementById('meta-app-secret');
+                if (secretInput) secretInput.value = '';
+                loadMetaWhatsAppSettings();
+            } else {
+                alert('❌ Erro ao salvar configurações: ' + (data.error || 'Verifique os dados informados'));
+            }
+        } catch (err) {
+            alert('❌ Falha na comunicação com o servidor: ' + err.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Salvar e Conectar Meta Cloud API';
+            }
+        }
+    }
+
+    async function testMetaWhatsAppConnection() {
+        const phone = prompt('Digite o número de WhatsApp para teste (com DDD e código do país, ex: 5511999998888):');
+        if (!phone) return;
+
+        const btn = document.getElementById('btnMetaTest');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando mensagem de teste...';
+        }
+
+        try {
+            const res = await fetch('/api/whatsapp/settings/test', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ phoneNumber: phone })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('✅ ' + (data.message || 'Mensagem de teste enviada com sucesso pela Graph API v21.0!'));
+                loadWhatsAppLiveMessages();
+            } else {
+                alert('❌ Erro no teste: ' + (data.error || data.message || 'Falha ao despachar mensagem'));
+            }
+        } catch (err) {
+            alert('❌ Erro ao executar teste: ' + err.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Mensagem de Teste Oficial';
+            }
+        }
+    }
+
+    async function disconnectMetaWhatsApp() {
+        if (!confirm('Tem certeza de que deseja desconectar o canal WhatsApp oficial da Meta? O canal será pausado.')) return;
+
+        try {
+            const res = await fetch('/api/whatsapp/settings', {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('✅ WhatsApp desconectado com sucesso.');
+                loadMetaWhatsAppSettings();
+            } else {
+                alert('Erro ao desconectar: ' + (data.error || 'Falha na resposta'));
+            }
+        } catch (err) {
+            alert('Erro ao desconectar: ' + err.message);
+        }
+    }
+
+    function escapeMetaHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    async function loadWhatsAppLiveMessages() {
+        const tbody = document.getElementById('metaLiveMessagesTbody');
+        if (!tbody) return;
+
+        try {
+            const res = await fetch('/api/whatsapp/messages?limit=25', {
+                headers: getAuthHeaders()
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const messages = data.messages || [];
+
+            if (messages.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="padding:1.5rem; text-align:center; color:#64748b;">
+                            Nenhuma mensagem registrada até o momento. As conversas recebidas via Webhook aparecerão aqui em tempo real.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = messages.map(msg => {
+                const dateStr = msg.created_at ? new Date(msg.created_at).toLocaleString('pt-BR') : '—';
+                const isInbound = msg.direction === 'inbound';
+                const flowBadge = isInbound
+                    ? '<span style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:2px 8px; border-radius:12px; font-size:0.72rem; font-weight:600;">📥 Recebida (Lead)</span>'
+                    : '<span style="background:rgba(37,211,102,0.15); color:#25d366; padding:2px 8px; border-radius:12px; font-size:0.72rem; font-weight:600;">📤 Enviada (IA)</span>';
+
+                const phone = escapeMetaHtml(msg.wa_phone || '—');
+                const content = escapeMetaHtml(msg.content || '');
+                const leadLink = msg.lead_id
+                    ? `<a href="/crm.html" target="_blank" style="color:#38bdf8; text-decoration:none;">Lead #${escapeMetaHtml(String(msg.lead_id).substring(0, 8))}</a>`
+                    : '<span style="color:#64748b;">—</span>';
+                const providerName = escapeMetaHtml(msg.provider === 'meta' ? 'Meta Cloud v21' : (msg.provider || 'WhatsApp'));
+
+                return `
+                    <tr style="border-bottom:1px solid #1e293b;">
+                        <td style="padding:0.6rem; color:#94a3b8; font-family:monospace; font-size:0.75rem;">${dateStr}</td>
+                        <td style="padding:0.6rem; color:#f1f5f9; font-weight:600;">${phone}</td>
+                        <td style="padding:0.6rem;">${flowBadge}</td>
+                        <td style="padding:0.6rem; color:#cbd5e1; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${content}">${content}</td>
+                        <td style="padding:0.6rem;">${leadLink}</td>
+                        <td style="padding:0.6rem; color:#64748b; font-size:0.75rem;">${providerName}</td>
+                    </tr>`;
+            }).join('');
+        } catch (err) {
+            console.warn('[WA-MESSAGES] Erro ao carregar mensagens ao vivo:', err.message);
+        }
+    }
+
+    function copyWebhookUrl() {
+        const input = document.getElementById('metaWebhookUrlDisplay');
+        if (input && input.value) {
+            navigator.clipboard.writeText(input.value).then(() => {
+                alert('📋 URL de Callback copiada:\n' + input.value);
+            }).catch(() => {
+                input.select();
+                document.execCommand('copy');
+                alert('📋 URL copiada!');
+            });
+        }
+    }
+
+    function copyVerifyToken() {
+        const input = document.getElementById('metaVerifyTokenDisplay');
+        if (input && input.value) {
+            navigator.clipboard.writeText(input.value).then(() => {
+                alert('📋 Verify Token copiado:\n' + input.value);
+            }).catch(() => {
+                input.select();
+                document.execCommand('copy');
+                alert('📋 Token copiado!');
+            });
+        }
+    }
+
+    function toggleWaAdvanced() {
+        const content = document.getElementById('waAdvancedContent');
+        const chevron = document.getElementById('waAdvancedChevron');
+        if (!content) return;
+        const isHidden = content.style.display === 'none';
+        content.style.display = isHidden ? 'block' : 'none';
+        if (chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[data-tab="whatsapp"], .tab-link, .nav-item').forEach(el => {
+            el.addEventListener('click', () => {
+                setTimeout(loadMetaWhatsAppSettings, 100);
+            });
+        });
+        if (document.getElementById('tab-whatsapp')?.style?.display !== 'none') {
+            loadMetaWhatsAppSettings();
+        }
+    });
+    </script>
+
 </body>
 
 </html>

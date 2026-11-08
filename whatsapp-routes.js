@@ -203,6 +203,37 @@ module.exports = function (app, logger) {
                 return res.status(401).json({ success: false, error: 'API Key não fornecida' });
             }
 
+            // 1. Resolver tenant UUID canônico a partir da sessão, api_keys ou whatsapp_settings (Correção E)
+            let tenantUuid = req.session?.tenantId || req.session?.tenantUuid || req.tenantId || req.tenantUuid || null;
+
+            if (!tenantUuid && db) {
+                try {
+                    const akQuery = USE_POSTGRES
+                        ? `SELECT tenant_id FROM api_keys WHERE key_value = $1 AND (active = true OR active IS NULL) LIMIT 1`
+                        : `SELECT tenant_id FROM api_keys WHERE key_value = ? AND (active = 1 OR active IS NULL) LIMIT 1`;
+                    const akRes = await db.query(akQuery, [apiKey]);
+                    const akRow = (akRes?.rows || akRes)?.[0];
+                    if (akRow && akRow.tenant_id) {
+                        tenantUuid = akRow.tenant_id;
+                    } else {
+                        const wsQuery = USE_POSTGRES
+                            ? `SELECT tenant_uuid FROM whatsapp_settings WHERE api_key = $1 LIMIT 1`
+                            : `SELECT tenant_uuid FROM whatsapp_settings WHERE api_key = ? LIMIT 1`;
+                        const wsRes = await db.query(wsQuery, [apiKey]);
+                        const wsRow = (wsRes?.rows || wsRes)?.[0];
+                        if (wsRow && wsRow.tenant_uuid) {
+                            tenantUuid = wsRow.tenant_uuid;
+                        }
+                    }
+                } catch (resErr) {
+                    logger.warn('Erro ao resolver tenantUuid para CRM messages:', resErr.message);
+                }
+            }
+
+            if (!tenantUuid && typeof apiKey === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apiKey.trim())) {
+                tenantUuid = apiKey.trim().toLowerCase();
+            }
+
             const phone = req.query.phone;
             const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
 
@@ -216,18 +247,20 @@ module.exports = function (app, logger) {
                                     l.nome as lead_name, l.status as lead_status
                              FROM whatsapp_messages m
                              LEFT JOIN tenant_leads l ON m.lead_id = l.id
-                             WHERE (m.api_key = $1 OR m.tenant_uuid::text = $1)
-                               AND m.wa_phone LIKE $2
-                             ORDER BY m.created_at DESC LIMIT $3`;
-                    params = [apiKey, `%${phoneClean}%`, limit];
+                               AND ((l.tenant_uuid IS NOT NULL AND l.tenant_uuid = $1) OR (l.tenant_uuid IS NULL AND l.api_key = $2))
+                             WHERE ((m.tenant_uuid IS NOT NULL AND m.tenant_uuid = $1) OR (m.tenant_uuid IS NULL AND m.api_key = $2))
+                               AND m.wa_phone LIKE $3
+                             ORDER BY m.created_at DESC LIMIT $4`;
+                    params = [tenantUuid, apiKey, `%${phoneClean}%`, limit];
                 } else {
                     query = `SELECT m.id, m.wa_message_id, m.wa_phone, m.direction, m.content, m.lead_id, m.conversation_id, m.provider, m.created_at,
                                     l.nome as lead_name, l.status as lead_status
                              FROM whatsapp_messages m
                              LEFT JOIN tenant_leads l ON m.lead_id = l.id
-                             WHERE (m.api_key = $1 OR m.tenant_uuid::text = $1)
-                             ORDER BY m.created_at DESC LIMIT $2`;
-                    params = [apiKey, limit];
+                               AND ((l.tenant_uuid IS NOT NULL AND l.tenant_uuid = $1) OR (l.tenant_uuid IS NULL AND l.api_key = $2))
+                             WHERE ((m.tenant_uuid IS NOT NULL AND m.tenant_uuid = $1) OR (m.tenant_uuid IS NULL AND m.api_key = $2))
+                             ORDER BY m.created_at DESC LIMIT $3`;
+                    params = [tenantUuid, apiKey, limit];
                 }
             } else {
                 if (phone) {
@@ -236,18 +269,20 @@ module.exports = function (app, logger) {
                                     l.nome as lead_name, l.status as lead_status
                              FROM whatsapp_messages m
                              LEFT JOIN tenant_leads l ON m.lead_id = l.id
-                             WHERE (m.api_key = ? OR m.tenant_uuid = ?)
+                               AND ((l.tenant_uuid IS NOT NULL AND l.tenant_uuid = ?) OR (l.tenant_uuid IS NULL AND l.api_key = ?))
+                             WHERE ((m.tenant_uuid IS NOT NULL AND m.tenant_uuid = ?) OR (m.tenant_uuid IS NULL AND m.api_key = ?))
                                AND m.wa_phone LIKE ?
                              ORDER BY m.created_at DESC LIMIT ?`;
-                    params = [apiKey, apiKey, `%${phoneClean}%`, limit];
+                    params = [tenantUuid, apiKey, tenantUuid, apiKey, `%${phoneClean}%`, limit];
                 } else {
                     query = `SELECT m.id, m.wa_message_id, m.wa_phone, m.direction, m.content, m.lead_id, m.conversation_id, m.provider, m.created_at,
                                     l.nome as lead_name, l.status as lead_status
                              FROM whatsapp_messages m
                              LEFT JOIN tenant_leads l ON m.lead_id = l.id
-                             WHERE (m.api_key = ? OR m.tenant_uuid = ?)
+                               AND ((l.tenant_uuid IS NOT NULL AND l.tenant_uuid = ?) OR (l.tenant_uuid IS NULL AND l.api_key = ?))
+                             WHERE ((m.tenant_uuid IS NOT NULL AND m.tenant_uuid = ?) OR (m.tenant_uuid IS NULL AND m.api_key = ?))
                              ORDER BY m.created_at DESC LIMIT ?`;
-                    params = [apiKey, apiKey, limit];
+                    params = [tenantUuid, apiKey, tenantUuid, apiKey, limit];
                 }
             }
 
