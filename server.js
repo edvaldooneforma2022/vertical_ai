@@ -1792,8 +1792,9 @@ function getTenantAppointmentsFilePath(apiKey) {
 }
 
 class LeadCaptureSystem {
-    constructor(apiKey) {
+    constructor(apiKey, tenantUuid = null) {
         this.apiKey = apiKey;
+        this.tenantUuid = tenantUuid || null;
         this.leadsFilePath = getTenantLeadsFilePath(this.apiKey);
         this.ensureDataDirectory();
         this.leads = this.loadLeadsSync(); // Carrega JSON primeiro (síncrono)
@@ -1818,7 +1819,9 @@ class LeadCaptureSystem {
     async initializePostgres() {
         try {
             // Buscar leads do PostgreSQL
-            const dbLeads = await DatabaseHelpers.getLeads(this.apiKey);
+            const dbLeads = this.tenantUuid
+                ? await DatabaseHelpers.getLeadsByTenant(this.tenantUuid)
+                : await DatabaseHelpers.getLeads(this.apiKey);
 
             // Se PostgreSQL vazio e JSON tem dados, migrar
             if (dbLeads.length === 0 && this.leads.length > 0) {
@@ -1901,8 +1904,9 @@ class LeadCaptureSystem {
     }
 
     // Salvar leads em PostgreSQL (primário) e JSON (backup)
-    async saveLeads() {
+    async saveLeads(tenantUuid = null) {
         try {
+            const effectiveTenantUuid = tenantUuid || this.tenantUuid || null;
             // Salvar em PostgreSQL se disponível
             if (USE_POSTGRES) {
                 for (const lead of this.leads) {
@@ -1917,7 +1921,7 @@ class LeadCaptureSystem {
                         status: lead.status || 'ativo',
                         metadata: { journeyStage: lead.journeyStage },
                         conversations: lead.conversations || []
-                    });
+                    }, effectiveTenantUuid);
                 }
                 console.log(`🗄️ Leads salvos no PostgreSQL: ${this.leads.length} registros`);
             }
@@ -2338,11 +2342,15 @@ class LeadCaptureSystem {
 // 🔴 SINGLETON MAP — Evita recriação do LeadCaptureSystem a cada request
 const _leadSystemCache = new Map();
 
-function getLeadSystem(apiKey) {
+function getLeadSystem(apiKey, tenantUuid = null) {
     if (_leadSystemCache.has(apiKey)) {
-        return _leadSystemCache.get(apiKey);
+        const sys = _leadSystemCache.get(apiKey);
+        if (tenantUuid && !sys.tenantUuid) {
+            sys.tenantUuid = tenantUuid;
+        }
+        return sys;
     }
-    const system = new LeadCaptureSystem(apiKey);
+    const system = new LeadCaptureSystem(apiKey, tenantUuid);
     _leadSystemCache.set(apiKey, system);
     console.log(`📦 [LEADS] Singleton criado para tenant: ${apiKey.substring(0, 20)}...`);
     return system;
@@ -3178,7 +3186,7 @@ class SuperInteligenciaEmocional {
             mensagemLower.includes(palavra)
         ).length;
 
-        // Análise de emoções negativas  
+        // Análise de emoções negativas
         const negativas = this.emociones.negativas.filter(palavra =>
             mensagemLower.includes(palavra)
         ).length;
@@ -3356,10 +3364,10 @@ const superInteligencia = new SuperInteligenciaEmocional();
 function gerarBotoesFixos(contatos, robotName) {
     let botoesHTML = `
     <div class="lm-botoes-fixos" style="
-        position: sticky; 
-        top: 0; 
-        background: white; 
-        padding: 15px; 
+        position: sticky;
+        top: 0;
+        background: white;
+        padding: 15px;
         border-bottom: 2px solid #3b82f6;
         z-index: 1000;
         display: flex;
@@ -3378,18 +3386,18 @@ function gerarBotoesFixos(contatos, robotName) {
         const whatsappNum = contatos.whatsapp[0].replace(/\D/g, '');
         botoesHTML += `
         <a href="https://wa.me/${whatsappNum}" target="_blank" style="
-            background: #25D366; 
-            color: white; 
-            padding: 12px 20px; 
-            border-radius: 25px; 
-            text-decoration: none; 
+            background: #25D366;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: all 0.3s;
             box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
-        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(37, 211, 102, 0.4)';" 
+        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(37, 211, 102, 0.4)';"
            onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(37, 211, 102, 0.3)';">
             <i class="fab fa-whatsapp"></i> WhatsApp
         </a>`;
@@ -3400,18 +3408,18 @@ function gerarBotoesFixos(contatos, robotName) {
         const telefoneNum = contatos.telefone[0].replace(/\D/g, '');
         botoesHTML += `
         <a href="tel:${telefoneNum}" style="
-            background: #3b82f6; 
-            color: white; 
-            padding: 12px 20px; 
-            border-radius: 25px; 
-            text-decoration: none; 
+            background: #3b82f6;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: all 0.3s;
             box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.4)';" 
+        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.4)';"
            onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(59, 130, 246, 0.3)';">
             <i class="fas fa-phone"></i> Ligar
         </a>`;
@@ -3420,10 +3428,10 @@ function gerarBotoesFixos(contatos, robotName) {
     // Botão de Agendamento
     botoesHTML += `
     <button onclick="iniciarAgendamento()" style="
-        background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); 
-        color: white; 
-        padding: 12px 20px; 
-        border-radius: 25px; 
+        background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px;
         border: none;
         font-weight: 600;
         display: flex;
@@ -3432,7 +3440,7 @@ function gerarBotoesFixos(contatos, robotName) {
         cursor: pointer;
         transition: all 0.3s;
         box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(139, 92, 246, 0.4)';" 
+    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(139, 92, 246, 0.4)';"
        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(139, 92, 246, 0.3)';">
         <i class="fas fa-calendar-check"></i> Agendar
     </button>`;
@@ -3441,18 +3449,18 @@ function gerarBotoesFixos(contatos, robotName) {
     if (contatos.site && contatos.site.length > 0) {
         botoesHTML += `
         <a href="${contatos.site[0]}" target="_blank" style="
-            background: #10B981; 
-            color: white; 
-            padding: 12px 20px; 
-            border-radius: 25px; 
-            text-decoration: none; 
+            background: #10B981;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: all 0.3s;
             box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.4)';" 
+        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.4)';"
            onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.3)';">
             <i class="fas fa-globe"></i> Site
         </a>`;
@@ -3981,8 +3989,8 @@ app.use(cors({
 app.use(express.json({
     limit: "10mb",
     verify: function(req, res, buf) {
-        // Salvar raw body para verificação do webhook Stripe
-        if (req.url === '/api/stripe/webhook') {
+        // Salvar raw body para verificação do webhook Stripe e Meta Cloud API
+        if (req.url === '/api/stripe/webhook' || req.url.startsWith('/api/webhook/meta')) {
             req.rawBody = buf;
         }
     }
@@ -4062,6 +4070,7 @@ async function requireApiKey(req, res, next) {
         "/api/stripe/webhook",
         "/api/webhook/evolution",
         "/api/webhook/twilio",
+        "/api/webhook/meta",
         "/api/whatsapp/channel/status",
         "/demo.html",
         "/ajuda", "/ajuda.html",
@@ -4214,7 +4223,7 @@ app.get("/health", (req, res) => {
 app.get("/healthz", async (req, res) => {
     try {
         const { db, USE_POSTGRES } = require('./database');
-        
+
         // 1. DB Latency
         let dbStatus = { status: 'unknown', latencyMs: -1 };
         try {
@@ -4744,7 +4753,8 @@ app.get("/admin/leads", requireApiKey, (req, res) => {
 
     _leadsRequestInFlight = true;
     try {
-        const leadSystem = getLeadSystem(apiKey);
+        const authenticatedTenantId = req.cliente?.id || req.session?.tenantId || null;
+        const leadSystem = getLeadSystem(apiKey, authenticatedTenantId);
         const leads = leadSystem.getLeads();
         console.log(`📊 Retornando ${leads.length} leads para admin`);
         res.json({
@@ -4764,7 +4774,8 @@ app.get("/admin/leads/:id", requireApiKey, (req, res) => {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
     }
 
-    const leadSystem = getLeadSystem(apiKey);
+    const authenticatedTenantId = req.cliente?.id || req.session?.tenantId || null;
+    const leadSystem = getLeadSystem(apiKey, authenticatedTenantId);
     const lead = leadSystem.getLeadById(req.params.id);
     if (lead) {
         res.json({ success: true, lead });
@@ -5708,7 +5719,7 @@ async function extractPageData(url) {
                 // 🎯 V14.2.1: EXTRAIR FAQ (Perguntas Frequentes)
                 try {
                     const faqItems = [];
-                    
+
                     // Seletores para diferentes frameworks de FAQ
                     const faqSelectors = [
                         { container: '.elementor-toggle-item', title: '.elementor-toggle-title', content: '.elementor-tab-content' },
@@ -5777,7 +5788,7 @@ async function extractPageData(url) {
                         $('a[href]').each((_, el) => {
                             const _href = ($(el).attr('href') || '').trim();
                             const _text = ($(el).text() || '').toLowerCase().trim();
-                            
+
                             // Resolver URLs relativas
                             let _resolvedHref = _href;
                             try {
@@ -6326,21 +6337,21 @@ async function extractPageData(url) {
             const _deepEnabled = _deepContextExplorer && featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_DEEP_CONTEXT_EXPLORER');
             if (_deepEnabled) {
                 console.log(`[V14.3] 🌐 Deep Context Explorer ativado para: ${url.substring(0, 80)}`);
-                
+
                 const deepTimeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('Deep Context timeout (45s)')), 45000)
                 );
-                
+
                 const deepExplorePromise = _deepContextExplorer.exploreDeepContext(url, extractedData, {
                     maxPages: 5,
                     maxDepth: 3,
                     timeoutPerPage: 8000,
                     globalTimeout: 45000
                 });
-                
+
                 const deepResult = await Promise.race([deepExplorePromise, deepTimeoutPromise]);
                 _deepContextExplorer.mergeDeepContext(extractedData, deepResult);
-                
+
                 console.log(`[V14.3] ✅ Deep Context completo: ${deepResult.pagesExplored} páginas, confidence=${deepResult.confidenceScore}%`);
             }
         } catch (_deepErr) {
@@ -6526,7 +6537,7 @@ function shouldActivateSalesMode(instructions) {
 
 /**
  * Detecta intenção de compra com padrões expandidos e coloquiais
- * @param {string} message 
+ * @param {string} message
  * @returns {boolean}
  */
 function detectBuyIntent(message = '') {
@@ -6549,8 +6560,8 @@ function detectBuyIntent(message = '') {
 
 /**
  * Validação robusta de presença de link na resposta
- * @param {string} response 
- * @param {string} checkout 
+ * @param {string} response
+ * @param {string} checkout
  * @returns {boolean}
  */
 function hasValidCheckout(response, checkout) {
@@ -6560,7 +6571,7 @@ function hasValidCheckout(response, checkout) {
 
 /**
  * Verifica se existe qualquer link válido na resposta
- * @param {string} text 
+ * @param {string} text
  * @returns {boolean}
  */
 function hasAnyUrl(text) {
@@ -6596,7 +6607,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             const _isInformationalAboutAI = /^(voc[eê]|tu|isso|este|essa|este chat)\s+(é|e|es|seria|parece)\s+(um[a]?\s+)?(humano|ia|rob[oô]|intelig[eê]ncia|m[aá]quina|bot|chatbot|gpt|artificial)/i.test(cleanUserMessage) ||
                 /^(é|e)\s+(um[a]?\s+)?(humano|ia|rob[oô]|bot|chatbot)/i.test(cleanUserMessage) ||
                 /\?\s*$/.test(cleanUserMessage.trim()) && /(humano|rob[oô]|ia|intelig[eê]ncia artificial|bot|chatbot)/i.test(cleanUserMessage) && !/(falar|quero|preciso|chamar|conectar|transferir)/i.test(cleanUserMessage);
-            
+
             if (_isInformationalAboutAI) {
                 console.log(`[V13-HARD-SUPPORT] ℹ️ Pergunta informativa sobre IA — NÃO interceptar: "${cleanUserMessage.substring(0,50)}"`);
                 // Deixar o pipeline responder naturalmente
@@ -6616,14 +6627,14 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 _hardMsg.includes('quero suporte')
             ) {
                 // Buscar WhatsApp em TODOS os locais possíveis do pageData
-                const _hardWhatsApp = 
+                const _hardWhatsApp =
                     (pageData?.contatos?.whatsapp && pageData.contatos.whatsapp.length > 0 ? pageData.contatos.whatsapp[0] : null) ||
                     pageData?.whatsapp ||
                     pageData?.whatsappLink ||
                     (pageData?.contatos?.telefone && pageData.contatos.telefone.length > 0 ? pageData.contatos.telefone[0] : null) ||
                     null;
-                
-                const _hardWhatsAppUrl = _hardWhatsApp 
+
+                const _hardWhatsAppUrl = _hardWhatsApp
                     ? (_hardWhatsApp.startsWith('http') ? _hardWhatsApp : `https://wa.me/${_hardWhatsApp.replace(/\D/g, '')}`)
                     : null;
 
@@ -7090,8 +7101,8 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
         try {
             const _ckPreEnabled = !featureFlags || !featureFlags.isEnabled || featureFlags.isEnabled('FEATURE_AUTO_CHECKOUT_DETECTION');
             if (_ckPreEnabled && pageData && !pageData.checkoutLink) {
-                const _resolved = typeof resolveCheckoutLink === 'function' 
-                    ? resolveCheckoutLink({ context: pageData, tenantConfig: null }) 
+                const _resolved = typeof resolveCheckoutLink === 'function'
+                    ? resolveCheckoutLink({ context: pageData, tenantConfig: null })
                     : null;
                 if (_resolved) {
                     pageData.checkoutLink = _resolved;
@@ -7111,7 +7122,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
             const _v13FlagFromManager = featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V13_BLINDADO');
             const _v13FlagFromEnv = process.env.FEATURE_V13_BLINDADO === 'true';
             const _v13FlagEnabled = _v13FlagFromManager || _v13FlagFromEnv;
-            
+
             console.log(`[V13-DEBUG] FLAG: manager=${_v13FlagFromManager} | env=${_v13FlagFromEnv} | final=${_v13FlagEnabled}`);
 
             const _v13SalesMode = (pageData && pageData.salesMode) || process.env.SALES_LAYER_MODE || 'auto';
@@ -7136,7 +7147,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                         const _supportResponse = _supportWhatsApp
                             ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_supportWhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
                             : `Perfeito 👍 nosso time está pronto para te atender. Fale com a gente! 🙌`;
-                        
+
                         const _supportElapsed = Date.now() - _v13Start;
                         console.log(`[V16.2-SUPPORT] ✅ Finalizado em ${_supportElapsed}ms (hard override)`);
                         return _supportResponse;
@@ -7270,10 +7281,10 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                     const _v13SupportResponse = _v13WhatsApp
                         ? `Perfeito 👍 vou te conectar com um atendente agora.\n\n📞 Fale direto no WhatsApp:\n${_v13WhatsApp}\n\nEles vão te ajudar rapidinho 🙌`
                         : `Perfeito 👍 nosso time está pronto para te atender agora. Fale com a gente! 🙌`;
-                    
+
                     const _v13Elapsed = Date.now() - _v13Start;
                     console.log(`[V13] ✅ SUPPORT finalizado em ${_v13Elapsed}ms (interceptado)`);
-                    
+
                     aiResponseText = _v13SupportResponse;
                     // Pular todo o resto do pipeline (IA, checkout, etc)
                     // O fluxo continua após o bloco V13 com aiResponseText já preenchido
@@ -7288,7 +7299,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 // ─── V13.0.2: PASSO 4 — RESPONSE BUILDER (Sistema monta base) ───
                 // Se V13.0.2 disponível: sistema → base → IA humaniza
                 // Se não: fallback para V13.0.0 (prompt blindado direto)
-                
+
                 let _v13FinalResponse = '';
                 const _v13HasBuilder = _v13BuildBaseResponse && _v13ApplyPostGuards;
 
@@ -7320,7 +7331,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                         try {
                             // V13.1: Usar humanizer dedicado se disponível
                             let _v13HumanizeSystemPrompt = _v13Base.humanizePrompt;
-                            
+
                             if (_v13BuildHumanizerPrompt) {
                                 _v13HumanizeSystemPrompt = _v13BuildHumanizerPrompt(_v13Base.baseText, {
                                     intent: _v13Intent.intent,
@@ -7666,7 +7677,7 @@ async function generateAIResponse(userMessage, pageData = {}, conversationHistor
                 try {
                     const _v14FlagOn = process.env.FEATURE_V14_SELF_OPTIMIZING === 'true' ||
                         (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_SELF_OPTIMIZING'));
-                    
+
                     if (_v14FlagOn && _v14Logger && _v14Logger.logConversation && db) {
                         const _v14HadCheckout = _v13FinalResponse.includes('FINALIZAR COMPRA') || _v13Action.sendCheckout;
                         _v14Logger.logConversation(db, {
@@ -8374,7 +8385,7 @@ ANTI-ERRO CRÍTICO:
         }
 
         // 🎯 CORREÇÃO FINAL: Limpar resposta (Regex de colchetes ajustada para evitar truncamento de links)
-        // [REF] BUG-FIX-LINK: O regex /\[.*?\]/g era muito agressivo. 
+        // [REF] BUG-FIX-LINK: O regex /\[.*?\]/g era muito agressivo.
         // Agora usamos um que evita limpar links markdown [texto](url)
         const finalResponse = String(response)
             .replace(/<s>\s*\[OUT\]/g, '')
@@ -8384,7 +8395,7 @@ ANTI-ERRO CRÍTICO:
             .replace(/\uFFFD/g, '')                                    // Replacement character (fast path)
             .replace(/\s+$/gm, '')                                     // Espaços residuais
             .trim();
-        
+
         if (finalResponse !== response && (response.includes('http') || response.includes('arsenalsecre'))) {
             console.log('🔗 [URL-DEBUG] Resposta Após Limpeza:', finalResponse);
         }
@@ -8410,8 +8421,8 @@ ANTI-ERRO CRÍTICO:
         console.log(`   Provedor: ${usedProvider}, Tempo: ${responseTime}ms`);
 
         logger.info(`AI response generated in ${responseTime}ms using ${usedProvider}`);
-        
-        
+
+
         // 🎯 [PRESET-INTEGRATED] Auto-seleção de preset por conteúdo/URL
         let _autoPreset = 'default';
         const _presetsActive = process.env.FEATURE_PRESETS !== 'false' &&
@@ -8858,7 +8869,7 @@ app.post("/api/chat-universal", ...[billingMiddleware].filter(Boolean), async (r
         return res.status(401).json({ success: false, error: 'Autenticação obrigatória.' });
     }
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
-    const leadSystem = getLeadSystem(apiKey);
+    const leadSystem = getLeadSystem(apiKey, tenantId);
     analytics.chatRequests++;
     try {
         const { message, pageData, url, conversationId: reqConvId, instructions = "", robotName, leadId } = req.body || {};
@@ -8945,7 +8956,7 @@ app.post("/api/chat-universal", ...[billingMiddleware].filter(Boolean), async (r
         }
 
         // 🎯 FEATURE_CLEAN_CHAT_V2: Passar robotName como chatbotId para busca de FAQs
-        
+
         // [SALESMODE-FLOW-PATCH] Garantir salesMode e salesPreset em processedPageData
         try {
             if (processedPageData) {
@@ -9064,9 +9075,9 @@ app.post("/api/chat-universal", ...[billingMiddleware].filter(Boolean), async (r
 
         // 🔥 V13.0.3: BLOQUEIO TOTAL DO LEGADO QUANDO V13 ATIVO
         // Se V13 gerou a resposta, NÃO processar camadas V10/V11/CTA/Closing/Orchestrator
-        const _v13ActiveBypass = process.env.FEATURE_V13_BLINDADO === 'true' && 
+        const _v13ActiveBypass = process.env.FEATURE_V13_BLINDADO === 'true' &&
             (pageData && pageData.salesMode || process.env.SALES_LAYER_MODE || 'auto') === 'auto';
-        
+
         if (_v13ActiveBypass) {
             console.log('[V13.0.3] 🚫 BYPASS LEGADO ATIVO — V10/V11/CTA/Closing/Orchestrator PULADOS');
             // Pular DIRETO para o envio (sem nenhuma camada legada)
@@ -9256,7 +9267,7 @@ app.post("/api/chat-universal", ...[billingMiddleware].filter(Boolean), async (r
             if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
                 const { detectIntent: _cuDetectIntent, shouldBlockCheckout: _cuShouldBlock } = require('./lib/decision-core');
                 const _cuIntent = _cuDetectIntent(message);
-                
+
                 if (_cuShouldBlock(_cuIntent)) {
                     const _cuCheckoutUrl = processedPageData?.checkoutLink || processedPageData?.checkoutUrl || '';
                     if (_cuCheckoutUrl && finalResponse.includes(_cuCheckoutUrl)) {
@@ -9599,7 +9610,7 @@ function applyDecisionCoreSafe({
 
     // 3. Detecção de intenção
     const decision = buildDecision(message);
-    
+
     if (!decision.shouldOverride) {
       return { text: response, overridden: false };
     }
@@ -9644,7 +9655,7 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
         return res.status(401).json({ success: false, error: 'Autenticação obrigatória.' });
     }
     const apiKey = req.cliente?.apiKey || req.session?.validatedApiKey || req.body.apiKey;
-    const leadSystem = getLeadSystem(apiKey);
+    const leadSystem = getLeadSystem(apiKey, tenantId);
     analytics.chatRequests++;
     try {
         const { message, pageData, url, conversationId: reqConvId, instructions = "", robotName, leadId } = req.body || {};
@@ -9879,7 +9890,7 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
             const respostaAgendamentoEarly = superInteligencia.detectarAgendamento(message);
             if (respostaAgendamentoEarly) {
                 console.log(`📅 [SCHED-PRIORITY] Agendamento EXPLÍCITO detectado ANTES do KB-FIRST — bypass total`);
-                
+
                 // Manter tracking do lead
                 let effectiveLeadId = leadId;
                 if (!effectiveLeadId && conversationId) {
@@ -9950,7 +9961,7 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
             const _isInfoAboutAI = /^(voc[eê]|tu|isso|este|essa|este chat)\s+(e|é|es|seria|parece)\s+(um[a]?\s+)?(humano|ia|rob[oô]|intelig[eê]ncia|m[aá]quina|bot|chatbot|gpt|artificial)/i.test(message) ||
                 /^(e|é)\s+(um[a]?\s+)?(humano|ia|rob[oô]|bot|chatbot)/i.test(message) ||
                 (/\?\s*$/.test((message||'').trim()) && /(humano|rob[oô]|ia|intelig[eê]ncia artificial|bot|chatbot)/i.test(message) && !/(falar|quero|preciso|chamar|conectar|transferir)/i.test(message));
-            
+
             const _iSupportKw = ['quero um atendente', 'quero atendente', 'chamar atendente', 'falar com alguem', 'falar com alguém', 'quero falar com humano', 'falar com humano', 'preciso de um humano', 'quero um humano', 'falar com pessoa', 'pessoa real', 'falar com suporte', 'quero suporte', 'contato humano', 'alguem de verdade', 'alguém de verdade', 'transferir para'];
             if (!_isInfoAboutAI && _iSupportKw.some(k => _iMsg.includes(k))) {
                 console.log('[PRE-KB] 🚀 SUPPORT INTERCEPT — handoff ativado');
@@ -10041,7 +10052,7 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
             const kbSearchId = robotName || apiKey;
             if (kbSearchId) {
                 const kbResults = knowledgeBaseManager.searchSmart(kbSearchId, message, 3);
-                
+
                 // Fallback: tentar também com apiKey se robotName não teve resultado
                 let allResults = kbResults;
                 if ((!kbResults || kbResults.length === 0) && robotName && apiKey && robotName !== apiKey) {
@@ -10055,7 +10066,7 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
                     if (bestMatch.type === 'faq' && bestMatch.score >= 3) {
                         kbDirectAnswer = bestMatch.data.answer;
                         console.log(`📚 [KB-FIRST] FAQ DIRETA (score=${bestMatch.score}): "${bestMatch.data.question.substring(0, 60)}"`);
-                    } 
+                    }
                     // Score >= 2 = match médio → será injetado como contexto para IA
                     else if (bestMatch.score >= 2) {
                         console.log(`📚 [KB-FIRST] FAQ como CONTEXTO (score=${bestMatch.score}): "${bestMatch.data?.question?.substring(0, 60) || bestMatch.data?.title?.substring(0, 60)}"`);
@@ -10409,8 +10420,8 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
         //      (Orchestrator já gerencia buy/post_sale). Apenas extrai _intDecision.
         let _intDecision = null;
         try {
-            const _intSalesModeDC = (processedPageData && processedPageData.salesMode) || 
-                          req.body?.salesMode || req.body?.sales_mode || 
+            const _intSalesModeDC = (processedPageData && processedPageData.salesMode) ||
+                          req.body?.salesMode || req.body?.sales_mode ||
                           process.env.SALES_LAYER_MODE || 'auto';
 
             // Extrair decision para uso pelo Orchestrator (SEMPRE)
@@ -10428,7 +10439,7 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
                     tenantConfig: req.cliente,
                     salesMode: _intSalesModeDC
                 });
-                
+
                 if (decisionResult.overridden) {
                     finalResponse = decisionResult.text;
                     console.log(`🛡️ [DECISION_CORE] Resposta reforçada com decisão determinística.`);
@@ -10446,8 +10457,8 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
             if (__forceCTA) {
                 console.log('[V18.2-CTA] ⏭️ Orchestrator V10 BYPASSED (forceCTA ativo)');
             } else if (orchestrator && featureFlags && featureFlags.isEnabled('FEATURE_ORCHESTRATOR_V10')) {
-                const _intSalesModeOrch = (processedPageData && processedPageData.salesMode) || 
-                          req.body?.salesMode || req.body?.sales_mode || 
+                const _intSalesModeOrch = (processedPageData && processedPageData.salesMode) ||
+                          req.body?.salesMode || req.body?.sales_mode ||
                           process.env.SALES_LAYER_MODE || 'auto';
 
                 // V10: Usar resposta IA original (antes das camadas) + dados reais de CTA/Closing
@@ -10594,7 +10605,7 @@ app.post("/api/process-chat-inteligente", ...[billingMiddleware].filter(Boolean)
                     _v21ResolvedIntent = _intIntent;
                     _v21IntentOrigin = 'decision-core';
                 }
-                
+
                 if (_intShouldBlock(_intIntent)) {
                     const _intCheckoutUrl = processedPageData?.checkoutLink || processedPageData?.checkoutUrl || '';
                     if (_intCheckoutUrl && finalResponse.includes(_intCheckoutUrl)) {
@@ -11370,7 +11381,7 @@ app.post("/api/extract", ...[billingMiddleware].filter(Boolean), async (req, res
 /**
  * 🧠 DIAGNÓSTICO DO ASSISTENTE
  * POST /api/assistant-diagnostic
- * 
+ *
  * Avalia se o assistente tem dados suficientes para operar com sucesso.
  */
 app.post("/api/assistant-diagnostic", async (req, res) => {
@@ -13034,7 +13045,7 @@ setupRoutes(app);
     /**
      * 🔗 Redirecionamento de Short URL
      * GET /l/:shortCode
-     * 
+     *
      * Resolve código curto e redireciona para /chatbot com parâmetros completos
      * Usa cache Redis para performance
      */
@@ -13134,7 +13145,7 @@ setupRoutes(app);
     /**
      * 📝 Criar Short URL
      * POST /api/create-short-url
-     * 
+     *
      * Cria um novo short URL para um tenant
      * Body: { robotName, salesUrl, instructions, apiKey }
      */
@@ -13393,7 +13404,8 @@ setupRoutes(app);
             whatsappManager,
             analytics,
             isSchedulingInfrastructureReady: DatabaseHelpers.isSchedulingInfrastructureReady,
-            reloadTenantAppointmentsCache
+            reloadTenantAppointmentsCache,
+            encryptionManager
         });
     } catch (waChannelErr) {
         console.warn('⚠️ [WA-CHANNEL] Canal WhatsApp não carregado (não bloqueia):', waChannelErr.message);
@@ -13719,7 +13731,7 @@ setupRoutes(app);
         try {
             const _v14Enabled = process.env.FEATURE_V14_SELF_OPTIMIZING === 'true' ||
                 (featureFlags && featureFlags.isEnabled && featureFlags.isEnabled('FEATURE_V14_SELF_OPTIMIZING'));
-            
+
             if (_v14Enabled && db) {
                 console.log('');
                 console.log('═══════════════════════════════════════════');

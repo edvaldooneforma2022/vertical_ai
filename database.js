@@ -1,7 +1,7 @@
 /**
  * 🗄️ SISTEMA DE BANCO DE DADOS - Link Mágico
  * Suporta PostgreSQL (produção) e SQLite (desenvolvimento)
- * 
+ *
  * Funcionalidades:
  * - Armazenamento persistente de chatbots
  * - Histórico de conversas (30 dias)
@@ -14,6 +14,14 @@ const path = require('path');
 
 // Detectar ambiente e escolher banco apropriado
 const USE_POSTGRES = process.env.DATABASE_URL || process.env.USE_POSTGRES === 'true';
+
+let encMgr = null;
+try {
+    const { encryptionManager } = require('./lib/encryption');
+    encMgr = encryptionManager;
+} catch (e) {
+    // encryptionManager opcional/fallback
+}
 
 // ════════════════════════════════════════════════════════════════
 // FASE 2B: ESTADO DE PRONTIDÃO DA INFRAESTRUTURA DE AGENDAMENTO (FAIL-CLOSED)
@@ -387,6 +395,17 @@ async function initializeDatabase() {
         `CREATE INDEX IF NOT EXISTS idx_wa_saas_instance ON whatsapp_settings(saas_instance_name)`,
 
         // ═══════════════════════════════════════════════════════
+        // META CLOUD API — WhatsApp Business Platform Oficial
+        // ═══════════════════════════════════════════════════════
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_phone_number_id VARCHAR(50)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_waba_id VARCHAR(50)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_access_token TEXT`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_verify_token VARCHAR(255)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_app_secret VARCHAR(255)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_meta_phone ON whatsapp_settings(meta_phone_number_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_meta_waba ON whatsapp_settings(meta_waba_id)`,
+
+        // ═══════════════════════════════════════════════════════
         // V9 BLINDADA — ÍNDICES DE PERFORMANCE ADICIONAIS
         // ═══════════════════════════════════════════════════════
         `CREATE INDEX IF NOT EXISTS idx_tenant_leads_created ON tenant_leads(created_at)`,
@@ -450,6 +469,11 @@ async function initializeDatabase() {
     // Executadas com validação estrutural em catálogos e fail-closed
     // ═══════════════════════════════════════════════════════
     await runPhase2bMigrations(db, USE_POSTGRES);
+
+    // ═══════════════════════════════════════════════════════
+    // FASE 2C.3 — Migrations de Persistência Canônica Multi-Tenant (R-02 / R-01 / R-05)
+    // ═══════════════════════════════════════════════════════
+    await runPhase2c3Migrations(db, USE_POSTGRES);
 
     // 🛡️ BILLING BLINDADO — Inicializar tabelas de billing (subscriptions, usage, keys, etc)
     try {
@@ -656,6 +680,172 @@ async function runPhase2bMigrations(dbInstance = db, usePostgres = USE_POSTGRES)
     };
 }
 
+// 🛡️ [FASE 2C.3] Validador canônico de UUID
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(val) {
+    return typeof val === 'string' && UUID_REGEX.test(val.trim());
+}
+
+/**
+ * ═══════════════════════════════════════════════════════
+ * FASE 2C.3 — MIGRATIONS DE PERSISTÊNCIA MULTI-TENANT CANÔNICA (R-02 / R-01 / R-05)
+ * ═══════════════════════════════════════════════════════
+ * Executa migrações estruturais e idempotentes para:
+ * 1. whatsapp_messages.tenant_uuid UUID + FK para tenants(id) + índice
+ * 2. tenant_leads.tenant_uuid índice idx_tenant_leads_tenant_uuid
+ * 3. learning_conversations.tenant_uuid UUID + índice idx_learning_conv_tenant_uuid
+ * 4. Backfill conservador para registros legados associados a chaves V1 ativas
+ *
+ * @param {Object} [dbInstance=db] - Instância de conexão do banco
+ * @param {boolean} [usePostgres=USE_POSTGRES] - Flag indicando se é ambiente PostgreSQL
+ * @returns {Promise<{ success: boolean, error: string|null, stats?: Object }>}
+ */
+async function runPhase2c3Migrations(dbInstance = db, usePostgres = USE_POSTGRES) {
+    const stats = {
+        leadsBackfilled: 0,
+        messagesBackfilled: 0
+    };
+
+    const phase2c3Migrations = [
+        // Migration 2C.3-1A: tenant_uuid em whatsapp_messages
+        `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS tenant_uuid ${usePostgres ? 'UUID' : 'TEXT'}`,
+        // Meta Cloud API colunas em whatsapp_settings
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_phone_number_id VARCHAR(50)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_waba_id VARCHAR(50)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_access_token TEXT`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_verify_token VARCHAR(255)`,
+        `ALTER TABLE whatsapp_settings ADD COLUMN IF NOT EXISTS meta_app_secret VARCHAR(255)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_meta_phone ON whatsapp_settings(meta_phone_number_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_wa_meta_waba ON whatsapp_settings(meta_waba_id)`,
+
+        // Migration 2C.3-1B: FK nomeada fk_wa_messages_tenant com validação estrutural via catálogos
+        ...(usePostgres ? [`DO $$
+        DECLARE
+            v_constraint RECORD;
+            v_count INT;
+        BEGIN
+            SELECT
+                c.conname,
+                tbl_local.relname AS local_table,
+                att_local.attname AS local_col,
+                tbl_ref.relname AS ref_table,
+                att_ref.attname AS ref_col,
+                c.contype
+            INTO v_constraint
+            FROM pg_constraint c
+            JOIN pg_class tbl_local ON tbl_local.oid = c.conrelid
+            JOIN pg_namespace ns_local ON ns_local.oid = tbl_local.relnamespace
+            JOIN pg_attribute att_local ON att_local.attrelid = tbl_local.oid AND att_local.attnum = c.conkey[1]
+            JOIN pg_class tbl_ref ON tbl_ref.oid = c.confrelid
+            JOIN pg_namespace ns_ref ON ns_ref.oid = tbl_ref.relnamespace
+            JOIN pg_attribute att_ref ON att_ref.attrelid = tbl_ref.oid AND att_ref.attnum = c.confkey[1]
+            WHERE c.conname = 'fk_wa_messages_tenant'
+              AND ns_local.nspname = current_schema();
+
+            IF FOUND THEN
+                IF v_constraint.local_table != 'whatsapp_messages' OR
+                   v_constraint.local_col != 'tenant_uuid' OR
+                   v_constraint.ref_table != 'tenants' OR
+                   v_constraint.ref_col != 'id' OR
+                   v_constraint.contype != 'f' THEN
+                    RAISE EXCEPTION 'Constraint homônima incompatível: % na tabela % (%). Esperado: whatsapp_messages(tenant_uuid) -> tenants(id)',
+                        v_constraint.conname, v_constraint.local_table, v_constraint.local_col;
+                END IF;
+            ELSE
+                SELECT COUNT(*) INTO v_count
+                FROM pg_constraint c
+                JOIN pg_namespace ns ON ns.oid = c.connamespace
+                WHERE c.conname = 'fk_wa_messages_tenant'
+                  AND ns.nspname = current_schema();
+
+                IF v_count > 0 THEN
+                    RAISE EXCEPTION 'Constraint homônima incompatível de outro tipo encontrada com nome fk_wa_messages_tenant';
+                END IF;
+
+                ALTER TABLE whatsapp_messages
+                ADD CONSTRAINT fk_wa_messages_tenant
+                FOREIGN KEY (tenant_uuid) REFERENCES tenants(id);
+            END IF;
+        END $$;`] : []),
+
+        // Migration 2C.3-1C: Índice para whatsapp_messages(tenant_uuid)
+        `CREATE INDEX IF NOT EXISTS idx_wa_msg_tenant_uuid ON whatsapp_messages (tenant_uuid)`,
+
+        // Migration 2C.3-2: Índice para tenant_leads(tenant_uuid)
+        `CREATE INDEX IF NOT EXISTS idx_tenant_leads_tenant_uuid ON tenant_leads (tenant_uuid)`,
+
+        // Migration 2C.3-3A: tenant_uuid em learning_conversations
+        `ALTER TABLE learning_conversations ADD COLUMN IF NOT EXISTS tenant_uuid ${usePostgres ? 'UUID' : 'TEXT'}`,
+
+        // Migration 2C.3-3B: Índice para learning_conversations(tenant_uuid)
+        `CREATE INDEX IF NOT EXISTS idx_learning_conv_tenant_uuid ON learning_conversations (tenant_uuid)`,
+
+        // Migration 2C.3-4A: Backfill conservador para whatsapp_messages (somente correspondência exata com chave V1 ativa)
+        ...(usePostgres ? [`UPDATE whatsapp_messages wm
+         SET tenant_uuid = ak.tenant_id
+         FROM api_keys ak
+         WHERE wm.api_key = ak.key_value
+           AND wm.tenant_uuid IS NULL
+           AND ak.active = true
+           AND ak.tenant_id IS NOT NULL`] : []),
+
+        // Migration 2C.3-4B: Backfill conservador para tenant_leads (somente correspondência exata com chave V1 ativa)
+        ...(usePostgres ? [`UPDATE tenant_leads tl
+         SET tenant_uuid = ak.tenant_id
+         FROM api_keys ak
+         WHERE tl.api_key = ak.key_value
+           AND tl.tenant_uuid IS NULL
+           AND ak.active = true
+           AND ak.tenant_id IS NOT NULL`] : [])
+    ];
+
+    let phase2c3Success = true;
+    let phase2c3Error = null;
+
+    for (const migration of phase2c3Migrations) {
+        try {
+            if (!usePostgres) {
+                const alterMatch = migration.match(/ALTER TABLE (\w+) ADD COLUMN (?:IF NOT EXISTS )?(\w+)/i);
+                if (alterMatch) {
+                    const [, tableName, colName] = alterMatch;
+                    try {
+                        const cols = await dbInstance.query(`PRAGMA table_info(${tableName})`);
+                        const colList = cols.rows || cols;
+                        const exists = colList.some(c => c.name === colName);
+                        if (exists) continue;
+                    } catch (pragmaErr) {
+                        continue;
+                    }
+                    const sqliteQuery = migration.replace(/ADD COLUMN IF NOT EXISTS/i, 'ADD COLUMN').replace(/REFERENCES \w+\(\w+\)/i, '');
+                    await dbInstance.query(sqliteQuery);
+                    continue;
+                }
+            }
+            const res = await dbInstance.query(migration);
+            if (migration.startsWith('UPDATE tenant_leads') && res && typeof res.rowCount === 'number') {
+                stats.leadsBackfilled = res.rowCount;
+            } else if (migration.startsWith('UPDATE whatsapp_messages') && res && typeof res.rowCount === 'number') {
+                stats.messagesBackfilled = res.rowCount;
+            }
+        } catch (err) {
+            phase2c3Success = false;
+            phase2c3Error = err.message;
+            console.error('❌ [FASE 2C.3] Falha na migration de persistência canônica:', err.message);
+            break;
+        }
+    }
+
+    if (phase2c3Success) {
+        console.log('✅ [FASE 2C.3] Estruturas de persistência canônica multi-tenant validadas com sucesso.');
+    }
+
+    return {
+        success: phase2c3Success,
+        error: phase2c3Error,
+        stats
+    };
+}
+
 /**
  * 📊 Estrutura de tabelas PostgreSQL
  */
@@ -810,26 +1000,26 @@ function getPostgresTables() {
             id SERIAL PRIMARY KEY,
             api_key VARCHAR(255) UNIQUE NOT NULL,
             provider VARCHAR(20) NOT NULL,
-            
+
             -- Configurações Twilio
             twilio_account_sid VARCHAR(255),
             twilio_auth_token VARCHAR(255),
             twilio_from_number VARCHAR(50),
-            
+
             -- Configurações Evolution API
             evolution_api_url TEXT,
             evolution_api_key VARCHAR(255),
             evolution_instance_name VARCHAR(100),
-            
+
             -- Configurações gerais
             notification_phone VARCHAR(50),
             is_active BOOLEAN DEFAULT true,
             test_mode BOOLEAN DEFAULT false,
-            
+
             -- Metadados
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            
+
             FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
         )`,
 
@@ -857,24 +1047,24 @@ function getPostgresTables() {
             user_id VARCHAR(255) NOT NULL,
             tenant_id VARCHAR(255),
             memory_type VARCHAR(50) DEFAULT 'conversation',
-            
+
             -- Dados da memória
             preferences JSONB DEFAULT '{}',
             interaction_history JSONB DEFAULT '[]',
             emotional_profile JSONB DEFAULT '{}',
             topics_discussed JSONB DEFAULT '[]',
-            
+
             -- Estatísticas
             total_interactions INTEGER DEFAULT 0,
             avg_sentiment REAL DEFAULT 0,
             last_emotion VARCHAR(50),
-            
+
             -- Metadados
             session_data JSONB DEFAULT '{}',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             expires_at TIMESTAMP,
-            
+
             UNIQUE(user_id, tenant_id)
         )`,
 
@@ -1211,26 +1401,26 @@ function getSQLiteTables() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             api_key TEXT UNIQUE NOT NULL,
             provider TEXT NOT NULL,
-            
+
             -- Configurações Twilio
             twilio_account_sid TEXT,
             twilio_auth_token TEXT,
             twilio_from_number TEXT,
-            
+
             -- Configurações Evolution API
             evolution_api_url TEXT,
             evolution_api_key TEXT,
             evolution_instance_name TEXT,
-            
+
             -- Configurações gerais
             notification_phone TEXT,
             is_active INTEGER DEFAULT 1,
             test_mode INTEGER DEFAULT 0,
-            
+
             -- Metadados
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            
+
             FOREIGN KEY (api_key) REFERENCES chatbots(api_key) ON DELETE CASCADE
         )`,
 
@@ -1258,24 +1448,24 @@ function getSQLiteTables() {
             user_id TEXT NOT NULL,
             tenant_id TEXT,
             memory_type TEXT DEFAULT 'conversation',
-            
+
             -- Dados da memória
             preferences TEXT DEFAULT '{}',
             interaction_history TEXT DEFAULT '[]',
             emotional_profile TEXT DEFAULT '{}',
             topics_discussed TEXT DEFAULT '[]',
-            
+
             -- Estatísticas
             total_interactions INTEGER DEFAULT 0,
             avg_sentiment REAL DEFAULT 0,
             last_emotion TEXT,
-            
+
             -- Metadados
             session_data TEXT DEFAULT '{}',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             expires_at DATETIME,
-            
+
             UNIQUE(user_id, tenant_id)
         )`,
 
@@ -1529,7 +1719,7 @@ const DatabaseHelpers = {
             ? `INSERT INTO chatbots (id, api_key, name, url, extracted_data, config, user_email, plan, last_active)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
                ON CONFLICT (id) DO UPDATE SET
-                   name = $3, url = $4, extracted_data = $5, config = $6, 
+                   name = $3, url = $4, extracted_data = $5, config = $6,
                    user_email = $7, plan = $8, last_active = CURRENT_TIMESTAMP
                RETURNING *`
             : `INSERT OR REPLACE INTO chatbots (id, api_key, name, url, extracted_data, config, user_email, plan, last_active)
@@ -1705,10 +1895,10 @@ const DatabaseHelpers = {
      */
     async getChatbotAnalytics(chatbot_id, days = 30) {
         const query = USE_POSTGRES
-            ? `SELECT * FROM analytics 
+            ? `SELECT * FROM analytics
                WHERE chatbot_id = $1 AND date >= CURRENT_DATE - ($2 * INTERVAL '1 day')
                ORDER BY date DESC`
-            : `SELECT * FROM analytics 
+            : `SELECT * FROM analytics
                WHERE chatbot_id = ? AND date >= date('now', '-' || ? || ' days')
                ORDER BY date DESC`;
 
@@ -1749,41 +1939,70 @@ const DatabaseHelpers = {
 
     /**
      * Salvar lead no PostgreSQL/SQLite
+     * 🛡️ [FASE 2C.3 / R-01 / R-07] Persistência Canônica Multi-Tenant
+     * @param {string} apiKey - Chave da API
+     * @param {Object} leadData - Dados do lead
+     * @param {string|null} [tenantUuid=null] - UUID canônico do tenant autenticado
      */
-    async saveLead(apiKey, leadData) {
-        const query = USE_POSTGRES
-            ? `INSERT INTO tenant_leads (id, api_key, nome, email, telefone, message, url_origem, source, status, metadata, conversations)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-               ON CONFLICT (id) DO UPDATE SET
-                   nome = $3, email = $4, telefone = $5, message = $6, 
-                   url_origem = $7, status = $9, metadata = $10, conversations = $11,
-                   updated_at = CURRENT_TIMESTAMP
-               RETURNING *`
-            : `INSERT OR REPLACE INTO tenant_leads (id, api_key, nome, email, telefone, message, url_origem, source, status, metadata, conversations, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
+    async saveLead(apiKey, leadData, tenantUuid = null) {
+        if (!leadData || !leadData.id) {
+            throw new Error('ID do lead é obrigatório para persistência.');
+        }
+
+        const resolvedTenantUuid = isUuid(tenantUuid)
+            ? tenantUuid.trim().toLowerCase()
+            : (isUuid(leadData.tenant_uuid)
+                ? leadData.tenant_uuid.trim().toLowerCase()
+                : (isUuid(leadData.tenantUuid) ? leadData.tenantUuid.trim().toLowerCase() : null));
 
         // 🛡️ [V20-FIX] Sanitizar dados antes de persistir no PostgreSQL
         const safeMeta = this._sanitizeForJson(leadData.metadata || {});
         const safeConvs = this._sanitizeForJson(leadData.conversations || []);
         const safeMessage = this._sanitizeForJson(leadData.message || null);
 
-        const params = [
-            leadData.id,
-            apiKey,
-            leadData.nome || null,
-            leadData.email || null,
-            leadData.telefone || null,
-            safeMessage,
-            leadData.url_origem || null,
-            leadData.source || 'widget',
-            leadData.status || 'novo',
-            JSON.stringify(safeMeta),
-            JSON.stringify(safeConvs)
-        ];
+        let savedLead = null;
 
-        // 🛡️ [V20.1-HOTFIX] Sanitização final dos params JSON stringificados
-        // Proteção dupla: mesmo após walk recursivo, sanitiza a string JSON final
         if (USE_POSTGRES) {
+            const query = `INSERT INTO tenant_leads (
+                id, api_key, nome, email, telefone, message, url_origem, source, status, metadata, conversations, tenant_uuid
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ON CONFLICT (id) DO UPDATE SET
+                nome = EXCLUDED.nome,
+                email = EXCLUDED.email,
+                telefone = EXCLUDED.telefone,
+                message = EXCLUDED.message,
+                url_origem = EXCLUDED.url_origem,
+                status = EXCLUDED.status,
+                metadata = EXCLUDED.metadata,
+                conversations = EXCLUDED.conversations,
+                api_key = CASE
+                    WHEN tenant_leads.tenant_uuid IS NOT NULL AND EXCLUDED.tenant_uuid IS NOT NULL AND tenant_leads.tenant_uuid = EXCLUDED.tenant_uuid THEN EXCLUDED.api_key
+                    ELSE tenant_leads.api_key
+                END,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE (
+                (tenant_leads.tenant_uuid IS NOT NULL AND EXCLUDED.tenant_uuid IS NOT NULL AND tenant_leads.tenant_uuid = EXCLUDED.tenant_uuid)
+                OR
+                (tenant_leads.tenant_uuid IS NULL AND EXCLUDED.tenant_uuid IS NULL AND tenant_leads.api_key = EXCLUDED.api_key)
+            )
+            RETURNING *`;
+
+            const params = [
+                leadData.id,
+                apiKey,
+                leadData.nome || null,
+                leadData.email || null,
+                leadData.telefone || null,
+                safeMessage,
+                leadData.url_origem || null,
+                leadData.source || 'widget',
+                leadData.status || 'novo',
+                JSON.stringify(safeMeta),
+                JSON.stringify(safeConvs),
+                resolvedTenantUuid
+            ];
+
+            // 🛡️ [V20.1-HOTFIX] Sanitização final dos params JSON stringificados
             const surrogateRegex = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
             for (let i = 0; i < params.length; i++) {
                 if (typeof params[i] === 'string' && surrogateRegex.test(params[i])) {
@@ -1793,38 +2012,111 @@ const DatabaseHelpers = {
                 }
                 surrogateRegex.lastIndex = 0;
             }
+
+            const result = await db.query(query, params);
+            if (result.rows && result.rows.length > 0) {
+                savedLead = result.rows[0];
+            } else {
+                // Conflito de ID com falha na cláusula WHERE de ownership
+                const existing = await db.query('SELECT id, tenant_uuid, api_key FROM tenant_leads WHERE id = $1', [leadData.id]);
+                if (existing.rows && existing.rows.length > 0) {
+                    const row = existing.rows[0];
+                    console.warn(`🚨 [SECURITY][TENANT-ISOLATION] Tentativa de alteração de lead pertencente a outro tenant: leadId=${leadData.id}, owner=${row.tenant_uuid || 'legacy'}, attemptedTenant=${resolvedTenantUuid || 'legacy'}`);
+                    const err = new Error('Acesso negado: lead pertence a outro tenant.');
+                    err.code = 'OWNERSHIP_MISMATCH';
+                    err.status = 403;
+                    throw err;
+                }
+            }
+        } else {
+            // SQLite / ambiente local
+            const existing = await db.query('SELECT id, tenant_uuid, api_key FROM tenant_leads WHERE id = ?', [leadData.id]);
+            const existingRow = existing.rows ? existing.rows[0] : null;
+
+            if (existingRow) {
+                const sameTenant = (existingRow.tenant_uuid && resolvedTenantUuid && existingRow.tenant_uuid === resolvedTenantUuid);
+                const sameLegacy = (!existingRow.tenant_uuid && !resolvedTenantUuid && existingRow.api_key === apiKey);
+
+                if (!sameTenant && !sameLegacy) {
+                    console.warn(`🚨 [SECURITY][TENANT-ISOLATION] Tentativa de alteração de lead pertencente a outro tenant (SQLite): leadId=${leadData.id}`);
+                    const err = new Error('Acesso negado: lead pertence a outro tenant.');
+                    err.code = 'OWNERSHIP_MISMATCH';
+                    err.status = 403;
+                    throw err;
+                }
+
+                const updateQuery = `UPDATE tenant_leads SET
+                    nome = ?, email = ?, telefone = ?, message = ?, url_origem = ?, source = ?,
+                    status = ?, metadata = ?, conversations = ?, updated_at = datetime('now')
+                    WHERE id = ?`;
+                await db.query(updateQuery, [
+                    leadData.nome || null,
+                    leadData.email || null,
+                    leadData.telefone || null,
+                    safeMessage,
+                    leadData.url_origem || null,
+                    leadData.source || 'widget',
+                    leadData.status || 'novo',
+                    JSON.stringify(safeMeta),
+                    JSON.stringify(safeConvs),
+                    leadData.id
+                ]);
+            } else {
+                const insertQuery = `INSERT INTO tenant_leads (id, api_key, nome, email, telefone, message, url_origem, source, status, metadata, conversations, tenant_uuid, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
+                await db.query(insertQuery, [
+                    leadData.id,
+                    apiKey,
+                    leadData.nome || null,
+                    leadData.email || null,
+                    leadData.telefone || null,
+                    safeMessage,
+                    leadData.url_origem || null,
+                    leadData.source || 'widget',
+                    leadData.status || 'novo',
+                    JSON.stringify(safeMeta),
+                    JSON.stringify(safeConvs),
+                    resolvedTenantUuid
+                ]);
+            }
+            const fetchRes = await db.query('SELECT * FROM tenant_leads WHERE id = ?', [leadData.id]);
+            savedLead = fetchRes.rows ? fetchRes.rows[0] : null;
         }
 
-        const result = await db.query(query, params);
-        const savedLead = result.rows ? result.rows[0] : null;
-
         // ===== HOOK: CRM SYNC (non-blocking, lazy require) =====
-        // Sincronizar lead no CRM sem bloquear a resposta ao usuário
+        // 🛡️ [FASE 2C.3 / R-07] Sincronização resiliente com tenant canônico e suporte a chaves V2 (bcrypt)
         setImmediate(async () => {
             try {
                 const { crmManager } = require('./lib/crm/index');
-                // Buscar tenant_uuid a partir da api_key para garantir UUID no CRM
-                let tenantId = null;
-                if (USE_POSTGRES) {
-                    const akResult = await db.query(`SELECT tenant_uuid FROM api_keys WHERE key_hash = $1 LIMIT 1`, [
-                        require('crypto').createHash('sha256').update(apiKey).digest('hex')
-                    ]);
-                    const row = (akResult.rows || akResult)[0];
-                    tenantId = row?.tenant_uuid?.toString() || null;
-                }
-                // Fallback: buscar direto em tenants pela api_key legacy
-                if (!tenantId) {
-                    const tResult = USE_POSTGRES
-                        ? await db.query(`SELECT t.id FROM tenants t JOIN api_keys ak ON ak.tenant_uuid = t.id WHERE ak.key_hash = $1 LIMIT 1`, [
-                            require('crypto').createHash('sha256').update(apiKey).digest('hex')
-                        ])
-                        : await db.query(`SELECT tenant_uuid FROM tenant_leads WHERE api_key = ? LIMIT 1`, [apiKey]);
-                    const tRow = ((tResult.rows || tResult)[0]);
-                    tenantId = tRow?.id || tRow?.tenant_uuid || null;
+                let crmTenantId = resolvedTenantUuid;
+
+                if (!crmTenantId && USE_POSTGRES && apiKey) {
+                    if (apiKey.startsWith('lm_live_') || apiKey.startsWith('lm_test_')) {
+                        const prefix = apiKey.substring(0, 12);
+                        const v2Result = await db.query(
+                            `SELECT tenant_id, key_hash, status FROM api_keys_v2 WHERE key_prefix = $1`,
+                            [prefix]
+                        );
+                        const rows = v2Result.rows || [];
+                        const bcrypt = require('bcryptjs');
+                        for (const row of rows) {
+                            if (row.status === 'active' && await bcrypt.compare(apiKey, row.key_hash)) {
+                                crmTenantId = row.tenant_id ? row.tenant_id.toString() : null;
+                                break;
+                            }
+                        }
+                    } else {
+                        const akResult = await db.query(
+                            `SELECT tenant_id, tenant_uuid FROM api_keys WHERE key_hash = $1 LIMIT 1`,
+                            [require('crypto').createHash('sha256').update(apiKey).digest('hex')]
+                        );
+                        const row = (akResult.rows || akResult)[0];
+                        crmTenantId = row?.tenant_uuid?.toString() || row?.tenant_id?.toString() || null;
+                    }
                 }
 
-                if (tenantId) {
-                    await crmManager.syncLeadToCRM(tenantId, {
+                if (crmTenantId) {
+                    await crmManager.syncLeadToCRM(crmTenantId, {
                         id: leadData.id,
                         nome: leadData.nome,
                         email: leadData.email,
@@ -1834,8 +2126,6 @@ const DatabaseHelpers = {
                     });
                 }
             } catch (crmErr) {
-                // CRM sync falhou — não impacta o salvamento do lead
-                // Usar POST /api/crm/sync-leads para re-sync manual
                 if (process.env.NODE_ENV !== 'test') {
                     console.warn('⚠️ [CRM-HOOK] Sync não executado:', crmErr.message);
                 }
@@ -1847,49 +2137,106 @@ const DatabaseHelpers = {
     },
 
     /**
-     * Buscar todos os leads de um tenant
+     * Buscar todos os leads de um tenant por UUID canônico
+     * @param {string} tenantUuid - UUID do tenant
      */
-    async getLeads(apiKey) {
+    async getLeadsByTenant(tenantUuid) {
+        if (!isUuid(tenantUuid)) {
+            throw new Error('UUID canônico inválido para busca de leads');
+        }
+        const normalizedUuid = tenantUuid.trim().toLowerCase();
         const query = USE_POSTGRES
-            ? `SELECT * FROM tenant_leads WHERE api_key = $1 OR tenant_uuid::text = $1 ORDER BY created_at DESC`
-            : `SELECT * FROM tenant_leads WHERE api_key = ? OR tenant_uuid = ? ORDER BY created_at DESC`;
+            ? `SELECT * FROM tenant_leads WHERE tenant_uuid = $1 ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_leads WHERE tenant_uuid = ? ORDER BY created_at DESC`;
 
-        const params = USE_POSTGRES ? [apiKey] : [apiKey, apiKey];
-        const result = await db.query(query, params);
-        return result.rows.map(lead => {
+        const result = await db.query(query, [normalizedUuid]);
+        const rows = result.rows || [];
+        return rows.map(lead => {
             if (!USE_POSTGRES) {
-                lead.metadata = JSON.parse(lead.metadata || '{}');
-                lead.conversations = JSON.parse(lead.conversations || '[]');
+                lead.metadata = typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata;
+                lead.conversations = typeof lead.conversations === 'string' ? JSON.parse(lead.conversations || '[]') : lead.conversations;
             }
             return lead;
         });
     },
 
     /**
-     * Buscar lead por ID
+     * Buscar todos os leads de um tenant
+     * Se identifier for UUID: filtra por tenant_uuid = $1
+     * Se identifier for API Key legada: filtra por api_key = $1 AND tenant_uuid IS NULL
      */
-    async getLeadById(apiKey, leadId) {
-        const query = USE_POSTGRES
-            ? `SELECT * FROM tenant_leads WHERE api_key = $1 AND id = $2`
-            : `SELECT * FROM tenant_leads WHERE api_key = ? AND id = ?`;
-
-        const result = await db.query(query, [apiKey, leadId]);
-        const lead = result.rows[0];
-
-        if (lead && !USE_POSTGRES) {
-            lead.metadata = JSON.parse(lead.metadata || '{}');
-            lead.conversations = JSON.parse(lead.conversations || '[]');
+    async getLeads(identifier) {
+        if (!identifier) return [];
+        if (isUuid(identifier)) {
+            return this.getLeadsByTenant(identifier);
         }
 
-        return lead;
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_leads WHERE api_key = $1 AND tenant_uuid IS NULL ORDER BY created_at DESC`
+            : `SELECT * FROM tenant_leads WHERE api_key = ? AND tenant_uuid IS NULL ORDER BY created_at DESC`;
+
+        const result = await db.query(query, [identifier]);
+        const rows = result.rows || [];
+        return rows.map(lead => {
+            if (!USE_POSTGRES) {
+                lead.metadata = typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata;
+                lead.conversations = typeof lead.conversations === 'string' ? JSON.parse(lead.conversations || '[]') : lead.conversations;
+            }
+            return lead;
+        });
     },
 
     /**
-     * Atualizar lead
+     * Buscar lead por ID e UUID do tenant
      */
-    async updateLead(apiKey, leadId, data) {
+    async getLeadByIdAndTenant(tenantUuid, leadId) {
+        if (!isUuid(tenantUuid)) throw new Error('UUID canônico inválido');
+        const normalizedUuid = tenantUuid.trim().toLowerCase();
         const query = USE_POSTGRES
-            ? `UPDATE tenant_leads SET 
+            ? `SELECT * FROM tenant_leads WHERE tenant_uuid = $1 AND id = $2`
+            : `SELECT * FROM tenant_leads WHERE tenant_uuid = ? AND id = ?`;
+
+        const result = await db.query(query, [normalizedUuid, leadId]);
+        const lead = (result.rows || [])[0];
+        if (lead && !USE_POSTGRES) {
+            lead.metadata = typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata;
+            lead.conversations = typeof lead.conversations === 'string' ? JSON.parse(lead.conversations || '[]') : lead.conversations;
+        }
+        return lead || null;
+    },
+
+    /**
+     * Buscar lead por ID
+     */
+    async getLeadById(identifier, leadId) {
+        if (!identifier || !leadId) return null;
+        if (isUuid(identifier)) {
+            return this.getLeadByIdAndTenant(identifier, leadId);
+        }
+
+        const query = USE_POSTGRES
+            ? `SELECT * FROM tenant_leads WHERE api_key = $1 AND tenant_uuid IS NULL AND id = $2`
+            : `SELECT * FROM tenant_leads WHERE api_key = ? AND tenant_uuid IS NULL AND id = ?`;
+
+        const result = await db.query(query, [identifier, leadId]);
+        const lead = (result.rows || [])[0];
+
+        if (lead && !USE_POSTGRES) {
+            lead.metadata = typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata;
+            lead.conversations = typeof lead.conversations === 'string' ? JSON.parse(lead.conversations || '[]') : lead.conversations;
+        }
+
+        return lead || null;
+    },
+
+    /**
+     * Atualizar lead por UUID do tenant
+     */
+    async updateLeadByTenant(tenantUuid, leadId, data) {
+        if (!isUuid(tenantUuid)) throw new Error('UUID canônico inválido');
+        const normalizedUuid = tenantUuid.trim().toLowerCase();
+        const query = USE_POSTGRES
+            ? `UPDATE tenant_leads SET
                 nome = COALESCE($3, nome),
                 email = COALESCE($4, email),
                 telefone = COALESCE($5, telefone),
@@ -1897,9 +2244,9 @@ const DatabaseHelpers = {
                 metadata = COALESCE($7, metadata),
                 conversations = COALESCE($8, conversations),
                 updated_at = CURRENT_TIMESTAMP
-               WHERE api_key = $1 AND id = $2
+               WHERE tenant_uuid = $1 AND id = $2
                RETURNING *`
-            : `UPDATE tenant_leads SET 
+            : `UPDATE tenant_leads SET
                 nome = COALESCE(?, nome),
                 email = COALESCE(?, email),
                 telefone = COALESCE(?, telefone),
@@ -1907,11 +2254,11 @@ const DatabaseHelpers = {
                 metadata = COALESCE(?, metadata),
                 conversations = COALESCE(?, conversations),
                 updated_at = datetime('now')
-               WHERE api_key = ? AND id = ?`;
+               WHERE tenant_uuid = ? AND id = ?`;
 
         const params = USE_POSTGRES
             ? [
-                apiKey, leadId,
+                normalizedUuid, leadId,
                 data.nome, data.email, data.telefone, data.status,
                 data.metadata ? JSON.stringify(this._sanitizeForJson(data.metadata)) : null,
                 data.conversations ? JSON.stringify(this._sanitizeForJson(data.conversations)) : null
@@ -1920,11 +2267,59 @@ const DatabaseHelpers = {
                 data.nome, data.email, data.telefone, data.status,
                 data.metadata ? JSON.stringify(this._sanitizeForJson(data.metadata)) : null,
                 data.conversations ? JSON.stringify(this._sanitizeForJson(data.conversations)) : null,
-                apiKey, leadId
+                normalizedUuid, leadId
             ];
 
         const result = await db.query(query, params);
-        return result.rows[0];
+        return (result.rows || [])[0] || null;
+    },
+
+    /**
+     * Atualizar lead
+     */
+    async updateLead(identifier, leadId, data) {
+        if (!identifier || !leadId) return null;
+        if (isUuid(identifier)) {
+            return this.updateLeadByTenant(identifier, leadId, data);
+        }
+
+        const query = USE_POSTGRES
+            ? `UPDATE tenant_leads SET
+                nome = COALESCE($3, nome),
+                email = COALESCE($4, email),
+                telefone = COALESCE($5, telefone),
+                status = COALESCE($6, status),
+                metadata = COALESCE($7, metadata),
+                conversations = COALESCE($8, conversations),
+                updated_at = CURRENT_TIMESTAMP
+               WHERE api_key = $1 AND tenant_uuid IS NULL AND id = $2
+               RETURNING *`
+            : `UPDATE tenant_leads SET
+                nome = COALESCE(?, nome),
+                email = COALESCE(?, email),
+                telefone = COALESCE(?, telefone),
+                status = COALESCE(?, status),
+                metadata = COALESCE(?, metadata),
+                conversations = COALESCE(?, conversations),
+                updated_at = datetime('now')
+               WHERE api_key = ? AND tenant_uuid IS NULL AND id = ?`;
+
+        const params = USE_POSTGRES
+            ? [
+                identifier, leadId,
+                data.nome, data.email, data.telefone, data.status,
+                data.metadata ? JSON.stringify(this._sanitizeForJson(data.metadata)) : null,
+                data.conversations ? JSON.stringify(this._sanitizeForJson(data.conversations)) : null
+            ]
+            : [
+                data.nome, data.email, data.telefone, data.status,
+                data.metadata ? JSON.stringify(this._sanitizeForJson(data.metadata)) : null,
+                data.conversations ? JSON.stringify(this._sanitizeForJson(data.conversations)) : null,
+                identifier, leadId
+            ];
+
+        const result = await db.query(query, params);
+        return (result.rows || [])[0] || null;
     },
 
     // ===== CRUD para tenant_appointments =====
@@ -2022,9 +2417,9 @@ const DatabaseHelpers = {
      */
     async updateAppointmentStatus(apiKey, appointmentId, status) {
         const query = USE_POSTGRES
-            ? `UPDATE tenant_appointments SET status = $3, updated_at = CURRENT_TIMESTAMP 
+            ? `UPDATE tenant_appointments SET status = $3, updated_at = CURRENT_TIMESTAMP
                WHERE api_key = $1 AND id = $2 RETURNING *`
-            : `UPDATE tenant_appointments SET status = ?, updated_at = datetime('now') 
+            : `UPDATE tenant_appointments SET status = ?, updated_at = datetime('now')
                WHERE api_key = ? AND id = ?`;
 
         const params = USE_POSTGRES
@@ -2092,13 +2487,13 @@ const DatabaseHelpers = {
      */
     async updateShortUrlAccess(shortCode) {
         const query = USE_POSTGRES
-            ? `UPDATE short_urls 
-               SET access_count = access_count + 1, 
-                   last_accessed = CURRENT_TIMESTAMP 
+            ? `UPDATE short_urls
+               SET access_count = access_count + 1,
+                   last_accessed = CURRENT_TIMESTAMP
                WHERE short_code = $1`
-            : `UPDATE short_urls 
-               SET access_count = access_count + 1, 
-                   last_accessed = datetime('now') 
+            : `UPDATE short_urls
+               SET access_count = access_count + 1,
+                   last_accessed = datetime('now')
                WHERE short_code = ?`;
 
         await db.query(query, [shortCode]);
@@ -2166,25 +2561,40 @@ const DatabaseHelpers = {
      * Salvar configurações WhatsApp de um tenant
      */
     async saveWhatsAppSettings(apiKey, settings) {
+        let metaToken = settings.metaAccessToken || settings.accessToken || null;
+        const tenantUuid = settings.tenantUuid || (isUuid(apiKey) ? apiKey : null);
+
+        // Criptografar token da Meta se encryptionManager estiver ativo
+        if (metaToken && encMgr && encMgr.enabled) {
+            metaToken = encMgr.encrypt(metaToken, tenantUuid || apiKey);
+        }
+
         const query = USE_POSTGRES
             ? `INSERT INTO whatsapp_settings (
-                   api_key, provider, twilio_account_sid, twilio_auth_token, 
+                   api_key, provider, twilio_account_sid, twilio_auth_token,
                    twilio_from_number, evolution_api_url, evolution_api_key,
-                   evolution_instance_name, notification_phone, is_active
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                   evolution_instance_name, notification_phone, is_active,
+                   meta_phone_number_id, meta_waba_id, meta_access_token,
+                   meta_verify_token, meta_app_secret, tenant_uuid
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                ON CONFLICT (api_key) DO UPDATE SET
                    provider = $2, twilio_account_sid = $3, twilio_auth_token = $4,
-                   twilio_from_number = $5, evolution_api_url = $6, 
+                   twilio_from_number = $5, evolution_api_url = $6,
                    evolution_api_key = $7, evolution_instance_name = $8,
                    notification_phone = $9, is_active = $10,
+                   meta_phone_number_id = $11, meta_waba_id = $12, meta_access_token = $13,
+                   meta_verify_token = $14, meta_app_secret = $15,
+                   tenant_uuid = COALESCE($16, whatsapp_settings.tenant_uuid),
                    updated_at = CURRENT_TIMESTAMP
                RETURNING *`
             : `INSERT OR REPLACE INTO whatsapp_settings (
                    api_key, provider, twilio_account_sid, twilio_auth_token,
                    twilio_from_number, evolution_api_url, evolution_api_key,
                    evolution_instance_name, notification_phone, is_active,
+                   meta_phone_number_id, meta_waba_id, meta_access_token,
+                   meta_verify_token, meta_app_secret, tenant_uuid,
                    updated_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`;
 
         const params = [
             apiKey,
@@ -2196,7 +2606,13 @@ const DatabaseHelpers = {
             settings.evolutionApiKey || null,
             settings.evolutionInstanceName || null,
             settings.notificationPhone || null,
-            settings.isActive !== undefined ? settings.isActive : true
+            settings.isActive !== undefined ? settings.isActive : true,
+            settings.metaPhoneNumberId || settings.phoneNumberId || null,
+            settings.metaWabaId || settings.wabaId || null,
+            metaToken,
+            settings.metaVerifyToken || settings.verifyToken || null,
+            settings.metaAppSecret || settings.appSecret || null,
+            tenantUuid
         ];
 
         try {
@@ -2231,6 +2647,11 @@ const DatabaseHelpers = {
             settings.test_mode = settings.test_mode === 1;
         }
 
+        // Descriptografar token da Meta se necessário
+        if (settings.meta_access_token && settings.meta_access_token.startsWith('ENC:') && encMgr) {
+            settings.meta_access_token = encMgr.decrypt(settings.meta_access_token, settings.tenant_uuid || apiKey);
+        }
+
         return settings;
     },
 
@@ -2257,17 +2678,65 @@ const DatabaseHelpers = {
      */
     async listWhatsAppSettings() {
         const query = USE_POSTGRES
-            ? `SELECT api_key, provider, notification_phone, is_active, created_at 
-               FROM whatsapp_settings 
+            ? `SELECT api_key, provider, notification_phone, is_active, created_at
+               FROM whatsapp_settings
                WHERE is_active = true
                ORDER BY created_at DESC`
-            : `SELECT api_key, provider, notification_phone, is_active, created_at 
-               FROM whatsapp_settings 
+            : `SELECT api_key, provider, notification_phone, is_active, created_at
+               FROM whatsapp_settings
                WHERE is_active = 1
                ORDER BY created_at DESC`;
 
         const result = await db.query(query);
         return result.rows || [];
+    },
+
+    /**
+     * Buscar configurações WhatsApp por Meta Phone Number ID (Webhooks)
+     */
+    async getWhatsAppSettingsByMetaPhone(phoneNumberId) {
+        if (!phoneNumberId) return null;
+        const query = USE_POSTGRES
+            ? `SELECT * FROM whatsapp_settings WHERE meta_phone_number_id = $1 AND is_active = true LIMIT 1`
+            : `SELECT * FROM whatsapp_settings WHERE meta_phone_number_id = ? AND is_active = 1 LIMIT 1`;
+        const result = await db.query(query, [phoneNumberId]);
+        const settings = result?.rows?.[0] || null;
+        if (settings && settings.meta_access_token && settings.meta_access_token.startsWith('ENC:') && encMgr) {
+            settings.meta_access_token = encMgr.decrypt(settings.meta_access_token, settings.tenant_uuid || settings.api_key);
+        }
+        return settings;
+    },
+
+    /**
+     * Buscar configurações WhatsApp por Meta WABA ID
+     */
+    async getWhatsAppSettingsByMetaWaba(wabaId) {
+        if (!wabaId) return null;
+        const query = USE_POSTGRES
+            ? `SELECT * FROM whatsapp_settings WHERE meta_waba_id = $1 AND is_active = true LIMIT 1`
+            : `SELECT * FROM whatsapp_settings WHERE meta_waba_id = ? AND is_active = 1 LIMIT 1`;
+        const result = await db.query(query, [wabaId]);
+        const settings = result?.rows?.[0] || null;
+        if (settings && settings.meta_access_token && settings.meta_access_token.startsWith('ENC:') && encMgr) {
+            settings.meta_access_token = encMgr.decrypt(settings.meta_access_token, settings.tenant_uuid || settings.api_key);
+        }
+        return settings;
+    },
+
+    /**
+     * Buscar configurações WhatsApp por tenant_uuid canônico
+     */
+    async getWhatsAppSettingsByTenant(tenantUuid) {
+        if (!tenantUuid) return null;
+        const query = USE_POSTGRES
+            ? `SELECT * FROM whatsapp_settings WHERE (tenant_uuid = $1 OR api_key = $1) AND is_active = true LIMIT 1`
+            : `SELECT * FROM whatsapp_settings WHERE (tenant_uuid = ? OR api_key = ?) AND is_active = 1 LIMIT 1`;
+        const result = await db.query(query, USE_POSTGRES ? [tenantUuid] : [tenantUuid, tenantUuid]);
+        const settings = result?.rows?.[0] || null;
+        if (settings && settings.meta_access_token && settings.meta_access_token.startsWith('ENC:') && encMgr) {
+            settings.meta_access_token = encMgr.decrypt(settings.meta_access_token, settings.tenant_uuid || settings.api_key);
+        }
+        return settings;
     },
 
     // ===== CRUD para chatgpt_settings (Multi-Tenant) =====
@@ -2409,11 +2878,11 @@ const DatabaseHelpers = {
         // Incrementar contador de acessos
         if (shortUrl) {
             const updateQuery = USE_POSTGRES
-                ? `UPDATE short_urls 
-                   SET access_count = access_count + 1, last_accessed = CURRENT_TIMESTAMP 
+                ? `UPDATE short_urls
+                   SET access_count = access_count + 1, last_accessed = CURRENT_TIMESTAMP
                    WHERE short_code = $1`
-                : `UPDATE short_urls 
-                   SET access_count = access_count + 1, last_accessed = datetime('now') 
+                : `UPDATE short_urls
+                   SET access_count = access_count + 1, last_accessed = datetime('now')
                    WHERE short_code = ?`;
 
             await db.query(updateQuery, [code]);
@@ -2551,13 +3020,15 @@ const DatabaseHelpers = {
     isSchedulingInfrastructureReady,
     getSchedulingInfrastructureError,
     setSchedulingInfrastructureReady,
-    runPhase2bMigrations
+    runPhase2bMigrations,
+    runPhase2c3Migrations
 };
 
 module.exports = {
     db,
     initializeDatabase,
     runPhase2bMigrations,
+    runPhase2c3Migrations,
     DatabaseHelpers,
     USE_POSTGRES,
     isSchedulingInfrastructureReady,

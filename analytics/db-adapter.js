@@ -1,16 +1,16 @@
 /**
  * 🗄️ DB ADAPTER — Auto-Learning V2.0
- * 
+ *
  * Camada de persistência que salva/carrega dados do auto-learning
  * no banco de dados (PostgreSQL ou SQLite).
- * 
+ *
  * REGRA DE OURO: Qualquer falha → fallback silencioso → zero impacto
- * 
+ *
  * Controlado por: FEATURE_LEARNING_DB_PERSISTENCE (default: true)
  * Debug: DEBUG_LEARNING=true
- * 
+ *
  * NÃO IMPACTA: fluxo de vendas (⚡/🎛️/⚫), billing, auth, CRM, whatsapp
- * 
+ *
  * @version 2.0.0
  */
 
@@ -59,21 +59,27 @@ class LearningDbAdapter {
             let saved = 0;
             for (const record of records) {
                 try {
-                    const links = typeof record.links === 'string' 
-                        ? record.links 
+                    const links = typeof record.links === 'string'
+                        ? record.links
                         : JSON.stringify(record.links || []);
+
+                    const rawTenant = record.tenantUuid || record.tenantId || null;
+                    const tenantUuid = (typeof rawTenant === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTenant.trim()))
+                        ? rawTenant.trim().toLowerCase()
+                        : null;
 
                     if (this.usePostgres) {
                         await this.db.query(
-                            `INSERT INTO learning_conversations 
-                             (id, conversation_id, user_message, ai_response, detected_intent, 
-                              journey_stage, profile, has_cta, links, emotional_state, 
-                              api_key, robot_name, action_clicked, action_scheduled, 
-                              action_lead_captured, action_whatsapp_opened, created_at)
-                             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+                            `INSERT INTO learning_conversations
+                             (id, conversation_id, user_message, ai_response, detected_intent,
+                              journey_stage, profile, has_cta, links, emotional_state,
+                              api_key, robot_name, action_clicked, action_scheduled,
+                              action_lead_captured, action_whatsapp_opened, created_at, tenant_uuid)
+                             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
                              ON CONFLICT (id) DO UPDATE SET
                               action_clicked = $13, action_scheduled = $14,
-                              action_lead_captured = $15, action_whatsapp_opened = $16`,
+                              action_lead_captured = $15, action_whatsapp_opened = $16,
+                              tenant_uuid = COALESCE(learning_conversations.tenant_uuid, $18)`,
                             [
                                 record.id,
                                 record.conversationId || null,
@@ -91,17 +97,18 @@ class LearningDbAdapter {
                                 record.actions?.scheduled || false,
                                 record.actions?.leadCaptured || false,
                                 record.actions?.whatsappOpened || false,
-                                record.timestamp || new Date().toISOString()
+                                record.timestamp || new Date().toISOString(),
+                                tenantUuid
                             ]
                         );
                     } else {
                         await this.db.query(
-                            `INSERT OR REPLACE INTO learning_conversations 
-                             (id, conversation_id, user_message, ai_response, detected_intent, 
-                              journey_stage, profile, has_cta, links, emotional_state, 
-                              api_key, robot_name, action_clicked, action_scheduled, 
-                              action_lead_captured, action_whatsapp_opened, created_at)
-                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                            `INSERT OR REPLACE INTO learning_conversations
+                             (id, conversation_id, user_message, ai_response, detected_intent,
+                              journey_stage, profile, has_cta, links, emotional_state,
+                              api_key, robot_name, action_clicked, action_scheduled,
+                              action_lead_captured, action_whatsapp_opened, created_at, tenant_uuid)
+                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
                             [
                                 record.id,
                                 record.conversationId || null,
@@ -119,7 +126,8 @@ class LearningDbAdapter {
                                 record.actions?.scheduled ? 1 : 0,
                                 record.actions?.leadCaptured ? 1 : 0,
                                 record.actions?.whatsappOpened ? 1 : 0,
-                                record.timestamp || new Date().toISOString()
+                                record.timestamp || new Date().toISOString(),
+                                tenantUuid
                             ]
                         );
                     }
@@ -142,22 +150,33 @@ class LearningDbAdapter {
     }
 
     /**
-     * Carregar todos os registros de conversa do banco
+     * Carregar registros de conversa de um tenant específico do banco
+     * 🛡️ [FASE 2C.3 / R-05] Isolamento estrito por tenant UUID
      * @param {number} limit - Número máximo de registros
-     * @returns {Array} Array de registros ou [] em caso de erro
+     * @param {string|null} [tenantUuid=null] - UUID do tenant
+     * @returns {Array} Array de registros ou [] em caso de ausência de tenant ou erro
      */
-    async loadConversations(limit = 5000) {
+    async loadConversations(limit = 5000, tenantUuid = null) {
         if (!this.initialized) return [];
 
-        try {
-            const paramPlaceholder = this.usePostgres ? '$1' : '?';
-            const result = await this.db.query(
-                `SELECT * FROM learning_conversations ORDER BY created_at DESC LIMIT ${paramPlaceholder}`,
-                [limit]
-            );
+        const isUuid = typeof tenantUuid === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantUuid.trim());
+        if (!isUuid) {
+            if (DEBUG) {
+                console.warn('⚠️ [LEARNING-DB] loadConversations rejeitado: tenantUuid obrigatório para isolamento');
+            }
+            return [];
+        }
 
+        const normalizedTenantUuid = tenantUuid.trim().toLowerCase();
+
+        try {
+            const query = this.usePostgres
+                ? `SELECT * FROM learning_conversations WHERE tenant_uuid = $1 ORDER BY created_at DESC LIMIT $2`
+                : `SELECT * FROM learning_conversations WHERE tenant_uuid = ? ORDER BY created_at DESC LIMIT ?`;
+
+            const result = await this.db.query(query, [normalizedTenantUuid, limit]);
             const rows = result.rows || [];
-            debugLog(`Carregadas ${rows.length} conversas do banco`);
+            debugLog(`Carregadas ${rows.length} conversas do banco para tenant ${normalizedTenantUuid}`);
 
             return rows.map(row => this._rowToRecord(row));
         } catch (err) {
@@ -181,8 +200,8 @@ class LearningDbAdapter {
         if (!this.initialized) return false;
 
         try {
-            const entries = patterns instanceof Map 
-                ? Array.from(patterns.entries()) 
+            const entries = patterns instanceof Map
+                ? Array.from(patterns.entries())
                 : Object.entries(patterns);
 
             let saved = 0;
@@ -197,8 +216,8 @@ class LearningDbAdapter {
 
                     if (this.usePostgres) {
                         await this.db.query(
-                            `INSERT INTO learning_scores 
-                             (pattern_key, intent, journey_stage, has_cta, success_rate, 
+                            `INSERT INTO learning_scores
+                             (pattern_key, intent, journey_stage, has_cta, success_rate,
                               attempts, conversions, breakdown, top_responses, updated_at)
                              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
                              ON CONFLICT (pattern_key) DO UPDATE SET
@@ -219,8 +238,8 @@ class LearningDbAdapter {
                         );
                     } else {
                         await this.db.query(
-                            `INSERT OR REPLACE INTO learning_scores 
-                             (pattern_key, intent, journey_stage, has_cta, success_rate, 
+                            `INSERT OR REPLACE INTO learning_scores
+                             (pattern_key, intent, journey_stage, has_cta, success_rate,
                               attempts, conversions, breakdown, top_responses, updated_at)
                              VALUES (?,?,?,?,?,?,?,?,?,?)`,
                             [
@@ -306,8 +325,8 @@ class LearningDbAdapter {
         if (!this.initialized) return false;
 
         try {
-            const entries = store instanceof Map 
-                ? Array.from(store.entries()) 
+            const entries = store instanceof Map
+                ? Array.from(store.entries())
                 : Object.entries(store);
 
             let saved = 0;
@@ -319,7 +338,7 @@ class LearningDbAdapter {
 
                     if (this.usePostgres) {
                         await this.db.query(
-                            `INSERT INTO learning_patterns 
+                            `INSERT INTO learning_patterns
                              (pattern_key, intent, profile, journey_stage, success_rate,
                               top_responses, attempts, conversions, access_count, updated_at)
                              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -341,7 +360,7 @@ class LearningDbAdapter {
                         );
                     } else {
                         await this.db.query(
-                            `INSERT OR REPLACE INTO learning_patterns 
+                            `INSERT OR REPLACE INTO learning_patterns
                              (pattern_key, intent, profile, journey_stage, success_rate,
                               top_responses, attempts, conversions, access_count, updated_at)
                              VALUES (?,?,?,?,?,?,?,?,?,?)`,
@@ -438,6 +457,7 @@ class LearningDbAdapter {
                 links: this._parseJSON(row.links, []),
                 emotionalState: row.emotional_state,
                 apiKey: row.api_key,
+                tenantUuid: row.tenant_uuid || null,
                 robotName: row.robot_name,
                 actions: {
                     clicked: this.usePostgres ? row.action_clicked : !!row.action_clicked,

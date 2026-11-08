@@ -881,16 +881,19 @@ class WhatsAppChannel {
         // ── Webhooks de entrada ──
         app.post('/api/webhook/evolution', (req, res) => this._handleEvolutionWebhook(req, res));
         app.post('/api/webhook/twilio',    (req, res) => this._handleTwilioWebhook(req, res));
+        app.get('/api/webhook/meta',       (req, res) => this._handleMetaWebhookVerify(req, res));
+        app.post('/api/webhook/meta',      (req, res) => this._handleMetaWebhook(req, res));
 
         // ── Status do canal ──
         app.get('/api/whatsapp/channel/status', (req, res) => {
             res.json({
                 channel: 'whatsapp',
                 active: true,
-                providers: ['evolution', 'twilio'],
-                version: 'WA-CHANNEL-002-SEC',
+                providers: ['evolution', 'twilio', 'meta'],
+                version: 'WA-CHANNEL-003-META',
                 security: {
                     webhookAuth: FEATURE_EVOLUTION_WEBHOOK_AUTH ? 'enabled' : 'disabled',
+                    metaSignatureAuth: 'enabled',
                     dedup: 'enabled',
                     dedupCacheSize: PROCESSED_MSG_IDS.size
                 }
@@ -899,7 +902,7 @@ class WhatsAppChannel {
 
         // ── SEC-12: Métricas de webhook (admin only via x-admin-key) ──
         app.get('/api/whatsapp/webhook-metrics', (req, res) => {
-            const expectedKey = process.env.ADMIN_API_KEY;
+            const expectedKey = process.env.ADMIN_API_KEY || process.env.ADMIN_SECRET_KEY;
 
             // Se ADMIN_API_KEY não está configurada, rota indisponível
             if (!expectedKey) {
@@ -930,6 +933,275 @@ class WhatsAppChannel {
         });
 
         console.log(`📱 [WA-CHANNEL] Rotas registradas | Auth: ${FEATURE_EVOLUTION_WEBHOOK_AUTH ? '✅ ON' : '⚠️ OFF'} | Dedup: ✅ ON`);
+    }
+
+    // ============================================================
+    // WEBHOOK — META WHATSAPP CLOUD API (Oficial v21.0)
+    // ============================================================
+
+    /**
+     * Webhook GET: Verificação do desafio da Meta (Webhook Handshake)
+     */
+    async _handleMetaWebhookVerify(req, res) {
+        const mode = req.query['hub.mode'];
+        const token = req.query['hub.verify_token'];
+        const challenge = req.query['hub.challenge'];
+
+        if (mode === 'subscribe' && token) {
+            const globalToken = process.env.META_VERIFY_TOKEN;
+            let isValid = (globalToken && token === globalToken);
+
+            if (!isValid && this.db) {
+                try {
+                    const query = this.USE_POSTGRES
+                        ? `SELECT id FROM whatsapp_settings WHERE meta_verify_token = $1 AND is_active = true LIMIT 1`
+                        : `SELECT id FROM whatsapp_settings WHERE meta_verify_token = ? AND is_active = 1 LIMIT 1`;
+                    const result = await this.db.query(query, [token]);
+                    if (result && result.rows && result.rows.length > 0) {
+                        isValid = true;
+                    }
+                } catch (err) {
+                    console.warn('📱 [META-VERIFY] Erro ao verificar token no banco:', err.message);
+                }
+            }
+
+            if (isValid) {
+                console.log('📱 [META-VERIFY] Webhook challenge verificado com sucesso');
+                return res.status(200).send(challenge);
+            }
+        }
+
+        console.warn('📱 [META-VERIFY] Falha na verificação do token de webhook Meta');
+        return res.status(403).send('Forbidden');
+    }
+
+    /**
+     * Webhook POST: Recepção e despacho de eventos da Meta Cloud API
+     */
+    async _handleMetaWebhook(req, res) {
+        try {
+            const body = req.body || {};
+            const signatureHeader = req.headers['x-hub-signature-256'] || '';
+            const webhookIp = req.ip || req.connection?.remoteAddress || 'unknown';
+
+            // 1. Validação de assinatura X-Hub-Signature-256 se configurada
+            const globalSecret = process.env.META_APP_SECRET;
+            if (signatureHeader || globalSecret) {
+                const isValid = await this._verifyMetaSignature(req, signatureHeader, body);
+                if (!isValid) {
+                    webhookMetrics.rejected_auth++;
+                    console.warn('📱 [META-WEBHOOK] Assinatura X-Hub-Signature-256 inválida ou ausente');
+                    return res.status(403).json({ error: 'Invalid signature' });
+                }
+            }
+
+            // Ack 200 rápido para a Meta
+            res.status(200).send('EVENT_RECEIVED');
+            webhookMetrics.received++;
+
+            // Verificar se o objeto é whatsapp_business_account
+            if (body.object !== 'whatsapp_business_account') {
+                return;
+            }
+
+            const entries = body.entry || [];
+            for (const entry of entries) {
+                const wabaId = entry.id;
+                const changes = entry.changes || [];
+                for (const change of changes) {
+                    if (change.field !== 'messages') continue;
+                    const value = change.value || {};
+                    const metadata = value.metadata || {};
+                    const phoneNumberId = metadata.phone_number_id;
+
+                    // 1. Processar status updates (sent, delivered, read, failed)
+                    if (Array.isArray(value.statuses)) {
+                        for (const status of value.statuses) {
+                            console.log(`📱 [META-STATUS] id=${status.id} status=${status.status} recipient=${status.recipient_id}`);
+                        }
+                    }
+
+                    // 2. Processar mensagens recebidas
+                    if (Array.isArray(value.messages)) {
+                        for (const msg of value.messages) {
+                            // Deduplicação pelo ID oficial da Meta (wamid)
+                            if (PROCESSED_MSG_IDS.has(msg.id)) {
+                                webhookMetrics.duplicate_ignored++;
+                                console.log(`📱 [META-DEDUP] Mensagem duplicada ignorada: ${msg.id}`);
+                                continue;
+                            }
+                            PROCESSED_MSG_IDS.set(msg.id, Date.now());
+
+                            // Extrair texto da mensagem
+                            let text = '';
+                            if (msg.type === 'text') {
+                                text = msg.text?.body || '';
+                            } else if (msg.type === 'button') {
+                                text = msg.button?.text || msg.button?.payload || '';
+                            } else if (msg.type === 'interactive') {
+                                text = msg.interactive?.button_reply?.title ||
+                                       msg.interactive?.list_reply?.title ||
+                                       msg.interactive?.button_reply?.id || '';
+                            } else {
+                                text = `[Mensagem recebida (${msg.type})]`;
+                            }
+
+                            const senderPhone = msg.from;
+                            const contact = (value.contacts || []).find(c => c.wa_id === senderPhone);
+                            const pushName = contact?.profile?.name || '';
+
+                            // Resolver tenant por phoneNumberId ou wabaId
+                            const tenantSettings = await this._resolveMetaTenant(phoneNumberId, wabaId);
+                            if (!tenantSettings) {
+                                console.warn(`📱 [META-TENANT] Nenhum tenant encontrado para phoneNumberId=${phoneNumberId} wabaId=${wabaId}`);
+                                continue;
+                            }
+
+                            // Chamar pipeline central de conversação
+                            await this._processIncomingMessage({
+                                apiKey: tenantSettings.api_key,
+                                channelMode: tenantSettings.channel_mode || 'auto',
+                                notifPhone: tenantSettings.notification_phone,
+                                phone: senderPhone,
+                                pushName: pushName,
+                                text: text,
+                                waMessageId: msg.id,
+                                provider: 'meta',
+                                instanceName: `meta_${phoneNumberId}`,
+                                instanceToken: tenantSettings.meta_access_token,
+                                extraOptions: {
+                                    phoneNumberId: phoneNumberId,
+                                    wabaId: wabaId,
+                                    accessToken: tenantSettings.meta_access_token,
+                                    tenantUuid: tenantSettings.tenant_uuid
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('📱 [META-WEBHOOK] Erro ao processar webhook:', error.message);
+        }
+    }
+
+    /**
+     * Validação timing-safe da assinatura HMAC SHA-256 do webhook Meta
+     */
+    async _verifyMetaSignature(req, signatureHeader, body) {
+        if (!signatureHeader || !signatureHeader.startsWith('sha256=')) {
+            return false;
+        }
+
+        const signatureHash = signatureHeader.substring(7);
+        const globalSecret = process.env.META_APP_SECRET;
+        let secretCandidates = [];
+        if (globalSecret) {
+            secretCandidates.push(globalSecret);
+        }
+
+        if (this.db) {
+            try {
+                let wabaId = body?.entry?.[0]?.id;
+                let phoneId = body?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+                if (wabaId || phoneId) {
+                    const query = this.USE_POSTGRES
+                        ? `SELECT meta_app_secret FROM whatsapp_settings WHERE (meta_waba_id = $1 OR meta_phone_number_id = $2) AND meta_app_secret IS NOT NULL AND is_active = true`
+                        : `SELECT meta_app_secret FROM whatsapp_settings WHERE (meta_waba_id = ? OR meta_phone_number_id = ?) AND meta_app_secret IS NOT NULL AND is_active = 1`;
+                    const res = await this.db.query(query, [wabaId || '', phoneId || '']);
+                    for (const row of (res?.rows || [])) {
+                        if (row.meta_app_secret && !secretCandidates.includes(row.meta_app_secret)) {
+                            secretCandidates.push(row.meta_app_secret);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('📱 [META-SIG] Erro ao buscar app_secret do tenant:', err.message);
+            }
+        }
+
+        if (secretCandidates.length === 0) {
+            return false;
+        }
+
+        const rawBody = req.rawBody || Buffer.from(JSON.stringify(body));
+
+        for (const secret of secretCandidates) {
+            const hmac = crypto.createHmac('sha256', secret);
+            hmac.update(rawBody);
+            const expectedHash = hmac.digest('hex');
+
+            const sigBuf = Buffer.from(signatureHash, 'utf8');
+            const expBuf = Buffer.from(expectedHash, 'utf8');
+
+            if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Resolver configurações do tenant por Meta phoneNumberId ou wabaId
+     */
+    async _resolveMetaTenant(phoneNumberId, wabaId) {
+        if (!this.db) return null;
+        try {
+            const query = this.USE_POSTGRES
+                ? `SELECT * FROM whatsapp_settings WHERE (meta_phone_number_id = $1 OR meta_waba_id = $2) AND is_active = true LIMIT 1`
+                : `SELECT * FROM whatsapp_settings WHERE (meta_phone_number_id = ? OR meta_waba_id = ?) AND is_active = 1 LIMIT 1`;
+            const params = [phoneNumberId || '', wabaId || ''];
+            const res = await this.db.query(query, params);
+            return res?.rows?.[0] || null;
+        } catch (e) {
+            console.warn('📱 [META-RESOLVE] Erro ao buscar tenant por Meta ID:', e.message);
+            return null;
+        }
+    }
+
+    /**
+     * Enviar mensagem diretamente pela WhatsApp Business Platform Cloud API (Meta Graph API v21.0)
+     */
+    async _sendMetaCloudResponse(phoneNumberId, accessToken, phone, message) {
+        const axios = require('axios');
+        const phoneClean = phone.replace(/\D/g, '');
+        const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+        const payload = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: phoneClean,
+            type: 'text',
+            text: {
+                preview_url: false,
+                body: message
+            }
+        };
+
+        try {
+            const resp = await axios.post(url, payload, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 15000
+            });
+            console.log(`📱 [META RESPONSE SENT] ✅ phoneId=${phoneNumberId} to=${phoneClean} msgId=${resp.data?.messages?.[0]?.id}`);
+            return {
+                success: true,
+                provider: 'meta_cloud_api',
+                messageId: resp.data?.messages?.[0]?.id || null
+            };
+        } catch (err) {
+            const errData = err.response?.data || {};
+            console.error(`📱 [META-SEND] ❌ Erro ao enviar mensagem:`, JSON.stringify(errData || err.message));
+            return {
+                success: false,
+                provider: 'meta_cloud_api',
+                error: errData.error?.message || err.message,
+                errorCode: errData.error?.code || null
+            };
+        }
     }
 
     // ============================================================
@@ -1184,7 +1456,7 @@ class WhatsAppChannel {
     // ============================================================
     // PROCESSAMENTO UNIFICADO (todos os provedores convergem aqui)
     // ============================================================
-    async _processIncomingMessage({ apiKey, channelMode, notifPhone, phone, pushName, text, waMessageId, provider, instanceName, instanceToken }) {
+    async _processIncomingMessage({ apiKey, channelMode, notifPhone, phone, pushName, text, waMessageId, provider, instanceName, instanceToken, extraOptions = {} }) {
         try {
             // Fase 2B: Resolver tenantId (UUID) a partir da apiKey
             let tenantId = null;
@@ -1205,14 +1477,14 @@ class WhatsAppChannel {
             this._currentApiKey = apiKey;
 
             // 1. Resolver ou criar lead pelo telefone
-            const lead = await this._resolveLeadByPhone(apiKey, phone, pushName);
+            const lead = await this._resolveLeadByPhone(apiKey, phone, pushName, tenantId);
             // GARANTIA OMNICHANNEL (CENÁRIO B): Priorizar o conversationId do CRM (Widget) para unificar a memória da IA
             const conversationId = lead?.conversationId || this._makeConversationId(phone, apiKey);
 
             // 2. Registrar mensagem de entrada
             await this._logMessage({
                 apiKey, waMessageId, waPhone: phone, direction: 'inbound',
-                content: text, leadId: lead?.id, conversationId, provider
+                content: text, leadId: lead?.id, conversationId, provider, tenantId
             });
 
             // 3. Atualizar histórico do lead
@@ -1247,12 +1519,12 @@ class WhatsAppChannel {
                 const schedResponse = await this._handleScheduleResponse(conversationId, text, apiKey, lead, tenantId);
                 if (schedResponse) {
                     // Resposta de agendamento — enviar direto, sem chamar IA
-                    const sendResult = await this._sendResponse(apiKey, phone, schedResponse, provider, instanceName, instanceToken);
+                    const sendResult = await this._sendResponse(apiKey, phone, schedResponse, provider, instanceName, instanceToken, extraOptions);
                     if (sendResult?.success) {
                         await this._logMessage({
                             apiKey, waMessageId: '', waPhone: phone,
                             direction: 'outbound', content: schedResponse, leadId: lead?.id,
-                            conversationId, provider
+                            conversationId, provider, tenantId
                         });
                     }
                     console.log(`📅 [WA-SCHED] Resposta de agendamento enviada | conv=${conversationId.substring(0, 20)}`);
@@ -1268,7 +1540,7 @@ class WhatsAppChannel {
 
             if (!aiResult || !aiResult.response) {
                 console.warn('📱 [WA-CHANNEL] IA sem resposta, enviando fallback');
-                await this._sendResponse(apiKey, phone, 'Recebi sua mensagem! Em breve retornaremos.', provider, instanceName, instanceToken);
+                await this._sendResponse(apiKey, phone, 'Recebi sua mensagem! Em breve retornaremos.', provider, instanceName, instanceToken, extraOptions);
                 return;
             }
 
@@ -1361,14 +1633,14 @@ class WhatsAppChannel {
             }
 
             // Enviar resposta
-            const sendResult = await this._sendResponse(apiKey, phone, adapted, provider, instanceName, instanceToken);
+            const sendResult = await this._sendResponse(apiKey, phone, adapted, provider, instanceName, instanceToken, extraOptions);
 
             // Registrar mensagem de saída
             if (sendResult?.success) {
                 await this._logMessage({
                     apiKey, waMessageId: sendResult.messageId || '', waPhone: phone,
                     direction: 'outbound', content: adapted, leadId: lead?.id,
-                    conversationId, provider
+                    conversationId, provider, tenantId
                 });
 
                 // Atualizar histórico com resposta da IA
@@ -1559,9 +1831,9 @@ class WhatsAppChannel {
     // ============================================================
     // RESOLUÇÃO DE LEAD POR TELEFONE
     // ============================================================
-    async _resolveLeadByPhone(apiKey, phone, pushName) {
+    async _resolveLeadByPhone(apiKey, phone, pushName, tenantId = null) {
         try {
-            const leadSystem = this.getLeadSystem(apiKey);
+            const leadSystem = this.getLeadSystem(apiKey, tenantId);
             const leads = leadSystem.getLeads();
 
             // 1. Buscar por wa_phone (campo novo)
@@ -1580,7 +1852,8 @@ class WhatsAppChannel {
                 // Vincular wa_phone ao lead existente
                 lead.wa_phone = phone;
                 lead.channel = lead.channel || 'widget';  // preservar canal original
-                leadSystem.saveLeads();
+                if (tenantId) lead.tenantUuid = tenantId;
+                leadSystem.saveLeads(tenantId);
                 console.log(`📱 [WA-CHANNEL] Lead existente vinculado via telefone: ${lead.nome || lead.email} ← ${phone}`);
                 return lead;
             }
@@ -1594,7 +1867,8 @@ class WhatsAppChannel {
                 url_origem: 'whatsapp://' + phone,
                 robotName: 'Assistente IA',
                 source: 'whatsapp',
-                channel: 'whatsapp'
+                channel: 'whatsapp',
+                tenantUuid: tenantId
             });
 
             console.log(`📱 [WA-CHANNEL] Novo lead criado via WhatsApp: ${newLead.nome} (${phone})`);
@@ -1603,7 +1877,7 @@ class WhatsAppChannel {
             try {
                 const { crmManager } = require('./lib/crm/index');
                 if (crmManager && typeof crmManager.syncLeadToCRM === 'function') {
-                    crmManager.syncLeadToCRM(apiKey, newLead).catch(() => {});
+                    crmManager.syncLeadToCRM(tenantId || apiKey, newLead).catch(() => {});
                 }
             } catch (e) { /* CRM sync não bloqueia */ }
 
@@ -1618,8 +1892,37 @@ class WhatsAppChannel {
     // ============================================================
     // ENVIAR RESPOSTA VIA WHATSAPP
     // ============================================================
-    async _sendResponse(apiKey, phone, message, provider, instanceName, instanceToken) {
+    async _sendResponse(apiKey, phone, message, provider, instanceName, instanceToken, extraOptions = {}) {
         try {
+            // ═══ PRIORIDADE 0: Envio DIRETO via Meta WhatsApp Cloud API (Oficial) ═══
+            if (provider === 'meta' || extraOptions?.phoneNumberId || extraOptions?.metaPhoneNumberId) {
+                const phoneNumberId = extraOptions?.phoneNumberId || extraOptions?.metaPhoneNumberId;
+                let accessToken = extraOptions?.accessToken || extraOptions?.metaAccessToken || instanceToken;
+
+                if (phoneNumberId && accessToken) {
+                    if (accessToken.startsWith('ENC:') && this.deps?.encryptionManager) {
+                        accessToken = this.deps.encryptionManager.decrypt(accessToken, extraOptions?.tenantUuid || apiKey);
+                    }
+                    return await this._sendMetaCloudResponse(phoneNumberId, accessToken, phone, message);
+                }
+
+                if (this.db) {
+                    try {
+                        const settings = await this._getTenantSettings(apiKey);
+                        if (settings && (settings.meta_phone_number_id || settings.phoneNumberId)) {
+                            const pId = settings.meta_phone_number_id || settings.phoneNumberId;
+                            let tok = settings.meta_access_token || settings.accessToken;
+                            if (tok && tok.startsWith('ENC:') && this.deps?.encryptionManager) {
+                                tok = this.deps.encryptionManager.decrypt(tok, settings.tenant_uuid || apiKey);
+                            }
+                            return await this._sendMetaCloudResponse(pId, tok, phone, message);
+                        }
+                    } catch (e) {
+                        console.warn('📱 [WA-SEND-META] Erro ao buscar configurações Meta do tenant:', e.message);
+                    }
+                }
+            }
+
             // ═══ PRIORIDADE 1: Envio DIRETO pela mesma instância que RECEBEU ═══
             const centralUrl = process.env.CENTRAL_EVOLUTION_URL;
             const centralKey = process.env.CENTRAL_EVOLUTION_API_KEY;
@@ -1892,21 +2195,26 @@ class WhatsAppChannel {
     // ============================================================
     // LOG DE MENSAGENS (whatsapp_messages)
     // ============================================================
-    async _logMessage({ apiKey, waMessageId, waPhone, direction, content, leadId, conversationId, provider }) {
+    async _logMessage({ apiKey, waMessageId, waPhone, direction, content, leadId, conversationId, provider, tenantId }) {
         try {
             if (!this.USE_POSTGRES) return; // Só loga em PostgreSQL
 
             const id = crypto.randomBytes(12).toString('hex');
+            const resolvedTenantUuid = (typeof tenantId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId.trim()))
+                ? tenantId.trim().toLowerCase()
+                : null;
+
             const q = `INSERT INTO whatsapp_messages
-                (id, tenant_id, api_key, wa_message_id, wa_phone, direction, content, lead_id, conversation_id, provider)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                (id, tenant_id, api_key, wa_message_id, wa_phone, direction, content, lead_id, conversation_id, provider, tenant_uuid)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 ON CONFLICT DO NOTHING`;
 
             await this.db.query(q, [
                 id, apiKey, apiKey,
                 waMessageId || '', waPhone, direction,
                 (content || '').substring(0, 10000),  // limitar tamanho
-                leadId || null, conversationId || '', provider || ''
+                leadId || null, conversationId || '', provider || '',
+                resolvedTenantUuid
             ]);
         } catch (error) {
             // Log falho não bloqueia o fluxo
