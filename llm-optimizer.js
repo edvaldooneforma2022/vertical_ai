@@ -84,17 +84,17 @@ class QuestionComplexityAnalyzer {
             return 'simple';
         }
 
-        // Verificar padrões simples
-        for (const pattern of this.simplePatterns) {
-            if (pattern.test(question)) {
-                return 'simple';
-            }
-        }
-
         // Verificar padrões complexos
         for (const pattern of this.complexPatterns) {
             if (pattern.test(question)) {
                 return 'complex';
+            }
+        }
+
+        // Verificar padrões simples
+        for (const pattern of this.simplePatterns) {
+            if (pattern.test(question)) {
+                return 'simple';
             }
         }
 

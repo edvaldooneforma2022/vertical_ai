@@ -16,35 +16,41 @@
 const assert = require('assert');
 const path = require('path');
 
-// ============================================================
-// Helpers de teste
-// ============================================================
-
-let passed = 0;
-let failed = 0;
-const failures = [];
-
-function test(name, fn) {
-    try {
-        fn();
-        passed++;
-        console.log(`  ✅ ${name}`);
-    } catch (err) {
-        failed++;
-        failures.push({ name, error: err.message });
-        console.log(`  ❌ ${name}`);
-        console.log(`     ${err.message}`);
-    }
-}
-
-// ============================================================
-// GRUPO 1: Verificação estática do publicPaths
-// ============================================================
-
-console.log('\n=== GRUPO 1: publicPaths ===\n');
+// Helpers de teste: usando describe e test nativos do Jest
 
 const fs = require('fs');
 const serverContent = fs.readFileSync(path.join(__dirname, '..', '..', 'server.js'), 'utf8');
+
+// Extrair a função requireApiKey do server.js
+const middlewareStart = serverContent.indexOf('async function requireApiKey');
+const middlewareEnd = serverContent.indexOf('\n}\r\n\r\n// ===== WIDGET TOKEN', middlewareStart);
+const middlewareCode = serverContent.substring(middlewareStart, middlewareEnd + 2);
+
+function createMockReq(options) {
+    return {
+        path: options.path || '/api/chat-universal',
+        headers: options.headers || {},
+        query: options.query || {},
+        body: options.body || {},
+        session: options.session || {},
+        cliente: options.cliente || undefined,
+    };
+}
+
+function createMockRes() {
+    const res = {
+        _statusCode: null,
+        _jsonData: null,
+        _redirectUrl: null,
+        status(code) { res._statusCode = code; return res; },
+        json(data) { res._jsonData = data; return res; },
+        redirect(url) { res._redirectUrl = url; return res; },
+    };
+    return res;
+}
+
+// ============================================================
+describe('GRUPO 1: publicPaths', () => {
 
 test('publicPaths NÃO contém /api/process-chat-inteligente como entrada ativa', () => {
     // Encontrar o array publicPaths e verificar que a linha está comentada
@@ -94,11 +100,9 @@ test('publicPaths preserva demais endpoints públicos', () => {
     });
 });
 
-// ============================================================
-// GRUPO 2: Verificação do inline middleware
-// ============================================================
+});
 
-console.log('\n=== GRUPO 2: Middleware inline ===\n');
+describe('GRUPO 2: Middleware inline', () => {
 
 test('chat-universal NÃO possui requireApiKey inline', () => {
     const chatUniversalMatch = serverContent.match(
@@ -138,11 +142,9 @@ test('process-chat-inteligente preserva billingMiddleware', () => {
         'billingMiddleware foi removido indevidamente de process-chat-inteligente');
 });
 
-// ============================================================
-// GRUPO 3: Defesa em profundidade nos handlers
-// ============================================================
+});
 
-console.log('\n=== GRUPO 3: Defesa em profundidade ===\n');
+describe('GRUPO 3: Defesa em profundidade', () => {
 
 test('chat-universal verifica req.cliente?.id no handler', () => {
     // Localizar o handler de chat-universal e verificar que há defesa em profundidade
@@ -168,16 +170,9 @@ test('process-chat-inteligente verifica req.cliente?.id no handler', () => {
         'Resposta 401 não encontrada no handler process-chat-inteligente');
 });
 
-// ============================================================
-// GRUPO 4: Middleware — JSON para rotas de API
-// ============================================================
+});
 
-console.log('\n=== GRUPO 4: Middleware JSON para rotas de API ===\n');
-
-// Extrair a função requireApiKey do server.js
-const middlewareStart = serverContent.indexOf('async function requireApiKey');
-const middlewareEnd = serverContent.indexOf('\n}\r\n\r\n// ===== WIDGET TOKEN', middlewareStart);
-const middlewareCode = serverContent.substring(middlewareStart, middlewareEnd + 2);
+describe('GRUPO 4: Middleware JSON para rotas de API', () => {
 
 test('Middleware possui 3 guardas de rota de API antes dos redirects', () => {
     const apiGuards = (middlewareCode.match(/req\.path === '\/api\/process-chat-inteligente' \|\| req\.path === '\/api\/chat-universal'/g) || []);
@@ -224,11 +219,9 @@ test('Guarda 3 (sem acesso) retorna 401 JSON', () => {
         'Guarda JSON deve vir ANTES do redirect para sem acesso');
 });
 
-// ============================================================
-// GRUPO 5: Preservação dos redirects para rotas web
-// ============================================================
+});
 
-console.log('\n=== GRUPO 5: Preservação dos redirects web ===\n');
+describe('GRUPO 5: Preservação dos redirects web', () => {
 
 test('Redirect "/?error=key_revoked" preservado para rotas web (UUID divergente)', () => {
     const uuidDivIdx = middlewareCode.indexOf('UUID divergente na sessão V1');
@@ -253,35 +246,9 @@ test('Redirect "/" preservado para rotas web (sem acesso)', () => {
         'Redirect "/" para rotas web foi removido');
 });
 
-// ============================================================
-// GRUPO 6: Simulação funcional da cadeia de middleware
-// ============================================================
+});
 
-console.log('\n=== GRUPO 6: Simulação funcional da cadeia de autenticação ===\n');
-
-// Simular o comportamento do middleware para as duas rotas de API
-function createMockReq(options) {
-    return {
-        path: options.path || '/api/chat-universal',
-        headers: options.headers || {},
-        query: options.query || {},
-        body: options.body || {},
-        session: options.session || {},
-        cliente: options.cliente || undefined,
-    };
-}
-
-function createMockRes() {
-    const res = {
-        _statusCode: null,
-        _jsonData: null,
-        _redirectUrl: null,
-        status(code) { res._statusCode = code; return res; },
-        json(data) { res._jsonData = data; return res; },
-        redirect(url) { res._redirectUrl = url; return res; },
-    };
-    return res;
-}
+describe('GRUPO 6: Simulação funcional da cadeia de autenticação', () => {
 
 // Cenário 1: API Key ausente nas rotas de API
 for (const endpoint of ['/api/chat-universal', '/api/process-chat-inteligente']) {
@@ -402,11 +369,9 @@ test('Cenário: API Key válida → req.cliente.id contém UUID', () => {
         'req.cliente.id deveria ser formato UUID válido');
 });
 
-// ============================================================
-// GRUPO 7: Verificação de que rotas web preservam redirect
-// ============================================================
+});
 
-console.log('\n=== GRUPO 7: Rotas web preservam redirect ===\n');
+describe('GRUPO 7: Rotas web preservam redirect', () => {
 
 test('Rota web "/app" não seria afetada pelas guardas de API', () => {
     const req = createMockReq({ path: '/app' });
@@ -437,11 +402,9 @@ test('Rota web "/dashboard" não seria afetada pelas guardas de API', () => {
     assert.strictEqual(res._statusCode, null);
 });
 
-// ============================================================
-// GRUPO 8: Verificação de segurança adicional
-// ============================================================
+});
 
-console.log('\n=== GRUPO 8: Segurança adicional ===\n');
+describe('GRUPO 8: Segurança adicional', () => {
 
 test('Handler NÃO confia em tenantId do body', () => {
     const cuHandlerIdx = serverContent.indexOf('app.post("/api/chat-universal"');
@@ -486,11 +449,9 @@ test('express.json() permanece antes de requireApiKey global', () => {
         'express.json() deve vir ANTES de requireApiKey global');
 });
 
-// ============================================================
-// GRUPO 9: Arquivos congelados intactos
-// ============================================================
+});
 
-console.log('\n=== GRUPO 9: Arquivos congelados ===\n');
+describe('GRUPO 9: Arquivos congelados', () => {
 
 const crypto = require('crypto');
 
@@ -510,18 +471,4 @@ test('tests/unit/phase-2c2a-identity-helper.test.js não foi alterado', () => {
     assert.strictEqual(hash, 'aaf563b1374fff2cd386e03fdada1f627ed06cfc4c40c643ca4a0f3a1d0c2823',
         'Hash dos testes 2C.2A diverge — arquivo foi alterado!');
 });
-
-// ============================================================
-// RESULTADO FINAL
-// ============================================================
-
-console.log('\n' + '='.repeat(60));
-console.log(`RESULTADO FINAL: ${passed} aprovados, ${failed} reprovados, ${passed + failed} total`);
-console.log('='.repeat(60));
-
-if (failures.length > 0) {
-    console.log('\nFALHAS:');
-    failures.forEach(f => console.log(`  ❌ ${f.name}: ${f.error}`));
-}
-
-process.exit(failed > 0 ? 1 : 0);
+});

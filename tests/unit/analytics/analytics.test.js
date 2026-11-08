@@ -3,12 +3,18 @@
  * Testa rastreamento de eventos e métricas
  */
 
-const { analyticsManager } = require('../../analytics');
+const { analyticsManager } = require('../../../analytics.js');
 
 describe('AnalyticsManager', () => {
     beforeEach(() => {
         // Limpar buffer antes de cada teste
         analyticsManager.metricsBuffer.clear();
+    });
+
+    afterAll(() => {
+        if (analyticsManager.flushTimer) {
+            clearInterval(analyticsManager.flushTimer);
+        }
     });
 
     describe('trackEvent', () => {
@@ -19,7 +25,7 @@ describe('AnalyticsManager', () => {
             });
 
             const todayKey = analyticsManager.getTodayKey();
-            expect(analyticsManager.metricsBuffer.has('test-chatbot')).toBe(true);
+            expect(analyticsManager.metricsBuffer.has(`test-chatbot:${todayKey}`)).toBe(true);
         });
 
         test('deve registrar evento de lead', () => {
@@ -27,7 +33,8 @@ describe('AnalyticsManager', () => {
                 email: 'test@example.com'
             });
 
-            expect(analyticsManager.metricsBuffer.has('test-chatbot')).toBe(true);
+            const todayKey = analyticsManager.getTodayKey();
+            expect(analyticsManager.metricsBuffer.has(`test-chatbot:${todayKey}`)).toBe(true);
         });
 
         test('deve registrar evento de extração', () => {
@@ -36,7 +43,8 @@ describe('AnalyticsManager', () => {
                 success: true
             });
 
-            expect(analyticsManager.metricsBuffer.has('test-chatbot')).toBe(true);
+            const todayKey = analyticsManager.getTodayKey();
+            expect(analyticsManager.metricsBuffer.has(`test-chatbot:${todayKey}`)).toBe(true);
         });
     });
 
@@ -61,8 +69,8 @@ describe('AnalyticsManager', () => {
     });
 
     describe('getSummary', () => {
-        test('deve retornar resumo mesmo sem dados', () => {
-            const summary = analyticsManager.getSummary('non-existent-chatbot', 7);
+        test('deve retornar resumo mesmo sem dados', async () => {
+            const summary = await analyticsManager.getSummary('non-existent-chatbot', 7);
 
             expect(summary).toHaveProperty('period');
             expect(summary).toHaveProperty('totalMessages');

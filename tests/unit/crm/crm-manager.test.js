@@ -63,6 +63,7 @@ describe('CRMManager', () => {
     });
 
     describe('syncLeadToCRM', () => {
+        const TEST_TENANT_UUID = '11111111-2222-4333-8444-555555555555';
         const leadData = {
             id: 'lead-orig-1',
             nome: 'João Silva',
@@ -75,7 +76,7 @@ describe('CRMManager', () => {
             db.query.mockResolvedValueOnce({ rows: [{ id: 'crm-lead-exists' }] }); // check existing
             db.query.mockResolvedValueOnce({ rows: [] }); // update
 
-            const result = await crm.syncLeadToCRM('tenant-abc', leadData);
+            const result = await crm.syncLeadToCRM(TEST_TENANT_UUID, leadData);
 
             expect(result).toBe('crm-lead-exists');
             // 1 SELECT check + 1 UPDATE = 2
@@ -90,7 +91,7 @@ describe('CRMManager', () => {
             db.query.mockResolvedValueOnce({ rows: [] }); // addActivity
             db.query.mockResolvedValueOnce({ rows: [] }); // _checkFollowUpTriggers
 
-            const result = await crm.syncLeadToCRM('tenant-abc', leadData);
+            const result = await crm.syncLeadToCRM(TEST_TENANT_UUID, leadData);
 
             expect(result).toBeTruthy();
             // Verificar que o INSERT contém os dados corretos
@@ -262,7 +263,7 @@ describe('CRMManager', () => {
             db.query.mockResolvedValueOnce({ rows: [] }); // addActivity
             db.query.mockResolvedValueOnce({ rows: [] }); // followup triggers
 
-            await crm.syncLeadToCRM('tenant-abc', leadData);
+            await crm.syncLeadToCRM('11111111-2222-4333-8444-555555555555', leadData);
 
             // Verificar que o INSERT contém temperatura calculada
             const insertCall = db.query.mock.calls.find(call =>
@@ -289,7 +290,7 @@ describe('CRMManager', () => {
             db.query.mockResolvedValueOnce({ rows: [] });
             db.query.mockResolvedValueOnce({ rows: [] });
 
-            await crm.syncLeadToCRM('tenant-abc', leadData);
+            await crm.syncLeadToCRM('11111111-2222-4333-8444-555555555555', leadData);
 
             const insertCall = db.query.mock.calls.find(call =>
                 call[0].includes('INSERT INTO crm_leads')

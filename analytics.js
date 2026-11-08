@@ -39,9 +39,12 @@ class AnalyticsManager {
      * Iniciar timer de flush
      */
     startFlushTimer() {
-        setInterval(() => {
+        this.flushTimer = setInterval(() => {
             this.flushMetrics();
         }, this.flushInterval);
+        if (this.flushTimer.unref) {
+            this.flushTimer.unref();
+        }
     }
 
     /**
@@ -76,6 +79,14 @@ class AnalyticsManager {
      */
     initializeMetrics() {
         return {
+            messages: 0,
+            extractions: 0,
+            apiCosts: {
+                groq: 0,
+                openai: 0,
+                openrouter: 0,
+                total: 0
+            },
             totalMessages: 0,
             userMessages: 0,
             botMessages: 0,
@@ -403,7 +414,13 @@ class AnalyticsManager {
         );
 
         if (analytics.length === 0) {
-            return this.initializeMetrics();
+            const initial = this.initializeMetrics();
+            return {
+                ...initial,
+                period: days,
+                totalMessages: 0,
+                totalLeads: 0
+            };
         }
 
         // Agregar todas as métricas

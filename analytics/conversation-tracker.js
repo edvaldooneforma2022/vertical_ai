@@ -387,9 +387,12 @@ class ConversationTracker {
 const conversationTracker = new ConversationTracker();
 
 // Graceful shutdown
-process.on('beforeExit', () => {
-    conversationTracker.forceFlush();
-});
+if (!process.__conversationTrackerBeforeExitRegistered) {
+    process.__conversationTrackerBeforeExitRegistered = true;
+    process.on('beforeExit', () => {
+        conversationTracker.forceFlush();
+    });
+}
 
 module.exports = {
     conversationTracker,

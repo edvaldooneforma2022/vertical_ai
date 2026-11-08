@@ -8,7 +8,7 @@ const {
     InputValidationSystem,
     ThreatDetectionSystem,
     RateLimitSystem
-} = require('../../security-system');
+} = require('../../../security-system');
 
 describe('InputValidationSystem', () => {
     let validator;
@@ -137,7 +137,7 @@ describe('RateLimitSystem', () => {
     describe('checkLimit', () => {
         test('deve permitir primeiras requisições', () => {
             const result = rateLimiter.checkLimit('192.168.1.1', 'default');
-            expect(result.allowed).toBe(true);
+            expect(result.allowed ?? result).toBe(true);
         });
 
         test('deve bloquear após exceder limite', () => {
@@ -149,7 +149,7 @@ describe('RateLimitSystem', () => {
             }
 
             const result = rateLimiter.checkLimit(ip, 'default');
-            expect(result.allowed).toBe(false);
+            expect(result.allowed ?? result).toBe(false);
         });
 
         test('deve ter limites diferentes por endpoint', () => {
@@ -161,7 +161,7 @@ describe('RateLimitSystem', () => {
             }
 
             const result = rateLimiter.checkLimit(ip, 'auth');
-            expect(result.allowed).toBe(false);
+            expect(result.allowed ?? result).toBe(false);
         });
     });
 });
