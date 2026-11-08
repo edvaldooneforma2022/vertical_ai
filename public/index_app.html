@@ -1174,7 +1174,7 @@
         .diag-item-warning { border-left: 4px solid #f59e0b; color: #fbbf24; }
 
         .diag-item i { font-size: 1.1rem; }
-        
+
         .diag-footer {
             display: flex;
             flex-direction: column;
@@ -2643,17 +2643,17 @@
         }
 
         // ===== 🧠 DIAGNÓSTICO E ATIVAÇÃO DO ASSISTENTE =====
-        
+
         const diagnosticModal = document.getElementById('diagnosticModal');
         const closeDiagModal = document.getElementById('closeDiagModal');
         const diagContinueBtn = document.getElementById('diagContinueBtn');
         const diagAdjustBtn = document.getElementById('diagAdjustBtn');
-        
+
         const diagScore = document.getElementById('diagScore');
         const diagMode = document.getElementById('diagMode');
         const diagIssuesList = document.getElementById('diagIssuesList');
         const diagWarningsList = document.getElementById('diagWarningsList');
-        
+
         const ISSUE_MAP = {
             CHECKOUT_MISSING: "Checkout não encontrado",
             WHATSAPP_MISSING: "WhatsApp não configurado",
@@ -2719,7 +2719,7 @@
                 // Atualizar UI
                 chatbotLinkUrl.href = currentChatbotUrl;
                 chatbotLinkUrl.textContent = currentChatbotUrl;
-                
+
                 if (data.data && data.data.summary) {
                     extractedSummary.textContent = data.data.summary;
                 } else {
@@ -2830,12 +2830,12 @@
 
                     if (diagData.success && diagData.diagnostic) {
                         const d = diagData.diagnostic;
-                        
+
                         // Popular Modal
                         diagScore.textContent = d.score;
                         diagMode.textContent = d.mode;
                         diagMode.className = 'diag-mode-badge diag-mode-' + d.mode.toLowerCase();
-                        
+
                         // Issues
                         diagIssuesList.innerHTML = '';
                         if (d.issues && d.issues.length > 0) {
@@ -2849,7 +2849,7 @@
                         } else {
                             document.getElementById('diagIssuesSection').style.display = 'none';
                         }
-                        
+
                         // Warnings
                         diagWarningsList.innerHTML = '';
                         if (d.warnings && d.warnings.length > 0) {
@@ -2863,7 +2863,7 @@
                         } else {
                             document.getElementById('diagWarningsSection').style.display = 'none';
                         }
-                        
+
                         // Botões Customizados
                         if (d.mode === 'AUTO') {
                             diagContinueBtn.textContent = '✅ Ativar Assistente';
@@ -2877,7 +2877,7 @@
                             diagAdjustBtn.style.display = 'block';
                             diagAdjustBtn.textContent = '🔧 Preencher manualmente';
                         }
-                        
+
                         hideLoading();
                         diagnosticModal.style.display = 'flex';
                         return; // Para aqui, espera modal
@@ -2979,10 +2979,10 @@
     };
 
     var apiBase = "${apiBase}";
-    if (!config.apiKey || config.apiKey === "SUA_API_KEY") { 
-        console.error("❌ LinkMágico Widget: API Key não configurada!"); 
-        alert("⚠️ LinkMágico Widget: API Key não configurada! Verifique o script."); 
-        return; 
+    if (!config.apiKey || config.apiKey === "SUA_API_KEY") {
+        console.error("❌ LinkMágico Widget: API Key não configurada!");
+        alert("⚠️ LinkMágico Widget: API Key não configurada! Verifique o script.");
+        return;
     }
     var isOpen = false, leadId = null, leadCaptured = false, conversationId = 'lm_' + Date.now(), calendarHash = null;
     var styles = document.createElement('style');
@@ -3513,162 +3513,304 @@
 
             <!-- Tab WhatsApp -->
             <div id="tab-whatsapp" class="new-tab-content" style="display:none;">
-                <div style="background:#1e293b; padding:2rem; border-radius:16px;">
+                <div style="background:#1e293b; padding:2rem; border-radius:16px; border:1px solid #334155;">
 
-                    <!-- ═══ SEÇÃO 1: CONEXÃO RÁPIDA (SaaS) ═══ -->
-                    <div id="waSaasSection">
-                        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">
-                            <div style="width:48px;height:48px;background:linear-gradient(135deg,#25d366,#128C7E);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                                <i class="fab fa-whatsapp" style="font-size:1.5rem;color:white;"></i>
+                    <!-- ═══ CABEÇALHO META OFICIAL ═══ -->
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem; border-bottom:1px solid #334155; padding-bottom:1.25rem;">
+                        <div style="display:flex; align-items:center; gap:0.85rem;">
+                            <div style="width:52px; height:52px; background:linear-gradient(135deg, #25d366, #128C7E); border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(37,211,102,0.25);">
+                                <i class="fab fa-whatsapp" style="font-size:1.8rem; color:white;"></i>
                             </div>
                             <div>
-                                <h2 style="color:#f1f5f9; margin:0; font-size:1.3rem;">Conecte seu WhatsApp</h2>
-                                <p style="color:#94a3b8; margin:0; font-size:0.85rem;">em menos de 1 minuto</p>
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <h2 style="color:#f1f5f9; margin:0; font-size:1.35rem; font-weight:700;">WhatsApp Business Platform</h2>
+                                    <span style="background:rgba(37,211,102,0.15); color:#25d366; font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:20px; border:1px solid rgba(37,211,102,0.3); text-transform:uppercase;">Oficial Meta</span>
+                                </div>
+                                <p style="color:#94a3b8; margin:0.25rem 0 0 0; font-size:0.85rem;">Conexão oficial da Meta (Graph API v21.0) com isolamento total por tenant e máxima estabilidade.</p>
                             </div>
                         </div>
-                        <p style="color:#64748b; font-size:0.8rem; margin-bottom:1.5rem;">A mesma IA que atende no seu site, agora atendendo no WhatsApp — com o mesmo CRM, memória e pipeline de vendas.</p>
-
-                        <!-- Card de Status -->
-                        <div id="waSaasStatusCard" style="background:linear-gradient(135deg,#0f172a,#1e293b); border:1px solid #334155; padding:1.5rem; border-radius:16px; margin-bottom:1.5rem;">
-                            <!-- Estado: Desconectado -->
-                            <div id="waSaasStateDisconnected">
-                                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
-                                    <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
-                                    <span style="color:#fbbf24;font-weight:600;">WhatsApp não conectado</span>
-                                </div>
-                                <button id="waSaasConnectBtn" onclick="if(this.disabled)return;this.disabled=true;waSaasConnect().finally(()=>{this.disabled=false;})"
-                                    style="width:100%;background:linear-gradient(135deg,#25d366,#128C7E);color:white;border:none;padding:1rem 1.5rem;border-radius:12px;cursor:pointer;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;transition:all 0.3s;">
-                                    <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Gerar QR Code do WhatsApp
-                                </button>
-                            </div>
-
-                            <!-- Estado: Conectando (QR Code) -->
-                            <div id="waSaasStateConnecting" style="display:none;">
-                                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
-                                    <span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;display:inline-block;animation:pulse 1.5s infinite;"></span>
-                                    <span style="color:#60a5fa;font-weight:600;">Aguardando escaneamento...</span>
-                                </div>
-                                <div id="waSaasQrContainer" style="background:white;border-radius:16px;padding:1.5rem;text-align:center;margin-bottom:1rem;">
-                                    <img id="waSaasQrImage" src="" alt="QR Code WhatsApp"
-                                        style="max-width:280px;width:100%;border-radius:8px;" />
-                                </div>
-                                <p style="color:#94a3b8;font-size:0.8rem;text-align:center;">
-                                    Abra o WhatsApp no celular → Menu (⋮) → Aparelhos conectados → Conectar aparelho → Escaneie o código acima
-                                </p>
-                            </div>
-
-                            <!-- Estado: Conectado -->
-                            <div id="waSaasStateConnected" style="display:none;">
-                                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
-                                    <span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;"></span>
-                                    <span style="color:#34d399;font-weight:600;">✅ WhatsApp conectado</span>
-                                </div>
-                                <div style="background:#0f172a;border-radius:12px;padding:1rem;margin-bottom:1rem;">
-                                    <div style="display:grid;grid-template-columns:auto 1fr;gap:0.5rem 1rem;align-items:center;">
-                                        <span style="color:#64748b;font-size:0.8rem;">Número:</span>
-                                        <span id="waSaasPhone" style="color:#f1f5f9;font-weight:600;">—</span>
-                                        <span style="color:#64748b;font-size:0.8rem;">Nome:</span>
-                                        <span id="waSaasPushName" style="color:#cbd5e1;">—</span>
-                                        <span style="color:#64748b;font-size:0.8rem;">Instância:</span>
-                                        <span id="waSaasInstance" style="color:#475569;font-size:0.75rem;font-family:monospace;">—</span>
-                                    </div>
-                                </div>
-                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-                                    <button onclick="waSaasDisconnect()"
-                                        style="background:#334155;color:#f87171;border:1px solid #475569;padding:0.75rem;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
-                                        Desconectar
-                                    </button>
-                                    <button onclick="waSaasReconnect()"
-                                        style="background:#334155;color:#60a5fa;border:1px solid #475569;padding:0.75rem;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
-                                        🔄 Reconectar
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Estado: Carregando -->
-                            <div id="waSaasStateLoading" style="display:none;text-align:center;padding:2rem;">
-                                <div style="width:40px;height:40px;border:3px solid #334155;border-top-color:#25d366;border-radius:50%;margin:0 auto 1rem;animation:spin 1s linear infinite;"></div>
-                                <span style="color:#94a3b8;" id="waSaasLoadingText">Conectando...</span>
-                            </div>
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <span id="metaHeaderBadge" style="background:rgba(245,158,11,0.15); color:#fbbf24; font-size:0.75rem; font-weight:700; padding:6px 14px; border-radius:20px; border:1px solid rgba(245,158,11,0.3);">
+                                ⚪ Não conectado
+                            </span>
                         </div>
                     </div>
 
-                    <!-- ═══ SEÇÃO 2: CONFIGURAÇÃO AVANÇADA (Accordion) ═══ -->
-                    <div style="border-top:1px solid #334155; padding-top:1rem; margin-top:0.5rem;">
+                    <!-- ═══ AVISO DE CUSTOS & DIRETRIZ DA META ═══ -->
+                    <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:12px; padding:1rem; margin-bottom:1.5rem; display:flex; align-items:flex-start; gap:0.75rem;">
+                        <i class="fas fa-info-circle" style="color:#60a5fa; font-size:1.1rem; margin-top:2px;"></i>
+                        <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.5;">
+                            <strong style="color:#93c5fd;">Transparência de Custos e Conexão Direta:</strong> Cada cliente conecta sua própria conta <strong>Meta Business / WABA</strong> e seu próprio número de telefone. Os custos das mensagens são cobrados pela Meta diretamente na forma de pagamento cadastrada no seu Meta Business Manager, sem sobretaxas.
+                        </div>
+                    </div>
+
+                    <!-- ═══ CARD DE STATUS EM TEMPO REAL ═══ -->
+                    <div id="metaStatusCard" style="background:linear-gradient(135deg, #0f172a, #1e293b); border:1px solid #334155; border-radius:16px; padding:1.5rem; margin-bottom:1.5rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem; border-bottom:1px solid #1e293b; padding-bottom:0.75rem;">
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                <span id="metaStatusIndicatorDot" style="width:12px; height:12px; border-radius:50%; background:#f59e0b; display:inline-block;"></span>
+                                <span id="metaStatusTitle" style="color:#f1f5f9; font-weight:700; font-size:1rem;">Status da Conexão</span>
+                            </div>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button onclick="loadMetaWhatsAppSettings()" style="background:#334155; color:#94a3b8; border:1px solid #475569; padding:0.4rem 0.8rem; border-radius:8px; font-size:0.75rem; cursor:pointer;">
+                                    <i class="fas fa-sync-alt"></i> Atualizar Status
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Grid de Metadados Conectados -->
+                        <div id="metaDetailsConnected" style="display:none; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1.25rem;">
+                            <div style="background:#0f172a; padding:0.9rem; border-radius:10px; border:1px solid #1e293b;">
+                                <span style="color:#64748b; font-size:0.75rem; display:block;">Número WhatsApp</span>
+                                <strong id="metaConnectedPhone" style="color:#25d366; font-size:0.95rem;">—</strong>
+                            </div>
+                            <div style="background:#0f172a; padding:0.9rem; border-radius:10px; border:1px solid #1e293b;">
+                                <span style="color:#64748b; font-size:0.75rem; display:block;">Phone Number ID</span>
+                                <span id="metaConnectedPhoneId" style="color:#f1f5f9; font-size:0.85rem; font-family:monospace;">—</span>
+                            </div>
+                            <div style="background:#0f172a; padding:0.9rem; border-radius:10px; border:1px solid #1e293b;">
+                                <span style="color:#64748b; font-size:0.75rem; display:block;">WABA ID (Conta Business)</span>
+                                <span id="metaConnectedWabaId" style="color:#f1f5f9; font-size:0.85rem; font-family:monospace;">—</span>
+                            </div>
+                            <div style="background:#0f172a; padding:0.9rem; border-radius:10px; border:1px solid #1e293b;">
+                                <span style="color:#64748b; font-size:0.75rem; display:block;">Armazenamento de Tokens</span>
+                                <span style="color:#34d399; font-size:0.8rem; font-weight:600;"><i class="fas fa-lock"></i> Criptografia AES-256</span>
+                            </div>
+                        </div>
+
+                        <!-- Seletor do Modo de Vendas (⚡ Auto / 🎛️ Manual / ⚫ Off) -->
+                        <div style="background:#0f172a; border-radius:12px; padding:1.2rem; margin-bottom:1.25rem; border:1px solid #1e293b;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+                                <div>
+                                    <strong style="color:#f1f5f9; font-size:0.9rem; display:block;">Modo de Atendimento WhatsApp</strong>
+                                    <span style="color:#64748b; font-size:0.75rem;">Controle como a IA reage às mensagens recebidas neste canal</span>
+                                </div>
+                                <span id="metaCurrentModeBadge" style="background:#1e293b; color:#3b82f6; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:12px; border:1px solid #334155;">
+                                    ⚡ Automático
+                                </span>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.75rem;">
+                                <button type="button" id="btnModeAuto" onclick="setWhatsAppMode('auto')"
+                                    style="background:#1e293b; color:#f1f5f9; border:2px solid #3b82f6; padding:0.75rem; border-radius:10px; cursor:pointer; font-size:0.8rem; font-weight:600; text-align:center; transition:all 0.2s;">
+                                    ⚡ Automático<br><span style="font-size:0.68rem; color:#94a3b8; font-weight:normal;">IA responde e agenda</span>
+                                </button>
+                                <button type="button" id="btnModeManual" onclick="setWhatsAppMode('manual')"
+                                    style="background:#1e293b; color:#f1f5f9; border:1px solid #334155; padding:0.75rem; border-radius:10px; cursor:pointer; font-size:0.8rem; font-weight:600; text-align:center; transition:all 0.2s;">
+                                    🎛️ Manual<br><span style="font-size:0.68rem; color:#94a3b8; font-weight:normal;">Notifica atendente</span>
+                                </button>
+                                <button type="button" id="btnModeOff" onclick="setWhatsAppMode('off')"
+                                    style="background:#1e293b; color:#f1f5f9; border:1px solid #334155; padding:0.75rem; border-radius:10px; cursor:pointer; font-size:0.8rem; font-weight:600; text-align:center; transition:all 0.2s;">
+                                    ⚫ Desligado<br><span style="font-size:0.68rem; color:#94a3b8; font-weight:normal;">Canal pausado</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Ações Rápidas -->
+                        <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
+                            <button id="btnMetaTest" onclick="testMetaWhatsAppConnection()"
+                                style="background:linear-gradient(135deg, #25d366, #128C7E); color:white; border:none; padding:0.75rem 1.25rem; border-radius:10px; cursor:pointer; font-weight:600; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
+                                <i class="fas fa-paper-plane"></i> Enviar Mensagem de Teste Oficial
+                            </button>
+                            <button id="btnMetaDisconnect" onclick="disconnectMetaWhatsApp()"
+                                style="background:#334155; color:#f87171; border:1px solid #475569; padding:0.75rem 1.25rem; border-radius:10px; cursor:pointer; font-weight:600; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
+                                <i class="fas fa-unlink"></i> Desconectar Conta
+                            </button>
+                            <button onclick="document.getElementById('metaCredentialsFormSection').scrollIntoView({behavior:'smooth'})"
+                                style="background:#334155; color:#cbd5e1; border:1px solid #475569; padding:0.75rem 1.25rem; border-radius:10px; cursor:pointer; font-weight:600; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
+                                <i class="fas fa-key"></i> Atualizar Credenciais WABA
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ═══ CONFIGURAÇÃO DE WEBHOOKS & URLs ═══ -->
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:16px; padding:1.5rem; margin-bottom:1.5rem;">
+                        <h3 style="color:#f1f5f9; font-size:0.95rem; margin:0 0 0.5rem 0; display:flex; align-items:center; gap:0.5rem;">
+                            <i class="fas fa-plug" style="color:#38bdf8;"></i> Configuração de Webhook na Meta
+                        </h3>
+                        <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 1rem 0;">
+                            Configure estes dados no <strong>Painel Meta for Developers &gt; WhatsApp &gt; Configuração &gt; Webhook</strong> para receber mensagens em tempo real.
+                        </p>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                            <div>
+                                <label style="color:#cbd5e1; font-size:0.78rem; display:block; margin-bottom:0.35rem;">URL de Retorno de Chamada (Callback URL):</label>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <input type="text" id="metaWebhookUrlDisplay" readonly value=""
+                                        style="flex:1; background:#1e293b; border:1px solid #475569; border-radius:8px; padding:0.6rem; color:#38bdf8; font-family:monospace; font-size:0.8rem;">
+                                    <button type="button" onclick="copyWebhookUrl()" style="background:#334155; color:white; border:none; padding:0.6rem 0.9rem; border-radius:8px; cursor:pointer; font-size:0.75rem;">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="color:#cbd5e1; font-size:0.78rem; display:block; margin-bottom:0.35rem;">Token de Verificação (Verify Token):</label>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <input type="text" id="metaVerifyTokenDisplay" readonly value=""
+                                        style="flex:1; background:#1e293b; border:1px solid #475569; border-radius:8px; padding:0.6rem; color:#34d399; font-family:monospace; font-size:0.8rem;">
+                                    <button type="button" onclick="copyVerifyToken()" style="background:#334155; color:white; border:none; padding:0.6rem 0.9rem; border-radius:8px; cursor:pointer; font-size:0.75rem;">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background:#1e293b; padding:0.75rem 1rem; border-radius:8px; font-size:0.75rem; color:#94a3b8;">
+                            <strong>Campos de Assinatura Webhook (Webhook Fields):</strong> Marque o campo <code style="color:#38bdf8; background:#0f172a; padding:2px 6px; border-radius:4px;">messages</code> no painel da Meta para receber todas as conversas e status de entrega.
+                        </div>
+                    </div>
+
+                    <!-- ═══ FORMULÁRIO DE CREDENCIAIS META WABA ═══ -->
+                    <div id="metaCredentialsFormSection" style="background:#0f172a; border:1px solid #334155; border-radius:16px; padding:1.5rem; margin-bottom:1.5rem;">
+                        <h3 style="color:#f1f5f9; font-size:0.95rem; margin:0 0 0.5rem 0; display:flex; align-items:center; gap:0.5rem;">
+                            <i class="fas fa-sliders-h" style="color:#25d366;"></i> Conexão de Credenciais Meta Cloud API
+                        </h3>
+                        <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 1.25rem 0;">
+                            Preencha com os dados do seu Aplicativo Meta for Developers e conta WABA:
+                        </p>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                            <div>
+                                <label style="color:#cbd5e1; font-size:0.8rem; display:block; margin-bottom:0.35rem;">
+                                    Phone Number ID <span style="color:#ef4444;">*</span>
+                                </label>
+                                <input type="text" id="meta-phone-id" placeholder="Ex: 104857291048271"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#f1f5f9; font-family:monospace; font-size:0.85rem;">
+                                <span style="color:#64748b; font-size:0.72rem;">Encontrado em: WhatsApp &gt; Primeiros Passos &gt; Identificação do número de telefone.</span>
+                            </div>
+                            <div>
+                                <label style="color:#cbd5e1; font-size:0.8rem; display:block; margin-bottom:0.35rem;">
+                                    WhatsApp Business Account ID (WABA ID)
+                                </label>
+                                <input type="text" id="meta-waba-id" placeholder="Ex: 103984719283746"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#f1f5f9; font-family:monospace; font-size:0.85rem;">
+                                <span style="color:#64748b; font-size:0.72rem;">Identificação da sua conta WABA no Meta Business Manager.</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:1rem;">
+                            <label style="color:#cbd5e1; font-size:0.8rem; display:block; margin-bottom:0.35rem;">
+                                Meta Access Token (Permanente / System User) <span style="color:#ef4444;">*</span>
+                            </label>
+                            <input type="password" id="meta-access-token" placeholder="EAABw..."
+                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#f1f5f9; font-family:monospace; font-size:0.85rem;">
+                            <span style="color:#64748b; font-size:0.72rem;">Token do Usuário do Sistema com permissões <code style="color:#94a3b8;">whatsapp_business_messaging</code> e <code style="color:#94a3b8;">whatsapp_business_management</code>. Criptografado com AES-256 no banco.</span>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                            <div>
+                                <label style="color:#cbd5e1; font-size:0.8rem; display:block; margin-bottom:0.35rem;">
+                                    Webhook Verify Token (Opcional - Customizado)
+                                </label>
+                                <input type="text" id="meta-verify-token" placeholder="Deixe em branco para gerar automático"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#f1f5f9; font-size:0.85rem;">
+                            </div>
+                            <div>
+                                <label style="color:#cbd5e1; font-size:0.8rem; display:block; margin-bottom:0.35rem;">
+                                    Meta App Secret (Para validação HMAC SHA-256)
+                                </label>
+                                <input type="password" id="meta-app-secret" placeholder="Chave secreta do aplicativo Meta"
+                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#f1f5f9; font-size:0.85rem;">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:1.25rem;">
+                            <label style="color:#cbd5e1; font-size:0.8rem; display:block; margin-bottom:0.35rem;">
+                                WhatsApp do Responsável (Notificações de Leads)
+                            </label>
+                            <input type="text" id="meta-notification-phone" placeholder="Ex: 5511999999999"
+                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#f1f5f9; font-size:0.85rem;">
+                        </div>
+
+                        <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                            <button type="button" onclick="saveMetaWhatsAppSettings()" id="btnSaveMeta"
+                                style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; padding:0.85rem 1.5rem; border-radius:10px; cursor:pointer; font-weight:700; font-size:0.9rem; display:flex; align-items:center; gap:0.5rem; transition:all 0.3s;">
+                                <i class="fas fa-save"></i> Salvar e Conectar Meta Cloud API
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ═══ MONITOR DE CONVERSAS & HISTÓRICO AO VIVO ═══ -->
+                    <div style="background:#0f172a; border:1px solid #334155; border-radius:16px; padding:1.5rem; margin-bottom:1.5rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
+                            <div>
+                                <h3 style="color:#f1f5f9; font-size:0.95rem; margin:0 0 0.25rem 0; display:flex; align-items:center; gap:0.5rem;">
+                                    <i class="fas fa-comments" style="color:#25d366;"></i> Conversas e Mensagens WhatsApp (Ao Vivo)
+                                </h3>
+                                <p style="color:#94a3b8; font-size:0.78rem; margin:0;">Mensagens recebidas e respostas enviadas pela IA com vínculo direto ao CRM.</p>
+                            </div>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button type="button" onclick="loadWhatsAppLiveMessages()" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155; padding:0.5rem 0.9rem; border-radius:8px; font-size:0.75rem; cursor:pointer;">
+                                    <i class="fas fa-sync-alt"></i> Atualizar Mensagens
+                                </button>
+                                <button type="button" onclick="window.open('/crm.html', '_blank')" style="background:#3b82f6; color:white; border:none; padding:0.5rem 0.9rem; border-radius:8px; font-size:0.75rem; cursor:pointer; font-weight:600;">
+                                    <i class="fas fa-external-link-alt"></i> Abrir CRM
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabela de Mensagens -->
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
+                                <thead>
+                                    <tr style="border-bottom:1px solid #334155; color:#64748b;">
+                                        <th style="padding:0.6rem;">Data/Hora</th>
+                                        <th style="padding:0.6rem;">Contato</th>
+                                        <th style="padding:0.6rem;">Fluxo</th>
+                                        <th style="padding:0.6rem;">Mensagem</th>
+                                        <th style="padding:0.6rem;">Lead no CRM</th>
+                                        <th style="padding:0.6rem;">Canal</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="metaLiveMessagesTbody">
+                                    <tr>
+                                        <td colspan="6" style="padding:1.5rem; text-align:center; color:#64748b;">
+                                            Carregando mensagens da operação...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ═══ ACORDEÃO DE PROVEDORES LEGADOS (Twilio / Evolution) ═══ -->
+                    <div style="border-top:1px solid #334155; padding-top:1rem;">
                         <button id="waAdvancedToggle" onclick="toggleWaAdvanced()"
-                            style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;">
-                            <i class="fas fa-chevron-right" id="waAdvancedChevron" style="font-size:0.6rem;transition:transform 0.3s;"></i>
-                            Usar minhas próprias credenciais (Avançado)
+                            style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem; display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0;">
+                            <i class="fas fa-chevron-right" id="waAdvancedChevron" style="font-size:0.6rem; transition:transform 0.3s;"></i>
+                            Provedores Legados (Twilio / Evolution Go - Opcional)
                         </button>
-
-                        <div id="waAdvancedContent" style="display:none; margin-top:1rem;">
-                            <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:1rem;">
-                                Se você possui sua própria instância Evolution API ou conta Twilio, configure aqui.
+                        <div id="waAdvancedContent" style="display:none; margin-top:1rem; background:#0f172a; padding:1.25rem; border-radius:12px; border:1px solid #334155;">
+                            <p style="color:#94a3b8; font-size:0.78rem; margin-bottom:1rem;">
+                                Apenas para compatibilidade legada com contas Twilio antigas. A Meta Cloud API acima é a recomendada oficialmente.
                             </p>
-
-                            <!-- FIX-WA-DOM: Elemento de status que o JS referencia -->
-                            <div id="whatsapp-current-status" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:1rem; margin-bottom:1rem;"></div>
-
-                            <!-- Escolha do Provedor (formulário original preservado 100%) -->
-                            <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                                <h3 style="color:#cbd5e1; margin-bottom:1rem;">Escolha o Provedor</h3>
-                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                                    <button id="btn-twilio" onclick="selectProvider('twilio')"
-                                        style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
-                                        <strong>Twilio</strong>
-                                    </button>
-                                    <button id="btn-evolution" onclick="selectProvider('evolution')"
-                                        style="background:#1e293b; border:2px solid #334155; color:white; padding:1rem; border-radius:12px; cursor:pointer;">
-                                        <strong>Evolution API</strong>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Config Twilio -->
-                            <div id="form-twilio"
-                                style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                                <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Twilio</h3>
-                                <input type="text" id="twilio-sid" placeholder="Account SID"
-                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                                <input type="password" id="twilio-token" placeholder="Auth Token"
-                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                                <input type="text" id="twilio-number" placeholder="Twilio Number (ex: +1234567890)"
-                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                                <input type="text" id="twilio-notification-phone"
-                                    placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
-                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
-                            </div>
-
-                            <!-- Config Evolution -->
-                            <div id="form-evolution"
-                                style="display:none; background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
-                                <h3 style="color:#cbd5e1; margin-bottom:1rem;">Configuração Evolution API</h3>
-                                <input type="text" id="evolution-url" placeholder="API URL (ex: https://api.suadominio.com)"
-                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                                <input type="password" id="evolution-key" placeholder="API Key"
-                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                                <input type="text" id="evolution-instance" placeholder="Instance Name"
-                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:1rem;">
-                                <input type="text" id="evolution-notification-phone"
-                                    placeholder="Seu WhatsApp para notificações (ex: +5511999999999)"
-                                    style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1;">
-                            </div>
-
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                                <button onclick="saveWhatsAppSettings()"
-                                    style="background:#3b82f6; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                                    💾 Salvar Configuração
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+                                <button type="button" id="btn-twilio" onclick="selectProvider('twilio')"
+                                    style="background:#1e293b; border:2px solid #334155; color:white; padding:0.75rem; border-radius:10px; cursor:pointer; font-size:0.8rem;">
+                                    Twilio
                                 </button>
-                                <button onclick="testWhatsAppConnection()"
-                                    style="background:#25d366; color:white; border:none; padding:1rem; border-radius:12px; cursor:pointer; font-weight:600;">
-                                    🧪 Testar Conexão
+                                <button type="button" id="btn-evolution" onclick="selectProvider('evolution')"
+                                    style="background:#1e293b; border:2px solid #334155; color:white; padding:0.75rem; border-radius:10px; cursor:pointer; font-size:0.8rem;">
+                                    Evolution API
                                 </button>
                             </div>
+                            <div id="form-twilio" style="display:none; margin-bottom:1rem;">
+                                <input type="text" id="twilio-sid" placeholder="Account SID" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:0.5rem; font-size:0.8rem;">
+                                <input type="password" id="twilio-token" placeholder="Auth Token" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:0.5rem; font-size:0.8rem;">
+                                <input type="text" id="twilio-number" placeholder="Twilio Number (+1...)" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; font-size:0.8rem;">
+                            </div>
+                            <div id="form-evolution" style="display:none; margin-bottom:1rem;">
+                                <input type="text" id="evolution-url" placeholder="API URL" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:0.5rem; font-size:0.8rem;">
+                                <input type="password" id="evolution-key" placeholder="API Key" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; margin-bottom:0.5rem; font-size:0.8rem;">
+                                <input type="text" id="evolution-instance" placeholder="Instance Name" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid #475569; background:#1e293b; color:#cbd5e1; font-size:0.8rem;">
+                            </div>
+                            <button type="button" onclick="saveWhatsAppSettings()" style="background:#334155; color:white; border:1px solid #475569; padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-size:0.8rem;">
+                                Salvar Provedor Legado
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <!-- ═══ WA-SAAS-001: JavaScript da Conexão Rápida ═══ -->
+                </div>
+            </div>
+
+            <!-- ═══ WA-SAAS-001: JavaScript da Conexão Rápida ═══ -->
                 <script>
                 (function() {
                     'use strict';
@@ -6194,7 +6336,7 @@
                                         <div style="flex:1;">
                                             <div style="color:#cbd5e1; font-weight:600; margin-bottom:0.25rem;">${nome || 'Visitante'}</div>
                                             <div style="color:#94a3b8; font-size:0.85rem;">
-                                                ${lead.email ? `📧 ${lead.email}` : ''} 
+                                                ${lead.email ? `📧 ${lead.email}` : ''}
                                                 ${lead.email && telefone ? ' | ' : ''}
                                                 ${telefone ? `📱 ${telefone}` : ''}
                                             </div>
@@ -6455,12 +6597,12 @@
                                 ✕ Fechar
                             </button>
                         </div>
-                        
+
                         <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Nome</div>
                             <div style="color:#cbd5e1; font-size:1.1rem; font-weight:600;">${nome}</div>
                         </div>
-                        
+
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                             <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                                 <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">📧 Email</div>
@@ -6471,29 +6613,29 @@
                                 <div style="color:#cbd5e1; font-weight:600;">${telefone}</div>
                             </div>
                         </div>
-                        
+
                         <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">💬 Última Mensagem</div>
                             <div style="color:#cbd5e1; line-height:1.6;">${(lead.conversations && lead.conversations.length > 0) ? lead.conversations[lead.conversations.length - 1].message : (lead.message || 'Nenhuma mensagem')}</div>
                         </div>
-                        
+
                         ${appointmentsHtml}
-                        
+
                         ${conversationsHtml}
-                        
+
                         <div style="background:#334155; padding:1.5rem; border-radius:12px; margin-bottom:1rem;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🕒 Data de Captura</div>
                             <div style="color:#cbd5e1; font-weight:600;">${dateStr}</div>
                         </div>
 
-                        
+
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
                             <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">🔗 URL de Origem</div>
                             <div style="color:#60a5fa; word-break:break-all;">${url}</div>
                         </div>
 
                         <!-- 🎯 BUG-FIX-004: Botão Excluir Lead -->
-                        <button onclick="deleteLead('${leadId}', this)" 
+                        <button onclick="deleteLead('${leadId}', this)"
                             style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:0.75rem; border-radius:12px; cursor:pointer; font-weight:600; width:100%; margin-top:1.5rem; transition:all 0.3s;">
                             🗑️ Excluir este Lead
                         </button>

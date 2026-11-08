@@ -1,6 +1,6 @@
 // ===== MULTI-TENANT WHATSAPP API ROUTES (NOVO) =====
 
-const { DatabaseHelpers } = require('./database');
+const { DatabaseHelpers, db, USE_POSTGRES } = require('./database');
 const { whatsappIntegration, clearTenantCache } = require('./whatsapp-integration');
 
 // Helper: resolver apiKey de múltiplas fontes (alinhado com server.js:3640)
@@ -21,10 +21,10 @@ module.exports = function (app, logger) {
             const settings = req.body;
 
             // Validar campos obrigatórios
-            if (!settings.provider || !['twilio', 'evolution'].includes(settings.provider)) {
+            if (!settings.provider || !['twilio', 'evolution', 'meta'].includes(settings.provider)) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Provider inválido. Use "twilio" ou "evolution"'
+                    error: 'Provider inválido. Use "twilio", "evolution" ou "meta"'
                 });
             }
 
@@ -41,6 +41,13 @@ module.exports = function (app, logger) {
                     return res.status(400).json({
                         success: false,
                         error: 'Evolution API requer: evolutionApiUrl, evolutionApiKey e evolutionInstanceName'
+                    });
+                }
+            } else if (settings.provider === 'meta') {
+                if ((!settings.metaPhoneNumberId && !settings.phoneNumberId) || (!settings.metaAccessToken && !settings.accessToken)) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Meta Cloud API requer: metaPhoneNumberId e metaAccessToken'
                     });
                 }
             }
@@ -93,9 +100,18 @@ module.exports = function (app, logger) {
                     provider: settings.provider,
                     notificationPhone: settings.notification_phone,
                     isActive: settings.is_active,
+                    channelMode: settings.channel_mode || 'auto',
                     // Indicadores sem expor credenciais
                     hasTwilioConfig: !!settings.twilio_account_sid,
                     hasEvolutionConfig: !!settings.evolution_api_url,
+                    hasMetaConfig: !!settings.meta_phone_number_id,
+                    metaPhoneNumberId: settings.meta_phone_number_id || null,
+                    metaWabaId: settings.meta_waba_id || null,
+                    metaVerifyToken: settings.meta_verify_token || null,
+                    hasAppSecret: !!settings.meta_app_secret,
+                    webhookUrl: `${req.protocol}://${req.get('host')}/api/webhook/meta`,
+                    webhookStatus: settings.meta_verify_token ? 'configured' : 'pending',
+                    costsDisclosure: 'Cada cliente utiliza sua própria conta Meta Business/WABA e assume os custos correspondentes da Meta.',
                     createdAt: settings.created_at
                 }
             });
@@ -174,6 +190,113 @@ module.exports = function (app, logger) {
                 success: false,
                 error: error.message
             });
+        }
+    });
+
+    /**
+     * Buscar histórico de mensagens WhatsApp do tenant (Painel de Operações)
+     */
+    app.get('/api/whatsapp/messages', async (req, res) => {
+        try {
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
+
+            const phone = req.query.phone;
+            const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+
+            let query = '';
+            let params = [];
+
+            if (USE_POSTGRES) {
+                if (phone) {
+                    const phoneClean = phone.replace(/\D/g, '');
+                    query = `SELECT m.id, m.wa_message_id, m.wa_phone, m.direction, m.content, m.lead_id, m.conversation_id, m.provider, m.created_at,
+                                    l.nome as lead_name, l.status as lead_status
+                             FROM whatsapp_messages m
+                             LEFT JOIN tenant_leads l ON m.lead_id = l.id
+                             WHERE (m.api_key = $1 OR m.tenant_uuid::text = $1)
+                               AND m.wa_phone LIKE $2
+                             ORDER BY m.created_at DESC LIMIT $3`;
+                    params = [apiKey, `%${phoneClean}%`, limit];
+                } else {
+                    query = `SELECT m.id, m.wa_message_id, m.wa_phone, m.direction, m.content, m.lead_id, m.conversation_id, m.provider, m.created_at,
+                                    l.nome as lead_name, l.status as lead_status
+                             FROM whatsapp_messages m
+                             LEFT JOIN tenant_leads l ON m.lead_id = l.id
+                             WHERE (m.api_key = $1 OR m.tenant_uuid::text = $1)
+                             ORDER BY m.created_at DESC LIMIT $2`;
+                    params = [apiKey, limit];
+                }
+            } else {
+                if (phone) {
+                    const phoneClean = phone.replace(/\D/g, '');
+                    query = `SELECT m.id, m.wa_message_id, m.wa_phone, m.direction, m.content, m.lead_id, m.conversation_id, m.provider, m.created_at,
+                                    l.nome as lead_name, l.status as lead_status
+                             FROM whatsapp_messages m
+                             LEFT JOIN tenant_leads l ON m.lead_id = l.id
+                             WHERE (m.api_key = ? OR m.tenant_uuid = ?)
+                               AND m.wa_phone LIKE ?
+                             ORDER BY m.created_at DESC LIMIT ?`;
+                    params = [apiKey, apiKey, `%${phoneClean}%`, limit];
+                } else {
+                    query = `SELECT m.id, m.wa_message_id, m.wa_phone, m.direction, m.content, m.lead_id, m.conversation_id, m.provider, m.created_at,
+                                    l.nome as lead_name, l.status as lead_status
+                             FROM whatsapp_messages m
+                             LEFT JOIN tenant_leads l ON m.lead_id = l.id
+                             WHERE (m.api_key = ? OR m.tenant_uuid = ?)
+                             ORDER BY m.created_at DESC LIMIT ?`;
+                    params = [apiKey, apiKey, limit];
+                }
+            }
+
+            const result = await db.query(query, params);
+            res.json({
+                success: true,
+                messages: result?.rows || []
+            });
+        } catch (error) {
+            logger.error('Erro ao buscar mensagens WhatsApp:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    });
+
+    /**
+     * Alterar modo operacional do canal WhatsApp (auto, manual, off)
+     */
+    app.post('/api/whatsapp/mode', async (req, res) => {
+        try {
+            const apiKey = resolveApiKey(req);
+            if (!apiKey) {
+                return res.status(401).json({ success: false, error: 'API Key não fornecida' });
+            }
+
+            const { mode } = req.body || {};
+            if (!mode || !['auto', 'manual', 'off'].includes(mode)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Modo inválido. Use "auto" (Automático), "manual" (Manual) ou "off" (Desligado)'
+                });
+            }
+
+            const query = USE_POSTGRES
+                ? `UPDATE whatsapp_settings SET channel_mode = $1, updated_at = CURRENT_TIMESTAMP WHERE (api_key = $2 OR tenant_uuid::text = $2)`
+                : `UPDATE whatsapp_settings SET channel_mode = ?, updated_at = datetime('now') WHERE (api_key = ? OR tenant_uuid = ?)`;
+            const params = USE_POSTGRES ? [mode, apiKey] : [mode, apiKey, apiKey];
+
+            await db.query(query, params);
+            clearTenantCache(apiKey);
+
+            logger.info(`🔄 Modo WhatsApp alterado para ${mode} para tenant ${apiKey}`);
+            res.json({
+                success: true,
+                mode: mode,
+                message: `Modo do canal alterado para: ${mode === 'auto' ? '⚡ Automático' : (mode === 'manual' ? '🎛️ Manual' : '⚫ Desligado')}`
+            });
+        } catch (error) {
+            logger.error('Erro ao alterar modo do WhatsApp:', error);
+            res.status(500).json({ success: false, error: error.message });
         }
     });
 

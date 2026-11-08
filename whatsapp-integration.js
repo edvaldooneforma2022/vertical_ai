@@ -99,6 +99,34 @@ Continue assim! 🚀`
         }
     }
 
+    // Configurar Meta WhatsApp Cloud API (Oficial)
+    configureMeta(config) {
+        try {
+            const { phoneNumberId, accessToken, wabaId, verifyToken, appSecret } = config;
+
+            if (!phoneNumberId || !accessToken) {
+                console.log('⚠️ Meta Cloud API não configurada (phoneNumberId ou accessToken ausentes)');
+                return false;
+            }
+
+            this.provider = 'meta';
+            this.config = {
+                phoneNumberId,
+                accessToken,
+                wabaId: wabaId || null,
+                verifyToken: verifyToken || null,
+                appSecret: appSecret || null
+            };
+            this.isConfigured = true;
+
+            console.log('✅ Meta Cloud API WhatsApp configurada');
+            return true;
+        } catch (error) {
+            console.error('❌ Erro ao configurar Meta Cloud API:', error.message);
+            return false;
+        }
+    }
+
     // Verificar se está configurado
     isReady() {
         return this.isConfigured && this.provider !== null;
@@ -198,6 +226,45 @@ Continue assim! 🚀`
         }
     }
 
+    // Enviar via Meta WhatsApp Cloud API (Graph API v21.0 Oficial)
+    async sendViaMeta(to, message) {
+        try {
+            const { phoneNumberId, accessToken } = this.config;
+            const phoneClean = to.replace(/\D/g, '');
+            const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+            const payload = {
+                messaging_product: 'whatsapp',
+                recipient_type: 'individual',
+                to: phoneClean,
+                type: 'text',
+                text: { preview_url: false, body: message }
+            };
+
+            const axios = require('axios');
+            const response = await axios.post(url, payload, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 15000
+            });
+
+            console.log(`📱 [META-INTEGRATION] Mensagem enviada para ${phoneClean} | ID: ${response.data?.messages?.[0]?.id}`);
+            return {
+                success: true,
+                messageId: response.data?.messages?.[0]?.id || null,
+                provider: 'meta'
+            };
+        } catch (error) {
+            console.error('❌ Erro ao enviar via Meta Cloud API:', error.response?.data || error.message);
+            return {
+                success: false,
+                error: error.response?.data?.error?.message || error.message,
+                provider: 'meta'
+            };
+        }
+    }
+
     // Enviar mensagem (detecta provider automaticamente)
     async sendMessage(to, message) {
         if (!this.isReady()) {
@@ -209,6 +276,8 @@ Continue assim! 🚀`
             return await this.sendViaTwilio(to, message);
         } else if (this.provider === 'evolution') {
             return await this.sendViaEvolution(to, message);
+        } else if (this.provider === 'meta') {
+            return await this.sendViaMeta(to, message);
         } else {
             return { success: false, error: 'Provider desconhecido' };
         }
@@ -396,6 +465,14 @@ Continue assim! 🚀`
                     console.warn(`⚠️ [WA-SAAS] Tenant ${apiKey} é SaaS mas Evolution Central não está configurada`);
                     return this; // Fallback para instância global
                 }
+            } else if (settings.provider === 'meta') {
+                tenantInstance.configureMeta({
+                    phoneNumberId: settings.meta_phone_number_id || settings.phoneNumberId,
+                    accessToken: settings.meta_access_token || settings.accessToken,
+                    wabaId: settings.meta_waba_id || settings.wabaId,
+                    verifyToken: settings.meta_verify_token || settings.verifyToken,
+                    appSecret: settings.meta_app_secret || settings.appSecret
+                });
             }
 
             // Armazenar em cache
@@ -506,4 +583,3 @@ module.exports = {
     getTenantInstance: (apiKey) => whatsappIntegration.getTenantInstance(apiKey),
     clearTenantCache: (apiKey) => whatsappIntegration.clearTenantCache(apiKey)
 };
-
