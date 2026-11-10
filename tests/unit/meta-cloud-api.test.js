@@ -872,6 +872,22 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
 
     describe('4. Despacho de Mensagens via Meta Graph API v21.0', () => {
         it('deve enviar mensagem para https://graph.facebook.com/v21.0/{phoneId}/messages com header Bearer', async () => {
+            mockDb.query.mockImplementation(async (sql) => {
+                if (typeof sql === 'string' && sql.includes('whatsapp_settings')) {
+                    return {
+                        rows: [{
+                            tenant_uuid: '11111111-1111-1111-1111-111111111111',
+                            api_key: 'dummy_key',
+                            provider: 'meta',
+                            is_active: true,
+                            meta_phone_number_id: '10987654321',
+                            meta_access_token: 'EAAB_test_access_token_123456'
+                        }]
+                    };
+                }
+                return { rows: [] };
+            });
+
             const spyPost = jest.spyOn(axios, 'post').mockResolvedValueOnce({
                 status: 200,
                 data: {
@@ -889,8 +905,7 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
                 null,
                 null,
                 {
-                    phoneNumberId: '10987654321',
-                    accessToken: 'EAAB_test_access_token_123456'
+                    tenantUuid: '11111111-1111-1111-1111-111111111111'
                 }
             );
 
@@ -919,14 +934,29 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
         });
 
         it('deve descriptografar token criptografado antes de enviar para a Graph API', async () => {
+            const rawToken = 'super-secret-meta-access-token';
+            const encryptedToken = `ENC:${Buffer.from(rawToken).toString('base64')}`;
+
+            mockDb.query.mockImplementation(async (sql) => {
+                if (typeof sql === 'string' && sql.includes('whatsapp_settings')) {
+                    return {
+                        rows: [{
+                            tenant_uuid: '11111111-1111-1111-1111-111111111111',
+                            api_key: 'tenant_api_key_enc',
+                            provider: 'meta',
+                            is_active: true,
+                            meta_phone_number_id: '9988776655',
+                            meta_access_token: encryptedToken
+                        }]
+                    };
+                }
+                return { rows: [] };
+            });
+
             const spyPost = jest.spyOn(axios, 'post').mockResolvedValueOnce({
                 status: 200,
                 data: { messages: [{ id: 'wamid.DECRYPTED_TOKEN_SENT' }] }
             });
-
-            // Token criptografado com formato ENC:base64
-            const rawToken = 'super-secret-meta-access-token';
-            const encryptedToken = `ENC:${Buffer.from(rawToken).toString('base64')}`;
 
             const result = await channel._sendResponse(
                 'tenant_api_key_enc',
@@ -936,8 +966,6 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
                 null,
                 null,
                 {
-                    phoneNumberId: '9988776655',
-                    accessToken: encryptedToken,
                     tenantUuid: '11111111-1111-1111-1111-111111111111'
                 }
             );
@@ -957,6 +985,22 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
         });
 
         it('deve tratar erro da Graph API (ex: rate limit ou token expirado) sem quebrar o servidor', async () => {
+            mockDb.query.mockImplementation(async (sql) => {
+                if (typeof sql === 'string' && sql.includes('whatsapp_settings')) {
+                    return {
+                        rows: [{
+                            tenant_uuid: '11111111-1111-1111-1111-111111111111',
+                            api_key: 'dummy_key',
+                            provider: 'meta',
+                            is_active: true,
+                            meta_phone_number_id: '10987654321',
+                            meta_access_token: 'valid_access_token_min_15_chars'
+                        }]
+                    };
+                }
+                return { rows: [] };
+            });
+
             const spyPost = jest.spyOn(axios, 'post').mockRejectedValueOnce({
                 response: {
                     status: 400,
@@ -979,8 +1023,7 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
                 null,
                 null,
                 {
-                    phoneNumberId: '10987654321',
-                    accessToken: 'some_token'
+                    tenantUuid: '11111111-1111-1111-1111-111111111111'
                 }
             );
 
@@ -995,6 +1038,37 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
 
     describe('5. Isolamento Multi-Tenant de Credenciais', () => {
         it('deve usar credenciais estritamente isoladas para cada tenant', async () => {
+            mockDb.query.mockImplementation(async (sql, params) => {
+                if (typeof sql === 'string' && sql.includes('whatsapp_settings')) {
+                    const key = params?.[1] || params?.[0];
+                    if (key === 'key_a') {
+                        return {
+                            rows: [{
+                                tenant_uuid: '11111111-1111-1111-1111-111111111111',
+                                api_key: 'key_a',
+                                provider: 'meta',
+                                is_active: true,
+                                meta_phone_number_id: '10000000001',
+                                meta_access_token: 'TOKEN_A_VALID_LEN_123'
+                            }]
+                        };
+                    }
+                    if (key === 'key_b') {
+                        return {
+                            rows: [{
+                                tenant_uuid: '11111111-1111-1111-1111-111111111111',
+                                api_key: 'key_b',
+                                provider: 'meta',
+                                is_active: true,
+                                meta_phone_number_id: '20000000002',
+                                meta_access_token: 'TOKEN_B_VALID_LEN_456'
+                            }]
+                        };
+                    }
+                }
+                return { rows: [] };
+            });
+
             const spyPost = jest.spyOn(axios, 'post').mockResolvedValue({
                 status: 200,
                 data: { messages: [{ id: 'wamid.SUCCESS' }] }
@@ -1002,29 +1076,27 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
 
             // Envio para Tenant A
             await channel._sendResponse('key_a', '5511911111111', 'Msg A', 'meta', null, null, {
-                phoneNumberId: 'PHONE_A',
-                accessToken: 'TOKEN_A'
+                tenantUuid: '11111111-1111-1111-1111-111111111111'
             });
 
             expect(spyPost).toHaveBeenLastCalledWith(
-                'https://graph.facebook.com/v21.0/PHONE_A/messages',
+                'https://graph.facebook.com/v21.0/10000000001/messages',
                 expect.any(Object),
                 expect.objectContaining({
-                    headers: expect.objectContaining({ Authorization: 'Bearer TOKEN_A' })
+                    headers: expect.objectContaining({ Authorization: 'Bearer TOKEN_A_VALID_LEN_123' })
                 })
             );
 
             // Envio para Tenant B
             await channel._sendResponse('key_b', '5511922222222', 'Msg B', 'meta', null, null, {
-                phoneNumberId: 'PHONE_B',
-                accessToken: 'TOKEN_B'
+                tenantUuid: '11111111-1111-1111-1111-111111111111'
             });
 
             expect(spyPost).toHaveBeenLastCalledWith(
-                'https://graph.facebook.com/v21.0/PHONE_B/messages',
+                'https://graph.facebook.com/v21.0/20000000002/messages',
                 expect.any(Object),
                 expect.objectContaining({
-                    headers: expect.objectContaining({ Authorization: 'Bearer TOKEN_B' })
+                    headers: expect.objectContaining({ Authorization: 'Bearer TOKEN_B_VALID_LEN_456' })
                 })
             );
 
@@ -1587,6 +1659,600 @@ describe('Meta WhatsApp Cloud API Integration (v21.0)', () => {
             expect(spySend).not.toHaveBeenCalled();
 
             spySend.mockRestore();
+        });
+    });
+
+    describe('10. Auditoria de Fechamento Meta Fail-Closed (Casos Mandatórios e Regressão)', () => {
+        const VALID_UUID = '11111111-1111-1111-1111-111111111111';
+        const VALID_PHONE_ID = '10987654321';
+        const VALID_TOKEN = 'EAAB_test_access_token_min_15_chars';
+
+        let spyAxiosPost;
+        let originalCentralUrl;
+        let originalCentralKey;
+
+        beforeEach(() => {
+            originalCentralUrl = process.env.CENTRAL_EVOLUTION_URL;
+            originalCentralKey = process.env.CENTRAL_EVOLUTION_API_KEY;
+            process.env.CENTRAL_EVOLUTION_URL = 'https://evolution.central.example.com';
+            process.env.CENTRAL_EVOLUTION_API_KEY = 'central_secret_key_123';
+
+            spyAxiosPost = jest.spyOn(axios, 'post').mockImplementation(async (url) => {
+                if (url.includes('graph.facebook.com')) {
+                    return {
+                        status: 200,
+                        data: {
+                            messaging_product: 'whatsapp',
+                            messages: [{ id: 'wamid.SUCCESS_TEST_OUTBOUND' }]
+                        }
+                    };
+                }
+                if (url.includes('evolution.central.example.com')) {
+                    return {
+                        status: 200,
+                        data: { key: { id: 'evo_msg_123' } }
+                    };
+                }
+                return { status: 200, data: {} };
+            });
+        });
+
+        afterEach(() => {
+            process.env.CENTRAL_EVOLUTION_URL = originalCentralUrl;
+            process.env.CENTRAL_EVOLUTION_API_KEY = originalCentralKey;
+            spyAxiosPost.mockRestore();
+        });
+
+        // 1. Meta com configuração moderna e autorização válida
+        it('1. Meta com configuração moderna e autorização válida', async () => {
+            mockDb.query.mockImplementation(async (sql) => {
+                if (typeof sql === 'string' && sql.includes('whatsapp_settings') && sql.includes('tenant_uuid = $1::uuid')) {
+                    return {
+                        rows: [{
+                            tenant_uuid: VALID_UUID,
+                            api_key: 'key_modern',
+                            provider: 'meta',
+                            is_active: true,
+                            meta_phone_number_id: VALID_PHONE_ID,
+                            meta_access_token: VALID_TOKEN
+                        }]
+                    };
+                }
+                return { rows: [] };
+            });
+
+            const res = await channel._sendResponse('key_modern', '5511999990001', 'Msg', 'meta', null, null, {
+                tenantUuid: VALID_UUID
+            });
+
+            expect(res.success).toBe(true);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.messageId).toBe('wamid.SUCCESS_TEST_OUTBOUND');
+            expect(spyAxiosPost).toHaveBeenCalledWith(
+                `https://graph.facebook.com/v21.0/${VALID_PHONE_ID}/messages`,
+                expect.any(Object),
+                expect.any(Object)
+            );
+        });
+
+        // 2. Meta com configuração legada e autorização válida
+        it('2. Meta com configuração legada e autorização válida', async () => {
+            mockDb.query.mockImplementation(async (sql) => {
+                if (typeof sql === 'string' && sql.includes('whatsapp_settings') && sql.includes('tenant_uuid = $1::uuid')) {
+                    return { rows: [] }; // Não encontra moderno
+                }
+                if (typeof sql === 'string' && sql.includes('whatsapp_settings') && sql.includes('tenant_uuid IS NULL')) {
+                    return {
+                        rows: [{
+                            tenant_uuid: null,
+                            api_key: 'key_legacy',
+                            provider: 'meta',
+                            is_active: true,
+                            meta_phone_number_id: VALID_PHONE_ID,
+                            meta_access_token: VALID_TOKEN
+                        }]
+                    };
+                }
+                return { rows: [] };
+            });
+
+            const res = await channel._sendResponse('key_legacy', '5511999990001', 'Msg', 'meta', null, null, {
+                tenantUuid: VALID_UUID
+            });
+
+            expect(res.success).toBe(true);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.messageId).toBe('wamid.SUCCESS_TEST_OUTBOUND');
+        });
+
+        // 3. API key revogada
+        it('3. API key revogada', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockResolvedValue({ valid: false, reasonCode: 'KEY_REVOKED', reason: 'Key revogada' })
+            });
+
+            const res = await channel._sendResponse('revoked_key', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('KEY_REVOKED');
+            expect(res.error).toBe('API key has been revoked');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 4. API key expirada
+        it('4. API key expirada', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockResolvedValue({ valid: false, reasonCode: 'KEY_EXPIRED', reason: 'Key expirada' })
+            });
+
+            const res = await channel._sendResponse('expired_key', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('KEY_EXPIRED');
+            expect(res.error).toBe('API key has expired');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 5. Tenant suspenso
+        it('5. Tenant suspenso', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockResolvedValue({ valid: false, reasonCode: 'TENANT_SUSPENDED', reason: 'Tenant suspenso' })
+            });
+
+            const res = await channel._sendResponse('suspended_key', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('TENANT_SUSPENDED');
+            expect(res.error).toBe('Tenant account is inactive or suspended');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 6. API key inexistente
+        it('6. API key inexistente', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockResolvedValue({ valid: false, reasonCode: 'KEY_NOT_FOUND', reason: 'Key inexistente' })
+            });
+
+            const res = await channel._sendResponse('nonexistent_key', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('SECURITY_MISMATCH');
+            expect(res.error).toBe('Security validation failed');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 7. validateKey() com exceção
+        it('7. validateKey() com exceção', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockRejectedValue(new Error('DB disconnect in auth'))
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('AUTH_SERVICE_ERROR');
+            expect(res.error).toBe('Authentication service error');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 8. ApiKeyManager ausente
+        it('8. ApiKeyManager ausente', async () => {
+            channel.deps.getApiKeyManager = null;
+            channel.deps.apiKeyManager = null;
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('AUTH_SERVICE_UNAVAILABLE');
+            expect(res.error).toBe('Authentication service unavailable');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 9. Getter de ApiKeyManager com exceção
+        it('9. Getter de ApiKeyManager com exceção', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockImplementation(() => {
+                throw new Error('Crash in getApiKeyManager');
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('AUTH_SERVICE_UNAVAILABLE');
+            expect(res.error).toBe('Authentication service unavailable');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 10. keyVal.valid === true, mas sem tenantId
+        it('10. keyVal.valid === true, mas sem tenantId', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockResolvedValue({ valid: true, tenantId: null })
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('SECURITY_MISMATCH');
+            expect(res.error).toBe('Security validation failed');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 11. tenantId inválido (não UUID)
+        it('11. tenantId inválido', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockResolvedValue({ valid: true, tenantId: 'not-a-valid-uuid' })
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('SECURITY_MISMATCH');
+            expect(res.error).toBe('Security validation failed');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 12. extraOptions.tenantUuid divergente
+        it('12. extraOptions.tenantUuid divergente', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockResolvedValue({ valid: true, tenantId: VALID_UUID })
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta', null, null, {
+                tenantUuid: '22222222-2222-2222-2222-222222222222'
+            });
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('SECURITY_MISMATCH');
+            expect(res.error).toBe('Security validation failed');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 13. extraOptions.tenantUuid inválido
+        it('13. extraOptions.tenantUuid inválido', async () => {
+            channel.deps.getApiKeyManager = jest.fn().mockReturnValue({
+                validateKey: jest.fn().mockResolvedValue({ valid: true, tenantId: VALID_UUID })
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta', null, null, {
+                tenantUuid: 'invalid_uuid_string'
+            });
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('SECURITY_MISMATCH');
+            expect(res.error).toBe('Security validation failed');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 14. Banco indisponível
+        it('14. Banco indisponível', async () => {
+            channel.db = null;
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('DB_UNAVAILABLE');
+            expect(res.error).toBe('Database service unavailable');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 15. Erro na consulta moderna
+        it('15. Erro na consulta moderna', async () => {
+            mockDb.query.mockRejectedValueOnce(new Error('Fatal syntax in queryA'));
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('DB_QUERY_ERROR');
+            expect(res.error).toBe('Failed to retrieve WhatsApp configuration');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 16. Erro na consulta legada
+        it('16. Erro na consulta legada', async () => {
+            mockDb.query
+                .mockResolvedValueOnce({ rows: [] }) // Consulta moderna retorna vazio
+                .mockRejectedValueOnce(new Error('Fatal syntax in queryB')); // Consulta legada falha
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('DB_QUERY_ERROR');
+            expect(res.error).toBe('Failed to retrieve WhatsApp configuration');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 17. Configuração Meta inexistente
+        it('17. Configuração Meta inexistente', async () => {
+            mockDb.query.mockResolvedValue({ rows: [] }); // Ambas consultas retornam vazio
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('META_NOT_CONFIGURED');
+            expect(res.error).toBe('Active Meta WhatsApp configuration not found');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 18. Phone Number ID inválido
+        it('18. Phone Number ID inválido', async () => {
+            mockDb.query.mockResolvedValueOnce({
+                rows: [{
+                    tenant_uuid: VALID_UUID,
+                    api_key: 'key1',
+                    provider: 'meta',
+                    is_active: true,
+                    meta_phone_number_id: 'abc_not_numeric',
+                    meta_access_token: VALID_TOKEN
+                }]
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('INVALID_PHONE_NUMBER_ID');
+            expect(res.error).toBe('Invalid Meta Phone Number ID');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 19. Token criptografado com EncryptionManager indisponível
+        it('19. Token criptografado com EncryptionManager indisponível', async () => {
+            channel.deps.encryptionManager = null;
+
+            mockDb.query.mockResolvedValueOnce({
+                rows: [{
+                    tenant_uuid: VALID_UUID,
+                    api_key: 'key1',
+                    provider: 'meta',
+                    is_active: true,
+                    meta_phone_number_id: VALID_PHONE_ID,
+                    meta_access_token: 'ENC:some_encrypted_data'
+                }]
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('ENCRYPTION_UNAVAILABLE');
+            expect(res.error).toBe('Encryption manager unavailable');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 20. Falha na descriptografia
+        it('20. Falha na descriptografia', async () => {
+            channel.deps.encryptionManager.decrypt = jest.fn().mockImplementation(() => {
+                throw new Error('GCM tag mismatch');
+            });
+
+            mockDb.query.mockResolvedValueOnce({
+                rows: [{
+                    tenant_uuid: VALID_UUID,
+                    api_key: 'key1',
+                    provider: 'meta',
+                    is_active: true,
+                    meta_phone_number_id: VALID_PHONE_ID,
+                    meta_access_token: 'ENC:corrupted_ciphertext'
+                }]
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('DECRYPTION_FAILED');
+            expect(res.error).toBe('Failed to decrypt Meta access credentials');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 21. Token inválido (curto ou com marcador)
+        it('21. Token inválido', async () => {
+            mockDb.query.mockResolvedValueOnce({
+                rows: [{
+                    tenant_uuid: VALID_UUID,
+                    api_key: 'key1',
+                    provider: 'meta',
+                    is_active: true,
+                    meta_phone_number_id: VALID_PHONE_ID,
+                    meta_access_token: 'short'
+                }]
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.errorCode).toBe('INVALID_ACCESS_TOKEN');
+            expect(res.error).toBe('Invalid Meta Access Token');
+            expect(spyAxiosPost).not.toHaveBeenCalled();
+        });
+
+        // 22. Credenciais falsas em extraOptions ignoradas
+        it('22. Credenciais falsas em extraOptions ignoradas', async () => {
+            mockDb.query.mockResolvedValueOnce({
+                rows: [{
+                    tenant_uuid: VALID_UUID,
+                    api_key: 'key1',
+                    provider: 'meta',
+                    is_active: true,
+                    meta_phone_number_id: VALID_PHONE_ID,
+                    meta_access_token: VALID_TOKEN
+                }]
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta', null, null, {
+                phoneNumberId: '99999_ROGUE_PHONE_ID',
+                accessToken: 'ROGUE_TOKEN_THAT_SHOULD_BE_IGNORED'
+            });
+
+            expect(res.success).toBe(true);
+            // Deve ter usado o Phone ID do banco (VALID_PHONE_ID), e NÃO o rogue
+            expect(spyAxiosPost).toHaveBeenCalledWith(
+                `https://graph.facebook.com/v21.0/${VALID_PHONE_ID}/messages`,
+                expect.any(Object),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        Authorization: `Bearer ${VALID_TOKEN}`
+                    })
+                })
+            );
+        });
+
+        // 23. instanceToken de Evolution/Twilio ignorado no despacho Meta
+        it('23. instanceToken de Evolution/Twilio ignorado no despacho Meta', async () => {
+            mockDb.query.mockResolvedValueOnce({
+                rows: [{
+                    tenant_uuid: VALID_UUID,
+                    api_key: 'key1',
+                    provider: 'meta',
+                    is_active: true,
+                    meta_phone_number_id: VALID_PHONE_ID,
+                    meta_access_token: VALID_TOKEN
+                }]
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta', 'instance_evo', 'EVOLUTION_TOKEN_123');
+
+            expect(res.success).toBe(true);
+            expect(spyAxiosPost).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Object),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        Authorization: `Bearer ${VALID_TOKEN}` // Token do banco, não EVOLUTION_TOKEN_123
+                    })
+                })
+            );
+        });
+
+        // 24. Nenhuma falha Meta chama Evolution Central
+        it('24. Nenhuma falha Meta chama Evolution Central', async () => {
+            mockDb.query.mockResolvedValue({ rows: [] }); // Simula falha META_NOT_CONFIGURED
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta', 'meta_instance', 'tok');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+
+            // Comprova que NENHUMA chamada para Evolution Central ocorreu
+            const callsToEvolution = spyAxiosPost.mock.calls.filter(([url]) => url.includes('evolution.central.example.com'));
+            expect(callsToEvolution.length).toBe(0);
+        });
+
+        // 25. Nenhuma falha Meta chama Evolution/Baileys
+        it('25. Nenhuma falha Meta chama Evolution/Baileys', async () => {
+            channel.whatsappMgr.getTenantInstance = jest.fn();
+            channel.whatsappMgr.sendMessage = jest.fn();
+            mockDb.query.mockResolvedValue({ rows: [] });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(channel.whatsappMgr.getTenantInstance).not.toHaveBeenCalled();
+            expect(channel.whatsappMgr.sendMessage).not.toHaveBeenCalled();
+        });
+
+        // 26. Nenhuma falha Meta chama Twilio
+        it('26. Nenhuma falha Meta chama Twilio', async () => {
+            mockDb.query.mockResolvedValue({ rows: [] });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Msg', 'meta');
+
+            expect(res.success).toBe(false);
+            expect(res.provider).toBe('meta_cloud_api');
+            // Verifica que não retornou nem caiu em provedores secundários
+            expect(res.error).toBe('Active Meta WhatsApp configuration not found');
+        });
+
+        // 27. Envio Meta bem-sucedido retorna o resultado correto
+        it('27. Envio Meta bem-sucedido retorna o resultado correto', async () => {
+            mockDb.query.mockResolvedValueOnce({
+                rows: [{
+                    tenant_uuid: VALID_UUID,
+                    api_key: 'key1',
+                    provider: 'meta',
+                    is_active: true,
+                    meta_phone_number_id: VALID_PHONE_ID,
+                    meta_access_token: VALID_TOKEN
+                }]
+            });
+
+            const res = await channel._sendResponse('key1', '5511999990001', 'Mensagem de sucesso', 'meta');
+
+            expect(res.success).toBe(true);
+            expect(res.provider).toBe('meta_cloud_api');
+            expect(res.messageId).toBe('wamid.SUCCESS_TEST_OUTBOUND');
+        });
+
+        // 28. Regressão Evolution: provider === 'evolution' continua no fluxo histórico
+        it('28. Regressão Evolution: provider === "evolution" continua no fluxo histórico via Central', async () => {
+            const res = await channel._sendResponse(
+                'key_evo',
+                '5511999990001',
+                'Msg Evolution',
+                'evolution',
+                'inst_evo_1',
+                'token_evo_1'
+            );
+
+            expect(res.success).toBe(true);
+            expect(res.provider).toBe('evolution_go_direct');
+            expect(res.messageId).toBe('evo_msg_123');
+
+            const evoCall = spyAxiosPost.mock.calls.find(([url]) => url.includes('evolution.central.example.com'));
+            expect(evoCall).toBeDefined();
+            expect(evoCall[0]).toBe('https://evolution.central.example.com/send/text');
+        });
+
+        // 29. Regressão Twilio: provider === 'twilio' não é capturado pelo bloco Meta
+        it('29. Regressão Twilio: provider === "twilio" não é capturado pelo bloco Meta', async () => {
+            const mockTenantInstance = {
+                isReady: jest.fn().mockReturnValue(true),
+                sendMessage: jest.fn().mockResolvedValue({ success: true, provider: 'tenant_instance_twilio' })
+            };
+            channel.whatsappMgr.getTenantInstance = jest.fn().mockResolvedValue(mockTenantInstance);
+
+            const res = await channel._sendResponse(
+                'key_twilio',
+                '5511999990001',
+                'Msg Twilio',
+                'twilio'
+            );
+
+            expect(channel.whatsappMgr.getTenantInstance).toHaveBeenCalledWith('key_twilio');
+            expect(res.provider).toBe('tenant_instance_twilio');
+        });
+
+        // 30. Preservação de prioridades de provedores legados
+        it('30. Preservação de prioridades: Evolution Central antes de Baileys', async () => {
+            channel.whatsappMgr.getTenantInstance = jest.fn();
+
+            const res = await channel._sendResponse(
+                'key_evo',
+                '5511999990001',
+                'Msg',
+                'evolution',
+                'inst_priority',
+                'tok_priority'
+            );
+
+            expect(res.provider).toBe('evolution_go_direct');
+            expect(channel.whatsappMgr.getTenantInstance).not.toHaveBeenCalled();
         });
     });
 });

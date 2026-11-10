@@ -19,6 +19,7 @@
 
 const http = require('http');
 const crypto = require('crypto');
+const { validateTenantId } = require('./lib/tenant-identity-helper');
 
 // ════════════════════════════════════════════════════════════════
 // V21 PARITY: Auditoria de paridade WhatsApp ↔ Link Curto
@@ -2628,31 +2629,167 @@ class WhatsAppChannel {
     async _sendResponse(apiKey, phone, message, provider, instanceName, instanceToken, extraOptions = {}) {
         try {
             // ═══ PRIORIDADE 0: Envio DIRETO via Meta WhatsApp Cloud API (Oficial) ═══
-            if (provider === 'meta' || extraOptions?.phoneNumberId || extraOptions?.metaPhoneNumberId) {
-                const phoneNumberId = extraOptions?.phoneNumberId || extraOptions?.metaPhoneNumberId;
-                let accessToken = extraOptions?.accessToken || extraOptions?.metaAccessToken || instanceToken;
-
-                if (phoneNumberId && accessToken) {
-                    if (accessToken.startsWith('ENC:') && this.deps?.encryptionManager) {
-                        accessToken = this.deps.encryptionManager.decrypt(accessToken, extraOptions?.tenantUuid || apiKey);
+            // REGRA INVIOLÁVEL: provider === 'meta' NUNCA transborda para outros provedores
+            const isMeta = provider === 'meta';
+            if (isMeta) {
+                try {
+                    // 1. Verificação Fail-Closed da infraestrutura de banco
+                    if (!this.db) {
+                        console.error('❌ [META-FAIL-CLOSED] Banco de dados indisponível para envio Meta Cloud API');
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'DB_UNAVAILABLE', error: 'Database service unavailable' };
                     }
-                    return await this._sendMetaCloudResponse(phoneNumberId, accessToken, phone, message);
-                }
 
-                if (this.db) {
+                    // 2. Resolver gerenciador de API keys com tratamento de exceção
+                    let apiKeyManager = null;
                     try {
-                        const settings = await this._getTenantSettings(apiKey);
-                        if (settings && (settings.meta_phone_number_id || settings.phoneNumberId)) {
-                            const pId = settings.meta_phone_number_id || settings.phoneNumberId;
-                            let tok = settings.meta_access_token || settings.accessToken;
-                            if (tok && tok.startsWith('ENC:') && this.deps?.encryptionManager) {
-                                tok = this.deps.encryptionManager.decrypt(tok, settings.tenant_uuid || apiKey);
-                            }
-                            return await this._sendMetaCloudResponse(pId, tok, phone, message);
-                        }
-                    } catch (e) {
-                        console.warn('📱 [WA-SEND-META] Erro ao buscar configurações Meta do tenant:', e.message);
+                        apiKeyManager = typeof this.deps?.getApiKeyManager === 'function'
+                            ? this.deps.getApiKeyManager()
+                            : (this.deps?.apiKeyManager || null);
+                    } catch (mgrErr) {
+                        console.error('❌ [META-FAIL-CLOSED] Exceção ao obter ApiKeyManager:', mgrErr.message);
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'AUTH_SERVICE_UNAVAILABLE', error: 'Authentication service unavailable' };
                     }
+
+                    if (!apiKeyManager || typeof apiKeyManager.validateKey !== 'function') {
+                        console.error('❌ [META-FAIL-CLOSED] ApiKeyManager indisponível para validação de autorização');
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'AUTH_SERVICE_UNAVAILABLE', error: 'Authentication service unavailable' };
+                    }
+
+                    // 3. Validação estrita de autorização em tempo real (Moderno e Legado)
+                    let keyVal = null;
+                    try {
+                        keyVal = await apiKeyManager.validateKey(apiKey);
+                    } catch (authErr) {
+                        console.error('❌ [META-FAIL-CLOSED] Erro ao validar API key no ApiKeyManager:', authErr.message);
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'AUTH_SERVICE_ERROR', error: 'Authentication service error' };
+                    }
+
+                    if (!keyVal || !keyVal.valid) {
+                        const reason = keyVal?.reasonCode || 'KEY_INVALID';
+                        console.error(`🚫 [META-FAIL-CLOSED] Autorização negada para apiKey (${reason})`);
+                        if (reason === 'KEY_REVOKED') {
+                            return { success: false, provider: 'meta_cloud_api', errorCode: 'KEY_REVOKED', error: 'API key has been revoked' };
+                        }
+                        if (reason === 'KEY_EXPIRED') {
+                            return { success: false, provider: 'meta_cloud_api', errorCode: 'KEY_EXPIRED', error: 'API key has expired' };
+                        }
+                        if (reason === 'TENANT_SUSPENDED') {
+                            return { success: false, provider: 'meta_cloud_api', errorCode: 'TENANT_SUSPENDED', error: 'Tenant account is inactive or suspended' };
+                        }
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'SECURITY_MISMATCH', error: 'Security validation failed' };
+                    }
+
+                    // 4. Identidade canônica obrigatória a partir de keyVal.tenantId
+                    let canonicalTenantUuid = null;
+                    try {
+                        canonicalTenantUuid = validateTenantId(keyVal.tenantId);
+                    } catch (_) {
+                        console.error('🚫 [META-FAIL-CLOSED] tenantId retornado pela validação não é um UUID válido');
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'SECURITY_MISMATCH', error: 'Security validation failed' };
+                    }
+
+                    // Se tenantUuid foi fornecido em extraOptions, exigir correspondência exata
+                    if (extraOptions?.tenantUuid) {
+                        let claimedUuid = null;
+                        try {
+                            claimedUuid = validateTenantId(extraOptions.tenantUuid);
+                        } catch (_) {
+                            console.error('🚫 [META-FAIL-CLOSED] extraOptions.tenantUuid não é um UUID válido');
+                            return { success: false, provider: 'meta_cloud_api', errorCode: 'SECURITY_MISMATCH', error: 'Security validation failed' };
+                        }
+                        if (claimedUuid !== canonicalTenantUuid) {
+                            console.error('🚫 [META-FAIL-CLOSED] Divergência de identidade: claimed tenantUuid !== canonicalTenantUuid');
+                            return { success: false, provider: 'meta_cloud_api', errorCode: 'SECURITY_MISMATCH', error: 'Security validation failed' };
+                        }
+                    }
+
+                    const tenantUuid = canonicalTenantUuid;
+                    let row = null;
+
+                    // 5. CENÁRIO A: Registro Moderno (Correspondência Conjunta Obrigatória: tenant_uuid AND api_key)
+                    const queryA = this.USE_POSTGRES
+                        ? `SELECT * FROM whatsapp_settings WHERE tenant_uuid = $1::uuid AND api_key = $2 AND provider = 'meta' AND is_active = true LIMIT 1`
+                        : `SELECT * FROM whatsapp_settings WHERE tenant_uuid = ? AND api_key = ? AND provider = 'meta' AND is_active = 1 LIMIT 1`;
+                    try {
+                        const resA = await this.db.query(queryA, [tenantUuid, apiKey]);
+                        row = (resA?.rows || resA)?.[0] || null;
+                    } catch (dbErrA) {
+                        console.error('❌ [META-FAIL-CLOSED] Erro ao consultar whatsapp_settings (Cenário A):', dbErrA.message);
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'DB_QUERY_ERROR', error: 'Failed to retrieve WhatsApp configuration' };
+                    }
+
+                    // 6. CENÁRIO B: Registro Legado (Somente se Cenário A não encontrou)
+                    if (!row) {
+                        const queryB = this.USE_POSTGRES
+                            ? `SELECT * FROM whatsapp_settings WHERE tenant_uuid IS NULL AND api_key = $1 AND provider = 'meta' AND is_active = true LIMIT 1`
+                            : `SELECT * FROM whatsapp_settings WHERE tenant_uuid IS NULL AND api_key = ? AND provider = 'meta' AND is_active = 1 LIMIT 1`;
+                        try {
+                            const resB = await this.db.query(queryB, [apiKey]);
+                            const legacyRow = (resB?.rows || resB)?.[0] || null;
+                            if (legacyRow) {
+                                if (legacyRow.tenant_uuid !== null && legacyRow.tenant_uuid !== undefined && legacyRow.tenant_uuid !== tenantUuid) {
+                                    console.error('🚫 [META-FAIL-CLOSED] Registro legado possui tenant_uuid conflitante');
+                                    return { success: false, provider: 'meta_cloud_api', errorCode: 'SECURITY_MISMATCH', error: 'Security validation failed' };
+                                }
+                                row = legacyRow;
+                            }
+                        } catch (dbErrB) {
+                            console.error('❌ [META-FAIL-CLOSED] Erro ao consultar whatsapp_settings (Cenário B):', dbErrB.message);
+                            return { success: false, provider: 'meta_cloud_api', errorCode: 'DB_QUERY_ERROR', error: 'Failed to retrieve WhatsApp configuration' };
+                        }
+                    }
+
+                    // 7. Configuração Meta ativa não encontrada
+                    if (!row) {
+                        console.error('❌ [META-FAIL-CLOSED] Configuração Meta ativa não encontrada para o tenant');
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'META_NOT_CONFIGURED', error: 'Active Meta WhatsApp configuration not found' };
+                    }
+
+                    // 8. Autoridade exclusiva das credenciais: estritamente o registro do banco
+                    const rawPhoneId = row.meta_phone_number_id;
+                    let rawToken = row.meta_access_token;
+
+                    if (extraOptions?.phoneNumberId && extraOptions.phoneNumberId !== rawPhoneId) {
+                        console.warn('⚠️ [META-AUTH] phoneNumberId em extraOptions ignorado; usando estritamente o banco');
+                    }
+
+                    // 9. Validação do Phone Number ID
+                    const cleanPhoneId = typeof rawPhoneId === 'string' ? rawPhoneId.trim() : (rawPhoneId != null ? String(rawPhoneId).trim() : '');
+                    if (!cleanPhoneId || !/^\d+$/.test(cleanPhoneId) || cleanPhoneId.length < 5) {
+                        console.error('❌ [META-FAIL-CLOSED] Phone Number ID inválido no registro');
+                        return { success: false, provider: 'meta_cloud_api', errorCode: 'INVALID_PHONE_NUMBER_ID', error: 'Invalid Meta Phone Number ID' };
+                    }
+
+                    // 10. Descriptografia do Access Token (contexto determinístico comprovado)
+                    if (rawToken && typeof rawToken === 'string' && rawToken.startsWith('ENC:')) {
+                        const encMgr = this.deps?.encryptionManager;
+                        if (!encMgr || !encMgr.enabled) {
+                            console.error('❌ [META-FAIL-CLOSED] EncryptionManager indisponível para descriptografar token');
+                            return { success: false, provider: 'meta_cloud_api', errorCode: 'ENCRYPTION_UNAVAILABLE', error: 'Encryption manager unavailable' };
+                        }
+                        const decryptionContext = row.tenant_uuid ? row.tenant_uuid : row.api_key;
+                        try {
+                            rawToken = encMgr.decrypt(rawToken, decryptionContext);
+                        } catch (decErr) {
+                            console.error('❌ [META-FAIL-CLOSED] Exceção durante descriptografia do token:', decErr.message);
+                            return { success: false, provider: 'meta_cloud_api', errorCode: 'DECRYPTION_FAILED', error: 'Failed to decrypt Meta access credentials' };
+                        }
+                    }
+
+                    // 11. Validação e sanitização do Access Token
+                    const cleanToken = typeof rawToken === 'string' ? rawToken.trim() : '';
+                    if (!cleanToken || cleanToken.length < 15 || cleanToken.startsWith('ENC:') || cleanToken.startsWith('[')) {
+                        console.error('❌ [META-FAIL-CLOSED] Access Token inválido ou falha de descriptografia');
+                        const errorCode = cleanToken.includes('DECRYPTION_FAILED') ? 'DECRYPTION_FAILED' : 'INVALID_ACCESS_TOKEN';
+                        const errorMsg = errorCode === 'DECRYPTION_FAILED' ? 'Failed to decrypt Meta access credentials' : 'Invalid Meta Access Token';
+                        return { success: false, provider: 'meta_cloud_api', errorCode, error: errorMsg };
+                    }
+
+                    // 12. Despacho exclusivo via Meta Cloud API oficial
+                    return await this._sendMetaCloudResponse(cleanPhoneId, cleanToken, phone, message);
+                } catch (metaErr) {
+                    console.error('❌ [META-FAIL-CLOSED] Exceção inesperada no fluxo Meta:', metaErr.message);
+                    return { success: false, provider: 'meta_cloud_api', errorCode: 'INTERNAL_ERROR', error: 'Internal error processing Meta dispatch' };
                 }
             }
 
