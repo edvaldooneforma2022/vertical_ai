@@ -210,6 +210,7 @@ try {
     console.log('⚠️ Billing enforcement não carregado (não crítico):', error.message);
 }
 // ===== NOVAS INTEGRAÇÕES V3.0 =====
+const { isWhatsAppOperational } = require('./lib/whatsapp-gate');
 const { gmailManager } = require('./gmail-integration');
 const { whatsappManager } = require('./whatsapp-integration');
 const { chatgptManager } = require('./chatgpt-integration');
@@ -12839,6 +12840,13 @@ setupRoutes(app);
     // WhatsApp Integration
     app.post('/api/whatsapp/send', requireApiKeyV3, ...[billingMiddleware].filter(Boolean), async (req, res) => {
         try {
+            if (!isWhatsAppOperational()) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'WHATSAPP_CHANNEL_DISABLED',
+                    message: 'O canal WhatsApp está desativado operacionalmente nesta plataforma.'
+                });
+            }
             const { to, message } = req.body;
             const result = await whatsappManager.sendMessage(to, message);
             res.json({ success: true, result });
@@ -12849,6 +12857,16 @@ setupRoutes(app);
     });
 
     app.get('/api/whatsapp/status', requireApiKeyV3, (req, res) => {
+        if (!isWhatsAppOperational()) {
+            return res.json({
+                configured: false,
+                provider: null,
+                ready: false,
+                operational: false,
+                disabled: true,
+                message: 'O canal WhatsApp está desativado operacionalmente.'
+            });
+        }
         const status = whatsappManager.getStatus();
         res.json(status);
     });
@@ -12966,7 +12984,7 @@ setupRoutes(app);
             if (process.env.GMAIL_USER) {
                 await gmailManager.sendLeadNotification(lead);
             }
-            if (process.env.WHATSAPP_PROVIDER) {
+            if (process.env.WHATSAPP_PROVIDER && isWhatsAppOperational()) {
                 await whatsappManager.sendLeadNotification(lead);
             }
 

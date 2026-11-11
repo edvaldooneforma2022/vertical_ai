@@ -291,7 +291,7 @@ footer a{color:var(--text-muted)}
 <section class="hero">
   <div class="badge">Sistema de Atendimento Automático</div>
   <h1>Seus visitantes perguntam.<br><span>Seu sistema responde — 24h por dia.</span></h1>
-  <p>Um atendimento automático treinado nas informações do seu negócio. Responde clientes no seu site, Instagram, WhatsApp e onde mais precisar.</p>
+  <p>Um atendimento automático treinado nas informações do seu negócio. Responde clientes no seu site, Instagram, links e onde mais precisar.</p>
 </section>
 
 <!-- CURIOSITY TRIGGER -->
@@ -300,7 +300,7 @@ footer a{color:var(--text-muted)}
     <h3>💬 Perguntas reais que clientes fazem todos os dias:</h3>
     <div class="curiosity-msgs">
       <div class="c-msg"><span class="c-msg-origin">Instagram</span><span class="c-msg-text">Vocês atendem aos sábados?</span></div>
-      <div class="c-msg"><span class="c-msg-origin">WhatsApp</span><span class="c-msg-text">Esse produto funciona mesmo?</span></div>
+      <div class="c-msg"><!-- [WA-SHUTDOWN] --><span class="c-msg-origin">Chat</span><span class="c-msg-text">Esse produto funciona mesmo?</span></div>
       <div class="c-msg"><span class="c-msg-origin">Site</span><span class="c-msg-text">Qual o prazo de entrega?</span></div>
       <div class="c-msg"><span class="c-msg-origin">Google</span><span class="c-msg-text">Posso falar com alguém?</span></div>
     </div>
@@ -468,7 +468,7 @@ footer a{color:var(--text-muted)}
           <li>Sistema treinado nas informações do seu negócio</li>
           <li>Atendimento 24h por dia, 7 dias por semana</li>
           <li>Captura automática de contatos</li>
-          <li>Funciona em site, WhatsApp e Instagram</li>
+          <!-- [WA-SHUTDOWN] --><li>Funciona em site, link e Instagram</li>
           <li>Painel de acompanhamento completo</li>
         </ul>
         <button class="btn-primary btn-green" onclick="irParaCheckout()">CRIAR MEU ATENDIMENTO AUTOMÁTICO →</button>
@@ -496,7 +496,7 @@ footer a{color:var(--text-muted)}
   <div class="section-sub">O Link Mágico centraliza o atendimento automático em qualquer lugar onde clientes façam perguntas.</div>
   <div class="channels-grid">
     <div class="channel-card"><div class="channel-icon">📸</div><div class="channel-name">Instagram</div></div>
-    <div class="channel-card"><div class="channel-icon">💬</div><div class="channel-name">WhatsApp</div></div>
+    <!-- [WA-SHUTDOWN] --><div class="channel-card"><div class="channel-icon">💬</div><div class="channel-name">Chat IA</div></div>
     <div class="channel-card"><div class="channel-icon">🌐</div><div class="channel-name">Sites</div></div>
     <div class="channel-card"><div class="channel-icon">🛒</div><div class="channel-name">Páginas de Vendas</div></div>
     <div class="channel-card"><div class="channel-icon">🔗</div><div class="channel-name">Links de Afiliado</div></div>
@@ -556,7 +556,7 @@ footer a{color:var(--text-muted)}
   <div class="section-sub">Tudo que você precisa saber antes de ativar.</div>
   <div class="faq-list">
     <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">O sistema realmente lê minha página?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim. O Link Mágico extrai automaticamente título, descrição, benefícios e informações do seu produto. Você também pode complementar manualmente com instruções personalizadas e FAQs.</p></div></div>
-    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Preciso instalar algum código?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Não. Após a ativação, você recebe um link único que pode compartilhar em qualquer lugar: WhatsApp, Instagram, email ou direto na sua página.</p></div></div>
+    <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Preciso instalar algum código?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Não. Após a ativação, você recebe um link único que pode compartilhar em qualquer lugar: redes sociais, email ou direto na sua página.</p></div></div>
     <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Funciona para qualquer tipo de negócio?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim. Cursos, mentorias, produtos físicos, serviços, consultorias, negócios locais — o sistema se adapta automaticamente ao seu nicho.</p></div></div>
     <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Posso cancelar a qualquer momento?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>Sim, sem multas ou complicações. E você tem 7 dias de garantia: se não gostar, devolvemos 100% do seu dinheiro.</p></div></div>
     <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">A demonstração é igual ao produto real?<span class="faq-arrow">▼</span></button><div class="faq-a"><p>A demonstração é uma simulação para que você veja o conceito funcionando. No produto real, o sistema é treinado com as informações específicas do seu negócio, oferecendo respostas muito mais precisas e personalizadas.</p></div></div>
@@ -602,7 +602,7 @@ const NICHOS = {
     clientes: [
       { nome:'Ana', origem:'Instagram', pergunta:'Esse método funciona para quem está começando do zero?' },
       { nome:'Carlos', origem:'Google', pergunta:'Preciso investir em anúncios para ter resultado?' },
-      { nome:'Juliana', origem:'WhatsApp', pergunta:'Em quanto tempo começo a ver resultado?' },
+      { nome:'Juliana', origem:'Chat', pergunta:'Em quanto tempo começo a ver resultado?' },
       { nome:'Pedro', origem:'Site', pergunta:'Tem suporte para tirar dúvidas durante o curso?' },
       { nome:'Mariana', origem:'Instagram', pergunta:'Funciona para qualquer nicho de mercado?' }
     ],
@@ -620,7 +620,7 @@ const NICHOS = {
     clientes: [
       { nome:'Maria', origem:'Instagram', pergunta:'Vocês atendem aos sábados?' },
       { nome:'João', origem:'Google', pergunta:'Qual o horário de funcionamento?' },
-      { nome:'Fernanda', origem:'WhatsApp', pergunta:'Aceitam cartão de crédito?' },
+      { nome:'Fernanda', origem:'Chat', pergunta:'Aceitam cartão de crédito?' },
       { nome:'Lucas', origem:'Google', pergunta:'Precisa agendar ou posso ir direto?' },
       { nome:'Patricia', origem:'Instagram', pergunta:'Qual o endereço de vocês?' }
     ],
@@ -638,7 +638,7 @@ const NICHOS = {
     clientes: [
       { nome:'Camila', origem:'Instagram', pergunta:'Tem esse produto em estoque?' },
       { nome:'Roberto', origem:'Site', pergunta:'Qual o prazo de entrega para São Paulo?' },
-      { nome:'Aline', origem:'WhatsApp', pergunta:'Vocês entregam para todo o Brasil?' },
+      { nome:'Aline', origem:'Chat', pergunta:'Vocês entregam para todo o Brasil?' },
       { nome:'Diego', origem:'Site', pergunta:'Posso trocar se não servir?' },
       { nome:'Beatriz', origem:'Instagram', pergunta:'Tem desconto para compras acima de 3 peças?' }
     ],
@@ -656,7 +656,7 @@ const NICHOS = {
     clientes: [
       { nome:'Thiago', origem:'Google', pergunta:'O curso é para iniciantes?' },
       { nome:'Larissa', origem:'Instagram', pergunta:'Tem acesso vitalício?' },
-      { nome:'Marcos', origem:'WhatsApp', pergunta:'Recebo certificado ao completar?' },
+      { nome:'Marcos', origem:'Chat', pergunta:'Recebo certificado ao completar?' },
       { nome:'Vanessa', origem:'Site', pergunta:'Posso assistir no celular?' },
       { nome:'Gabriel', origem:'Instagram', pergunta:'Qual a diferença desse para outros cursos do mercado?' }
     ],
@@ -674,7 +674,7 @@ const NICHOS = {
     clientes: [
       { nome:'Rafael', origem:'Google', pergunta:'Como funciona o processo de trabalho?' },
       { nome:'Sandra', origem:'Instagram', pergunta:'Vocês atendem empresas pequenas?' },
-      { nome:'Felipe', origem:'WhatsApp', pergunta:'Qual o valor do serviço?' },
+      { nome:'Felipe', origem:'Chat', pergunta:'Qual o valor do serviço?' },
       { nome:'Claudia', origem:'Site', pergunta:'Quanto tempo leva para ver resultados?' },
       { nome:'Daniel', origem:'Instagram', pergunta:'Posso agendar uma conversa antes de contratar?' }
     ],
@@ -692,7 +692,7 @@ const NICHOS = {
     clientes: [
       { nome:'Lucia', origem:'Instagram', pergunta:'Funciona para quem já tentou várias dietas?' },
       { nome:'André', origem:'Google', pergunta:'Preciso fazer exercícios pesados?' },
-      { nome:'Priscila', origem:'WhatsApp', pergunta:'Em quanto tempo emagreço?' },
+      { nome:'Priscila', origem:'Chat', pergunta:'Em quanto tempo emagreço?' },
       { nome:'Ricardo', origem:'Site', pergunta:'Tem acompanhamento nutricional?' },
       { nome:'Amanda', origem:'Instagram', pergunta:'Funciona para qualquer idade?' }
     ],

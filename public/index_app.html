@@ -1806,7 +1806,8 @@
 
             <!-- ═══ SAFE PATCH — WA-CHANNEL-003: Seção WhatsApp na Página Principal ═══ -->
             <!-- Aparece após ativar o assistente. Mostra status e link para configuração. -->
-            <div id="waChannelSection" style="display:none; background:rgba(15,23,42,0.6); border:1px solid rgba(37,211,102,0.25); border-radius:12px; padding:16px; margin-top:12px; transition:all 0.3s ease;">
+            <!-- [WA-SHUTDOWN] Seção WhatsApp Canal ocultada operacionalmente -->
+            <div id="waChannelSection" style="display:none !important; background:rgba(15,23,42,0.6); border:1px solid rgba(37,211,102,0.25); border-radius:12px; padding:16px; margin-top:12px; transition:all 0.3s ease;">
                 <h4 style="color:#25d366; font-size:0.9rem; margin:0 0 10px 0; display:flex; align-items:center; gap:8px;">
                     <i class="fab fa-whatsapp"></i> WhatsApp Canal
                     <span id="waChannelBadge" style="background:rgba(245,158,11,0.15); color:#fbbf24; font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase;">Não conectado</span>
@@ -1827,7 +1828,7 @@
             <!-- /WA-CHANNEL-003 -->
 
             <div class="social-grid">
-                <button class="social-btn whatsapp" id="shareWhatsApp"><i class="fab fa-whatsapp"></i> WhatsApp<span class="lm-ui-social-subtitle">Bio · Link</span></button>
+                <!-- [WA-SHUTDOWN] Botão WhatsApp share ocultado --><button class="social-btn whatsapp" id="shareWhatsApp" style="display:none !important;"><i class="fab fa-whatsapp"></i> WhatsApp<span class="lm-ui-social-subtitle">Bio · Link</span></button>
                 <button class="social-btn instagram" id="shareInstagram"><i class="fab fa-instagram"></i> Instagram<span class="lm-ui-social-subtitle">Perfil · Post · Reel</span></button>
                 <button class="social-btn facebook" id="shareFacebook"><i class="fab fa-facebook"></i> Facebook<span class="lm-ui-social-subtitle">Página · Post</span></button>
                 <button class="social-btn youtube" id="shareYouTube"><i class="fab fa-youtube"></i> YouTube<span class="lm-ui-social-subtitle">Vídeo · Canal</span></button>
@@ -3191,7 +3192,7 @@
                 </button>
 
                 <button class="new-tab" onclick="showNewTab('whatsapp')"
-                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600;">
+                    style="background:#334155; color:white; border:none; padding:1rem 1.5rem; border-radius:12px; cursor:pointer; font-weight:600; display:none !important;" data-wa-hidden="true">
                     📱 WhatsApp
                 </button>
                 <button class="new-tab" onclick="showNewTab('chatgpt')"
@@ -4530,6 +4531,12 @@
                     }
                 }
             } catch(e) { /* fail-open: se erro, permite acesso */ }
+
+            // [WA-SHUTDOWN] Bloquear acesso à tab WhatsApp quando canal desativado
+            if (tabName === 'whatsapp') {
+                if (typeof showToast === 'function') showToast('O canal WhatsApp está temporariamente indisponível nesta plataforma.', 'warning');
+                return;
+            }
 
             // Esconder todos os conteúdos
             document.querySelectorAll('.new-tab-content').forEach(el => el.style.display = 'none');
@@ -7412,6 +7419,8 @@
 
         // Mostrar seção WhatsApp quando assistente for ativado
         function showWaChannelSection() {
+            // [WA-SHUTDOWN] Seção WhatsApp desativada operacionalmente
+            return;
             try {
                 var section = document.getElementById('waChannelSection');
                 if (section) {
@@ -7437,7 +7446,7 @@
                     || '';
                 if (!apiKey) return;
 
-                fetch('/api/whatsapp/status?apiKey=' + encodeURIComponent(apiKey))
+                /* [WA-SHUTDOWN] */ return; fetch('/api/whatsapp/status?apiKey=' + encodeURIComponent(apiKey))
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         var badge = document.getElementById('waChannelBadge');

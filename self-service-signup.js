@@ -147,7 +147,7 @@ async function handleSignup(req, res) {
         }
 
         // 1. Validar dados de entrada
-        const { email, password, name, whatsapp } = req.body || {};
+        const { email, password, name, whatsapp, phone } = req.body || {};
 
         if (!email || !password) {
             return res.status(400).json({
@@ -213,8 +213,9 @@ async function handleSignup(req, res) {
         const clientName = (name || '').trim() || email.split('@')[0];
         const plano = 'free';
 
-        const whatsappClean = (whatsapp || '').replace(/\D/g, '').trim() || null;
-        console.log(`🆓 [Signup] Novo cadastro self-service — ${clientName} (${email})${whatsappClean ? ` | WhatsApp: ${whatsappClean}` : ''}`);
+        const phoneInput = phone || whatsapp || '';
+        const phoneClean = phoneInput.replace(/\D/g, '').trim() || null;
+        console.log(`🆓 [Signup] Novo cadastro self-service — ${clientName} (${email})${phoneClean ? ` | Telefone: ${phoneClean}` : ''}`);
 
         // 6. Salvar no banco de dados
         if (db) {
@@ -233,14 +234,14 @@ async function handleSignup(req, res) {
 
                 console.log(`✅ [Signup] Tenant + API key salvos no banco`);
 
-                // Salvar WhatsApp separadamente (fallback seguro — coluna pode não existir)
-                if (whatsappClean) {
+                // Salvar Telefone separadamente (fallback seguro — coluna pode não existir)
+                if (phoneClean) {
                     try {
                         const updatePhone = USE_POSTGRES
                             ? `UPDATE tenants SET phone = $1 WHERE id = $2`
                             : `UPDATE tenants SET phone = ? WHERE id = ?`;
-                        await db.query(updatePhone, [whatsappClean, tenantId]);
-                        console.log(`📱 [Signup] WhatsApp salvo: ${whatsappClean}`);
+                        await db.query(updatePhone, [phoneClean, tenantId]);
+                        console.log(`📱 [Signup] Telefone salvo: ${phoneClean}`);
                     } catch (phoneErr) {
                         console.warn(`⚠️ [Signup] Coluna phone não disponível (não crítico): ${phoneErr.message}`);
                     }
@@ -277,7 +278,7 @@ async function handleSignup(req, res) {
                 tenantId, eventType: 'signup_self_service', planId: plano,
                 amountCents: 0, source: 'self_service',
                 newState: { plan: plano, status: 'active' },
-                metadata: { email: email.trim().toLowerCase(), name: clientName, whatsapp: whatsappClean }
+                metadata: { email: email.trim().toLowerCase(), name: clientName, phone: phoneClean, whatsapp: phoneClean }
             });
         } catch (e) {
             // Silencioso — audit é best-effort

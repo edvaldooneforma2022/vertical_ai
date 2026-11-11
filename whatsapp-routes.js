@@ -2,6 +2,19 @@
 
 const { DatabaseHelpers, db, USE_POSTGRES } = require('./database');
 const { whatsappIntegration, clearTenantCache } = require('./whatsapp-integration');
+const { isWhatsAppOperational } = require('./lib/whatsapp-gate');
+
+// Middleware para bloquear mutações quando o canal WhatsApp estiver desativado operacionalmente
+const checkWhatsAppOperational = (req, res, next) => {
+    if (!isWhatsAppOperational()) {
+        return res.status(403).json({
+            success: false,
+            error: 'WHATSAPP_CHANNEL_DISABLED',
+            message: 'O canal WhatsApp está temporariamente indisponível para uso nesta plataforma.'
+        });
+    }
+    next();
+};
 
 // Helper: resolver apiKey de múltiplas fontes (alinhado com server.js:3640)
 function resolveApiKey(req) {
@@ -12,7 +25,7 @@ module.exports = function (app, logger) {
     /**
      * Salvar configurações WhatsApp do tenant
      */
-    app.post('/api/whatsapp/settings', async (req, res) => {
+    app.post('/api/whatsapp/settings', checkWhatsAppOperational, async (req, res) => {
         try {
             const apiKey = resolveApiKey(req);
             if (!apiKey) {
@@ -77,6 +90,15 @@ module.exports = function (app, logger) {
      */
     app.get('/api/whatsapp/settings', async (req, res) => {
         try {
+            if (!isWhatsAppOperational()) {
+                return res.json({
+                    success: true,
+                    configured: false,
+                    operational: false,
+                    disabled: true,
+                    message: 'O canal WhatsApp está desativado operacionalmente.'
+                });
+            }
             const apiKey = resolveApiKey(req);
             if (!apiKey) {
                 return res.status(401).json({ success: false, error: 'API Key não fornecida' });
@@ -127,7 +149,7 @@ module.exports = function (app, logger) {
     /**
      * Testar configuração WhatsApp do tenant
      */
-    app.post('/api/whatsapp/settings/test', async (req, res) => {
+    app.post('/api/whatsapp/settings/test', checkWhatsAppOperational, async (req, res) => {
         try {
             const apiKey = resolveApiKey(req);
             if (!apiKey) {
@@ -166,7 +188,7 @@ module.exports = function (app, logger) {
     /**
      * Deletar configurações WhatsApp do tenant
      */
-    app.delete('/api/whatsapp/settings', async (req, res) => {
+    app.delete('/api/whatsapp/settings', checkWhatsAppOperational, async (req, res) => {
         try {
             const apiKey = resolveApiKey(req);
             if (!apiKey) {
@@ -300,7 +322,7 @@ module.exports = function (app, logger) {
     /**
      * Alterar modo operacional do canal WhatsApp (auto, manual, off)
      */
-    app.post('/api/whatsapp/mode', async (req, res) => {
+    app.post('/api/whatsapp/mode', checkWhatsAppOperational, async (req, res) => {
         try {
             const apiKey = resolveApiKey(req);
             if (!apiKey) {
@@ -370,7 +392,7 @@ module.exports = function (app, logger) {
      * Cria instância na Evolution Central + retorna QR Code
      * Proteção: idempotente (reutiliza instância existente)
      */
-    app.post('/api/whatsapp/saas/connect', async (req, res) => {
+    app.post('/api/whatsapp/saas/connect', checkWhatsAppOperational, async (req, res) => {
         try {
             const apiKey = resolveApiKey(req);
             const tenantId = req.session?.tenantId;
@@ -655,6 +677,14 @@ module.exports = function (app, logger) {
      */
     app.get('/api/whatsapp/saas/status', async (req, res) => {
         try {
+            if (!isWhatsAppOperational()) {
+                return res.json({
+                    success: true,
+                    status: 'disabled',
+                    operational: false,
+                    message: 'O canal WhatsApp está desativado operacionalmente.'
+                });
+            }
             const apiKey = resolveApiKey(req);
             if (!apiKey) {
                 return res.status(401).json({ success: false, error: 'API Key não fornecida' });
@@ -775,7 +805,7 @@ module.exports = function (app, logger) {
      * POST /api/whatsapp/saas/disconnect
      * Logout da instância (NÃO deleta — preserva histórico)
      */
-    app.post('/api/whatsapp/saas/disconnect', async (req, res) => {
+    app.post('/api/whatsapp/saas/disconnect', checkWhatsAppOperational, async (req, res) => {
         try {
             const apiKey = resolveApiKey(req);
             if (!apiKey) {
@@ -836,7 +866,7 @@ module.exports = function (app, logger) {
      * POST /api/whatsapp/saas/reconnect
      * Reconectar instância existente (novo QR Code, sem criar nova instância)
      */
-    app.post('/api/whatsapp/saas/reconnect', async (req, res) => {
+    app.post('/api/whatsapp/saas/reconnect', checkWhatsAppOperational, async (req, res) => {
         try {
             const apiKey = resolveApiKey(req);
             if (!apiKey) {

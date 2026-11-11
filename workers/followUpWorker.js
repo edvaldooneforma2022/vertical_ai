@@ -15,6 +15,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const cron = require('node-cron');
 const { db, USE_POSTGRES } = require('../database');
 const { FollowUpManager } = require('../lib/crm/followup-manager');
+const { isWhatsAppOperational } = require('../lib/whatsapp-gate');
 
 const followUpManager = new FollowUpManager();
 
@@ -57,6 +58,12 @@ async function processFollowUpJobs() {
 
         for (const job of jobs) {
             try {
+                // Suspender jobs de WhatsApp se o canal estiver desativado operacionalmente
+                if (job.channel === 'whatsapp' && !isWhatsAppOperational()) {
+                    console.log(`  ⏸️ Job ${job.id.substring(0, 8)}... (WhatsApp) suspenso — canal WhatsApp desativado operacionalmente`);
+                    continue;
+                }
+
                 // Marcar como processando (idempotência)
                 await followUpManager.markJobProcessing(job.id);
 
@@ -176,6 +183,9 @@ async function sendMessage(job) {
             }
 
             case 'whatsapp': {
+                if (!isWhatsAppOperational()) {
+                    return { success: false, error: 'WHATSAPP_CHANNEL_DISABLED', suspended: true };
+                }
                 if (!lead_phone) {
                     return { success: false, error: 'Lead não possui telefone cadastrado' };
                 }

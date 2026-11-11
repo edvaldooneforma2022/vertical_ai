@@ -2,6 +2,7 @@
 // Módulo para enviar mensagens via WhatsApp usando Twilio ou Evolution API
 
 const axios = require('axios');
+const { isWhatsAppOperational } = require('./lib/whatsapp-gate');
 
 class WhatsAppIntegration {
     constructor() {
@@ -267,6 +268,11 @@ Continue assim! 🚀`
 
     // Enviar mensagem (detecta provider automaticamente)
     async sendMessage(to, message) {
+        if (!isWhatsAppOperational()) {
+            console.warn('🚫 [WA-INTEGRATION][BLOCKED] Envio WhatsApp bloqueado: canal desativado operacionalmente');
+            return { success: false, error: 'WHATSAPP_CHANNEL_DISABLED' };
+        }
+
         if (!this.isReady()) {
             console.log('⚠️  WhatsApp não configurado, mensagem não enviada');
             return { success: false, error: 'WhatsApp não configurado' };

@@ -20,6 +20,7 @@
 const http = require('http');
 const crypto = require('crypto');
 const { validateTenantId } = require('./lib/tenant-identity-helper');
+const { isWhatsAppOperational } = require('./lib/whatsapp-gate');
 
 // ════════════════════════════════════════════════════════════════
 // V21 PARITY: Auditoria de paridade WhatsApp ↔ Link Curto
@@ -141,11 +142,13 @@ class WhatsAppChannel {
         this._isProcessingQueue = false;
         this._queueWorkerInterval = null;
 
-        // Fase 2B: Reconciliar agendamentos travados em booking_in_progress
-        this._reconcileStaleBookings();
-        this._reconcileInterval = setInterval(() => this._reconcileStaleBookings(), 300000); // 5 min
-        if (this._reconcileInterval && typeof this._reconcileInterval.unref === 'function') {
-            this._reconcileInterval.unref();
+        // Fase 2B: Reconciliar agendamentos travados em booking_in_progress (apenas se operacional)
+        if (isWhatsAppOperational()) {
+            this._reconcileStaleBookings();
+            this._reconcileInterval = setInterval(() => this._reconcileStaleBookings(), 300000); // 5 min
+            if (this._reconcileInterval && typeof this._reconcileInterval.unref === 'function') {
+                this._reconcileInterval.unref();
+            }
         }
 
         console.log('📱 [WA-CHANNEL] Módulo de canal WhatsApp inicializado');
@@ -939,7 +942,11 @@ class WhatsAppChannel {
         });
 
         console.log(`📱 [WA-CHANNEL] Rotas registradas | Auth: ${FEATURE_EVOLUTION_WEBHOOK_AUTH ? '✅ ON' : '⚠️ OFF'} | Dedup: ✅ ON`);
-        this.startQueueWorker();
+        if (isWhatsAppOperational()) {
+            this.startQueueWorker();
+        } else {
+            console.log('📱 [WA-CHANNEL] Queue worker não iniciado (canal WhatsApp desativado operacionalmente)');
+        }
     }
 
     // ============================================================
@@ -1492,6 +1499,12 @@ class WhatsAppChannel {
      */
     async _handleMetaWebhook(req, res) {
         try {
+            // FASE 1: Graceful Blackhole se o canal estiver desativado operacionalmente
+            if (!isWhatsAppOperational()) {
+                console.log('📱 [META-WEBHOOK][BLACKHOLE] Webhook Meta recebido com canal desativado operacionalmente (ack 200 enviado, evento descartado)');
+                return res.status(200).send('EVENT_RECEIVED');
+            }
+
             const body = req.body || {};
             const signatureHeader = req.headers?.['x-hub-signature-256'] || '';
             const webhookIp = req.ip || req.connection?.remoteAddress || 'unknown';
@@ -1751,6 +1764,10 @@ class WhatsAppChannel {
     // WEBHOOK — EVOLUTION API  (Fase 2A)
     // ============================================================
     async _handleEvolutionWebhook(req, res) {
+        if (!isWhatsAppOperational()) {
+            return res.status(200).json({ received: true, active: false });
+        }
+
         // Ack imediato — Evolution reenvia se não receber 200 rápido
         res.status(200).json({ received: true });
 
@@ -1957,6 +1974,10 @@ class WhatsAppChannel {
     // WEBHOOK — TWILIO  (Compatibilidade)
     // ============================================================
     async _handleTwilioWebhook(req, res) {
+        if (!isWhatsAppOperational()) {
+            return res.status(200).send('<Response></Response>');
+        }
+
         res.status(200).send('<Response></Response>');  // TwiML ack
 
         try {
@@ -2004,6 +2025,11 @@ class WhatsAppChannel {
         apiKey, phone, message, provider, instanceName, instanceToken,
         extraOptions = {}, conversationId, lead, tenantId
     }) {
+        if (!isWhatsAppOperational()) {
+            console.warn('🚫 [WA-OUTBOUND][BLOCKED] Envio WhatsApp bloqueado: canal desativado operacionalmente');
+            return { success: false, blocked: true, errorCode: 'WHATSAPP_CHANNEL_DISABLED', error: 'WhatsApp channel is operationally disabled' };
+        }
+
         const recordId = extraOptions?.persistedRecordId;
         const leaseToken = extraOptions?.leaseToken;
         const isLeaseActive = typeof extraOptions?.isLeaseActive === 'function' ? extraOptions.isLeaseActive : () => true;
@@ -2628,6 +2654,16 @@ class WhatsAppChannel {
     // ============================================================
     async _sendResponse(apiKey, phone, message, provider, instanceName, instanceToken, extraOptions = {}) {
         try {
+            if (!isWhatsAppOperational()) {
+                console.warn('🚫 [WA-CHANNEL][BLOCKED] _sendResponse bloqueado: canal desativado operacionalmente');
+                return {
+                    success: false,
+                    provider: provider || 'unknown',
+                    errorCode: 'WHATSAPP_CHANNEL_DISABLED',
+                    error: 'WhatsApp channel is operationally disabled'
+                };
+            }
+
             // ═══ PRIORIDADE 0: Envio DIRETO via Meta WhatsApp Cloud API (Oficial) ═══
             // REGRA INVIOLÁVEL: provider === 'meta' NUNCA transborda para outros provedores
             const isMeta = provider === 'meta';

@@ -139,6 +139,27 @@ describe('FollowUpManager', () => {
             expect(call[0]).toContain('FOR UPDATE');
             expect(call[0]).toContain('SKIP LOCKED');
         });
+
+        it('deve filtrar fr.channel != "whatsapp" para prevenir starvation quando canal desativado', async () => {
+            delete process.env.FEATURE_WHATSAPP_OPERATIONAL;
+            db.query.mockResolvedValueOnce({ rows: [] });
+
+            await fm.getPendingJobs(10);
+
+            const call = db.query.mock.calls[0];
+            expect(call[0]).toContain("fr.channel != 'whatsapp'");
+        });
+
+        it('não deve filtrar whatsapp quando FEATURE_WHATSAPP_OPERATIONAL === "true"', async () => {
+            process.env.FEATURE_WHATSAPP_OPERATIONAL = 'true';
+            db.query.mockResolvedValueOnce({ rows: [] });
+
+            await fm.getPendingJobs(10);
+
+            const call = db.query.mock.calls[0];
+            expect(call[0]).not.toContain("fr.channel != 'whatsapp'");
+            delete process.env.FEATURE_WHATSAPP_OPERATIONAL;
+        });
     });
 
     describe('updateLeadResponse', () => {
