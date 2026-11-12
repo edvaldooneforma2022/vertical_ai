@@ -4728,7 +4728,7 @@ app.get("/api/billing/limits", async (req, res) => {
             planName: 'Gratuito',
             planId: 'free',
             limits: {
-                messages: { used: 0, limit: 100 },
+                messages: { used: 0, limit: 500 },
                 extractions: { used: 0, limit: 3 },
                 chatbots: { used: 0, limit: 1 }
             },
@@ -13684,6 +13684,41 @@ setupRoutes(app);
             console.warn('⚠️ Weekly Report não disponível:', e.message);
         }
     }
+
+    // [SANEAMENTO CORR-27] Catch-all 404 handler para URLs não atendidas
+    // Posicionado APÓS todas as rotas e express.static, ANTES do app.listen
+    // Retorna HTTP 404 real em vez de Soft 404 (redirect para home ou "Cannot GET")
+    app.use((req, res) => {
+        // Não interceptar requisições de API — essas já têm seus próprios handlers
+        if (req.path.startsWith('/api/')) {
+            return res.status(404).json({ success: false, error: 'Endpoint não encontrado' });
+        }
+        // Para requisições web, retornar página 404 com noindex
+        res.status(404).send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Página não encontrada — LinkMágico</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f8f9fa; color: #333; }
+        .container { text-align: center; padding: 2rem; }
+        h1 { font-size: 4rem; margin: 0; color: #6c63ff; }
+        p { font-size: 1.2rem; margin: 1rem 0; }
+        a { color: #6c63ff; text-decoration: none; font-weight: 600; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>404</h1>
+        <p>A página que você procura não existe ou foi movida.</p>
+        <a href="/">Voltar para o início</a>
+    </div>
+</body>
+</html>`);
+    });
 
     app.listen(PORT, '0.0.0.0', () => {
         logger.info('Server running on port ' + PORT);
