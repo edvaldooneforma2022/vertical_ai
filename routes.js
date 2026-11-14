@@ -102,12 +102,23 @@ function setupRoutes(app) {
     //   2. DatabaseHelpers (PostgreSQL) em vez de lib/leads/lead-capture.js (JSON-only)
     //   3. Autenticação via requireApiKey middleware (sessão ou header X-API-Key)
     //   Sem UUID canônico, a rota rejeita a requisição.
+    // [FASE 3 — 14/11/2026] Expandido para incluir conversationsToday e messagesToday.
+    //   Warnings sanitizados (sem detalhes internos). Fonte única dos 3 cards principais.
 
     /**
      * GET /api/tenant-stats
      * Retorna estatísticas do tenant para o dashboard.
      * Requer autenticação via requireApiKey middleware (sessão ou header X-API-Key).
      * UUID canônico obrigatório — sem fallback por credencial legada.
+     *
+     * Retorna:
+     *   stats.activeAssistants   → Card "Assistentes Ativos" (valor principal)
+     *   stats.createdToday       → Card "Assistentes Ativos" (sub-indicador)
+     *   stats.conversationsToday → Card "Leads Ativos Hoje" (valor principal — leads distintos com interação hoje)
+     *   stats.messagesToday      → Card "Leads Ativos Hoje" (sub-indicador "Mensagens hoje")
+     *   stats.totalLeads         → Card "Leads Capturados" (valor principal)
+     *   stats.leadsToday         → Card "Leads Capturados" (sub-indicador)
+     *   warnings[]               → Mensagens seguras sobre erros parciais (sem detalhes internos)
      */
     app.get('/api/tenant-stats', async (req, res) => {
         try {
@@ -131,6 +142,15 @@ function setupRoutes(app) {
             let createdToday = 0;
             let totalLeads = 0;
             let leadsToday = 0;
+            let conversationsToday = 0;
+            let messagesToday = 0;
+            const warnings = [];
+
+            // [FASE 3] Data de "hoje" em horário de Brasília (UTC-3)
+            // Render roda em UTC; timestamps do banco estão em UTC.
+            // Para o tenant brasileiro, "hoje" é UTC-3.
+            const nowBrasilia = new Date(Date.now() - 3 * 60 * 60 * 1000);
+            const todayStr = nowBrasilia.toISOString().split('T')[0];
 
             // --- Assistentes (short_urls indexados por api_key) ---
             try {
@@ -140,17 +160,19 @@ function setupRoutes(app) {
                     const activeUrls = shortUrls.filter(s => s.status === 'active' || !s.status);
                     activeAssistants = activeUrls.length;
 
-                    // Contar criados hoje (apenas ativos)
-                    const today = new Date().toISOString().split('T')[0];
-                    createdToday = activeUrls.filter(s =>
-                        s.created_at && s.created_at.toString().startsWith(today)
-                    ).length;
+                    // Contar criados hoje (horário Brasília)
+                    createdToday = activeUrls.filter(s => {
+                        if (!s.created_at) return false;
+                        const createdBrasilia = new Date(new Date(s.created_at).getTime() - 3 * 60 * 60 * 1000);
+                        return createdBrasilia.toISOString().startsWith(todayStr);
+                    }).length;
                 }
             } catch (err) {
                 console.warn('⚠️ [tenant-stats] Erro ao buscar assistentes:', err.message);
+                warnings.push('Não foi possível carregar dados de assistentes. Tente novamente.');
             }
 
-            // --- Leads (PostgreSQL via DatabaseHelpers — exclusivamente por UUID) ---
+            // --- Leads e Conversas (PostgreSQL via DatabaseHelpers — exclusivamente por UUID) ---
             try {
                 let leads;
                 if (typeof DatabaseHelpers.getLeadsByTenant === 'function') {
@@ -159,29 +181,68 @@ function setupRoutes(app) {
                     // getLeadsByTenant não disponível — erro explícito, não fallback por apiKey
                     console.error('❌ [tenant-stats] DatabaseHelpers.getLeadsByTenant não disponível');
                     leads = [];
+                    warnings.push('Serviço de leads temporariamente indisponível.');
                 }
                 totalLeads = leads.length;
 
-                const today = new Date().toISOString().split('T')[0];
+                // Contar leads de hoje (horário Brasília)
                 leadsToday = leads.filter(l => {
                     const ts = l.created_at || l.timestamp || l.lastInteraction;
-                    return ts && ts.toString().startsWith(today);
+                    if (!ts) return false;
+                    const tsBrasilia = new Date(new Date(ts).getTime() - 3 * 60 * 60 * 1000);
+                    return tsBrasilia.toISOString().startsWith(todayStr);
                 }).length;
+
+                // [FASE 3] Contar leads ativos e mensagens de hoje
+                // Formato em tenant_leads.conversations (JSONB):
+                //   Array flat de objetos { timestamp, message, isUser }
+                //   Cada entrada é uma mensagem individual, não uma conversa agrupada.
+                //   "Leads Ativos Hoje" (conversationsToday) = leads distintos que tiveram ≥1 mensagem hoje.
+                //   "Mensagens Hoje" (messagesToday) = total de mensagens trocadas hoje.
+                const leadsWithConversationsToday = new Set();
+                leads.forEach(lead => {
+                    const convs = lead.conversations;
+                    if (!Array.isArray(convs)) return;
+                    convs.forEach(entry => {
+                        if (!entry.timestamp) return;
+                        try {
+                            const entryBrasilia = new Date(new Date(entry.timestamp).getTime() - 3 * 60 * 60 * 1000);
+                            if (entryBrasilia.toISOString().startsWith(todayStr)) {
+                                messagesToday++;
+                                leadsWithConversationsToday.add(lead.id);
+                            }
+                        } catch (_) {
+                            // timestamp mal-formado — ignorar entrada
+                        }
+                    });
+                });
+                conversationsToday = leadsWithConversationsToday.size;
+
             } catch (err) {
                 console.warn('⚠️ [tenant-stats] Erro ao buscar leads:', err.message);
+                warnings.push('Não foi possível carregar dados de leads. Tente novamente.');
             }
 
-            console.log(`📊 [tenant-stats] ${tenantUuid.substring(0, 8)}...: ${activeAssistants} assistants, ${totalLeads} leads`);
+            console.log(`📊 [tenant-stats] ${tenantUuid.substring(0, 8)}...: ${activeAssistants} assistants, ${totalLeads} leads, ${conversationsToday} convs today, ${messagesToday} msgs today`);
 
-            res.json({
+            const response = {
                 success: true,
                 stats: {
                     activeAssistants,
                     createdToday,
                     totalLeads,
-                    leadsToday
+                    leadsToday,
+                    conversationsToday,
+                    messagesToday
                 }
-            });
+            };
+
+            // Incluir warnings apenas se existirem (não expõe detalhes internos)
+            if (warnings.length > 0) {
+                response.warnings = warnings;
+            }
+
+            res.json(response);
 
         } catch (error) {
             console.error('❌ [tenant-stats] Erro fatal:', error);

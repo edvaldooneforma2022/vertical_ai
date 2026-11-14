@@ -2054,13 +2054,13 @@
                     </div>
                     <div class="analytics-card">
                         <div class="card-header">
-                            <span class="card-title">Conversas Hoje</span>
+                            <span class="card-title">Leads Ativos Hoje</span>
                             <div class="card-icon"><i class="fas fa-comments"></i></div>
                         </div>
                         <div class="card-value" id="conversationsToday">0</div>
                         <div class="card-change"><i class="fas fa-arrow-up"></i> <span id="messagesSent">0</span>
                             Mensagens
-                            enviadas</div>
+                            hoje</div>
                     </div>
                     <div class="analytics-card">
                         <div class="card-header">
@@ -2387,6 +2387,12 @@
         }
 
         // ===== SAFE PATCH - BUG-DASH-001: Carregar estatísticas reais do backend =====
+        // [FASE 3 — 14/11/2026] Fonte única para os 3 cards do Dashboard:
+        //   Card 1: Assistentes Ativos (activeChatbots / createdToday)
+        //   Card 2: Leads Ativos Hoje (conversationsToday / messagesSent)
+        //   Card 3: Leads Capturados (totalLeads / leadsToday)
+        //   Card 4: Conversões — alimentado separadamente por /api/conversion-stats
+        // loadDashboardLeads() NÃO atualiza mais estes elementos.
         async function loadDashboardStats() {
             const FEATURE_LOAD_STATS = true;
 
@@ -2405,23 +2411,46 @@
                     return;
                 }
 
-                // [FASE 3 — PLANO TÉCNICO 13/11/2026] Enviar apiKey via header (não na URL)
-                // A rota /api/tenant-stats agora usa req.session.validatedApiKey (requireApiKey middleware)
-                // mas mantemos o header X-API-Key como fallback para compatibilidade.
+                // [FASE 1] Enviar apiKey via header (não na URL)
                 const response = await fetch('/api/tenant-stats', {
                     headers: { 'X-API-Key': apiKey }
                 });
+
+                // [FASE 3] Tratar erros HTTP de forma informativa
+                if (response.status === 401) {
+                    console.warn('⚠️ [Dashboard] Sessão expirada ou API Key inválida');
+                    const activeChatbotsEl = document.getElementById('activeChatbots');
+                    if (activeChatbotsEl) activeChatbotsEl.textContent = '–';
+                    const totalLeadsEl = document.getElementById('totalLeads');
+                    if (totalLeadsEl) totalLeadsEl.textContent = '–';
+                    const conversationsTodayEl = document.getElementById('conversationsToday');
+                    if (conversationsTodayEl) conversationsTodayEl.textContent = '–';
+                    return;
+                }
+
+                if (!response.ok) {
+                    console.error('❌ [Dashboard] Erro HTTP:', response.status);
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (data.success && data.stats) {
-                    // Atualizar contadores do dashboard
+                    // Atualizar Card 1: Assistentes Ativos
                     const activeChatbotsEl = document.getElementById('activeChatbots');
                     const createdTodayEl = document.getElementById('createdToday');
-                    const totalLeadsEl = document.getElementById('totalLeads');
-                    const leadsTodayEl = document.getElementById('leadsToday');
-
                     if (activeChatbotsEl) activeChatbotsEl.textContent = data.stats.activeAssistants || 0;
                     if (createdTodayEl) createdTodayEl.textContent = data.stats.createdToday || 0;
+
+                    // Atualizar Card 2: Leads Ativos Hoje
+                    const conversationsTodayEl = document.getElementById('conversationsToday');
+                    const messagesSentEl = document.getElementById('messagesSent');
+                    if (conversationsTodayEl) conversationsTodayEl.textContent = data.stats.conversationsToday || 0;
+                    if (messagesSentEl) messagesSentEl.textContent = data.stats.messagesToday || 0;
+
+                    // Atualizar Card 3: Leads Capturados
+                    const totalLeadsEl = document.getElementById('totalLeads');
+                    const leadsTodayEl = document.getElementById('leadsToday');
                     if (totalLeadsEl) totalLeadsEl.textContent = data.stats.totalLeads || 0;
                     if (leadsTodayEl) leadsTodayEl.textContent = data.stats.leadsToday || 0;
 
@@ -2437,12 +2466,21 @@
                         if (emptyEl) emptyEl.style.display = 'block';
                     }
 
+                    // [FASE 3] Mostrar warnings como toast, se houver
+                    if (data.warnings && data.warnings.length > 0) {
+                        data.warnings.forEach(w => {
+                            if (typeof showToast === 'function') {
+                                showToast('⚠️ ' + w, 'warning');
+                            }
+                        });
+                    }
+
                     console.log('✅ Dashboard stats carregados:', data.stats);
                 }
 
             } catch (error) {
                 console.error('❌ Erro ao carregar dashboard stats:', error);
-                // Fallback: manter valores atuais (0) - comportamento original
+                // Sem conexão — manter valores atuais, não zerar
             }
         }
 
@@ -6375,7 +6413,10 @@
             }
         }
 
-        // Função para carregar leads no dashboard principal
+        // Função para carregar leads no dashboard principal (lista de leads)
+        // [FASE 3 — 14/11/2026] Esta função NÃO atualiza mais os cards do Dashboard.
+        // Os cards (assistentes, conversas, leads) são atualizados exclusivamente por loadDashboardStats().
+        // Esta função alimenta a lista de leads e o card de conversões.
         async function loadDashboardLeads() {
             try {
                 const response = await fetch('/admin/leads', {
@@ -6386,64 +6427,10 @@
                 const data = await response.json();
 
                 if (data.success && data.leads) {
-                    const leads = data.leads;
-                    const totalLeads = leads.length;
-
-                    // Calcular leads de hoje
-                    const today = new Date().toDateString();
-                    const leadsToday = leads.filter(lead => {
-                        const leadDate = new Date(lead.timestamp).toDateString();
-                        return leadDate === today;
-                    }).length;
-
-                    // Calcular conversas e mensagens
-                    let totalConversations = 0;
-                    let totalMessages = 0;
-                    let conversationsToday = 0;
-                    let messagesToday = 0;
-
-                    leads.forEach(lead => {
-                        if (lead.conversations && Array.isArray(lead.conversations)) {
-                            lead.conversations.forEach(conv => {
-                                totalConversations++;
-
-                                // Verificar se a conversa é de hoje
-                                if (conv.timestamp) {
-                                    const convDate = new Date(conv.timestamp).toDateString();
-                                    if (convDate === today) {
-                                        conversationsToday++;
-                                    }
-                                }
-
-                                // Contar mensagens
-                                if (conv.messages && Array.isArray(conv.messages)) {
-                                    const msgCount = conv.messages.length;
-                                    totalMessages += msgCount;
-
-                                    // Contar mensagens de hoje
-                                    conv.messages.forEach(msg => {
-                                        if (msg.timestamp) {
-                                            const msgDate = new Date(msg.timestamp).toDateString();
-                                            if (msgDate === today) {
-                                                messagesToday++;
-                                            }
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-
-                    // Atualizar dashboard
-                    document.getElementById('totalLeads').textContent = totalLeads;
-                    document.getElementById('leadsToday').textContent = leadsToday;
-                    document.getElementById('conversationsToday').textContent = conversationsToday;
-                    document.getElementById('messagesSent').textContent = messagesToday;
-
-                    console.log(`📊 Dashboard atualizado: ${totalLeads} leads (${leadsToday} hoje), ${conversationsToday} conversas hoje, ${messagesToday} mensagens hoje`);
+                    console.log(`📊 [loadDashboardLeads] ${data.leads.length} leads carregados para lista`);
                 }
 
-                // 📈 Carregar métricas de conversão
+                // 📈 Carregar métricas de conversão (Card 4 — alimentado por endpoint separado)
                 try {
                     const convResp = await fetch('/api/conversion-stats', { credentials: 'include' });
                     if (convResp.ok) {
@@ -6464,8 +6451,6 @@
                 }
             } catch (error) {
                 console.error('Erro ao carregar leads do dashboard:', error);
-                document.getElementById('totalLeads').textContent = '0';
-                document.getElementById('leadsToday').textContent = '0';
             }
         }
 
@@ -6870,11 +6855,14 @@
             }
         }
 
-        // Carregar leads do dashboard ao iniciar
+        // Carregar leads e stats do dashboard ao iniciar
+        // [FASE 3 — 14/11/2026] loadDashboardStats atualiza os cards; loadDashboardLeads atualiza a lista e conversões.
         window.addEventListener('DOMContentLoaded', () => {
             loadDashboardLeads();
-            // Atualizar a cada 30 segundos
+            // Atualizar lista de leads e conversões a cada 30 segundos
             setInterval(loadDashboardLeads, 30000);
+            // Atualizar cards do dashboard a cada 30 segundos
+            setInterval(loadDashboardStats, 30000);
         });
 
 
