@@ -3299,7 +3299,7 @@
                             <div id="analytics-messages" style="color:#60a5fa; font-size:2rem; font-weight:700;">-</div>
                         </div>
                         <div style="background:#334155; padding:1.5rem; border-radius:12px;">
-                            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Conversas</div>
+                            <div style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;">Leads Ativos</div>
                             <div id="analytics-conversations" style="color:#10b981; font-size:2rem; font-weight:700;">-
                             </div>
                         </div>
@@ -5211,11 +5211,15 @@
         }
 
 
+        // [FASE 4] Contador de versão para proteção contra race condition
+        // em alternância rápida de períodos (7d → 30d → 90d)
+        let _analyticsRequestId = 0;
+
         async function loadAnalytics(days = 30) {
-            // SAFE PATCH - QA FIX: BUG-001 + BUG-007
-            // Adiciona fallback para contagem de mensagens e filtros de período
+            const requestId = ++_analyticsRequestId;
+
             try {
-                // Atualizar visual dos botões de período se existirem
+                // Atualizar visual dos botões de período
                 document.querySelectorAll('.analytics-period-btn').forEach(btn => {
                     btn.style.background = '#334155';
                     btn.style.color = '#94a3b8';
@@ -5226,90 +5230,46 @@
                     activeBtn.style.color = 'white';
                 }
 
-                // SAFE PATCH - BILLING-FIX-001: Usar API key do tenant (não hardcoded)
                 const tenantApiKey = localStorage.getItem('linkmagico_api_key') || '';
-                // Buscar dados de leads
-                const leadsResponse = await fetch('/admin/leads', {
-                    headers: {
-                        'X-API-Key': tenantApiKey
-                    }
+                const response = await fetch(`/api/analytics/tenant?days=${days}`, {
+                    headers: { 'X-API-Key': tenantApiKey }
                 });
-                const leadsData = await leadsResponse.json();
 
-                // SAFE PATCH - QA FIX: BUG-001 - Buscar analytics do servidor como fallback
-                let serverAnalytics = { chatRequests: 0, totalRequests: 0 };
-                try {
-                    const statusResponse = await fetch('/api/system/status');
-                    const statusData = await statusResponse.json();
-                    if (statusData && statusData.analytics) {
-                        serverAnalytics = statusData.analytics;
-                    }
-                } catch (e) {
-                    console.warn('⚠️ Fallback analytics do servidor indisponível:', e);
+                // Verificar se esta ainda é a requisição mais recente
+                if (requestId !== _analyticsRequestId) return;
+
+                if (response.status === 401) {
+                    document.getElementById('analytics-messages').textContent = '–';
+                    document.getElementById('analytics-conversations').textContent = '–';
+                    document.getElementById('analytics-leads').textContent = '–';
+                    document.getElementById('analytics-success').textContent = '–';
+                    console.warn('⚠️ Analytics: autenticação necessária');
+                    return;
                 }
 
-                if (leadsData.success && leadsData.leads) {
-                    const leads = leadsData.leads;
+                if (!response.ok) {
+                    console.error('❌ Analytics: erro HTTP', response.status);
+                    return; // Preservar valores anteriores
+                }
 
-                    // SAFE PATCH - QA FIX: BUG-007 - Filtrar por período
-                    const cutoffDate = new Date();
-                    cutoffDate.setDate(cutoffDate.getDate() - days);
-                    const filteredLeads = leads.filter(lead => {
-                        const leadDate = new Date(lead.timestamp || lead.createdAt);
-                        return leadDate >= cutoffDate;
-                    });
+                const data = await response.json();
 
-                    const totalLeads = filteredLeads.length;
+                // Verificar novamente após parse (proteção contra race condition)
+                if (requestId !== _analyticsRequestId) return;
 
-                    // Calcular total de mensagens (soma de todas as conversas)
-                    let totalMessages = 0;
-                    let totalConversations = 0;
-
-                    filteredLeads.forEach(lead => {
-                        if (lead.conversations && Array.isArray(lead.conversations)) {
-                            // BUG-001 FIX: lead.conversations is a flat array of messages
-                            // Each item is {timestamp, message, isUser}, not a conversation with nested messages
-                            totalMessages += lead.conversations.length;
-                            // Count lead as having a conversation if it has at least one message
-                            if (lead.conversations.length > 0) {
-                                totalConversations += 1;
-                            }
-                        }
-                    });
-
-                    // SAFE PATCH - BILLING-FIX-001: Manter totalMessages do tenant
-                    // (não usar analytics.chatRequests global pois é soma de TODOS os tenants)
-                    // totalMessages já reflete corretamente os dados do tenant via leads
-
-                    // Calcular taxa de sucesso (leads com email ou telefone / total)
-                    const leadsWithContact = filteredLeads.filter(lead => {
-                        const telefone = lead.telefone || lead.phone;
-                        return lead.email || telefone;
-                    }).length;
-
-                    const successRate = totalLeads > 0 ? Math.round((leadsWithContact / totalLeads) * 100) : 100;
-
-                    // Atualizar interface
-                    document.getElementById('analytics-messages').textContent = totalMessages;
-                    document.getElementById('analytics-conversations').textContent = totalConversations;
-                    document.getElementById('analytics-leads').textContent = totalLeads;
-                    document.getElementById('analytics-success').textContent = successRate + '%';
-
-                    console.log(`📊 Analytics carregado (${days}d): ${totalMessages} mensagens, ${totalConversations} conversas, ${totalLeads} leads, ${successRate}% sucesso`);
-                } else {
-                    // SAFE PATCH - QA FIX: BUG-001 - Usar servidor analytics se leads vazio
-                    document.getElementById('analytics-messages').textContent = serverAnalytics.chatRequests || '0';
-                    document.getElementById('analytics-conversations').textContent = serverAnalytics.activeChats || '0';
-                    document.getElementById('analytics-leads').textContent = serverAnalytics.leadsCaptured || '0';
-                    document.getElementById('analytics-success').textContent = '100%';
+                if (data.success && data.metrics) {
+                    document.getElementById('analytics-messages').textContent = data.metrics.totalMessages;
+                    document.getElementById('analytics-conversations').textContent = data.metrics.activeLeads;
+                    document.getElementById('analytics-leads').textContent = data.metrics.leadsCaptured;
+                    document.getElementById('analytics-success').textContent = data.metrics.successRate + '%';
+                    console.log(`📊 Analytics (${days}d): ${data.metrics.totalMessages} msgs, ` +
+                        `${data.metrics.activeLeads} ativos, ${data.metrics.leadsCaptured} capturados, ` +
+                        `${data.metrics.successRate}% sucesso`);
                 }
             } catch (error) {
+                if (requestId !== _analyticsRequestId) return;
                 console.error('Erro ao carregar analytics:', error);
-                // Mostrar zeros em caso de erro
-                document.getElementById('analytics-messages').textContent = '0';
-                document.getElementById('analytics-conversations').textContent = '0';
-                document.getElementById('analytics-leads').textContent = '0';
-                document.getElementById('analytics-success').textContent = '0%';
+                // Preservar valores anteriores — não zerar
             }
         }
 
