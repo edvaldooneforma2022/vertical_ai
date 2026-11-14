@@ -2405,7 +2405,12 @@
                     return;
                 }
 
-                const response = await fetch(`/api/tenant-stats?apiKey=${encodeURIComponent(apiKey)}`);
+                // [FASE 3 — PLANO TÉCNICO 13/11/2026] Enviar apiKey via header (não na URL)
+                // A rota /api/tenant-stats agora usa req.session.validatedApiKey (requireApiKey middleware)
+                // mas mantemos o header X-API-Key como fallback para compatibilidade.
+                const response = await fetch('/api/tenant-stats', {
+                    headers: { 'X-API-Key': apiKey }
+                });
                 const data = await response.json();
 
                 if (data.success && data.stats) {

@@ -12,15 +12,9 @@ const { analyticsManager } = require('./analytics');
 const { llmOptimizer } = require('./llm-optimizer');
 const { knowledgeBaseManager } = require('./knowledge-base');
 
-// SAFE PATCH - BUG-LEADS-002: Importar getLeadSystem para dados de leads consistentes
-let getLeadSystem = null;
-try {
-    const leadsModule = require('./lib/leads/lead-capture');
-    getLeadSystem = leadsModule.getLeadSystem;
-    console.log('✅ Módulo de leads carregado em routes.js');
-} catch (e) {
-    console.warn('⚠️ Módulo de leads não disponível para routes.js:', e.message);
-}
+// [FASE 1 — PLANO TÉCNICO 13/11/2026] Import de getLeadSystem REMOVIDO.
+// O módulo lib/leads/lead-capture.js cria instâncias SEM singleton e SEM PostgreSQL.
+// Leads agora são consultados via DatabaseHelpers (fonte canônica, PostgreSQL).
 
 // ===== Feature Flags (Meus Assistentes) =====
 let featureFlags = null;
@@ -103,83 +97,81 @@ function setupRoutes(app) {
     });
 
     // ===== ROTA: Estatísticas do Tenant para Dashboard =====
-    // SAFE PATCH - BUG-DASH-001: Corrige contador de assistentes ativos
+    // [FASE 1 — PLANO TÉCNICO 13/11/2026] Corrigido para usar:
+    //   1. UUID canônico do tenant (req.cliente.id) — OBRIGATÓRIO
+    //   2. DatabaseHelpers (PostgreSQL) em vez de lib/leads/lead-capture.js (JSON-only)
+    //   3. Autenticação via requireApiKey middleware (sessão ou header X-API-Key)
+    //   Sem UUID canônico, a rota rejeita a requisição.
 
     /**
      * GET /api/tenant-stats
-     * Retorna estatísticas do tenant para o dashboard
+     * Retorna estatísticas do tenant para o dashboard.
+     * Requer autenticação via requireApiKey middleware (sessão ou header X-API-Key).
+     * UUID canônico obrigatório — sem fallback por credencial legada.
      */
     app.get('/api/tenant-stats', async (req, res) => {
-        const FEATURE_TENANT_STATS_API = true;
-
-        // Feature flag: se desativado, retorna zeros (comportamento original)
-        if (!FEATURE_TENANT_STATS_API) {
-            return res.json({
-                success: true,
-                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 }
-            });
-        }
-
         try {
-            const { apiKey } = req.query;
+            // [FASE 1] Resolver identidade exclusivamente pelo UUID canônico
+            // O requireApiKey middleware já validou e definiu req.cliente e req.session
+            const tenantUuid = req.cliente?.id || req.session?.tenantId || null;
 
-            // Sem API Key, retornar zeros (comportamento original mantido)
-            if (!apiKey) {
-                return res.json({
-                    success: true,
-                    stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 }
+            // Sem UUID canônico — rejeitar
+            if (!tenantUuid) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Identificação do tenant não disponível. Autentique-se novamente.'
                 });
             }
 
-            // Buscar short URLs (assistentes) do tenant
+            // apiKey da sessão validada — apenas para consulta de assistentes (short_urls)
+            // que são indexados por api_key no banco, não por tenant UUID
+            const apiKey = req.session?.validatedApiKey || null;
+
             let activeAssistants = 0;
             let createdToday = 0;
             let totalLeads = 0;
             let leadsToday = 0;
 
+            // --- Assistentes (short_urls indexados por api_key) ---
             try {
-                const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
-                // SAFE PATCH - BUG-DASH-002: Filtrar apenas assistentes ativos (excluir soft-deleted)
-                const activeUrls = shortUrls.filter(s => s.status === 'active' || !s.status);
-                activeAssistants = activeUrls.length;
+                if (apiKey) {
+                    const shortUrls = await DatabaseHelpers.getShortUrlsByApiKey(apiKey);
+                    // Filtrar apenas assistentes ativos (excluir soft-deleted)
+                    const activeUrls = shortUrls.filter(s => s.status === 'active' || !s.status);
+                    activeAssistants = activeUrls.length;
 
-                // Contar criados hoje (apenas ativos)
-                const today = new Date().toISOString().split('T')[0];
-                createdToday = activeUrls.filter(s =>
-                    s.created_at && s.created_at.toString().startsWith(today)
-                ).length;
-            } catch (err) {
-                console.warn('⚠️ Erro ao buscar assistentes:', err.message);
-                // Fallback: manter zeros
-            }
-
-            try {
-                // SAFE PATCH - BUG-LEADS-002: Buscar leads via getLeadSystem (mesma fonte que /admin/leads)
-                if (getLeadSystem) {
-                    const leadSystem = getLeadSystem(apiKey);
-                    const leads = leadSystem.getLeads();
-                    totalLeads = leads.length;
-
+                    // Contar criados hoje (apenas ativos)
                     const today = new Date().toISOString().split('T')[0];
-                    leadsToday = leads.filter(l => {
-                        const ts = l.timestamp || l.created_at || l.lastInteraction;
-                        return ts && ts.toString().startsWith(today);
-                    }).length;
-                } else {
-                    // Fallback: usar DatabaseHelpers se módulo de leads indisponível
-                    const leads = await DatabaseHelpers.getLeads(apiKey);
-                    totalLeads = leads.length;
-                    const today = new Date().toISOString().split('T')[0];
-                    leadsToday = leads.filter(l =>
-                        l.created_at && l.created_at.toString().startsWith(today)
+                    createdToday = activeUrls.filter(s =>
+                        s.created_at && s.created_at.toString().startsWith(today)
                     ).length;
                 }
             } catch (err) {
-                console.warn('⚠️ Erro ao buscar leads:', err.message);
-                // Fallback: manter zeros
+                console.warn('⚠️ [tenant-stats] Erro ao buscar assistentes:', err.message);
             }
 
-            console.log(`📊 Stats for tenant ${apiKey.substring(0, 8)}...: ${activeAssistants} assistants, ${totalLeads} leads`);
+            // --- Leads (PostgreSQL via DatabaseHelpers — exclusivamente por UUID) ---
+            try {
+                let leads;
+                if (typeof DatabaseHelpers.getLeadsByTenant === 'function') {
+                    leads = await DatabaseHelpers.getLeadsByTenant(tenantUuid);
+                } else {
+                    // getLeadsByTenant não disponível — erro explícito, não fallback por apiKey
+                    console.error('❌ [tenant-stats] DatabaseHelpers.getLeadsByTenant não disponível');
+                    leads = [];
+                }
+                totalLeads = leads.length;
+
+                const today = new Date().toISOString().split('T')[0];
+                leadsToday = leads.filter(l => {
+                    const ts = l.created_at || l.timestamp || l.lastInteraction;
+                    return ts && ts.toString().startsWith(today);
+                }).length;
+            } catch (err) {
+                console.warn('⚠️ [tenant-stats] Erro ao buscar leads:', err.message);
+            }
+
+            console.log(`📊 [tenant-stats] ${tenantUuid.substring(0, 8)}...: ${activeAssistants} assistants, ${totalLeads} leads`);
 
             res.json({
                 success: true,
@@ -192,11 +184,10 @@ function setupRoutes(app) {
             });
 
         } catch (error) {
-            console.error('❌ Erro ao buscar tenant stats:', error);
-            // Fallback seguro: retornar zeros (comportamento original)
-            res.json({
-                success: true,
-                stats: { activeAssistants: 0, createdToday: 0, totalLeads: 0, leadsToday: 0 }
+            console.error('❌ [tenant-stats] Erro fatal:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro interno ao buscar estatísticas'
             });
         }
     });

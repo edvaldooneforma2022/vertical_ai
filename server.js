@@ -8745,7 +8745,37 @@ app.post("/api/capture-lead", async (req, res) => {
         return res.status(401).json({ success: false, error: "API Key não fornecida" });
     }
 
-    const leadSystem = getLeadSystem(apiKey);
+    // [FASE 1 — PLANO TÉCNICO 13/11/2026] Resolver UUID canônico do tenant
+    // antes de criar o singleton, garantindo que leads sejam persistidos
+    // com tenant_uuid válido no PostgreSQL.
+    // REGRA: Nenhum lead pode ser persistido sem tenant_uuid canônico.
+    let captureLeadTenantUuid = null;
+    try {
+        const captureValidation = await validateApiKey(apiKey);
+        if (captureValidation.success) {
+            captureLeadTenantUuid = captureValidation.tenant.id;
+        } else if (!captureValidation.isInfraError) {
+            // API Key inválida ou revogada — rejeitar captura
+            console.warn(`🚫 [CAPTURE-LEAD] API Key inválida: ${apiKey.substring(0, 12)}... reason=${captureValidation.reasonCode || 'UNKNOWN'}`);
+            return res.status(401).json({ success: false, error: "API Key inválida ou revogada" });
+        } else {
+            // Erro de infraestrutura (DB indisponível) — rejeitar para não criar lead órfão
+            console.error(`🚫 [CAPTURE-LEAD] Infra error — captura rejeitada (sem UUID): ${captureValidation.error}`);
+            return res.status(503).json({ success: false, error: "Serviço temporariamente indisponível. Tente novamente." });
+        }
+    } catch (captureValErr) {
+        // Exceção inesperada — rejeitar para não criar lead órfão
+        console.error(`🚫 [CAPTURE-LEAD] Exceção na validação — captura rejeitada: ${captureValErr.message}`);
+        return res.status(503).json({ success: false, error: "Serviço temporariamente indisponível. Tente novamente." });
+    }
+
+    // Garantia final: se UUID não foi resolvido, não prosseguir
+    if (!captureLeadTenantUuid) {
+        console.error(`🚫 [CAPTURE-LEAD] UUID não resolvido após validação — captura bloqueada`);
+        return res.status(503).json({ success: false, error: "Não foi possível identificar o tenant. Tente novamente." });
+    }
+
+    const leadSystem = getLeadSystem(apiKey, captureLeadTenantUuid);
     try {
         const { nome, email, telefone, url_origem, robotName, conversationId } = req.body || {};
 
@@ -8781,10 +8811,10 @@ app.post("/api/capture-lead", async (req, res) => {
         console.log(`🎯 NOVO LEAD CAPTURADO: ${newLead.nome} (${newLead.email})`);
 
         // 🏢 [CRM V7.0] Sync hook — fire-and-forget, zero impacto no fluxo existente
-        // Priorizar UUID da sessão (setado pelo requireApiKey) para garantir pipeline correto
+        // [FASE 1] Usar UUID canônico validado em vez de apiKey como fallback
         try {
             if (crmManager && typeof crmManager.syncLeadToCRM === 'function') {
-                const crmTenantId = req.session?.tenantId || apiKey;
+                const crmTenantId = captureLeadTenantUuid || req.session?.tenantId || apiKey;
                 crmManager.syncLeadToCRM(crmTenantId, newLead).catch(err => {
                     console.warn('⚠️ [CRM] Sync hook falhou (não bloqueia captura):', err.message);
                 });
@@ -12618,7 +12648,9 @@ try {
     console.log('⚠️ [Hotmart] Webhook não disponível:', e.message);
 }
 
-setupRoutes(app);
+// [FASE 1 — PLANO TÉCNICO 13/11/2026] setupRoutes(app) REMOVIDO daqui.
+// A chamada duplicada causava registro duplo de todas as rotas de routes.js.
+// A chamada definitiva ocorre dentro de initialize() com try/catch adequado.
 
 // REMOVIDO (Deploy #1 — SEC): Primeira montagem V8 redundante.
 // A montagem definitiva ocorre após await initialize() (L12958-12965),
