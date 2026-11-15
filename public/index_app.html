@@ -4551,6 +4551,8 @@
         function openNewSystems() {
             document.getElementById('newSystemsPanel').style.display = 'block';
             loadSystemStatus();
+            // [P-01 FIX] Carregar analytics ao abrir painel (tab analytics e' a padrao visivel)
+            if (typeof loadAnalytics === 'function') loadAnalytics();
         }
 
         function closeNewSystems() {
