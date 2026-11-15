@@ -33,6 +33,155 @@ function setupRoutes(app) {
 
     // ===== ROTAS DE ANALYTICS =====
 
+    // ===== ANALYTICS PROFISSIONAL PER-TENANT =====
+
+    /**
+     * GET /api/analytics/tenant
+     * Retorna métricas de analytics do tenant para a aba "Analytics Profissional".
+     * Requer autenticação via requireApiKey middleware.
+     * UUID canônico obrigatório — sem fallback por credencial legada.
+     *
+     * Query params:
+     *   days (opcional) — Período em dias: 7, 30 ou 90. Padrão: 30.
+     *
+     * Retorna:
+     *   period.days         → Período selecionado
+     *   period.from         → Data inicial (inclusiva, horário Brasília)
+     *   period.to           → Data final (inclusiva, horário Brasília)
+     *   metrics.totalMessages   → Total de mensagens trocadas no período
+     *   metrics.activeLeads     → Leads distintos com ≥1 mensagem no período
+     *   metrics.leadsCaptured   → Leads capturados (created_at) no período
+     *   metrics.successRate     → % de leads capturados no período com email ou telefone válido
+     */
+    app.get('/api/analytics/tenant', async (req, res) => {
+        const startMs = Date.now();
+        try {
+            // --- Identidade: UUID canônico (API Key é credencial, não identidade) ---
+            const tenantUuid = req.cliente?.id || req.session?.tenantId || null;
+
+            if (!tenantUuid) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Identificação do tenant não disponível. Autentique-se novamente.'
+                });
+            }
+
+            // --- Validar parâmetro de período ---
+            const VALID_DAYS = [7, 30, 90];
+            const daysParam = req.query.days !== undefined ? parseInt(req.query.days, 10) : 30;
+
+            if (Number.isNaN(daysParam) || !VALID_DAYS.includes(daysParam)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Período inválido. Valores aceitos: 7, 30, 90.'
+                });
+            }
+
+            // --- Calcular limites do período em horário de Brasília (UTC-3) ---
+            // "Hoje" em Brasília: subtrair 3 horas do UTC atual
+            const nowBrasilia = new Date(Date.now() - 3 * 60 * 60 * 1000);
+            const toStr = nowBrasilia.toISOString().split('T')[0];
+
+            // "from" inclusivo: hoje - (days - 1)
+            const fromDate = new Date(nowBrasilia);
+            fromDate.setDate(fromDate.getDate() - (daysParam - 1));
+            const fromStr = fromDate.toISOString().split('T')[0];
+
+            // --- Buscar leads do tenant (exclusivamente por UUID) ---
+            let leads;
+            if (typeof DatabaseHelpers.getLeadsByTenant === 'function') {
+                leads = await DatabaseHelpers.getLeadsByTenant(tenantUuid);
+            } else {
+                console.error('❌ [analytics/tenant] DatabaseHelpers.getLeadsByTenant não disponível');
+                return res.status(503).json({
+                    success: false,
+                    error: 'Serviço de dados temporariamente indisponível.'
+                });
+            }
+
+            // --- Single-pass: calcular todas as métricas em uma única iteração ---
+            let totalMessages = 0;
+            const activeLeadIds = new Set();
+            let leadsCaptured = 0;
+            let leadsWithContact = 0;
+
+            for (const lead of leads) {
+                // 1. Verificar se o lead foi capturado no período (para leadsCaptured e successRate)
+                let leadCapturedInPeriod = false;
+                const createdTs = lead.created_at;
+                if (createdTs) {
+                    const createdDate = new Date(createdTs);
+                    if (!Number.isNaN(createdDate.getTime())) {
+                        const createdBrasilia = new Date(createdDate.getTime() - 3 * 60 * 60 * 1000);
+                        const createdStr = createdBrasilia.toISOString().split('T')[0];
+                        if (createdStr >= fromStr && createdStr <= toStr) {
+                            leadCapturedInPeriod = true;
+                            leadsCaptured++;
+
+                            // Verificar contato válido (somente para leads capturados no período)
+                            const email = lead.email;
+                            const telefone = lead.telefone || lead.phone;
+                            const hasValidEmail = email && email.trim() !== '' && email !== 'Não informado';
+                            const hasValidPhone = telefone && telefone.trim() !== '' && telefone !== 'Não informado';
+                            if (hasValidEmail || hasValidPhone) {
+                                leadsWithContact++;
+                            }
+                        }
+                    }
+                }
+
+                // 2. Iterar mensagens para totalMessages e activeLeads
+                const convs = lead.conversations;
+                if (!Array.isArray(convs)) continue;
+
+                for (const entry of convs) {
+                    if (!entry || !entry.timestamp) continue;
+
+                    const entryDate = new Date(entry.timestamp);
+                    if (Number.isNaN(entryDate.getTime())) continue;
+
+                    const entryBrasilia = new Date(entryDate.getTime() - 3 * 60 * 60 * 1000);
+                    const entryStr = entryBrasilia.toISOString().split('T')[0];
+
+                    if (entryStr >= fromStr && entryStr <= toStr) {
+                        totalMessages++;
+                        activeLeadIds.add(lead.id);
+                    }
+                }
+            }
+
+            const activeLeads = activeLeadIds.size;
+            const successRate = leadsCaptured > 0
+                ? Math.round((leadsWithContact / leadsCaptured) * 100)
+                : 0;
+
+            const durationMs = Date.now() - startMs;
+            console.log(`📊 [analytics/tenant] ${tenantUuid.substring(0, 8)}...: ${totalMessages} msgs, ${activeLeads} ativos, ${leadsCaptured} capturados, ${successRate}% sucesso — ${durationMs}ms (${leads.length} leads)`);
+
+            res.json({
+                success: true,
+                period: {
+                    days: daysParam,
+                    from: fromStr,
+                    to: toStr
+                },
+                metrics: {
+                    totalMessages,
+                    activeLeads,
+                    leadsCaptured,
+                    successRate
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ [analytics/tenant] Erro fatal:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro interno ao processar analytics.'
+            });
+        }
+    });
+
     /**
      * GET /api/analytics/:chatbotId
      * Obter analytics de um chatbot
@@ -249,155 +398,6 @@ function setupRoutes(app) {
             res.status(500).json({
                 success: false,
                 error: 'Erro interno ao buscar estatísticas'
-            });
-        }
-    });
-
-    // ===== ANALYTICS PROFISSIONAL PER-TENANT =====
-
-    /**
-     * GET /api/analytics/tenant
-     * Retorna métricas de analytics do tenant para a aba "Analytics Profissional".
-     * Requer autenticação via requireApiKey middleware.
-     * UUID canônico obrigatório — sem fallback por credencial legada.
-     *
-     * Query params:
-     *   days (opcional) — Período em dias: 7, 30 ou 90. Padrão: 30.
-     *
-     * Retorna:
-     *   period.days         → Período selecionado
-     *   period.from         → Data inicial (inclusiva, horário Brasília)
-     *   period.to           → Data final (inclusiva, horário Brasília)
-     *   metrics.totalMessages   → Total de mensagens trocadas no período
-     *   metrics.activeLeads     → Leads distintos com ≥1 mensagem no período
-     *   metrics.leadsCaptured   → Leads capturados (created_at) no período
-     *   metrics.successRate     → % de leads capturados no período com email ou telefone válido
-     */
-    app.get('/api/analytics/tenant', async (req, res) => {
-        const startMs = Date.now();
-        try {
-            // --- Identidade: UUID canônico (API Key é credencial, não identidade) ---
-            const tenantUuid = req.cliente?.id || req.session?.tenantId || null;
-
-            if (!tenantUuid) {
-                return res.status(401).json({
-                    success: false,
-                    error: 'Identificação do tenant não disponível. Autentique-se novamente.'
-                });
-            }
-
-            // --- Validar parâmetro de período ---
-            const VALID_DAYS = [7, 30, 90];
-            const daysParam = req.query.days !== undefined ? parseInt(req.query.days, 10) : 30;
-
-            if (Number.isNaN(daysParam) || !VALID_DAYS.includes(daysParam)) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Período inválido. Valores aceitos: 7, 30, 90.'
-                });
-            }
-
-            // --- Calcular limites do período em horário de Brasília (UTC-3) ---
-            // "Hoje" em Brasília: subtrair 3 horas do UTC atual
-            const nowBrasilia = new Date(Date.now() - 3 * 60 * 60 * 1000);
-            const toStr = nowBrasilia.toISOString().split('T')[0];
-
-            // "from" inclusivo: hoje - (days - 1)
-            const fromDate = new Date(nowBrasilia);
-            fromDate.setDate(fromDate.getDate() - (daysParam - 1));
-            const fromStr = fromDate.toISOString().split('T')[0];
-
-            // --- Buscar leads do tenant (exclusivamente por UUID) ---
-            let leads;
-            if (typeof DatabaseHelpers.getLeadsByTenant === 'function') {
-                leads = await DatabaseHelpers.getLeadsByTenant(tenantUuid);
-            } else {
-                console.error('❌ [analytics/tenant] DatabaseHelpers.getLeadsByTenant não disponível');
-                return res.status(503).json({
-                    success: false,
-                    error: 'Serviço de dados temporariamente indisponível.'
-                });
-            }
-
-            // --- Single-pass: calcular todas as métricas em uma única iteração ---
-            let totalMessages = 0;
-            const activeLeadIds = new Set();
-            let leadsCaptured = 0;
-            let leadsWithContact = 0;
-
-            for (const lead of leads) {
-                // 1. Verificar se o lead foi capturado no período (para leadsCaptured e successRate)
-                let leadCapturedInPeriod = false;
-                const createdTs = lead.created_at;
-                if (createdTs) {
-                    const createdDate = new Date(createdTs);
-                    if (!Number.isNaN(createdDate.getTime())) {
-                        const createdBrasilia = new Date(createdDate.getTime() - 3 * 60 * 60 * 1000);
-                        const createdStr = createdBrasilia.toISOString().split('T')[0];
-                        if (createdStr >= fromStr && createdStr <= toStr) {
-                            leadCapturedInPeriod = true;
-                            leadsCaptured++;
-
-                            // Verificar contato válido (somente para leads capturados no período)
-                            const email = lead.email;
-                            const telefone = lead.telefone || lead.phone;
-                            const hasValidEmail = email && email.trim() !== '' && email !== 'Não informado';
-                            const hasValidPhone = telefone && telefone.trim() !== '' && telefone !== 'Não informado';
-                            if (hasValidEmail || hasValidPhone) {
-                                leadsWithContact++;
-                            }
-                        }
-                    }
-                }
-
-                // 2. Iterar mensagens para totalMessages e activeLeads
-                const convs = lead.conversations;
-                if (!Array.isArray(convs)) continue;
-
-                for (const entry of convs) {
-                    if (!entry || !entry.timestamp) continue;
-
-                    const entryDate = new Date(entry.timestamp);
-                    if (Number.isNaN(entryDate.getTime())) continue;
-
-                    const entryBrasilia = new Date(entryDate.getTime() - 3 * 60 * 60 * 1000);
-                    const entryStr = entryBrasilia.toISOString().split('T')[0];
-
-                    if (entryStr >= fromStr && entryStr <= toStr) {
-                        totalMessages++;
-                        activeLeadIds.add(lead.id);
-                    }
-                }
-            }
-
-            const activeLeads = activeLeadIds.size;
-            const successRate = leadsCaptured > 0
-                ? Math.round((leadsWithContact / leadsCaptured) * 100)
-                : 0;
-
-            const durationMs = Date.now() - startMs;
-            console.log(`📊 [analytics/tenant] ${tenantUuid.substring(0, 8)}...: ${totalMessages} msgs, ${activeLeads} ativos, ${leadsCaptured} capturados, ${successRate}% sucesso — ${durationMs}ms (${leads.length} leads)`);
-
-            res.json({
-                success: true,
-                period: {
-                    days: daysParam,
-                    from: fromStr,
-                    to: toStr
-                },
-                metrics: {
-                    totalMessages,
-                    activeLeads,
-                    leadsCaptured,
-                    successRate
-                }
-            });
-
-        } catch (error) {
-            console.error('❌ [analytics/tenant] Erro fatal:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Erro interno ao processar analytics.'
             });
         }
     });
