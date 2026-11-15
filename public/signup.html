@@ -434,6 +434,8 @@
                         sessionStorage.setItem('lm_api_key', data.apiKey);
                         localStorage.setItem('lm_api_key', data.apiKey);
                         localStorage.setItem('linkmagico_key', data.apiKey);
+                        // [P-01 FIX] Gravar chave canônica consumida pelo Analytics Profissional.
+                        localStorage.setItem('linkmagico_api_key', data.apiKey);
                     } catch(e) {}
                 }
 

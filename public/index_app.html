@@ -2336,6 +2336,10 @@
             }
         });
 
+        // [P-01 FIX] Promise de inicialização da credencial.
+        // loadAnalytics() aguarda esta promise antes de ler localStorage.
+        let _initPromise = null;
+
         // Verificar consentimento ao carregar a página
         window.addEventListener('DOMContentLoaded', () => {
             if (!localStorage.getItem('lgpd_consent')) {
@@ -2343,7 +2347,10 @@
             }
 
             // SAFE PATCH - BUG-DASH-003: Buscar apiKey da sessão antes de carregar stats
-            initializeApiKeyFromSession();
+            // [P-01 FIX] Limpar credencial potencialmente obsoleta antes da inicialização.
+            // Após init, localStorage conterá somente o valor confirmado pela sessão.
+            localStorage.removeItem('linkmagico_api_key');
+            _initPromise = initializeApiKeyFromSession();
         });
 
         // SAFE PATCH - BUG-DASH-003: Resolver apiKey da sessão e popular input/localStorage
@@ -5230,10 +5237,21 @@
                     activeBtn.style.color = 'white';
                 }
 
+                // [P-01 FIX] Aguardar inicialização da credencial.
+                // Garante que localStorage['linkmagico_api_key'] contém o valor
+                // confirmado pela sessão, não um valor obsoleto de sessão anterior.
+                if (_initPromise) {
+                    await _initPromise;
+                }
+
+                // [P-01 FIX] Ler credencial após inicialização concluída.
+                // Se vazia, omitir header para que o middleware autentique via sessão.
                 const tenantApiKey = localStorage.getItem('linkmagico_api_key') || '';
-                const response = await fetch(`/api/analytics/tenant?days=${days}`, {
-                    headers: { 'X-API-Key': tenantApiKey }
-                });
+                const fetchOptions = {};
+                if (tenantApiKey) {
+                    fetchOptions.headers = { 'X-API-Key': tenantApiKey };
+                }
+                const response = await fetch(`/api/analytics/tenant?days=${days}`, fetchOptions);
 
                 // Verificar se esta ainda é a requisição mais recente
                 if (requestId !== _analyticsRequestId) return;
