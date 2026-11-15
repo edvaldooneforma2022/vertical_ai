@@ -5226,6 +5226,7 @@
 
         async function loadAnalytics(days = 30) {
             const requestId = ++_analyticsRequestId;
+            console.log('[Analytics] carregando...', { days, requestId });
 
             try {
                 // Atualizar visual dos botões de período
@@ -5285,6 +5286,12 @@
                     console.log(`📊 Analytics (${days}d): ${data.metrics.totalMessages} msgs, ` +
                         `${data.metrics.activeLeads} ativos, ${data.metrics.leadsCaptured} capturados, ` +
                         `${data.metrics.successRate}% sucesso`);
+                } else {
+                    console.warn('[Analytics] resposta sem metricas:', {
+                        success: data?.success,
+                        hasMetrics: Boolean(data?.metrics),
+                        responseKeys: data && typeof data === 'object' ? Object.keys(data) : []
+                    });
                 }
             } catch (error) {
                 if (requestId !== _analyticsRequestId) return;
