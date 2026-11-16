@@ -4557,6 +4557,9 @@ app.get("/termos.html", (req, res) => {
 app.get("/termos", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "termos.html"));
 });
+// Redirect documento obsoleto (Hotmart/anual) para termos vigentes (Stripe/mensal)
+app.get("/termos-de-uso.html", (req, res) => res.redirect(301, "/termos"));
+app.get("/termos-de-uso", (req, res) => res.redirect(301, "/termos"));
 app.get("/privacidade.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "privacidade.html"));
 });
