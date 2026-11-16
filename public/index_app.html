@@ -1365,22 +1365,6 @@
         .v113-checkout-input-row button:disabled{opacity:0.5;cursor:not-allowed;transform:none}
         .v113-checkout-hint{color:#64748b;font-size:0.75rem;margin-top:6px}
 
-        /* 🎬 QUICK START VIDEO — Card de vídeo do fundador (isolado, sem impacto) */
-        .qsv__card{background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(59,130,246,0.08));border:1.5px solid rgba(16,185,129,0.25);border-radius:16px;padding:20px;margin-bottom:1.5rem;position:relative;animation:qsv__fadeIn .4s ease}
-        @keyframes qsv__fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        .qsv__header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-        .qsv__badge{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,0.15);color:#34d399;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 12px;border-radius:20px;border:1px solid rgba(16,185,129,0.3)}
-        .qsv__badge i{font-size:.45rem;animation:pulse 2s infinite}
-        .qsv__close{background:none;border:none;color:#64748b;cursor:pointer;font-size:1.1rem;padding:4px 8px;border-radius:6px;transition:all .2s}
-        .qsv__close:hover{color:#e2e8f0;background:rgba(100,116,139,0.2)}
-        .qsv__title{color:#e2e8f0;font-size:1rem;font-weight:700;margin-bottom:4px}
-        .qsv__subtitle{color:#94a3b8;font-size:.8rem;line-height:1.5;margin-bottom:14px}
-        .qsv__subtitle strong{color:#cbd5e1}
-        .qsv__video-wrap{position:relative;width:100%;border-radius:12px;overflow:hidden;background:#0f172a;border:1px solid rgba(71,85,105,0.4);aspect-ratio:9/16;max-height:420px;margin:0 auto}
-        .qsv__video-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
-        .qsv__footer{margin-top:12px;text-align:center}
-        .qsv__footer-text{color:#64748b;font-size:.72rem;font-style:italic}
-        @media(max-width:768px){.qsv__video-wrap{max-height:360px}}
 
         /* ═══ LM-UI MODERNIZATION V5 — CSS Incremental (prefixado, sem colisão) ═══ */
 
@@ -1458,57 +1442,6 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
-        /* Video lazy load card */
-        .lm-ui-video-thumb {
-            position: relative;
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            background: linear-gradient(135deg, var(--dark), var(--dark-surface));
-            border: 1px solid rgba(71,85,105,0.4);
-            aspect-ratio: 16/9;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .lm-ui-video-thumb:hover {
-            border-color: var(--primary);
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
-        }
-        .lm-ui-video-play {
-            width: 64px;
-            height: 64px;
-            background: rgba(59, 130, 246, 0.9);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 1.5rem;
-            transition: transform 0.2s ease, background 0.2s ease;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
-        }
-        .lm-ui-video-thumb:hover .lm-ui-video-play {
-            transform: scale(1.1);
-            background: rgba(59, 130, 246, 1);
-        }
-        .lm-ui-video-meta {
-            position: absolute;
-            bottom: 12px;
-            right: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(0,0,0,0.7);
-            color: #e2e8f0;
-            font-size: 0.72rem;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 6px;
-            backdrop-filter: blur(4px);
-        }
 
         /* Tutorial reactivation button */
         .lm-ui-tutorial-btn {
@@ -1534,14 +1467,11 @@
         @media (prefers-reduced-motion: reduce) {
             .lm-ui-accordion-chevron,
             .lm-ui-accordion-body,
-            .lm-ui-video-play,
-            .lm-ui-video-thumb,
             .lm-ui-tutorial-btn,
             #activateChatbotBtn,
             .form-input,
             .social-btn,
-            .analytics-card,
-            .qsv__card {
+            .analytics-card {
                 animation: none !important;
                 transition: none !important;
             }
@@ -1992,44 +1922,6 @@
                 }
                 </script>
             </div>
-
-            <!-- QUICK START VIDEO — Lazy load estilo Notion (Modernização V5) -->
-            <div id="qsvCard" class="qsv__card">
-                <div class="qsv__header">
-                    <span class="qsv__badge"><i class="fas fa-circle"></i> <i class="fas fa-film" style="margin-right:4px;"></i> GUIA RÁPIDO</span>
-                    <button class="qsv__close" onclick="dismissQSV()" title="Fechar para sempre"><i class="fas fa-times" style="font-size:0.8rem;"></i></button>
-                </div>
-                <div class="qsv__title">Ative seu vendedor automático em 3 passos</div>
-                <p class="qsv__subtitle"><strong>Edvaldo</strong>, fundador do LinkMágico, explica como configurar em menos de 2 minutos.</p>
-                <div id="qsvVideoContainer">
-                    <!-- Thumbnail — vídeo carrega apenas no clique (lazy load) -->
-                    <div class="lm-ui-video-thumb" id="qsvThumb" onclick="(function(){try{var c=document.getElementById('qsvVideoContainer');if(c){c.innerHTML='<div class=\'qsv__video-wrap\'><video controls autoplay playsinline controlsList=\'nodownload\' style=\'position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000;\'><source src=\'/videos/onboarding_v2.mp4\' type=\'video/mp4\'></video></div>';}}catch(e){console.warn('[LM-UI] Erro ao carregar vídeo:',e.message);}})()">
-                        <div class="lm-ui-video-play"><i class="fas fa-play"></i></div>
-                        <div class="lm-ui-video-meta"><i class="fas fa-clock"></i> 2 min</div>
-                    </div>
-                </div>
-                <div class="qsv__footer">
-                    <span class="qsv__footer-text"><i class="fas fa-clock" style="margin-right:4px;"></i> Vídeo curto &bull; Sem compromisso &bull; Veja e comece a usar</span>
-                </div>
-            </div>
-            <script>
-            // SAFE PATCH — QSV: Lógica de dismiss com localStorage (isolado, sem impacto)
-            try {
-                if (localStorage.getItem('lm_qsv_dismissed') === '1') {
-                    var qsvEl = document.getElementById('qsvCard');
-                    if (qsvEl) qsvEl.style.display = 'none';
-                }
-            } catch(e) { console.warn('[QSV] localStorage indisponível:', e.message); }
-            function dismissQSV() {
-                try {
-                    var qsvEl = document.getElementById('qsvCard');
-                    if (qsvEl) { qsvEl.style.opacity = '0'; qsvEl.style.transform = 'translateY(-10px)'; qsvEl.style.transition = 'all 0.3s ease'; setTimeout(function() { qsvEl.style.display = 'none'; }, 300); }
-                    localStorage.setItem('lm_qsv_dismissed', '1');
-                    console.log('[QSV] ✅ Vídeo dismissed permanentemente');
-                } catch(e) { console.warn('[QSV] Erro ao dismissar:', e.message); }
-            }
-            </script>
-
 
             <!-- UX-005: Card motivacional quando não há assistente ativo -->
             <div id="emptyStateCard"
